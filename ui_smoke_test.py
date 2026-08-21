@@ -367,7 +367,7 @@ def main():
         # Ardenia is selected, so the player can simply press Next.
         assert step._list.currentRow() == 0
         assert step._summaries[0]["id"] == "ardenia"
-        cfg = CampaignConfig(country_id="ardenia")
+        cfg = CampaignConfig(country_id="krasova")
         step.collect(cfg)
         assert cfg.country_id == "ardenia"
         # Defensive collection must still reject an injected foreign id even
