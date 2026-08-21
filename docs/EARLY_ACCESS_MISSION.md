@@ -642,6 +642,8 @@ These are foundational even when their presentation should become quieter.
 
 The roadmap is organized around evidence-bearing player-facing milestones, not arbitrary feature counts. Comprehension work remains necessary throughout, but the immediate question is whether the player can author and be judged for a consequential political project.
 
+**Human evidence rule:** Every human evidence gate in this mission requires external human players. Automated suites and agent reviews may supplement those sessions, but cannot count toward, replace, or satisfy a human evidence gate.
+
 ### Milestone 0: Protected baseline and unassisted evidence
 
 **Goal:** Protect the working simulation and learn how strangers actually experience the current build.
@@ -649,14 +651,14 @@ The roadmap is organized around evidence-bearing player-facing milestones, not a
 **Deliverables:**
 
 - A protected Git baseline with the current automated suites recorded green.
-- Unassisted baseline playtests of the current build with no developer explanation beyond ordinary onboarding.
+- Unassisted baseline playtests with external human players, with no developer explanation beyond ordinary onboarding.
 - Observation notes covering where players form, abandon, or cannot state a political purpose; which decisions cause hesitation; and whether their confusion concerns explanation, agency, stakes, or consequences.
 - Major new work evaluated against the governing cycle; no new playable-country scope.
 
 **Exit criteria:**
 
 - The baseline is recoverable and its known technical state is documented.
-- The team has external, unassisted evidence rather than an assumed comprehension diagnosis.
+- The team has external human evidence rather than an assumed comprehension diagnosis.
 - A narrow first prototype question is written from that evidence.
 
 **Existing foundations to retain and test:**
@@ -685,7 +687,7 @@ The roadmap is organized around evidence-bearing player-facing milestones, not a
 - Two players can pursue the same diagnosed inequality through recognizably different reforms.
 - The project encounters meaningful opposition; concessions and rejection alter its route or record.
 - Bill passage does not guarantee delivery, and evaluation distinguishes technical, administrative, fiscal, political, and electoral outcomes.
-- Unassisted players can state what they authored, what was at stake, and why a material result followed.
+- Unassisted external human players can state what they authored, what was at stake, and why a material result followed.
 
 **Release state after milestone:** Closed prototype playtest.
 
@@ -695,14 +697,14 @@ The roadmap is organized around evidence-bearing player-facing milestones, not a
 
 **Deliverables:**
 
-- Comparable playtest versions or sessions for real-time-with-pause, advance-to-next-decision, and monthly advancement around the reference reform.
-- Evidence on dead air, decision anticipation, missed obligations, perceived political rhythm, and comprehension of time-sensitive consequences.
+- Comparable sessions with external human players for real-time-with-pause, advance-to-next-decision, and monthly advancement around the reference reform.
+- Human-playtest evidence on dead air, decision anticipation, missed obligations, perceived political rhythm, and comprehension of time-sensitive consequences.
 - A documented pacing decision and only the stop/calendar infrastructure justified by that decision.
 
 **Acceptance criteria:**
 
 - The chosen model produces a clearer and more satisfying political rhythm than the alternatives for the tested loop.
-- Automatic pauses, deadlines, and calendar surfaces are tied to demonstrated player needs, not inherited implementation assumptions.
+- Automatic pauses, deadlines, and calendar surfaces are tied to demonstrated external human-player needs, not inherited implementation assumptions.
 
 ### Milestone 3: Evidence checkpoint and production decision
 
@@ -710,13 +712,13 @@ The roadmap is organized around evidence-bearing player-facing milestones, not a
 
 **Deliverables:**
 
-- External playtest findings for the protected baseline, reference reform, and time-model comparison.
+- External human-playtest findings for the protected baseline, reference reform, and time-model comparison.
 - A decision record identifying the winning loop, the evidence for it, its unresolved failures, and the scope deliberately deferred.
 - A production plan for the second reform family only if the first loop is enjoyable and the evidence supports generalization.
 
 **Acceptance criteria:**
 
-- The project can point to observed player behavior showing whether political authorship, not explanation alone, is carrying the experience.
+- The project can point to observed external human-player behavior showing whether political authorship, not explanation alone, is carrying the experience.
 - The immediate milestone ends at this external evidence checkpoint. No broad productionization begins before it.
 
 **Release state after milestone:** Evidence-backed production candidate.
@@ -793,7 +795,7 @@ Early Access should not be triggered by a date alone. All of the following gates
 ### 18.1 Core-loop gate
 
 - Diagnosis through electoral judgment works as one connected cycle.
-- The first reform family has demonstrated, in unassisted play, an enjoyable complete loop of diagnosis, authorship, opposition, consequence, and judgment.
+- The first reform family has demonstrated, in unassisted external human play, an enjoyable complete loop of diagnosis, authorship, opposition, consequence, and judgment.
 - A second family has demonstrated that the loop's architecture generalizes.
 - The number of further families is justified by observed replay needs rather than an unconditional quota.
 - Coalition formation and maintenance are playable.
@@ -830,13 +832,13 @@ Early Access should not be triggered by a date alone. All of the following gates
 
 ### 18.5 Playtest gate
 
-- At least 70% of unassisted testers complete the first ninety days.
+- At least 70% of unassisted external human testers complete the first ninety days.
 - At least 50% voluntarily reach the first election during the applicable test window.
-- Most testers can state their programme in their own words.
-- Most testers can identify the stakes, opposition, and remembered consequence of their principal political project.
-- Fewer than 20% describe major outcomes as random or fundamentally unexplained.
-- Players demonstrate several different strategies.
-- The dominant requests concern expansion and depth, not basic navigation or comprehension.
+- Most external human testers can state their programme in their own words.
+- Most external human testers can identify the stakes, opposition, and remembered consequence of their principal political project.
+- Fewer than 20% of external human testers describe major outcomes as random or fundamentally unexplained.
+- External human players demonstrate several different strategies.
+- The dominant external human-player requests concern expansion and depth, not basic navigation or comprehension.
 
 ### 18.6 Product gate
 
@@ -1002,7 +1004,7 @@ Development should now complete **Milestone 0: Protected baseline and unassisted
 The immediate sequence is:
 
 1. Protect and record the current Git and automated-test baseline.
-2. Run unassisted baseline playtests of the current build.
+2. Run unassisted baseline playtests with external human players.
 3. Build only the regional-inequality diagnosis-to-judgment prototype, including its persistent named negotiating counterparty.
 4. Compare real-time-with-pause, advance-to-next-decision, and monthly advancement around that prototype.
 5. Stop at the external evidence checkpoint and choose the winning loop before productionizing generic systems or further reform families.
