@@ -12,7 +12,7 @@ It is a research packet, not a demonstration script. Do not use it to prove that
 
 ## Participant standard and evidence gate
 
-The baseline requires **5–8 external human players**: people outside the Ardenia project and its internal design/review process who have not read the Early Access mission and have not received coaching on how to play Ardenia. A developer, facilitator, agent, automated run, expert review, or developer self-test is not a participant session.
+The baseline requires **5–8 external human players**: people outside the Ardenia project and its internal design/review process who have not read the Early Access mission and have not received coaching on how to play Ardenia. Each counted session also requires consent to retain anonymized notes. A developer, facilitator, agent, automated run, expert review, or developer self-test is not a participant session.
 
 Automated checks, agent cold reads, and expert reviews may supplement the record, for example by identifying a reproducible defect. They cannot count toward, replace, or be combined with the required human-session total.
 

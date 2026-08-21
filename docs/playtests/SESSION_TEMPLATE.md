@@ -1,13 +1,14 @@
 # Baseline session record — copy one per participant
 
-Keep this completed record outside the public repository unless the participant explicitly consents to inclusion. Use only a participant code; do not add names, email addresses, or unnecessary personal details. See [BASELINE_PROTOCOL.md](BASELINE_PROTOCOL.md) for the runbook and the copyable post-sample synthesis.
+Use this record only after the participant has consented to retaining anonymous notes. If they decline, do not complete or retain this file, a participant code, notes, or a recording; thank them and stop, or allow only clearly labelled non-counting informal feedback with no retained record. Keep every completed record outside the public repository unless the participant explicitly consents to inclusion. Use only a participant code; do not add names, email addresses, or unnecessary personal details. See [BASELINE_PROTOCOL.md](BASELINE_PROTOCOL.md) for the runbook and the copyable post-sample synthesis.
 
 ## 1. Session header
 
 - Participant code:
 - Session date and facilitator:
-- Eligibility confirmed: external human / has not read mission / has not been coached
-- Consent for anonymous notes: yes / no
+- Eligible for the required 5–8 human sample: yes — all conditions below confirmed
+- Eligibility conditions confirmed: external human / has not read mission / has not been coached / anonymous-note consent retained
+- Consent for anonymous notes: yes — required to complete and retain this template
 - Consent for screen or audio recording, if offered: yes / no / not offered
 - Assigned opening: government / opposition
 - Opening actually used: government / opposition
@@ -46,9 +47,9 @@ Record only visible actions, timestamps, and the participant's words here. Do no
 
 ### Stalls, passive intervals, and spontaneous requests for direction
 
-Use one row for every observed item. A stall is 20+ seconds without a purposeful action while deciding/searching/waiting/disengaged, or a shorter explicit statement of not knowing what to do. A passive interval is time passing or watching without a stated reason. Record `none observed` if applicable.
+Use one row for every observed item. Record every 20+ second interval without a purposeful action as a **neutral pause** unless a quotation or visible searching/decision behavior supports calling it a stall. A stall is a neutral pause with an indicator such as repeated screen/menu searching, pointer movement between candidate controls, opening then dismissing relevant choices, starting then cancelling a choice, or an explicit shorter request for direction. A passive interval is time passing or watching without a stated reason. Record `none observed` if applicable.
 
-| Start–end | Type: stall / passive / spontaneous request | Duration | Visible context | Exact words or observable evidence |
+| Start–end | Type: stall / neutral pause / passive / spontaneous request | Duration | Visible context | Exact words or observable indicator |
 | --- | --- | --- | --- | --- |
 |  |  |  |  |  |
 |  |  |  |  |  |

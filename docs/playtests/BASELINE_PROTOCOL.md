@@ -8,7 +8,9 @@ Recruit 5–8 external human participants: people outside the Ardenia project an
 
 - has not read `EARLY_ACCESS_MISSION.md` or a summary of the product roadmap;
 - has not received a tutorial, demonstration, action recommendation, or advance explanation of Ardenia from the team; and
-- is willing to be observed under the consent arrangement below.
+- consents to the retention of anonymized session notes under the arrangement below.
+
+A session counts toward the required 5–8 only when all three conditions are met and anonymous notes can be retained. If a person declines note retention, thank them and end the research session before play, or let them play only as clearly labelled informal, non-counting feedback without retaining notes, recordings, or a session template. Do not count informal feedback toward the sample.
 
 Assign the sample so that it includes both available campaign openings: government and opposition. Record the assigned opening and the opening actually used. A balanced split is useful when feasible, but the required standard is coverage of both openings, not an artificial quota. If a participant cannot or does not use the assigned opening, record the reason; do not coach them into it.
 
@@ -16,9 +18,9 @@ Set a common observation window before recruiting (for example, 45 minutes) and 
 
 ## 2. Consent, anonymity, and storage
 
-Before opening the game, explain in plain language that you are observing an early game session to understand the experience, that participation is voluntary, and that the person may stop at any time. Ask separately for permission to retain anonymous notes and, if applicable, a screen or audio recording. Do not imply that recording is required.
+Before opening the game, explain in plain language that you are observing an early game session to understand the experience, that participation is voluntary, and that the person may stop at any time. Ask separately for permission to retain anonymous notes and, if applicable, a screen or audio recording. Do not imply that recording is required. Explain that anonymous-note consent is required for a session to count; screen or audio recording remains optional.
 
-Give the participant a non-identifying code (`P01`, `P02`, and so on). Record consent status, not a name or contact detail. Keep raw notes and any recordings outside this public repository unless the participant explicitly consents to inclusion. Store only a future product-level summary in project planning material.
+If anonymous-note consent is declined, do not assign or retain a participant code, notes, recording, or completed template. Give the person the stop/non-counting choice above and exclude the interaction from the required sample. For an eligible session, use a non-identifying code (`P01`, `P02`, and so on) and record consent status, not a name or contact detail. Keep raw notes and any recordings outside this public repository unless the participant explicitly consents to inclusion. Store only a future product-level summary in project planning material.
 
 ## 3. Prepare a comparable session
 
@@ -30,6 +32,18 @@ Complete the session header before the participant arrives.
 4. Choose seeds in advance and record them. Reuse a small predeclared set when comparison is useful, while leaving room to observe more than one situation. A seed is not representative of Ardenia; compare like settings and seeds cautiously and retain seed-specific variation in the notes.
 5. Open a blank session template and a clock. If recording is consented to, check that it works before play begins.
 6. Set up so the participant controls the game. The observer may take quiet notes but should not point at controls, hover over choices, or take over input.
+
+### End-user build and campaign setup
+
+Use the supplied Ardenia build. Start it and, at the `A R D E N I A` main menu, select **New Game**. In the `NEW CAMPAIGN` wizard:
+
+1. On `Country Selection`, leave the displayed **Begin the Ardenia campaign** choice selected and select **Next**.
+2. On `Character Creation`, use `Opening Position` to enter only the preassigned study condition: **Lead a government** or **Begin in opposition**. Record that assignment in the template.
+3. Hand the controls to the participant for all choices that are not preassigned study settings. In particular, do not choose their name, `Political Party`, political background, ideology override, difficulty, seed, guided-opening setting, or any other game option for them.
+4. If the study has explicitly preassigned another setting for comparability (for example, a difficulty or seed), enter or confirm only that written setting and record it. Do not substitute a facilitator preference for an unassigned choice.
+5. The participant uses **Next** to continue, reviews `REVIEW YOUR CAMPAIGN`, and selects **Generate**. Handing control to the participant must occur before any choice that is not a preassigned study setting.
+
+Do not explain what any character, party, ideology, opening position, difficulty, seed, or guided-opening option means. The government/opposition assignment is a study condition, not a recommended way to play. Once the campaign is generated, give the neutral opening prompt and begin observation.
 
 ## 4. Give the opening prompt
 
@@ -47,12 +61,13 @@ Start the clock when the participant begins. Record timestamps, direct quotation
 
 - **Meaningful action:** an intentional in-game commitment that can affect the campaign, such as selecting a campaign choice, confirming a political or administrative action, committing resources, making a decision, or advancing time after deciding to proceed. Moving the pointer, opening and closing a screen without using it, and observer-directed recovery are not meaningful actions.
 - **Time to first meaningful action:** the elapsed time from the opening prompt to the first meaningful action. Record `not reached` if it never occurs.
-- **Stall:** either (a) 20 or more seconds without a purposeful game action while the participant appears to be deciding, searching, waiting, or disengaged, or (b) any shorter interval in which they explicitly say they do not know what to do, ask what to do, or say they are waiting. Record the start/end time and evidence. Do not record normal reading or an intentional pause as a stall unless the definition is met.
-- **Passive interval:** a period in which the participant lets time pass or watches without stating a reason or taking a purposeful action. Record its duration and visible context; do not assume its cause.
+- **Neutral pause:** 20 or more seconds without a purposeful game action. Record its start/end time and visible context. A neutral pause is not, by itself, evidence of confusion, boredom, or any other cause.
+- **Stall:** a neutral pause with an observable stall indicator, or any shorter interval in which the participant explicitly says they do not know what to do, asks what to do, or says they are waiting. Observable indicators are repeated searching between screens or menus without using an option, repeated pointer movement between candidate controls, opening then dismissing relevant choices, starting then cancelling a choice, or another visible attempt to decide or find a route. Record the specific indicator or quotation. Do not call normal reading, an intentional pause, or an unexplained quiet interval a stall.
+- **Passive interval:** a period in which the participant lets time pass or watches without a stated reason or purposeful action. Record its duration and visible context; do not assume its cause. A 20-second interval with no quote or observable stall indicator should be recorded as a neutral pause or passive interval, not a stall.
 
 Record every stall, passive interval, and spontaneous "what do I do?" moment. Capture any spontaneous statement of the participant's role, current goal, first objective, reasons, opponent, tradeoff, or consequence. Do not ask them to account for these while the observed session is under way.
 
-For each stall, the observer may classify it after the session as **confusion**, **boredom**, **weak stakes**, **lack of agency**, **technical/accessibility**, or **uncertain**. The label must cite an observed action or quotation; it is a hypothesis, not a claim about the participant's private state. Use `uncertain` when the record does not support a classification.
+For each stall, the observer may classify it after the session as **confusion**, **boredom**, **weak stakes**, **lack of agency**, **technical/accessibility**, or **uncertain**. The label must cite an observed action or quotation; it is a hypothesis, not a claim about the participant's private state. Use `uncertain` when the record does not support a classification. Do not assign one of these causes to a neutral pause or passive interval without additional evidence.
 
 ### No-coaching rule
 
@@ -87,7 +102,7 @@ Only after the open time question, offer these named choices if the participant 
 
 ## 7. Close and store the session
 
-Record completion, abandonment, duration, missing observations, and any technical or accessibility issue. Separate factual notes and quotations from the observer's interpretation before closing the template. Store the anonymized raw record outside the public repository according to the consent decision.
+Record completion, abandonment, duration, missing observations, and any technical or accessibility issue. Separate factual notes and quotations from the observer's interpretation before closing the template. Store the anonymized raw record outside the public repository according to the consent decision. Only sessions with anonymous-note consent are retained and eligible for the required sample.
 
 Do not synthesize after a single memorable session. Once all 5–8 eligible human sessions have raw notes, make a copy of the following section and complete it. Automated checks, agent cold reads, and expert reviews may be listed as supplementary context, but they never count toward or replace the human sample.
 
@@ -97,7 +112,7 @@ Do not synthesize after a single memorable session. Once all 5–8 eligible huma
 
 - Date completed:
 - Facilitator:
-- Eligible external human sessions completed: `__/5–8`
+- Eligible external human sessions completed (each has retained anonymous notes): `__/5–8`
 - Government openings represented (participant codes only):
 - Opposition openings represented (participant codes only):
 - Excluded or incomplete sessions and reason:
