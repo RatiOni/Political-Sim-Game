@@ -1,8 +1,8 @@
 # Evidence-First Early Access Foundation
 
-**Status:** Approved for execution  
-**Branch:** `feature/evidence-first-foundation`  
-**Baseline:** `1f14604`  
+**Status:** Approved for execution
+**Branch:** `feature/evidence-first-foundation`
+**Baseline:** `1f14604`
 **Decision:** The user selected the revised evidence-first premises and authorized a new Git repository.
 
 ## Objective
