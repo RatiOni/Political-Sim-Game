@@ -1,0 +1,483 @@
+"""
+Dispatch copy — the game's voice. Template variant pools per dispatch type,
+rendered by engine/flavor.py: say(state, key, **fields). Every variant of a
+type contains that type's MARKERS keyword, so tests (and the dispatch-detail
+dialog) can match on stable substrings while the wording stays varied.
+"""
+
+TEMPLATES = {
+    # ── The world acting on itself ─────────────────────────────────────────
+    "world_deepen": [
+        "{actor} and {target} deepen their ties after a round of quiet diplomacy.",
+        "{actor_leader} hosts {target_leader} amid talk of closer ties between {actor} and {target}.",
+        "A joint communiqué from {actor} and {target} celebrates the two governments' warming ties.",
+        "{actor} and {target} exchange trade delegations — another sign of deepening ties.",
+    ],
+    "world_undermine": [
+        "{actor} moves quietly to undermine {target}'s standing with its neighbours.",
+        "Diplomats accuse {actor} of working to undermine {target} in every chancellery that will listen.",
+        "{actor_leader}'s government leans on smaller states to isolate {target} — a bid to undermine its influence.",
+    ],
+    "world_condemn": [
+        "{actor} publicly condemns {target}; {target_leader}'s government dismisses it as theatre.",
+        "{actor_leader} takes the podium to condemn {target} in blistering terms.",
+        "A formal condemnation of {target} is read out in {actor}'s assembly to loud applause.",
+    ],
+    "world_trade_pact": [
+        "{actor} and {target} sign a trade pact after months of negotiation.",
+        "Pens down in {actor}: a new trade pact binds its markets to {target}.",
+        "{actor_leader} and {target_leader} shake hands on a trade pact both call 'historic'.",
+    ],
+    "world_court_player": [
+        "{actor_leader} sends warm signals — {actor} is courting your government.",
+        "An unexpected gift of goodwill from {actor}: {actor_leader} wants closer relations with your government.",
+        "{actor}'s foreign ministry proposes a 'new chapter' with your government.",
+    ],
+    "world_pressure_player": [
+        "{actor} leans on your government — {actor_leader} wants concessions, and relations cool.",
+        "Pressure from {actor}: your envoys report a distinct chill on {actor_leader}'s orders.",
+        "{actor} squeezes your government diplomatically, testing how much pressure you will absorb.",
+    ],
+    "world_condemn_player": [
+        "{actor_leader} publicly condemns your government before a cheering home crowd.",
+        "{actor} issues a formal condemnation of your government's conduct.",
+        "State media in {actor} run wall-to-wall condemnation of your government.",
+    ],
+
+    # ── Domestic drama ─────────────────────────────────────────────────────
+    "protest": [
+        "PROTESTS — crowds fill the squares over {grievance}; {leader} tells them {faction} 'will not be ignored'.",
+        "PROTESTS — a march led by {faction} sympathisers turns the capital loud and angry over {grievance}.",
+        "PROTESTS — {leader} addresses a sea of banners: {grievance} has brought {faction}'s base into the streets.",
+    ],
+    "scandal": [
+        "⚠ SCANDAL — {minister} resigns from {portfolio}, citing betrayal of {faction}; the government reels.",
+        "⚠ SCANDAL — {minister} storms out of {portfolio} with a letter accusing the government of abandoning {faction}.",
+        "⚠ SCANDAL — the {portfolio} ministry is leaderless: {minister} quits publicly and {faction} applauds the exit.",
+    ],
+    "minister_appointed": [
+        "{name} joins the cabinet at {portfolio} — a {trait} from {party}.",
+        "The {portfolio} brief goes to {name} of {party}; colleagues describe a {trait}.",
+    ],
+    "minister_restless": [
+        "Whispers in the corridors: {minister} at {portfolio} is restless, and not hiding it well.",
+        "{minister} ({portfolio}) is restless — allies report private briefings against the government.",
+        "The {trait} at {portfolio} grows restless; {minister}'s allies are counting votes.",
+    ],
+    "wing_takeover": [
+        "{party}: the {new_wing} overtakes the {old_wing} as the party's leading tendency — {leader} must now answer to a new base.",
+        "Inside {party}, the {new_wing} overtakes the {old_wing}; the party's centre of gravity shifts under {leader}.",
+        "{party} tilts: the {new_wing} overtakes the {old_wing} as the dominant voice at party headquarters.",
+    ],
+
+    "leader_ousted": [
+        "{party}: {old} is ousted; {new} of the {wing} takes the leadership.",
+        "A palace coup inside {party} — {old} ousted, {new} anointed, the {wing} triumphant.",
+        "{old} is ousted as leader of {party} in a corridor ambush; the {wing} install {new}.",
+    ],
+
+    # ── Civil war ──────────────────────────────────────────────────────────
+    "civil_war_out": [
+        "⚠ CIVIL WAR BREAKS OUT — armed factions reject the state's authority; the country is coming apart.",
+        "⚠ CIVIL WAR BREAKS OUT — the government's writ ends at the capital's edge as armed factions seize the provinces.",
+    ],
+    "civil_war_ongoing": [
+        "Civil war rages on — the economy bleeds and authority drains into simply holding the country together.",
+        "Another month of civil war — checkpoints, shortages, and a state fighting for its own existence.",
+        "The civil war grinds forward; every institution bends under the strain.",
+    ],
+    "civil_war_end": [
+        "The civil war subsides — a fragile peace returns, and the rebuilding of the state begins.",
+        "Quiet, at last: the civil war winds down, leaving a country exhausted but intact.",
+    ],
+    "world_civil_war_out": [
+        "⚠ Civil war erupts in {country} — {leader}'s government loses control as the country splinters.",
+        "⚠ {country} collapses into civil war; refugees stream toward every border.",
+    ],
+    "world_civil_war_end": [
+        "The civil war in {country} winds down; {leader}'s battered government surveys the wreckage.",
+        "A ceasefire holds in {country} — its civil war ends, for now.",
+    ],
+
+    # ── Legislation ────────────────────────────────────────────────────────
+    "vote_passed": [
+        "VOTE PASSED — \"{bill}\" clears the chamber {vfor}-{vagainst} (needed {threshold}).",
+        "VOTE PASSED — \"{bill}\" carries {vfor}-{vagainst}; the government banks a win.",
+        "VOTE PASSED — {vfor} ayes, {vagainst} noes. \"{bill}\" is law, and the whips can breathe.",
+        "VOTE PASSED — \"{bill}\" survives the division {vfor}-{vagainst}, closer to the line than anyone will admit.",
+    ],
+    "vote_failed": [
+        "VOTE FAILED — \"{bill}\" falls {vfor}-{vagainst} (needed {threshold}); an embarrassment on the floor.",
+        "VOTE FAILED — the chamber rejects \"{bill}\" {vfor}-{vagainst}, and the opposition scents blood.",
+        "VOTE FAILED — {vagainst} against, {vfor} for. \"{bill}\" is finished, and so is the argument for it.",
+        "VOTE FAILED — the government misread its own benches: \"{bill}\" dies {vfor}-{vagainst}.",
+    ],
+    "vote_reaction_pleased": [
+        "{leader} ({party}) hails the outcome: 'a good day for the country.'",
+        "{party} celebrates — {leader} calls the outcome 'long overdue'.",
+        "{leader} of {party} greets the outcome as 'the very least this country was owed'.",
+    ],
+    "vote_reaction_angry": [
+        "{leader} ({party}) fumes at the outcome: 'this will not be forgotten.'",
+        "{party} erupts — {leader} brands the outcome 'a betrayal'.",
+        "{leader} promises {party} will reverse the outcome 'at the first opportunity, and there will be one'.",
+    ],
+    "vote_rebellion": [
+        "{count} {party} deputies cross their own party on \"{bill}\" — the {wing} in open revolt, voting {direction}.",
+        "Rebellion on the floor: {count} of the {party}'s {wing} defy the whip to vote {direction} on \"{bill}\".",
+    ],
+    "law_repealed": [
+        "REPEALED — \"{bill}\" is struck from the statute book; its effects lapse within the month.",
+        "REPEALED — the government unwinds \"{bill}\", and everything it was doing stops.",
+    ],
+    "exec_order": [
+        "EXECUTIVE ORDER — \"{bill}\" enacted without a vote; the opposition calls it rule by decree.",
+        "EXECUTIVE ORDER — \"{bill}\" signed into force over the legislature's head. Trust erodes outside the coalition.",
+    ],
+
+    # ── Elections ──────────────────────────────────────────────────────────
+    "election_winner_quote": [
+        "{leader} claims a mandate: '{party} will govern for the whole country.'",
+        "{party} headquarters erupts as {leader} claims victory before the count is even final.",
+    ],
+
+    "world_deliberates": [
+        "Foreign desks report {actor} is weighing its options toward {target}; {actor_leader} keeps the cards close.",
+        "Something stirs in {actor}'s chancellery — diplomats say it is weighing a move on {target}.",
+        "{actor_leader} convenes advisers behind closed doors; {actor} is weighing its next step toward {target}.",
+    ],
+
+    # ── The player's statecraft ────────────────────────────────────────────
+    "defense_pact": [
+        "A defense pact is signed with {country} — {leader} calls it 'a shield over both our peoples'.",
+        "Ink dries on a mutual-defense pact with {country}; general staffs begin joint planning.",
+    ],
+    "sanctions_imposed": [
+        "Sanctions descend on {country} — trade halts overnight, and {leader} vows retaliation.",
+        "Your government imposes sweeping sanctions on {country}; customs posts fall silent.",
+    ],
+    "sanctions_lifted": [
+        "The sanctions on {country} are lifted; battered traders begin picking up the pieces.",
+        "Sanctions end for {country} — a thaw, though the scars on trade remain.",
+    ],
+    "summit": [
+        "{name} hosts a summit with {leader} of {country} — smiles, flags, and genuine progress.",
+        "A bilateral summit with {country}: {name} and {leader} emerge with a joint communiqué.",
+    ],
+    "treaty_broken": [
+        "The {treaty} is torn up by your government; in {country}, {leader} calls it 'a betrayal in broad daylight'.",
+        "The {treaty} is dead — torn up by your hand, to fury in {country}.",
+    ],
+
+    # ── The Vasca question (content/events.py) ────────────────────────────
+    "vasca_operation": [
+        "Convoys move west overnight. The government does not confirm an operation in {region}, which is confirmation enough.",
+        "Roadblocks appear on the western approaches; nobody in {region} needs to be told what for.",
+    ],
+    "vasca_amnesty": [
+        "Terms are published for anyone who comes down out of {region} by spring. One name is conspicuously absent from them.",
+        "An amnesty is offered to the rank and file in {region} — everyone, that is, except the man they followed.",
+    ],
+    "vasca_captured": [
+        "Dorin Vasca is in custody. The first photograph shows a tired man in a borrowed coat, and half of {region} refuses to believe it is him.",
+        "They have Vasca. After fourteen months of rumour, {region} wakes up to a man in a cell and no idea what to feel about it.",
+    ],
+    "vasca_isolated": [
+        "The fighting in {region} has stopped without anyone declaring it over. What is left up there is a handful of men and an old grievance.",
+        "Whatever Vasca still commands in {region}, it is no longer enough to be called a movement.",
+    ],
+    "vasca_dead": [
+        "Dorin Vasca is dead. The government says he was killed in the assault; his people say he was alive when they took him. Neither account will ever be settled, and {region} has already chosen which one it believes.",
+        "Vasca did not survive the compound. There are two versions of the last twenty minutes, and the only men who could reconcile them are all on one side of it. {region} will argue about this for a generation.",
+    ],
+    "vasca_exiled": [
+        "Vasca leaves on a chartered flight before dawn, having read a statement he did not write. {region} watches it on television in silence.",
+        "The plane goes; the man goes with it. Somewhere in {region} they are still saying he will be back, and they may not be wrong.",
+    ],
+    "vasca_unresolved": [
+        "The compound is watched and nothing is done. Dorin Vasca goes to bed a free man in {region} for another night, and the government has no plans to change that.",
+        "The road stays under observation and the question stays open. {region} remains, for practical purposes, somebody else's country.",
+    ],
+
+    # ── Vetrenka: the frozen conflict (content/events.py) ─────────────────
+    "vetrenka_incident": [
+        "Shelling on the contact line before dawn, an hour of it, and by breakfast each side has published its account of who fired first. {region} counts one dead and files a protest with the monitors.",
+        "The prisoner lists are exchanged again and again they do not match. Forty-one names on ours that are not on theirs; the delegation on the {region} side calls it an administrative discrepancy.",
+        "A Krasovan convoy in peacekeeper white takes the coast road through {region} — a road the ceasefire map does not give them. Nobody stops it. Somebody photographs it.",
+        "A drone, or a bird, or nothing at all over the {region} line at 0400, depending on which ministry you ask. The batteries were live for nine minutes.",
+    ],
+    "vetrenka_talks": [
+        "Ardenia takes a seat at the table. The delegation flies out under a formula that permits everyone to deny they are negotiating over {region}.",
+        "Talks open on the {region} question — the first time in a year that the word talks has been said aloud on the record.",
+    ],
+    "vetrenka_offensive": [
+        "The reserve call-up notices go out overnight. Whatever the ministry says at noon, the country understands by morning that {region} is going to be settled by other means.",
+        "Armour moves toward the {region} corridor. The government's statement uses the phrase restoring constitutional order, which is what statements say when a war is starting.",
+    ],
+    "vetrenka_settled": [
+        "The framework on {region} is initialled. Neither delegation says the word status; both go home able to claim they refused to. The shooting stops all the same.",
+        "It is signed. {region} is not returned and not conceded, and the paragraph that manages to be both is the finest piece of drafting anyone has seen in a decade.",
+    ],
+    "vetrenka_talks_failed": [
+        "The {region} talks collapse. The photograph that runs everywhere is of the empty table, and a year of the government's authority went into that room and did not come out.",
+        "No agreement on {region}. Each delegation blames the other's sequencing; the line goes back to what it was, colder, and next time the mediators will call somebody else.",
+    ],
+    "vetrenka_retaken": [
+        "Ardenian troops are in the regional capital. The flag goes up over {region} for the first time since 1992, and a third of the people who lived there have gone the other way.",
+        "{region} is retaken in nine days. The pictures are of the flag; the problem, starting tomorrow, is everything the pictures do not show.",
+    ],
+    "vetrenka_rout": [
+        "The offensive breaks. Krasovan aircraft are over the {region} corridor within the week, protecting peacekeepers by a definition nobody was consulted on, and the line is further inland than it was.",
+        "It failed. {region} is not merely still gone — it is bigger than it was, and a ceasefire is being offered on terms worse than the one this government turned down.",
+    ],
+    "vetrenka_partition": [
+        "The customs posts on the {region} line become permanent and the crossing publishes opening hours. No treaty is signed, no word is said, and the maps go to the printers with a dotted line on them.",
+        "Quietly, without ceremony and without the word recognition ever being used, {region} stops being a war and starts being a border.",
+    ],
+    "vetrenka_normalised": [
+        "The {region} crossing opens on schedule for the fifth month running. Nobody has forgiven it; everybody has stopped organising against it, which is the only kind of settlement this question was ever going to get.",
+        "Day permits, published hours, lorries queuing in the rain. The {region} line has become a timetable, and a timetable is very hard to hold a rally about.",
+    ],
+    "vetrenka_backlash": [
+        "The opposition has found its question — who gave {region} away — and it is on every leaflet, at every rally, and put to every minister who steps outdoors. There is no rebutting it, because the answer is the government.",
+        "Veterans' associations march over {region}, and behind them walk people who voted for this government. The campaign has one question in it and the government is the answer.",
+    ],
+
+    # ── The schemer arc (content/events.py) ───────────────────────────────
+    "schemer_arc": [
+        "Whispers around {portfolio}: {minister} is keeping company that has nothing to do with the department.",
+        "{minister} ({portfolio}) is counting something, and it isn't departmental spending.",
+        "The corridors have {minister} down as a man with a diary he doesn't publish.",
+    ],
+    "schemer_bought": [
+        "{minister} stays at {portfolio}, loyal on paper, expensive in practice.",
+        "A deal is struck: {minister} keeps {portfolio} and the government keeps its majority.",
+        "{minister} is bought — the price was the {portfolio} brief and everyone knowing you paid it.",
+    ],
+    "schemer_neutralized": [
+        "{minister} leaves {portfolio} without a farewell photograph.",
+        "It is over for {minister}: {portfolio} changes hands and the plot dies with the appointment.",
+        "{minister} is gone from {portfolio}, and the signatures on the letter suddenly belong to nobody.",
+    ],
+    "schemer_ascendant": [
+        "{minister} has the numbers, and everyone in {portfolio} knows it.",
+        "The government's authority now runs only as far as {minister} permits.",
+        "{minister} no longer bothers denying it — {portfolio} has become a rival court.",
+    ],
+
+    # ── Named world developments ───────────────────────────────────────────
+    "world_axis": [
+        "Diplomats begin speaking of a {a}–{b} axis — the two capitals now move as one.",
+        "A {a}–{b} axis takes shape; every chancellery on the continent redraws its maps.",
+    ],
+    "world_feud": [
+        "The quarrel between {a} and {b} hardens into open feud.",
+        "{a} and {b} are past diplomacy now — a feud, and everyone knows it.",
+    ],
+    "world_arc_ends": [
+        "The {a}–{b} {kind} is quietly no more; the maps are redrawn again.",
+        "Observers note the {a}–{b} {kind} has run its course.",
+    ],
+
+    # ── Leadership (roleplay) ──────────────────────────────────────────────
+    "background_move": [
+        "{name} {deed}.",
+        "The {title} shows their old colours: {name} {deed}.",
+        "Old instincts, new office — {name} {deed}.",
+    ],
+    "address_reassuring": [
+        "{name} addresses the nation in measured tones: 'steady hands are on the wheel.'",
+        "A calm address from {name}: no drama, no denial, a government in control.",
+        "{name} delivers the address seated, from a desk rather than a podium — the staging chosen to say nothing is on fire.",
+    ],
+    "address_defiant": [
+        "{name} addresses the country and picks the fight: 'we will not be lectured by those who broke this country.'",
+        "A defiant address — {name} names the government's enemies and dares them to object.",
+        "{name}'s address names names. The chamber will be unbearable tomorrow, and that is the point.",
+    ],
+    "address_visionary": [
+        "{name} addresses the nation on where the country is going — and for a moment, people believe it.",
+        "An address about tomorrow: {name} paints ten years ahead and invites the country along.",
+        "{name} gives an address written almost entirely in the future tense — a speech about a country that does not exist yet.",
+    ],
+    "address_contrite": [
+        "{name} addresses the nation plainly: 'mistakes were made, and they were mine.'",
+        "A rare thing in politics — {name}'s address offers an actual apology, and the country listens.",
+        "Halfway through the address {name} stops explaining, which is rarer than an apology and lands harder.",
+    ],
+    # ── The rival, escalating ─────────────────────────────────────────────
+    # Three tiers on the same dispatch type, chosen by how many times they
+    # have already had a go at you (engine/roleplay.py). MARKERS matches on
+    # "{rival}", which every variant carries, so tier choice is invisible to
+    # anything matching on markers.
+    "rival_jibe": [                       # early: barely bothers to engage
+        "{rival} is asked for comment and offers a shrug: 'I did try to warn them.'",
+        "{rival} tells reporters the government is 'finding its feet, slowly' — {party} can afford to be generous.",
+        "A brief statement from {rival}: 'no comment beyond the obvious.' {party} lets it speak for itself.",
+    ],
+    "rival_jibe_sharp": [                 # mid-campaign: scenting blood
+        "{rival} twists the knife: 'this is exactly what {party} warned about all along.'",
+        "From the opposition benches, {rival} savours the moment: 'how much more must the country endure?'",
+        "{rival} tells reporters the government is 'unravelling by the day' — {party} is enjoying this.",
+        "{rival} counts the failures on their fingers for the cameras, slowly, and {party} lets the pictures run.",
+    ],
+    "rival_jibe_bitter": [                # late, and losing: grudging fury
+        "{rival} has stopped smiling: 'they will be found out. They are always found out.' {party} has heard it before.",
+        "There is an edge to {rival} now — a decade of being right and losing anyway sits badly on {party}'s benches.",
+        "{rival} attacks the government with the weariness of someone who has run out of new ways to say it.",
+        "'History will judge this government,' {rival} tells a half-empty chamber. {party} applauds anyway.",
+    ],
+
+    # ── Housekeeping with a pulse ─────────────────────────────────────────
+    # Fires every single turn — the most repeated line in the game, so it
+    # carries the widest pool.
+    "economy_move": [
+        "The economy {direction} {pct}% this month.",
+        "Monthly figures land: the economy {direction} {pct}%.",
+        "The statisticians make it {pct}% — the economy {direction}, and that is the number everyone will quote until next month.",
+        "Quietly, without ceremony, the economy {direction} {pct}%.",
+        "{pct}%: the economy {direction}, and a government will be judged on it long after the figure is forgotten.",
+    ],
+    "modifier_expired": [
+        "The long-term effects of \"{source}\" ({target}) have run their course.",
+        "\"{source}\" fades from the ledgers — its {target} effect has run its course.",
+        "Nobody announces it, but \"{source}\" stops shaping {target} this month; the policy has run its course.",
+        "The {target} consequences of \"{source}\" have run their course — the file can be closed.",
+    ],
+
+    # ── The monthly digest (engine/digest.py) ──────────────────────────────
+    # Rendered through flavor.render(), never say() — this is the
+    # government's own bookkeeping, not a press dispatch, so it must never
+    # reach turn_news or the front page.
+    "digest_approval_up": [
+        "Approval rose {points} points. {cause}.",
+        "Approval climbed {points} points — {cause}.",
+    ],
+    "digest_approval_down": [
+        "Approval fell {points} points. {cause}.",
+        "Approval slipped {points} points — {cause}.",
+    ],
+    "digest_stability_up": [
+        "Government stability rose {points} points. {cause}.",
+        "Stability improved {points} points — {cause}.",
+    ],
+    "digest_stability_down": [
+        "Government stability fell {points} points. {cause}.",
+        "Stability slipped {points} points — {cause}.",
+    ],
+    "digest_ministry_up": [
+        "{portfolio}'s delivery has recovered to {delivery} — {band}. {cause}.",
+        "{portfolio} is back to {delivery} delivery, now {band}: {cause}.",
+    ],
+    "digest_ministry_down": [
+        "{portfolio}'s delivery is down to {delivery} — {band}. {cause}.",
+        "{portfolio} is {band} at {delivery} delivery: {cause}.",
+    ],
+    "digest_region_up": [
+        "{region}'s pressure rose to {value} — {band}. {cause}.",
+        "Pressure in {region} climbed to {value}, now {band}: {cause}.",
+    ],
+    "digest_region_down": [
+        "{region}'s pressure eased to {value} — {band}. {cause}.",
+        "Pressure in {region} fell to {value}, now {band}: {cause}.",
+    ],
+    "digest_household_worse": [
+        "{region}: {group} moved from {before} to {after}.",
+        "In {region}, {group} slid from {before} to {after}.",
+    ],
+    "digest_household_better": [
+        "{region}: {group} moved from {before} to {after}.",
+        "In {region}, {group} recovered from {before} to {after}.",
+    ],
+    "digest_budget_worse": [
+        "The budget balance moved to {balance} M — {band}. {cause}.",
+        "The public finances slipped to {balance} M, {band}: {cause}.",
+    ],
+    "digest_budget_better": [
+        "The budget balance moved to {balance} M — {band}. {cause}.",
+        "The public finances improved to {balance} M, {band}: {cause}.",
+    ],
+}
+
+# A keyword guaranteed present in EVERY variant of its type — for tests and
+# the dispatch-detail dialog's keyword matching.
+MARKERS = {
+    "world_deepen": "ties",
+    "world_undermine": "undermine",
+    "world_condemn": "condemn",
+    "world_trade_pact": "trade pact",
+    "world_court_player": "your government",
+    "world_pressure_player": "your",
+    "world_condemn_player": "your government",
+    "protest": "PROTESTS",
+    "scandal": "SCANDAL",
+    "minister_appointed": "{portfolio}",   # placeholder-marker
+    "minister_restless": "restless",
+    "wing_takeover": "overtakes",
+    "leader_ousted": "ousted",
+    "civil_war_out": "CIVIL WAR BREAKS OUT",
+    "civil_war_ongoing": "civil war",
+    "civil_war_end": "civil war",
+    "world_civil_war_out": "ivil war",
+    "world_civil_war_end": "civil war",
+    "vote_passed": "VOTE PASSED",
+    "vote_failed": "VOTE FAILED",
+    "vote_reaction_pleased": "outcome",
+    "vote_reaction_angry": "outcome",
+    "exec_order": "EXECUTIVE ORDER",
+    "law_repealed": "REPEALED",
+    "vote_rebellion": "{wing}",      # placeholder-marker
+    "election_winner_quote": "claims",
+    "world_deliberates": "weighing",
+    "defense_pact": "pact",
+    "sanctions_imposed": "anctions",
+    "sanctions_lifted": "anctions",
+    "summit": "summit",
+    "treaty_broken": "torn up",
+    "world_axis": "axis",
+    "world_feud": "feud",
+    "world_arc_ends": "{kind}",      # placeholder-marker
+    "background_move": "{deed}",     # placeholder-marker: present in every template by construction
+    "address_reassuring": "address",
+    "address_defiant": "address",
+    "address_visionary": "address",
+    "address_contrite": "address",
+    "rival_jibe": "{rival}",         # placeholder-marker
+    "rival_jibe_sharp": "{rival}",
+    "rival_jibe_bitter": "{rival}",
+    "vasca_operation": "{region}",
+    "vasca_amnesty": "{region}",
+    "vasca_captured": "Vasca",
+    "vasca_isolated": "{region}",
+    "vasca_dead": "Vasca",
+    "vasca_exiled": "{region}",
+    "vasca_unresolved": "{region}",
+    "vetrenka_incident": "{region}",
+    "vetrenka_talks": "{region}",
+    "vetrenka_offensive": "{region}",
+    "vetrenka_settled": "{region}",
+    "vetrenka_talks_failed": "{region}",
+    "vetrenka_retaken": "{region}",
+    "vetrenka_rout": "{region}",
+    "vetrenka_partition": "{region}",
+    "vetrenka_normalised": "{region}",
+    "vetrenka_backlash": "{region}",
+    "schemer_arc": "{minister}",
+    "schemer_bought": "{minister}",
+    "schemer_neutralized": "{minister}",
+    "schemer_ascendant": "{minister}",
+    "economy_move": "economy",
+    "modifier_expired": "course",
+    "digest_approval_up": "approval",
+    "digest_approval_down": "approval",
+    "digest_stability_up": "stability",
+    "digest_stability_down": "stability",
+    "digest_ministry_up": "delivery",
+    "digest_ministry_down": "delivery",
+    "digest_region_up": "pressure",
+    "digest_region_down": "pressure",
+    "digest_household_worse": "{before}",
+    "digest_household_better": "{before}",
+    "digest_budget_worse": "{balance}",
+    "digest_budget_better": "{balance}",
+}

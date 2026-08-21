@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ardenia — UI redesign mockup</title>
+<style>
+:root{
+  --bg:#0b111a; --panel:#111b29; --raised:#172438; --edge:#263750;
+  --ink:#edf3f8; --dim:#9aacc0; --faint:#617187;
+  --accent:#78aaf7; --accent-soft:#203b63; --highlight:#f0c66e;
+  --good:#55c99a; --okay:#8fcf83; --warn:#f0c66e; --bad:#ef956b; --crit:#e36b76;
+  --sea:#0d1826;
+  --p-calm:#21374f; --p-uneasy:#4c4b50; --p-strained:#8a5c48; --p-crit:#ab4a52;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:13px/1.5 'Segoe UI',Inter,Arial,sans-serif;overflow-x:hidden}
+.mono{font-variant-numeric:tabular-nums}
+
+/* ── header ─────────────────────────────────────────── */
+header{display:flex;align-items:center;gap:18px;padding:14px 22px 10px;border-bottom:1px solid var(--edge)}
+.country{font-size:19px;letter-spacing:3px;font-weight:600}
+.sep{color:var(--faint)}
+.who{font-size:14px;color:var(--dim)}
+.date{font-size:14px;color:var(--ink)}
+.clock{margin-left:auto;display:flex;align-items:center;gap:8px}
+.play{background:var(--accent);color:var(--bg);border:none;border-radius:5px;padding:7px 18px;font-size:13px;font-weight:600;cursor:pointer}
+.pips{display:flex;gap:3px}
+.pip{width:26px;height:28px;border:1px solid var(--edge);background:var(--raised);color:var(--dim);border-radius:4px;cursor:pointer;font-size:11px}
+.pip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+
+/* ── nav ─────────────────────────────────────────────── */
+nav{display:flex;gap:2px;padding:0 22px;border-bottom:1px solid var(--edge)}
+nav button{background:none;border:none;border-bottom:2px solid transparent;color:var(--dim);
+  padding:9px 15px;font-size:13px;cursor:pointer;font-family:inherit}
+nav button:hover{color:var(--ink);background:var(--raised)}
+nav button.active{color:var(--ink);border-bottom-color:var(--accent)}
+nav .spacer{margin-left:auto}
+
+/* ── needs-you strip ─────────────────────────────────── */
+.needs{margin:12px 22px 0;display:flex;gap:10px;flex-wrap:wrap}
+.need{background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--warn);
+  border-radius:5px;padding:8px 14px;font-size:12.5px;cursor:pointer;display:flex;gap:10px;align-items:center}
+.need:hover{border-color:var(--accent);background:var(--raised)}
+.need .tag{color:var(--faint);font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase}
+.need.crit{border-left-color:var(--crit)}
+
+/* ── grid ────────────────────────────────────────────── */
+.wrap{display:grid;grid-template-columns:250px 1fr 288px;gap:14px;padding:14px 22px 0;align-items:start}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:7px;padding:14px 15px}
+.card + .card{margin-top:12px}
+h3{font-size:10.5px;letter-spacing:1.6px;color:var(--faint);text-transform:uppercase;font-weight:600;margin-bottom:11px}
+
+/* vitals */
+.vital{margin-bottom:14px}
+.vital:last-child{margin-bottom:0}
+.vital .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.vital .lbl{font-size:12px;color:var(--dim);letter-spacing:.4px}
+.vital .val{font-size:21px;font-weight:600;letter-spacing:-.3px}
+.track{height:5px;background:#0a1220;border-radius:3px;overflow:hidden}
+.fill{height:100%;border-radius:3px}
+
+/* econ table */
+table.econ{width:100%;border-collapse:collapse}
+table.econ td{padding:5px 0;font-size:12.5px}
+table.econ td.k{color:var(--dim)}
+table.econ td.v{text-align:right;font-weight:600}
+.trend{display:inline-block;width:13px;text-align:center;font-size:10px;margin-left:5px}
+details.more{margin-top:10px;border-top:1px solid var(--edge);padding-top:9px}
+details.more summary{font-size:11.5px;color:var(--faint);cursor:pointer;list-style:none}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary:before{content:"▸ ";color:var(--faint)}
+details.more[open] summary:before{content:"▾ "}
+
+/* map */
+.maphead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.legend{display:flex;gap:12px;align-items:center;font-size:10.5px;color:var(--faint)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+svg{display:block;width:100%;height:auto;background:var(--sea);border-radius:5px}
+.rname{font:600 13px 'Segoe UI',sans-serif;letter-spacing:1.6px;fill:#f2f6fa;
+  paint-order:stroke;stroke:#0b111a;stroke-width:3.5px;stroke-linejoin:round}
+.cname{font:11px 'Segoe UI',sans-serif;fill:#cfdae6;paint-order:stroke;stroke:#0b111a;stroke-width:3px}
+.foreign{font:500 10.5px 'Segoe UI',sans-serif;letter-spacing:2.4px;fill:#4a5a6f}
+.sealbl{font:italic 10px 'Segoe UI',sans-serif;letter-spacing:2px;fill:#2c4056}
+.reg{stroke:#0b111a;stroke-width:1.6;cursor:pointer}
+.reg:hover{stroke:var(--accent);stroke-width:2.2}
+.reg.sel{stroke:var(--highlight);stroke-width:2.4}
+
+/* assembly strip */
+.assembly{display:flex;align-items:center;gap:14px}
+.seatbar{flex:1;display:flex;height:15px;border-radius:3px;overflow:hidden;position:relative}
+.seatbar span{display:block}
+.majority{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.85}
+.asmnote{font-size:12px;color:var(--dim);white-space:nowrap}
+.asmlink{font-size:11.5px;color:var(--accent);cursor:pointer;white-space:nowrap}
+
+/* right col */
+.kv{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0}
+.kv .k{color:var(--dim)}
+.big{font-size:19px;font-weight:600}
+.sub{font-size:11.5px;color:var(--faint);margin-top:2px}
+.regline{font-size:12.5px;color:var(--dim);padding:3px 0;display:flex;justify-content:space-between}
+.regline b{color:var(--ink);font-weight:600}
+.issue{margin-top:11px;padding-top:10px;border-top:1px solid var(--edge)}
+.issue .t{font-size:12.5px;color:var(--highlight);margin-bottom:4px}
+.issue .b{font-size:12px;color:var(--dim);line-height:1.55}
+.pill{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:10px;
+  background:var(--raised);border:1px solid var(--edge);color:var(--dim)}
+
+/* dispatches */
+.disp{margin:12px 22px 22px}
+.disp ul{list-style:none}
+.disp li{font-size:12.5px;color:var(--dim);padding:6px 0;border-bottom:1px solid #16212f;line-height:1.6;cursor:pointer}
+.disp li:last-child{border:none}
+.disp li:hover{color:var(--ink)}
+.disp li b{color:var(--ink);font-weight:500}
+
+/* desk overlay */
+.scrim{position:fixed;inset:0;background:rgba(4,8,14,.62);opacity:0;pointer-events:none;transition:.22s}
+.scrim.on{opacity:1;pointer-events:auto}
+.desk{position:fixed;top:0;right:0;bottom:0;width:428px;background:var(--panel);
+  border-left:1px solid var(--edge);transform:translateX(100%);transition:.24s cubic-bezier(.3,.8,.4,1);
+  display:flex;flex-direction:column;box-shadow:-24px 0 48px rgba(0,0,0,.45)}
+.desk.on{transform:none}
+.deskhead{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--edge)}
+.deskhead .back{background:none;border:none;color:var(--dim);font-size:17px;cursor:pointer;padding:0 2px}
+.deskhead .back:hover{color:var(--ink)}
+.deskhead h2{font-size:15px;letter-spacing:2.4px;color:var(--accent);font-weight:600}
+.deskbody{overflow-y:auto;padding:16px 18px}
+.party{margin-bottom:18px}
+.pname{font-size:13.5px;color:var(--accent);margin-bottom:2px}
+.pmeta{font-size:11.5px;color:var(--faint);margin-bottom:9px}
+.bloc{margin-bottom:11px;padding-left:11px;border-left:2px solid var(--edge)}
+.bloc .r{display:flex;justify-content:space-between;align-items:baseline}
+.bloc .n{font-size:12.5px}
+.bloc .s{font-size:11.5px;color:var(--dim)}
+.bloc .t2{height:4px;background:#0a1220;border-radius:2px;margin:5px 0 6px}
+.bloc .d{font-size:11.5px;color:var(--faint);line-height:1.55}
+.hint{position:fixed;left:22px;bottom:14px;font-size:11px;color:var(--faint)}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="country">ARDENIA</span>
+  <span class="sep">·</span>
+  <span class="who">Prime Minister Maren Steele</span>
+  <span class="sep">·</span>
+  <span class="date mono">1 Mar 1993</span>
+  <div class="clock">
+    <button class="play">▶ Play</button>
+    <div class="pips">
+      <button class="pip on">1</button><button class="pip">2</button>
+      <button class="pip">3</button><button class="pip">4</button><button class="pip">5</button>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <button onclick="openDesk('Policies')">Policies</button>
+  <button onclick="openDesk('Cabinet')">Cabinet</button>
+  <button class="active" onclick="openDesk('Parties')">Parties</button>
+  <button onclick="openDesk('Diplomacy')">Diplomacy</button>
+  <button onclick="openDesk('Briefing')">Briefing</button>
+  <button onclick="openDesk('History')">History</button>
+  <span class="spacer"></span>
+  <button>Game</button>
+</nav>
+
+<div class="needs">
+  <div class="need" onclick="openDesk('Policies')">
+    <span class="tag">Chamber</span><span>Land Reform Act awaits a vote — <b>3 days</b></span>
+  </div>
+  <div class="need crit" onclick="sel('zavost')">
+    <span class="tag">Zavost</span><span>Wage arrears entering a fourth month</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- LEFT -->
+  <div>
+    <div class="card">
+      <h3>Your government</h3>
+      <div class="vital">
+        <div class="row"><span class="lbl">Approval</span><span class="val mono">48%</span></div>
+        <div class="track"><div class="fill" style="width:48%;background:var(--warn)"></div></div>
+      </div>
+      <div class="vital">
+        <div class="row"><span class="lbl">Stability</span><span class="val mono">41% <span style="font-size:12px;color:var(--bad);font-weight:400">Fragile</span></span></div>
+        <div class="track"><div class="fill" style="width:41%;background:var(--bad)"></div></div>
+      </div>
+      <div class="vital">
+        <div class="row"><span class="lbl">Political capital</span><span class="val mono">45</span></div>
+        <div class="track"><div class="fill" style="width:45%;background:var(--okay)"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Economy</h3>
+      <table class="econ">
+        <tr><td class="k">Growth</td><td class="v mono" style="color:var(--good)">+2.9%<span class="trend" style="color:var(--good)">▲</span></td></tr>
+        <tr><td class="k">Unemployment</td><td class="v mono" style="color:var(--bad)">11.2%<span class="trend" style="color:var(--bad)">▲</span></td></tr>
+        <tr><td class="k">Inflation</td><td class="v mono" style="color:var(--warn)">4.8%<span class="trend" style="color:var(--good)">▼</span></td></tr>
+        <tr><td class="k">Debt / GDP</td><td class="v mono">64%<span class="trend" style="color:var(--faint)">–</span></td></tr>
+        <tr><td class="k">Budget</td><td class="v mono" style="color:var(--crit)">−1,400 M</td></tr>
+      </table>
+      <details class="more">
+        <summary>More indicators</summary>
+        <table class="econ" style="margin-top:7px">
+          <tr><td class="k">GDP</td><td class="v mono">48,000 M</td></tr>
+          <tr><td class="k">Revenue</td><td class="v mono">12,000 M</td></tr>
+          <tr><td class="k">Spending</td><td class="v mono">13,400 M</td></tr>
+          <tr><td class="k">Workforce quality</td><td class="v mono">0.50</td></tr>
+          <tr><td class="k">Bureaucracy</td><td class="v mono">0.60</td></tr>
+        </table>
+      </details>
+    </div>
+  </div>
+
+  <!-- CENTRE -->
+  <div>
+    <div class="card">
+      <div class="maphead">
+        <h3 style="margin:0">Ardenia — regional pressure</h3>
+        <div class="legend">
+          <span><i style="background:var(--p-calm)"></i>Calm</span>
+          <span><i style="background:var(--p-uneasy)"></i>Uneasy</span>
+          <span><i style="background:var(--p-strained)"></i>Strained</span>
+          <span><i style="background:var(--p-crit)"></i>Critical</span>
+          <span><i style="background:#2b3746;border:1px dashed #6d7d90"></i>Outside administration</span>
+        </div>
+      </div>
+      <svg viewBox="0 0 600 470">
+        <defs>
+          <pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+            <rect width="7" height="7" fill="#2b3746"/>
+            <line x1="0" y1="0" x2="0" y2="7" stroke="#5d6c80" stroke-width="1.6"/>
+          </pattern>
+        </defs>
+
+        <text class="foreign" x="298" y="26" text-anchor="middle">VELDORIA</text>
+        <text class="foreign" x="556" y="196" text-anchor="middle" transform="rotate(90 556 196)">KRASOVA</text>
+        <text class="foreign" x="430" y="452" text-anchor="middle">MEROVA</text>
+        <text class="sealbl" x="118" y="404">ASTER SEA</text>
+
+        <path class="reg" id="r-anera"    d="M118 66 L296 42 L292 178 L188 238 L118 302 L80 240 Z" fill="var(--p-strained)"/>
+        <path class="reg" id="r-vashtera" d="M296 42 L378 52 L374 138 L294 144 Z" fill="var(--p-calm)"/>
+        <path class="reg" id="r-zavost"   d="M378 52 L470 86 L520 224 L430 252 L374 138 Z" fill="var(--p-strained)"/>
+        <path class="reg sel" id="r-sela" d="M294 144 L374 138 L430 252 L358 322 L248 302 L188 238 L292 178 Z" fill="var(--p-strained)"/>
+        <path class="reg" id="r-kelvet"   d="M430 252 L520 224 L458 382 L338 420 L358 322 Z" fill="var(--p-uneasy)"/>
+        <path class="reg" id="r-vetrenka" d="M188 238 L248 302 L338 420 L228 432 L150 400 L118 302 Z" fill="url(#hatch)"/>
+
+        <text class="rname" x="186" y="150" text-anchor="middle">ANERA</text>
+        <text class="rname" x="452" y="152" text-anchor="middle">ZAVOST</text>
+        <text class="rname" x="312" y="232" text-anchor="middle">SELA</text>
+        <text class="rname" x="432" y="322" text-anchor="middle">KELVET</text>
+        <text class="rname" x="232" y="356" text-anchor="middle">VETRENKA</text>
+
+        <circle cx="336" cy="96" r="4.5" fill="#f0c66e" stroke="#0b111a" stroke-width="1.4"/>
+        <text class="cname" x="346" y="100">Vashtera</text>
+        <circle cx="150" cy="196" r="3" fill="#8ba0b8"/><text class="cname" x="158" y="200">Kavor</text>
+        <circle cx="437" cy="196" r="3" fill="#8ba0b8"/><text class="cname" x="445" y="200">Duvinsk</text>
+        <circle cx="316" cy="266" r="3" fill="#8ba0b8"/><text class="cname" x="324" y="270">Rovets</text>
+        <circle cx="416" cy="356" r="3" fill="#8ba0b8"/><text class="cname" x="424" y="360">Tavri</text>
+        <circle cx="252" cy="386" r="3" fill="#8ba0b8"/><text class="cname" x="260" y="390">Ostrena</text>
+      </svg>
+    </div>
+
+    <div class="card">
+      <div class="assembly">
+        <span class="asmnote"><b>56</b> / 51 needed · <span style="color:var(--good)">majority</span></span>
+        <div class="seatbar">
+          <span style="width:38%;background:#e0b04a"></span>
+          <span style="width:18%;background:#4caf7d"></span>
+          <span style="width:32%;background:#3b7dd8"></span>
+          <span style="width:8%;background:#8e6fc0"></span>
+          <span style="width:4%;background:#c0392b"></span>
+          <span class="majority" style="left:51%"></span>
+        </div>
+        <span class="asmlink" onclick="openDesk('Parties')">Seat detail →</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div>
+    <div class="card">
+      <h3>Next election</h3>
+      <div class="big mono">1,461 days</div>
+      <div class="sub">Full term · March 1997</div>
+    </div>
+
+    <div class="card">
+      <h3>Abroad</h3>
+      <div class="kv"><span class="k">Veldoria</span><span style="color:var(--accent)">Friendly</span></div>
+      <div class="kv"><span class="k">Krasova</span><span style="color:var(--dim)">Neutral · watch</span></div>
+      <div class="sub" style="margin-top:7px">7 others neutral —
+        <span style="color:var(--accent);cursor:pointer" onclick="openDesk('Diplomacy')">see all</span></div>
+    </div>
+
+    <div class="card">
+      <h3>Selected region</h3>
+      <div style="font-size:15px;font-weight:600;margin-bottom:2px">The Sela</div>
+      <div class="sub" style="margin-bottom:10px">Grain plain · land claims · rural credit</div>
+      <div class="regline"><span>Control</span><b>Direct state</b></div>
+      <div class="regline"><span>State reach</span><b class="mono">54%</b></div>
+      <div class="regline"><span>Unemployment</span><b class="mono">13.5%</b></div>
+      <div class="regline"><span>Pressure</span><b class="mono" style="color:var(--p-strained)">51% Strained</b></div>
+      <div class="issue">
+        <div class="t">The land settlement</div>
+        <div class="b">Farm titles, old collective holdings and access to the Kesla corridor
+          are being argued together. A technical settlement will still choose winners.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card disp" style="margin-top:0">
+  <h3>Dispatches</h3>
+  <ul>
+    <li><b>Prime Minister Maren Steele takes office</b> this month leading the Liberal Democrats with the Social Democrats, after the Reckoning — the first government since the Turn of the Year that anyone actually voted for.</li>
+    <li><b>Maren Steele's political inheritance:</b> Cyrus Baran's project, and the closest thing the transition has to an establishment — reform-minded Union-era technocrats, diaspora returnees and Awakening moderates who never trusted Vasca.</li>
+    <li><b>The Sela land commission</b> has begun registering claims in Rovets, where the pre-1921 deeds and the collective-era rolls disagree about roughly a third of the district.</li>
+    <li><b>In Duvinsk,</b> the nitrogen works has not paid wages since November. The plant director says he is waiting on the ministry; the ministry says it is waiting on the budget.</li>
+  </ul>
+</div>
+
+<div class="scrim" id="scrim" onclick="closeDesk()"></div>
+<aside class="desk" id="desk">
+  <div class="deskhead">
+    <button class="back" onclick="closeDesk()">←</button>
+    <h2 id="desktitle">PARTIES</h2>
+  </div>
+  <div class="deskbody">
+    <div class="party">
+      <div class="pname">Liberal Democrats <span style="color:var(--faint);font-size:11.5px">· 38 seats</span></div>
+      <div class="pmeta">Centre Right · leading bloc The Circle · cohesion 87%</div>
+      <div class="bloc">
+        <div class="r"><span class="n">The Circle ★</span><span class="s mono">40%</span></div>
+        <div class="t2"><div class="fill" style="width:40%;background:var(--accent)"></div></div>
+        <div class="d">The technocrats around Baran himself — credible abroad and disliked at home.
+          <span style="color:var(--good)">for</span> central bank independence ·
+          <span style="color:var(--crit)">against</span> emergency price controls</div>
+      </div>
+      <div class="bloc">
+        <div class="r"><span class="n">The Capital Bar</span><span class="s mono">33%</span></div>
+        <div class="t2"><div class="fill" style="width:33%;background:var(--accent)"></div></div>
+        <div class="d">Vashtera lawyers, importers and the new banks, interested in government chiefly as a source of licences.</div>
+      </div>
+      <div class="bloc">
+        <div class="r"><span class="n">The Return</span><span class="s mono">27%</span></div>
+        <div class="t2"><div class="fill" style="width:27%;background:var(--accent)"></div></div>
+        <div class="d">Diaspora money and diaspora certainty: hardest on the Union, softest on the market.</div>
+      </div>
+    </div>
+    <div class="party">
+      <div class="pname">National Conservatives <span style="color:var(--faint);font-size:11.5px">· 32 seats</span></div>
+      <div class="pmeta">Centre Right · leading bloc The Square · cohesion 83%</div>
+      <div class="bloc">
+        <div class="r"><span class="n">The Square ★</span><span class="s mono">35%</span></div>
+        <div class="t2"><div class="fill" style="width:35%;background:#3b7dd8"></div></div>
+        <div class="d">Kestrel Square veterans, genuinely democratic and genuinely nationalist.</div>
+      </div>
+      <div class="bloc">
+        <div class="r"><span class="n">The Line</span><span class="s mono">35%</span></div>
+        <div class="t2"><div class="fill" style="width:35%;background:#3b7dd8"></div></div>
+        <div class="d">Irredentists with army connections, for whom Vetrenka is the only issue.</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<div class="hint">Mockup — click the nav, the map regions, or an alert. Everything is static except the desk overlay and region selection.</div>
+
+<script>
+function openDesk(name){
+  document.getElementById('desktitle').textContent=name.toUpperCase();
+  document.getElementById('desk').classList.add('on');
+  document.getElementById('scrim').classList.add('on');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.textContent===name));
+}
+function closeDesk(){
+  document.getElementById('desk').classList.remove('on');
+  document.getElementById('scrim').classList.remove('on');
+}
+function sel(id){
+  document.querySelectorAll('.reg').forEach(r=>r.classList.remove('sel'));
+  const el=document.getElementById('r-'+id); if(el) el.classList.add('sel');
+}
+document.querySelectorAll('.reg').forEach(r=>r.addEventListener('click',()=>{
+  document.querySelectorAll('.reg').forEach(x=>x.classList.remove('sel')); r.classList.add('sel');
+}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDesk()});
+</script>
+</body>
+</html>

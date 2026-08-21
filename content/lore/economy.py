@@ -1,0 +1,116 @@
+"""Ardenia's broken transition economy, currency, energy, and obligations."""
+
+ECONOMIC_PICTURE = {
+    "id": "broken_union_machine",
+    "name": "A broken part of a larger machine",
+    "body": (
+        "Ardenia in March 1993 has an economy built for Union-scale demand and "
+        "supply chains now divided by international borders. Output has fallen "
+        "roughly forty per cent since 1989, and industrial output by more."
+    ),
+}
+
+
+SECTORS = [
+    {
+        "id": "union_industry",
+        "name": "Industry",
+        "body": (
+            "Zavost's plants were designed as pieces of a Union economy. Its "
+            "nitrogen works is one of four plants in a supply chain whose other "
+            "three now stand in Krasova. Enterprises retain workers on paper, "
+            "miss wages in practice, and have lost the market they were built to serve."
+        ),
+    },
+    {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "body": (
+            "The only growing sector owes its expansion to people farming for "
+            "themselves after the collectives dissolved. Title, valuation and "
+            "the claims of pre-1921 owners remain unresolved; many descendants "
+            "are now diaspora supporters of the Liberal Democrats."
+        ),
+    },
+    {
+        "id": "informal_economy",
+        "name": "The informal economy",
+        "body": (
+            "Customs at Tavri, fuel over the Krasovan border, cigarettes and "
+            "metal through Vetrenka, and the capital's markets are not a marginal "
+            "distortion. Something like a third of measured output and rather "
+            "more employment live here, along with the money behind a dozen "
+            "district seats."
+        ),
+    },
+]
+
+
+KRON = {
+    "id": "kron",
+    "name": "The kron",
+    "body": (
+        "Introduced in November 1992 at parity with the Union ruble, the kron "
+        "has lost about ninety per cent of that value. Rubles still circulate "
+        "in Zavost, while dollars and Krasovan notes circulate on Kelvet. "
+        "Monthly inflation remains in triple digits and is falling, which is "
+        "either a triumph or a rounding error depending on the briefing."
+    ),
+}
+
+
+ENERGY = {
+    "id": "zovar_energy_dependency",
+    "name": "Energy and the Zovar line",
+    "body": (
+        "Ardenia imports essentially all of its gas from Krasova through the "
+        "Zovar transit line, under a Baran Council contract payable in hard "
+        "currency the country does not have. The heating season runs October "
+        "to March. Krasova has not turned the valve; it has mentioned the valve."
+    ),
+}
+
+
+FOREIGN_OBLIGATIONS = [
+    {
+        "id": "isf_stabilisation_agreement",
+        "name": "The ISF agreement",
+        "body": (
+            "The Baran Council signed a stabilisation agreement with the "
+            "International Stabilisation Fund in December 1992. Quarterly "
+            "reviews cover the deficit and Bank independence; the budget already "
+            "assumes disbursements that remain conditional."
+        ),
+    },
+    {
+        "id": "concert_association",
+        "name": "The Concert",
+        "body": (
+            "Ardenia has applied to the western economic bloc's association "
+            "process and will not be admitted to it for a decade."
+        ),
+    },
+    {
+        "id": "meridian_partnership",
+        "name": "The Meridian Treaty Organisation",
+        "body": (
+            "Its partnership programme is open to Ardenia; a security guarantee "
+            "for a country with an active territorial dispute is not."
+        ),
+    },
+]
+
+
+PRESENT_DAY = {
+    "id": "march_1993_daily_life",
+    "name": "What March 1993 feels like",
+    "body": (
+        "Power holds for most of the day in Vashtera and less in Duvinsk. The "
+        "Chamber sits three days a week and achieves less than that. Two ministries "
+        "have not paid staff since January. A currency-kiosk queue is the most "
+        "reliable economic indicator available. Anera reports that all is normal, "
+        "Tavri clears a container at a fifth of its declared value, and the "
+        "ceasefire line exchanges ninety seconds of fire a week. This month the "
+        "government can pay the Zavost wage arrears or the gas bill, not both."
+    ),
+}

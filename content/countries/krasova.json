@@ -1,0 +1,85 @@
+{
+  "id": "krasova",
+  "name": "Krasova",
+  "regime_type": "authoritarian",
+  "population": 22000000,
+  "national_traits": ["centralized", "high_corruption", "weak_institutions"],
+  "meta": {
+    "short_description": "A large, centralized authoritarian state riding resource wealth over deep corruption and restless factions. Power is concentrated — and precarious.",
+    "difficulty": "hard",
+    "strengths": ["Large population and resource base", "Decisive centralized authority", "High headline growth"],
+    "weaknesses": ["Endemic corruption", "Hollow institutions", "High inflation", "Distrustful neighbours"]
+  },
+  "economy": {
+    "gdp": 55000.0,
+    "growth_rate": 0.040,
+    "inflation": 0.060,
+    "unemployment": 0.080,
+    "public_debt_pct": 0.55,
+    "budget": {"revenue": 14000.0, "expenditure": 15000.0},
+    "sectors": [
+      {"id": "resources",   "name": "Resources",     "gdp_share": 0.38, "growth_rate": 0.050, "employment_share": 0.20, "aligned_faction_ids": ["state_bloc"]},
+      {"id": "industry",    "name": "Industry",      "gdp_share": 0.30, "growth_rate": 0.030, "employment_share": 0.32, "aligned_faction_ids": ["industrial_barons"]},
+      {"id": "agriculture", "name": "Agriculture",   "gdp_share": 0.16, "growth_rate": 0.012, "employment_share": 0.30, "aligned_faction_ids": ["provincial_bloc"]},
+      {"id": "services",    "name": "Services",      "gdp_share": 0.16, "growth_rate": 0.028, "employment_share": 0.18, "aligned_faction_ids": ["reform_circle"]}
+    ]
+  },
+  "factions": [
+    {"id": "state_bloc",         "name": "State Bloc",         "ideology": {"economic": 0.1, "social": -0.8}, "power": 0.9, "loyalty": 0.6,  "seats": 46, "in_coalition": true,  "support": 0.46},
+    {"id": "industrial_barons",  "name": "Industrial Barons",  "ideology": {"economic": 0.7, "social": -0.4}, "power": 0.7, "loyalty": 0.2,  "seats": 24, "in_coalition": true,  "support": 0.24},
+    {"id": "provincial_bloc",    "name": "Provincial Bloc",    "ideology": {"economic": -0.3, "social": -0.5},"power": 0.4, "loyalty": -0.2, "seats": 18, "in_coalition": false, "support": 0.18,
+      "grievances": [
+        {"source": "Neglected provinces", "severity": 0.5, "turns_active": 6}
+      ]
+    },
+    {"id": "reform_circle",      "name": "Reform Circle",      "ideology": {"economic": 0.2, "social": 0.7},  "power": 0.3, "loyalty": -0.7, "seats": 12, "in_coalition": false, "support": 0.12,
+      "grievances": [
+        {"source": "Political repression", "severity": 0.7, "turns_active": 10},
+        {"source": "Endemic corruption",   "severity": 0.6, "turns_active": 8}
+      ],
+      "demands": [
+        {"description": "Free elections", "urgency": 0.8}
+      ]
+    }
+  ],
+  "cabinet": [
+    {"id": "k1", "name": "General Roshkov", "portfolio": "Finance",         "faction_id": "state_bloc",        "competence": 0.55, "loyalty": 0.70, "ambition": 0.55},
+    {"id": "k2", "name": "Yuri Baranov",    "portfolio": "Interior",        "faction_id": "state_bloc",        "competence": 0.60, "loyalty": 0.75, "ambition": 0.60},
+    {"id": "k3", "name": "Sergei Volkov",   "portfolio": "Foreign Affairs", "faction_id": "state_bloc",        "competence": 0.65, "loyalty": 0.55, "ambition": 0.70},
+    {"id": "k4", "name": "Marshal Denov",   "portfolio": "Defense",         "faction_id": "state_bloc",        "competence": 0.70, "loyalty": 0.50, "ambition": 0.80},
+    {"id": "k5", "name": "Piotr Aslan",     "portfolio": "Economy",         "faction_id": "industrial_barons", "competence": 0.62, "loyalty": 0.35, "ambition": 0.50},
+    {"id": "k6", "name": "Irina Kord",      "portfolio": "Justice",         "faction_id": "state_bloc",        "competence": 0.48, "loyalty": 0.68, "ambition": 0.40}
+  ],
+  "starting_laws": [
+    {
+      "id": "state_security_act",
+      "name": "State Security Act",
+      "description": "Sweeping surveillance and public-order powers concentrated in the interior ministry.",
+      "tier": "statutory",
+      "portfolio": "Interior",
+      "votes_for": 70, "votes_against": 30, "turns_active": 12,
+      "effects": {
+        "faction_loyalty_deltas": {
+          "reform_circle": -0.01,
+          "state_bloc": 0.005
+        }
+      }
+    }
+  ],
+  "default_player": {
+    "name": "Chairman Valen",
+    "title": "Chairman",
+    "faction_id": "state_bloc",
+    "ideology_economic": 0.1,
+    "ideology_social": -0.7,
+    "approval": 0.44,
+    "political_capital": 40.0
+  },
+  "agenda": {"type": "hegemon", "rival": "veldoria"},
+  "neighbours": ["ardenia", "veldoria", "merova"],
+  "default_relations": {
+    "ardenia":  {"score": -0.2,  "trade_volume": 900.0},
+    "veldoria": {"score": -0.35, "trade_volume": 600.0},
+    "merova":   {"score": -0.1,  "trade_volume": 500.0}
+  }
+}

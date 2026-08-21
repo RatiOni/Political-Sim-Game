@@ -1,0 +1,85 @@
+{
+  "id": "terand",
+  "name": "Terand",
+  "regime_type": "authoritarian",
+  "population": 19000000,
+  "bureaucratic_capacity": 0.72,
+  "national_traits": ["militarist", "centralized", "resource_rich"],
+  "meta": {
+    "short_description": "A militarist revanchist power that never accepted its diminished borders. The army is the state; national grievance is the official creed. It presses on its neighbours and waits for weakness.",
+    "difficulty": "hard",
+    "stability_value": 0.68,
+    "strengths": ["Powerful armed forces", "Decisive central command", "Resource self-sufficiency"],
+    "weaknesses": ["Ruinous military spending", "Isolated and distrusted", "Suppressed democratic opposition", "Brittle personality-driven rule"]
+  },
+  "economy": {
+    "gdp": 70000.0,
+    "growth_rate": 0.030,
+    "inflation": 0.050,
+    "unemployment": 0.080,
+    "public_debt_pct": 0.62,
+    "budget": {"revenue": 18000.0, "expenditure": 20500.0},
+    "sectors": [
+      {"id": "industry",    "name": "Heavy Industry", "gdp_share": 0.34, "growth_rate": 0.032, "employment_share": 0.30, "aligned_faction_ids": ["industrial_command"]},
+      {"id": "resources",   "name": "Resources",      "gdp_share": 0.28, "growth_rate": 0.038, "employment_share": 0.18, "aligned_faction_ids": ["military_bloc"]},
+      {"id": "agriculture", "name": "Agriculture",    "gdp_share": 0.20, "growth_rate": 0.012, "employment_share": 0.34, "aligned_faction_ids": ["nationalist_party"]},
+      {"id": "services",    "name": "Services",       "gdp_share": 0.18, "growth_rate": 0.024, "employment_share": 0.18, "aligned_faction_ids": ["democratic_underground"]}
+    ]
+  },
+  "factions": [
+    {"id": "military_bloc",         "name": "Military Bloc",         "ideology": {"economic": 0.1, "social": -0.9}, "power": 0.9, "loyalty": 0.7,  "seats": 42, "in_coalition": true,  "support": 0.42, "color": "#6b7a4a"},
+    {"id": "nationalist_party",     "name": "Nationalist Party",     "ideology": {"economic": 0.3, "social": -0.7}, "power": 0.6, "loyalty": 0.5,  "seats": 28, "in_coalition": true,  "support": 0.28, "color": "#8a3a3a"},
+    {"id": "industrial_command",    "name": "Industrial Command",    "ideology": {"economic": 0.6, "social": -0.4}, "power": 0.6, "loyalty": 0.3,  "seats": 18, "in_coalition": false, "support": 0.18, "color": "#a5762e"},
+    {"id": "democratic_underground","name": "Democratic Underground","ideology": {"economic": 0.0, "social": 0.7}, "power": 0.3, "loyalty": -0.8, "seats": 12, "in_coalition": false, "support": 0.12, "color": "#5a8fd0",
+      "grievances": [
+        {"source": "Political repression",       "severity": 0.75, "turns_active": 15},
+        {"source": "War economy hardship",       "severity": 0.55, "turns_active": 8}
+      ],
+      "demands": [
+        {"description": "Free political prisoners", "urgency": 0.65}
+      ]
+    }
+  ],
+  "cabinet": [
+    {"id": "te1", "name": "Marshal Vunt",   "portfolio": "Defense",         "faction_id": "military_bloc",     "competence": 0.80, "loyalty": 0.75, "ambition": 0.70},
+    {"id": "te2", "name": "Colonel Aksel",  "portfolio": "Interior",        "faction_id": "military_bloc",     "competence": 0.68, "loyalty": 0.78, "ambition": 0.55},
+    {"id": "te3", "name": "Dram Holnic",    "portfolio": "Foreign Affairs", "faction_id": "nationalist_party", "competence": 0.66, "loyalty": 0.60, "ambition": 0.65},
+    {"id": "te4", "name": "Viktor Sabl",    "portfolio": "Finance",         "faction_id": "industrial_command","competence": 0.70, "loyalty": 0.45, "ambition": 0.50},
+    {"id": "te5", "name": "Roza Kelvic",    "portfolio": "Economy",         "faction_id": "nationalist_party", "competence": 0.62, "loyalty": 0.55, "ambition": 0.40},
+    {"id": "te6", "name": "Judge Ferran",   "portfolio": "Justice",         "faction_id": "military_bloc",     "competence": 0.58, "loyalty": 0.72, "ambition": 0.30}
+  ],
+  "starting_laws": [
+    {
+      "id": "national_mobilisation_act",
+      "name": "National Mobilisation Act",
+      "description": "Permanent war footing: conscription, defense procurement, and militarised industry.",
+      "tier": "statutory",
+      "portfolio": "Defense",
+      "votes_for": 70, "votes_against": 30, "turns_active": 24,
+      "effects": {
+        "budget_expenditure_delta": 400.0,
+        "faction_loyalty_deltas": {
+          "military_bloc": 0.006,
+          "democratic_underground": -0.01
+        }
+      }
+    }
+  ],
+  "default_player": {
+    "name": "Kars Veil",
+    "title": "Marshal-President",
+    "faction_id": "military_bloc",
+    "ideology_economic": 0.1,
+    "ideology_social": -0.8,
+    "approval": 0.50,
+    "political_capital": 50.0
+  },
+  "agenda": {"type": "revanchist", "rival": "solheim", "ally": "qadir"},
+  "neighbours": ["solheim", "valmora", "qadir"],
+  "default_relations": {
+    "solheim": {"score": -0.50, "trade_volume": 600.0},
+    "valmora": {"score": -0.45, "trade_volume": 300.0},
+    "qadir":   {"score": 0.35,  "trade_volume": 1400.0},
+    "krasova": {"score": 0.15,  "trade_volume": 800.0}
+  }
+}

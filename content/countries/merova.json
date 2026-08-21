@@ -1,0 +1,58 @@
+{
+  "id": "merova",
+  "name": "Merova",
+  "regime_type": "presidential_democracy",
+  "population": 6000000,
+  "national_traits": ["agricultural", "federal", "low_corruption"],
+  "meta": {
+    "short_description": "A small federal presidential democracy with a proud agricultural heartland and clean but decentralized government. Steering it means bargaining with the regions.",
+    "difficulty": "normal",
+    "strengths": ["Clean, trusted government", "Resilient rural base", "Federal stability"],
+    "weaknesses": ["Slow-growing economy", "Hard to steer from the centre", "Small and dependent on trade"]
+  },
+  "economy": {
+    "gdp": 30000.0,
+    "growth_rate": 0.033,
+    "inflation": 0.028,
+    "unemployment": 0.090,
+    "public_debt_pct": 0.40,
+    "budget": {"revenue": 8000.0, "expenditure": 8200.0},
+    "sectors": [
+      {"id": "agriculture", "name": "Agriculture",   "gdp_share": 0.28, "growth_rate": 0.016, "employment_share": 0.34, "aligned_faction_ids": ["farmers_union"]},
+      {"id": "industry",    "name": "Industry",      "gdp_share": 0.26, "growth_rate": 0.024, "employment_share": 0.24, "aligned_faction_ids": ["national_party"]},
+      {"id": "services",    "name": "Services",      "gdp_share": 0.34, "growth_rate": 0.030, "employment_share": 0.32, "aligned_faction_ids": ["liberal_forum"]},
+      {"id": "public",      "name": "Public Sector", "gdp_share": 0.12, "growth_rate": 0.010, "employment_share": 0.10, "aligned_faction_ids": ["social_union"]}
+    ]
+  },
+  "factions": [
+    {"id": "national_party",  "name": "National Party",  "ideology": {"economic": 0.4, "social": -0.1}, "power": 0.6, "loyalty": 0.6,  "seats": 34, "in_coalition": true,  "support": 0.34},
+    {"id": "liberal_forum",   "name": "Liberal Forum",   "ideology": {"economic": 0.3, "social": 0.5},  "power": 0.5, "loyalty": 0.3,  "seats": 24, "in_coalition": true,  "support": 0.24},
+    {"id": "farmers_union",   "name": "Farmers' Union",  "ideology": {"economic": -0.2, "social": -0.3},"power": 0.4, "loyalty": 0.1,  "seats": 22, "in_coalition": false, "support": 0.22},
+    {"id": "social_union",    "name": "Social Union",    "ideology": {"economic": -0.6, "social": 0.4}, "power": 0.3, "loyalty": -0.2, "seats": 20, "in_coalition": false, "support": 0.20}
+  ],
+  "cabinet": [
+    {"id": "e1", "name": "Tomas Reyes",   "portfolio": "Finance",         "faction_id": "national_party", "competence": 0.68, "loyalty": 0.70, "ambition": 0.30},
+    {"id": "e2", "name": "Clara Nunez",   "portfolio": "Interior",        "faction_id": "liberal_forum",  "competence": 0.64, "loyalty": 0.58, "ambition": 0.35},
+    {"id": "e3", "name": "Miguel Sato",   "portfolio": "Foreign Affairs", "faction_id": "national_party", "competence": 0.72, "loyalty": 0.62, "ambition": 0.45},
+    {"id": "e4", "name": "Rosa Delgado",  "portfolio": "Defense",         "faction_id": "national_party", "competence": 0.60, "loyalty": 0.55, "ambition": 0.30},
+    {"id": "e5", "name": "Andres Vela",   "portfolio": "Economy",         "faction_id": "liberal_forum",  "competence": 0.70, "loyalty": 0.60, "ambition": 0.28},
+    {"id": "e6", "name": "Lucia Marin",   "portfolio": "Justice",         "faction_id": "national_party", "competence": 0.74, "loyalty": 0.68, "ambition": 0.18}
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "President Adaro",
+    "title": "President",
+    "faction_id": "national_party",
+    "ideology_economic": 0.3,
+    "ideology_social": 0.0,
+    "approval": 0.52,
+    "political_capital": 48.0
+  },
+  "agenda": {"type": "reformer", "ally": "veldoria"},
+  "neighbours": ["ardenia", "veldoria", "krasova"],
+  "default_relations": {
+    "ardenia":  {"score": 0.1,  "trade_volume": 400.0},
+    "veldoria": {"score": 0.35, "trade_volume": 1200.0},
+    "krasova":  {"score": -0.1, "trade_volume": 500.0}
+  }
+}

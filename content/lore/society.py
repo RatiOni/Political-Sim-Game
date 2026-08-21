@@ -1,0 +1,170 @@
+"""The people, languages, scripts, faiths, and social order of Ardenia."""
+
+PEOPLES = [
+    {
+        "id": "ardenians",
+        "name": "Ardenians — 72%",
+        "body": (
+            "The national majority is strongest in Anera and the Sela and less "
+            "settled in the industrial east and coastal south. The figure comes "
+            "from a 1989 census taken by an authority nobody now trusts."
+        ),
+    },
+    {
+        "id": "kolvenians",
+        "name": "Kolvenians — 14%",
+        "body": (
+            "Union-era industrial settlement made Kolvenian-speakers a plurality "
+            "in Zavost's cities. They are disproportionately young, qualified and "
+            "likely to have left since independence, through a border that went "
+            "uncounted for two years."
+        ),
+    },
+    {
+        "id": "vetreni",
+        "name": "Vetreni — 7%",
+        "body": (
+            "Almost all Vetreni now live beyond the ceasefire line. Their dialect "
+            "and history of autonomy are distinct; their relationship to Ardenia "
+            "has rarely been one of uncomplicated consent."
+        ),
+    },
+    {
+        "id": "tavri_muslims",
+        "name": "Tavri Muslims — 4%",
+        "body": (
+            "An urban and mercantile southern community present since the Sarine "
+            "period. It has supported every government since independence in "
+            "exchange for being left alone."
+        ),
+    },
+    {
+        "id": "other_peoples",
+        "name": "Others — 3%",
+        "body": (
+            "Sela Roma, a residual Aurine-descended merchant community in Tavri, "
+            "and the remainder produced by an obsolete census."
+        ),
+    },
+]
+
+
+DEMOGRAPHY = {
+    "id": "demographic_collapse",
+    "name": "The demography of collapse",
+    "body": (
+        "The birth rate has halved since 1989. Somewhere between 200,000 and "
+        "400,000 people have left since independence, disproportionately the "
+        "young, the qualified and the Kolvenian. Male life expectancy has "
+        "fallen by four years since 1990, a statistic about alcohol and despair "
+        "rather than medicine."
+    ),
+}
+
+
+SOCIAL_ORDER = [
+    {
+        "id": "transition_winners",
+        "name": "The transition's winners",
+        "body": (
+            "A small stratum did extremely well when state assets became "
+            "sellable: Union-era plant directors, foreign-trade officials and "
+            "the Falcons."
+        ),
+    },
+    {
+        "id": "professional_class",
+        "name": "The professional class",
+        "body": (
+            "Doctors, teachers and administrators have been comprehensively "
+            "wiped out. A Vashtera doctor's monthly salary buys less than a "
+            "coastal customs clerk earns off the books in a week."
+        ),
+    },
+    {
+        "id": "industrial_workforce",
+        "name": "The industrial workforce",
+        "body": (
+            "Zavost's workers remain employed on paper by enterprises that have "
+            "not paid wages in four months. They retain scarce skills, real "
+            "unions and the capacity to stop the eastern economy."
+        ),
+    },
+    {
+        "id": "countryside",
+        "name": "The countryside",
+        "body": (
+            "The countryside has land and no credit, and is eating better than "
+            "the towns for the first time in seventy years."
+        ),
+    },
+    {
+        "id": "pension_cohort",
+        "name": "The pension cohort",
+        "body": (
+            "Some 1.1 million people saw their life savings erased by the ruble's "
+            "collapse in 1991. They vote at nearly ninety per cent."
+        ),
+    },
+]
+
+
+LANGUAGE_AND_SCRIPT = {
+    "id": "ardenian_language_and_verzhan_script",
+    "name": "Language and script",
+    "body": (
+        "Ardenian is written in the Verzhan alphabet standardised by the "
+        "Lamplight writers in the 1860s. The Union imposed a Kolvenian-based "
+        "official script in 1938; the Assembly restored Verzhan in 1990. The "
+        "working administration reads the other alphabet more fluently, while "
+        "textbooks, land registers, criminal files, pension rolls and old deeds "
+        "sit in three scripts without a concordance. This is not merely a "
+        "cultural grievance. It is why land reform cannot be executed."
+    ),
+}
+
+
+RELIGION = [
+    {
+        "id": "ardenian_apostolic_church",
+        "name": "The Ardenian Apostolic Church",
+        "body": (
+            "Autocephalous and claiming a ninth-century foundation, the Church "
+            "is the country's most trusted institution. The Union shut its "
+            "seminaries in 1929 and a Patriarch died in custody in 1937, then "
+            "domesticated the surviving hierarchy through appointments vetted "
+            "by the Third Directorate. It organises Anera, could contain or "
+            "legitimise the Vasca remnant, opposes recognition of Vetrenka and "
+            "the loss of twelve monasteries beyond the line, and holds views on "
+            "schools, script and the seventy per cent of its pre-1921 property "
+            "now serving as sanatoria or tractor depots."
+        ),
+    },
+    {
+        "id": "kolvenian_orthodox_exarchate",
+        "name": "The Kolvenian Orthodox Exarchate",
+        "body": (
+            "The Exarchate serves most of Zavost and answers to a synod in "
+            "Krasova. The National Conservatives want it expelled; doing so "
+            "would radicalise the industrial east and give Krasova an enduring "
+            "international grievance."
+        ),
+    },
+    {
+        "id": "tavri_islam",
+        "name": "The Tavri Muslim community",
+        "body": (
+            "Four per cent of the country, urban, mercantile and studiedly "
+            "unaligned. Its arrangement with the state remains stable precisely "
+            "while nobody turns it into a symbol."
+        ),
+    },
+    {
+        "id": "functional_irreligion",
+        "name": "The irreligious third",
+        "body": (
+            "Roughly a third of Ardenia is functionally irreligious, a Union-era "
+            "inheritance concentrated in Zavost and the Vashtera professional class."
+        ),
+    },
+]

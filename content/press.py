@@ -1,0 +1,214 @@
+"""
+Press copy: headline and lead-story pools per news key (the keys are the
+flavor-dispatch types recorded into GameState.turn_news, plus the explicit
+captures: situation/situation_resolved/situation_lapsed/election/
+confidence_vote). Headlines are styled uppercase by engine/press.py.
+SAMPLE_FIELDS documents (and lets tests lint) the fields each key carries.
+"""
+
+# key -> headline template variants (short; press.py uppercases them).
+HEADLINES = {
+    "election": [
+        "{winner_party} take the chamber",
+        "the country has spoken: {winner_party} to govern",
+    ],
+    "confidence_vote": [
+        "government survives the floor, {vfor}-{vagainst}",
+        "confidence vote: {vfor}-{vagainst}",
+    ],
+    "civil_war_out": ["civil war", "the republic fractures"],
+    "civil_war_ongoing": ["the war grinds on", "another month under arms"],
+    "civil_war_end": ["peace, of a kind", "the guns fall silent"],
+    "world_civil_war_out": ["{country} collapses into civil war"],
+    "world_civil_war_end": ["ceasefire holds in {country}"],
+    "scandal": [
+        "{minister} quits {portfolio} in open revolt",
+        "{portfolio} in crisis as {minister} walks",
+    ],
+    "protest": [
+        "streets fill over {grievance}",
+        "{faction} bring the capital to a halt",
+    ],
+    "vote_passed": ["\"{bill}\" passes, {vfor}-{vagainst}"],
+    "vote_failed": ["\"{bill}\" falls on the floor", "chamber rejects \"{bill}\""],
+    "exec_order": ["rule by decree: \"{bill}\" enacted"],
+    "law_repealed": ["\"{bill}\" repealed"],
+    "vote_rebellion": ["{party} {wing} defy the whip on \"{bill}\""],
+    "minister_appointed": ["{name} takes {portfolio}"],
+    "minister_restless": ["trouble at {portfolio}: {minister} restless"],
+    "vasca_operation": ["security operation moves west"],
+    "vasca_amnesty": ["amnesty offered in {region}"],
+    "vasca_captured": ["VASCA TAKEN ALIVE"],
+    "vasca_isolated": ["the western insurgency fades"],
+    "vasca_dead": ["VASCA DEAD — accounts differ"],
+    "vasca_exiled": ["Vasca flies out before dawn"],
+    "vasca_unresolved": ["government watches, and waits"],
+    "vetrenka_incident": ["another week on the {region} line"],
+    "vetrenka_talks": ["Ardenia goes to the table over {region}"],
+    "vetrenka_offensive": ["THE ARMY MOVES ON {region}"],
+    "vetrenka_settled": ["PEACE IN {region} — after a fashion"],
+    "vetrenka_talks_failed": ["{region} talks collapse"],
+    "vetrenka_retaken": ["THE FLAG OVER {region}"],
+    "vetrenka_rout": ["THE OFFENSIVE BREAKS"],
+    "vetrenka_partition": ["a line on the map, quietly"],
+    "vetrenka_normalised": ["the {region} crossing opens on schedule"],
+    "vetrenka_backlash": ["\"WHO GAVE {region} AWAY?\""],
+    "schemer_arc": ["{minister} counts votes at {portfolio}"],
+    "schemer_bought": ["{minister} stays — at a price"],
+    "schemer_neutralized": ["{minister} out at {portfolio}"],
+    "schemer_ascendant": ["{minister} has the numbers"],
+    "wing_takeover": ["{party}: {new_wing} seize the party"],
+    "leader_ousted": ["{old} ousted — {new} leads {party}"],
+    "situation": ["{title}"],
+    "situation_resolved": ["{title}: government chooses '{option}'"],
+    "situation_lapsed": ["{title} festers unaddressed"],
+    "defense_pact": ["defense pact signed with {country}"],
+    "sanctions_imposed": ["sanctions bite: {country} cut off"],
+    "sanctions_lifted": ["sanctions on {country} end"],
+    "summit": ["{name} and {leader}: summit yields a thaw"],
+    "treaty_broken": ["{treaty} torn up — fury in {country}"],
+    "world_axis": ["a {a}–{b} axis takes shape"],
+    "world_feud": ["{a} and {b}: a feud hardens"],
+    "world_arc_ends": ["the {a}–{b} {kind} is no more"],
+    "world_deepen": ["{actor} and {target} draw closer"],
+    "world_undermine": ["{actor} works against {target}"],
+    "world_condemn": ["{actor} condemns {target}"],
+    "world_trade_pact": ["{actor}–{target} trade pact signed"],
+    "world_court_player": ["{actor} extends a hand"],
+    "world_pressure_player": ["{actor} turns the screws"],
+    "world_condemn_player": ["{actor} condemns the government"],
+    "address_reassuring": ["{name} calms the nation"],
+    "address_defiant": ["{name} comes out swinging"],
+    "address_visionary": ["{name} sells the future"],
+    "address_contrite": ["{name}: 'the failures were mine'"],
+    "economy_move": ["economy {direction} {pct}% on the month"],
+    "world_deliberates": ["{actor} weighs its options on {target}"],
+}
+
+# key -> lead-story body variants (one short paragraph). Keys without a body
+# pool still headline; the paper just runs the head alone.
+LEADS = {
+    "election": [
+        "Polling stations closed on turnout of {turnout}%, and by morning the arithmetic "
+        "was beyond argument: {winner_party} will lead the next government, with "
+        "{winner_leader} at its head. The talks begin immediately; the promises expire sooner.",
+    ],
+    "confidence_vote": [
+        "The government faced its accusers on the floor and the count came back "
+        "{vfor}-{vagainst}. Survival is not the same as strength — but in this chamber, "
+        "this month, it will do.",
+    ],
+    "civil_war_out": [
+        "It has a name now, the thing everyone feared to say aloud. Armed factions hold "
+        "ground the state cannot reach, and the government's writ ends where the barricades "
+        "begin. The republic is at war with itself.",
+    ],
+    "scandal": [
+        "{minister}'s resignation letter reached the press before it reached the government. "
+        "The {portfolio} ministry stands leaderless, {faction} are demanding answers, and "
+        "the corridors smell of blood.",
+    ],
+    "protest": [
+        "They came with banners and left with promises to return. {leader} told the crowd "
+        "that {faction} would not be ignored — and on the evidence of the numbers in the "
+        "square, they may be right.",
+    ],
+    "vote_failed": [
+        "The government brought \"{bill}\" to the floor believing it had the numbers. "
+        "It did not. The opposition benches are still cheering.",
+    ],
+    "situation": [
+        "The story of the month lands on the government's desk, and every choice has "
+        "a price. Ministers meet tonight; the country will judge them by morning.",
+    ],
+    "situation_lapsed": [
+        "Weeks of silence from the government have let events decide for themselves — "
+        "and events are rarely generous.",
+    ],
+    "world_axis": [
+        "Diplomats have stopped pretending otherwise: {a} and {b} now move as one, and "
+        "every chancellery on the continent is redrawing its maps.",
+    ],
+    "world_feud": [
+        "What began as friction between {a} and {b} has hardened into open enmity. "
+        "Neighbours are quietly choosing sides.",
+    ],
+    "quiet": [
+        "No crisis, no collapse, no scandal worth the ink — a month of government by "
+        "administration. The nation, suspicious of its own good fortune, reads the "
+        "small print.",
+        "The quietest month in recent memory. Ministers governed, markets traded, and "
+        "nobody resigned. It will not last.",
+    ],
+}
+
+# Sample fields per key, for template linting in tests.
+SAMPLE_FIELDS = {
+    "election": {"tag": "GENERAL ELECTION", "winner_party": "X", "winner_leader": "Y",
+                 "turnout": "64.2", "player_won": True, "lost_office": False,
+                 "gained_office": False},
+    "confidence_vote": {"survived": True, "vfor": 60, "vagainst": 40},
+    "civil_war_out": {}, "civil_war_ongoing": {}, "civil_war_end": {},
+    "world_civil_war_out": {"country": "X", "leader": "Y"},
+    "world_civil_war_end": {"country": "X", "leader": "Y"},
+    "scandal": {"minister": "X", "portfolio": "Finance", "faction": "Y"},
+    "protest": {"faction": "X", "leader": "Y", "grievance": "austerity"},
+    "vote_passed": {"bill": "X", "vfor": 60, "vagainst": 40, "threshold": 51},
+    "vote_failed": {"bill": "X", "vfor": 40, "vagainst": 60, "threshold": 51},
+    "exec_order": {"bill": "X"},
+    "law_repealed": {"bill": "X"},
+    "vote_rebellion": {"count": 6, "party": "X", "wing": "Y", "bill": "Z",
+                       "direction": "against"},
+    "minister_appointed": {"name": "X", "portfolio": "Finance", "party": "Y", "trait": "Technocrat"},
+    "minister_restless": {"minister": "X", "portfolio": "Finance", "trait": "Schemer"},
+    "vasca_operation": {"region": "the west"},
+    "vasca_amnesty": {"region": "the west"},
+    "vasca_captured": {"region": "the west"},
+    "vasca_isolated": {"region": "the west"},
+    "vasca_dead": {"region": "the west"},
+    "vasca_exiled": {"region": "the west"},
+    "vasca_unresolved": {"region": "the west"},
+    "vetrenka_incident": {"region": "Vetrenka"},
+    "vetrenka_talks": {"region": "Vetrenka"},
+    "vetrenka_offensive": {"region": "Vetrenka"},
+    "vetrenka_settled": {"region": "Vetrenka"},
+    "vetrenka_talks_failed": {"region": "Vetrenka"},
+    "vetrenka_retaken": {"region": "Vetrenka"},
+    "vetrenka_rout": {"region": "Vetrenka"},
+    "vetrenka_partition": {"region": "Vetrenka"},
+    "vetrenka_normalised": {"region": "Vetrenka"},
+    "vetrenka_backlash": {"region": "Vetrenka"},
+    "schemer_arc": {"minister": "X", "portfolio": "Finance"},
+    "schemer_bought": {"minister": "X", "portfolio": "Finance"},
+    "schemer_neutralized": {"minister": "X", "portfolio": "Finance"},
+    "schemer_ascendant": {"minister": "X", "portfolio": "Finance"},
+    "rival_jibe_sharp": {"rival": "X", "party": "Y"},
+    "rival_jibe_bitter": {"rival": "X", "party": "Y"},
+    "wing_takeover": {"party": "X", "new_wing": "Y", "old_wing": "Z", "leader": "W"},
+    "leader_ousted": {"party": "X", "old": "A", "new": "B", "wing": "Y"},
+    "situation": {"title": "X", "category": "Economic"},
+    "situation_resolved": {"title": "X", "option": "Y"},
+    "situation_lapsed": {"title": "X", "option": "Y"},
+    "defense_pact": {"country": "X", "leader": "Y"},
+    "sanctions_imposed": {"country": "X", "leader": "Y"},
+    "sanctions_lifted": {"country": "X"},
+    "summit": {"country": "X", "leader": "Y", "name": "Z"},
+    "treaty_broken": {"country": "X", "treaty": "T", "leader": "Y"},
+    "world_axis": {"a": "X", "b": "Y"},
+    "world_feud": {"a": "X", "b": "Y"},
+    "world_arc_ends": {"a": "X", "b": "Y", "kind": "axis"},
+    "world_deepen": {"actor": "X", "actor_leader": "XL", "target": "Y", "target_leader": "YL"},
+    "world_undermine": {"actor": "X", "actor_leader": "XL", "target": "Y", "target_leader": "YL"},
+    "world_condemn": {"actor": "X", "actor_leader": "XL", "target": "Y", "target_leader": "YL"},
+    "world_trade_pact": {"actor": "X", "actor_leader": "XL", "target": "Y", "target_leader": "YL"},
+    "world_court_player": {"actor": "X", "actor_leader": "XL"},
+    "world_pressure_player": {"actor": "X", "actor_leader": "XL"},
+    "world_condemn_player": {"actor": "X", "actor_leader": "XL"},
+    "address_reassuring": {"name": "X", "title": "PM"},
+    "address_defiant": {"name": "X", "title": "PM"},
+    "address_visionary": {"name": "X", "title": "PM"},
+    "address_contrite": {"name": "X", "title": "PM"},
+    "economy_move": {"direction": "grew", "pct": "1.00"},
+    "world_deliberates": {"actor": "X", "actor_leader": "XL", "target": "Y"},
+    "quiet": {},
+}

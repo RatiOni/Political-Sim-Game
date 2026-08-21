@@ -1,0 +1,267 @@
+"""The constitutional order, officeholders, coercive bodies, and public life."""
+
+CONSTITUTIONAL_ORDER = {
+    "id": "constitution_of_the_reckoning",
+    "name": "The Constitution of the Reckoning",
+    "body": (
+        "Drafted in eleven weeks between November 1992 and January 1993 and "
+        "ratified in February on a 61% turnout, the constitution is a "
+        "semi-presidential compromise. Baran's people, Doncic's people and the "
+        "National Conservatives each held a veto. Its ambiguities are the price "
+        "of getting it signed, not drafting oversights."
+    ),
+}
+
+
+INSTITUTIONS = [
+    {
+        "id": "national_assembly",
+        "name": "The National Assembly — the Chamber",
+        "body": (
+            "One hundred seats and a four-year term: sixty by national list at "
+            "a five per cent threshold, forty in single-member districts. List "
+            "seats belong to parties; district seats belong to whoever controls "
+            "the locality. Roughly a dozen district members are only nominally "
+            "members of the colours under which they ran."
+        ),
+    },
+    {
+        "id": "presidency",
+        "name": "The Presidency",
+        "body": (
+            "The directly elected President serves five years with a mandate "
+            "separate from the Chamber and is not the player. The office commands "
+            "the armed forces, appoints the senior prosecutor, security director "
+            "and Chief of General Staff subject to confirmation, may return a bill "
+            "once, and may call a consultative referendum. Article 61 permits "
+            "measures necessary to preserve the constitutional order; neither the "
+            "measures nor their limit are defined."
+        ),
+    },
+    {
+        "id": "council_of_ministers",
+        "name": "The Council of Ministers",
+        "body": (
+            "The player is Chairman of the Council of Ministers — Prime Minister "
+            "in everything but the Union-era title the constitution retained. "
+            "The Chairman runs government, controls the budget, appoints ministers "
+            "and requires the Chamber's confidence. The President is a rival "
+            "mandate rather than an enemy, and cooperation with him is finite."
+        ),
+    },
+    {
+        "id": "constitutional_court",
+        "name": "The Constitutional Court",
+        "body": (
+            "Nine judges: three presidential nominees, three chosen by two-thirds "
+            "of the Chamber, and three from the conference of senior judges, still "
+            "dominated by Union-era appointees. It may strike a law on referral "
+            "from the President, the government, or thirty Chamber members."
+        ),
+    },
+    {
+        "id": "national_bank",
+        "name": "The National Bank of Ardenia",
+        "body": (
+            "Statutorily independent since February 1993 as a condition of the "
+            "first stabilisation agreement. It issues the kron and may not be "
+            "instructed to finance the deficit. It may be pressured, and its "
+            "independence may be repealed, but neither is costless."
+        ),
+    },
+    {
+        "id": "prosecutor_general",
+        "name": "The Prosecutor General's Office",
+        "body": (
+            "The least reformed institution in Ardenia remains a Union-era "
+            "procuracy with supervisory power over the administration and the "
+            "ability to open a criminal file on any official. The appointment "
+            "belongs to the President and can end careers."
+        ),
+    },
+    {
+        "id": "regional_governors",
+        "name": "The regional governors",
+        "body": (
+            "Governors are appointed by the Council of Ministers under an "
+            "emergency Baran-period arrangement provisionally preserved by the "
+            "constitution. Whether organic law should make them elected is the "
+            "largest unresolved constitutional question: Zavost might elect a "
+            "Kolvenian regionalist, and Anera whoever Vasca blessed."
+        ),
+    },
+    {
+        "id": "ardenian_army",
+        "name": "The Ardenian Army",
+        "body": (
+            "About 28,000 personnel under the Defence Ministry, poorly equipped "
+            "and carrying the institutional wound of losing the Vetrenka War. "
+            "The President is commander-in-chief."
+        ),
+    },
+    {
+        "id": "national_guard",
+        "name": "The National Guard",
+        "body": (
+            "About 11,000 personnel under the Interior Ministry, better paid, "
+            "formed out of the Turn of the Year and disproportionately recruited "
+            "from Anera. It and the Army answer day to day to different ministers "
+            "and ultimately to the President; neither has been asked which order "
+            "it would follow if those authorities diverged."
+        ),
+    },
+    {
+        "id": "state_security_service",
+        "name": "The State Security Service — the Directorate",
+        "body": (
+            "The service inherited the Union Third Directorate's building, "
+            "officers and files: forty years of records naming who informed on "
+            "whom. A 1991 moratorium sealed the archive and expires by its own "
+            "terms in 1994. The Church is one reason opening it is dangerous."
+        ),
+    },
+]
+
+
+OFFICEHOLDERS = [
+    {
+        "id": "president",
+        "figure_id": "stanik",
+        "name": "President Marek Stanik",
+        "body": (
+            "A constitutional lawyer and Kestrel Square survivor, elected at the "
+            "Reckoning as the compromise nobody objected to. He holds no party "
+            "card, enormous moral standing, and the unused language of Article 61."
+        ),
+    },
+    {
+        "id": "chief_justice",
+        "figure_id": "lostane",
+        "name": "Chief Justice Vera Lostane",
+        "body": (
+            "Chief Justice of a court balanced among three appointing authorities "
+            "and surrounded by a judiciary still full of Union-era careers."
+        ),
+    },
+    {
+        "id": "national_bank_governor",
+        "figure_id": "grast",
+        "name": "Governor Emil Grast",
+        "body": (
+            "Governor of the National Bank, custodian of the kron and of an "
+            "independence clause on which foreign stabilisation money depends."
+        ),
+    },
+    {
+        "id": "catholicos_patriarch",
+        "figure_id": "meletian_iv",
+        "name": "Catholicos-Patriarch Meletian IV",
+        "body": (
+            "Head of the Ardenian Apostolic Church, consecrated bishop in 1979. "
+            "His authority reaches Anera and the country's moral register; his "
+            "Union-era advancement makes the Directorate files personal."
+        ),
+    },
+]
+
+
+LAW_AND_POWER = [
+    {
+        "id": "union_judiciary",
+        "name": "Law without enforcement",
+        "body": (
+            "The judiciary is Union-era, underpaid by a factor of ten relative "
+            "to what a case is worth, and unreformed. Enforcing a judgment is a "
+            "commercial transaction in most regions and simply unavailable in Anera."
+        ),
+    },
+    {
+        "id": "licences_arrears_privatisation",
+        "name": "Licences, arrears and privatisation",
+        "body": (
+            "Ardenian corruption is less a matter of envelopes than of deciding "
+            "who gets an import licence, whose wage arrears the budget clears, "
+            "and how a plant is valued when sold. All three levers sit with the "
+            "government; every Chamber faction has clients asking that they move."
+        ),
+    },
+    {
+        "id": "informal_five",
+        "name": "The five outside office",
+        "body": (
+            "Informal power sits with Baran's credibility, Doncic's untested hold "
+            "on the officer corps, Yeska's Falcons and coastal money, Meletian IV's "
+            "moral authority in Anera, and the possibility that Vasca still holds "
+            "a legitimacy claim older than the constitution."
+        ),
+    },
+]
+
+
+MEDIA_AND_CIVIL_SOCIETY = [
+    {
+        "id": "state_television",
+        "name": "State Television",
+        "body": (
+            "Still the only nationwide broadcaster. Its director is appointed by "
+            "the government, and its evening bulletin is the most valuable asset "
+            "in Ardenian politics."
+        ),
+    },
+    {
+        "id": "vestnik",
+        "name": "Vestnik",
+        "body": (
+            "The old Union daily is owned by nobody who will say and remains "
+            "reliably hostile to reform."
+        ),
+    },
+    {
+        "id": "ardenian_courier",
+        "name": "The Ardenian Courier",
+        "body": (
+            "Small, liberal and chronically unpaid; read by everyone who matters "
+            "and almost nobody who votes."
+        ),
+    },
+    {
+        "id": "regional_press",
+        "name": "The regional press",
+        "body": (
+            "Owned locally, which in practice means owned by whoever runs the locality."
+        ),
+    },
+    {
+        "id": "kestrel_committee",
+        "name": "The Kestrel Committee",
+        "body": (
+            "The families of the 1989 dead are morally unassailable and dangerous "
+            "for any government to cross."
+        ),
+    },
+    {
+        "id": "union_of_ardenian_veterans",
+        "name": "The Union of Ardenian Veterans",
+        "body": (
+            "Thirty thousand Vetrenka War veterans, unemployed and organised: "
+            "the largest pool of men in the country who will appear in a square "
+            "when told."
+        ),
+    },
+    {
+        "id": "zavost_trade_unions",
+        "name": "The Zavost trade unions",
+        "body": (
+            "The industrial federation is the only labour organisation with the "
+            "reach to close a region rather than issue a statement."
+        ),
+    },
+    {
+        "id": "foreign_funded_ngos",
+        "name": "The foreign-funded organisations",
+        "body": (
+            "A thin layer of civic organisations whose overseas funding is real "
+            "and whom the National Conservatives already describe as an embassy project."
+        ),
+    },
+]

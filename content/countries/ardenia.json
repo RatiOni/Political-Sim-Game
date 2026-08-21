@@ -1,0 +1,89 @@
+{
+  "id": "ardenia",
+  "name": "Ardenia",
+  "regime_type": "parliamentary_democracy",
+  "population": 8500000,
+  "national_traits": ["post_communist_legacy", "weak_institutions"],
+  "meta": {
+    "paper": "The Vashtera Herald",
+    "capital": "Vashtera",
+    "short_description": "Eighteen months independent and choosing its fourth government from a fragmented first elected parliament. Whoever assembles a majority inherits a collapsing economy, a frozen war in Vetrenka, and a predecessor who was never caught.",
+    "difficulty": "normal",
+    "strengths": ["Diversified service economy", "Functioning democratic institutions", "Friendly ties with Veldoria"],
+    "weaknesses": ["High public debt", "Restive labour movement", "Weak post-communist bureaucracy"]
+  },
+  "economy": {
+    "gdp": 48000.0,
+    "growth_rate": 0.025,
+    "inflation": 0.038,
+    "unemployment": 0.112,
+    "public_debt_pct": 0.64,
+    "budget": {"revenue": 12000.0, "expenditure": 13400.0},
+    "sectors": [
+      {"id": "industry",    "name": "Industry",      "gdp_share": 0.32, "growth_rate": 0.018, "employment_share": 0.27, "aligned_faction_ids": ["national_conservatives"]},
+      {"id": "agriculture", "name": "Agriculture",   "gdp_share": 0.12, "growth_rate": 0.010, "employment_share": 0.15, "aligned_faction_ids": ["agrarian_union"]},
+      {"id": "services",    "name": "Services",      "gdp_share": 0.44, "growth_rate": 0.031, "employment_share": 0.48, "aligned_faction_ids": ["liberal_democrats"]},
+      {"id": "public",      "name": "Public Sector", "gdp_share": 0.12, "growth_rate": 0.005, "employment_share": 0.10, "aligned_faction_ids": ["social_democrats", "workers_front"]}
+    ]
+  },
+  "factions": [
+    {"id": "liberal_democrats",      "name": "Liberal Democrats",      "ideology": {"economic": 0.3, "social": 0.6},  "power": 0.6, "loyalty": 0.7,  "seats": 38, "in_coalition": true,  "support": 0.38, "color": "#e0b04a", "leader": "Annika Roth"},
+    {"id": "national_conservatives", "name": "National Conservatives", "ideology": {"economic": 0.4, "social": -0.5}, "power": 0.7, "loyalty": -0.4, "seats": 32, "in_coalition": false, "support": 0.32, "color": "#3b7dd8", "leader": "Petar Volkan"},
+    {"id": "social_democrats",       "name": "Social Democrats",       "ideology": {"economic": -0.5, "social": 0.3}, "power": 0.5, "loyalty": 0.3,  "seats": 18, "in_coalition": true,  "support": 0.18, "color": "#d9534f", "leader": "Ilona Vess"},
+    {"id": "agrarian_union",         "name": "Agrarian Union",         "ideology": {"economic": -0.2, "social": -0.2},"power": 0.3, "loyalty": 0.1,  "seats": 8,  "in_coalition": false, "support": 0.08, "color": "#4caf7d", "leader": "Old Tomas Grear"},
+    {"id": "workers_front",          "name": "Workers' Front",         "ideology": {"economic": -0.9, "social": 0.4}, "power": 0.2, "loyalty": -0.6, "seats": 4,  "in_coalition": false, "support": 0.04, "color": "#c0392b", "leader": "Rosa Malenko",
+      "grievances": [
+        {"source": "Austerity measures",         "severity": 0.6, "turns_active": 3},
+        {"source": "Privatisation of utilities", "severity": 0.4, "turns_active": 1}
+      ],
+      "demands": [
+        {"description": "Reverse utility privatisation", "urgency": 0.7},
+        {"description": "Minimum wage increase",         "urgency": 0.5}
+      ]
+    }
+  ],
+  "cabinet": [
+    {"id": "m1", "name": "Elena Voss",   "portfolio": "Finance",         "faction_id": "liberal_democrats",      "competence": 0.75, "loyalty": 0.80, "ambition": 0.30},
+    {"id": "m2", "name": "Viktor Haan",  "portfolio": "Interior",        "faction_id": "social_democrats",       "competence": 0.55, "loyalty": 0.65, "ambition": 0.20},
+    {"id": "m3", "name": "Dmitri Koval", "portfolio": "Foreign Affairs", "faction_id": "liberal_democrats",      "competence": 0.80, "loyalty": 0.50, "ambition": 0.65},
+    {"id": "m4", "name": "Ana Petrov",   "portfolio": "Defense",         "faction_id": "national_conservatives", "competence": 0.60, "loyalty": 0.40, "ambition": 0.40},
+    {"id": "m5", "name": "Leon Marsh",   "portfolio": "Economy",         "faction_id": "liberal_democrats",      "competence": 0.65, "loyalty": 0.75, "ambition": 0.25},
+    {"id": "m6", "name": "Sonja Bauer",  "portfolio": "Justice",         "faction_id": "social_democrats",       "competence": 0.70, "loyalty": 0.70, "ambition": 0.15}
+  ],
+  "starting_laws": [
+    {
+      "id": "fiscal_consolidation_act",
+      "name": "Fiscal Consolidation Act",
+      "description": "Spending cuts and revenue measures to narrow the deficit.",
+      "tier": "statutory",
+      "portfolio": "Finance",
+      "votes_for": 57, "votes_against": 41, "turns_active": 4,
+      "effects": {
+        "gdp_growth_delta": -0.002,
+        "budget_revenue_delta": 400.0,
+        "budget_expenditure_delta": -600.0,
+        "faction_loyalty_deltas": {
+          "workers_front": -0.005,
+          "social_democrats": -0.002,
+          "national_conservatives": 0.002
+        }
+      }
+    }
+  ],
+  "default_player": {
+    "name": "Maren Steele",
+    "title": "Prime Minister",
+    "faction_id": "liberal_democrats",
+    "ideology_economic": 0.25,
+    "ideology_social": 0.55,
+    "approval": 0.48,
+    "political_capital": 45.0
+  },
+  "agenda": {"type": "trader"},
+  "neighbours": ["veldoria", "krasova", "merova"],
+  "default_relations": {
+    "veldoria": {"score": 0.6,  "trade_volume": 2400.0},
+    "krasova":  {"score": -0.2, "trade_volume": 900.0},
+    "merova":   {"score": 0.1,  "trade_volume": 400.0}
+  }
+}

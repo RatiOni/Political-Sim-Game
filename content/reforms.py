@@ -1,0 +1,138 @@
+"""Reform objectives: political purposes, not pre-written legislation.
+
+The engine derives urgency from the named live signals. Instruments, scope
+and concessions deliberately do not live here yet; those are subsequent
+choices in the reform-design process.
+"""
+
+
+REFORM_OBJECTIVES = [
+    {
+        "id": "restore_purchasing_power",
+        "name": "Restore household purchasing power",
+        "portfolio": "Finance",
+        "body": (
+            "Stop living costs outrunning incomes, with particular attention "
+            "to pensioners and households already close to hardship."
+        ),
+        "signals": [
+            ("inflation_pressure", 0.35),
+            ("real_income_loss", 0.35),
+            ("household_hardship", 0.30),
+        ],
+    },
+    {
+        "id": "secure_work_and_wages",
+        "name": "Secure work and wages",
+        "portfolio": "Economy",
+        "body": (
+            "Raise employment security and earned incomes without treating a "
+            "single national unemployment figure as the whole labour market."
+        ),
+        "signals": [
+            ("unemployment_pressure", 0.40),
+            ("employment_insecurity", 0.35),
+            ("real_income_loss", 0.15),
+            ("regional_jobs_gap", 0.10),
+        ],
+    },
+    {
+        "id": "rebuild_public_services",
+        "name": "Rebuild public services",
+        "portfolio": "Interior",
+        "body": (
+            "Make schools, clinics and ordinary administration reliably "
+            "available outside the best-served districts as well as inside them."
+        ),
+        "signals": [
+            ("service_access_gap", 0.50),
+            ("public_delivery_gap", 0.30),
+            ("regional_reach_gap", 0.20),
+        ],
+    },
+    {
+        "id": "modernise_productive_economy",
+        "name": "Modernise the productive economy",
+        "portfolio": "Economy",
+        "body": (
+            "Raise productive capacity, workforce capability and durable "
+            "growth rather than purchasing a brief improvement in the headline rate."
+        ),
+        "signals": [
+            ("growth_gap", 0.45),
+            ("workforce_gap", 0.35),
+            ("ministry_delivery_gap", 0.20),
+        ],
+    },
+    {
+        "id": "restore_fiscal_room",
+        "name": "Restore fiscal room",
+        "portfolio": "Finance",
+        "body": (
+            "Bring recurrent commitments, revenue and debt onto a footing that "
+            "leaves the state able to respond to the next crisis."
+        ),
+        "signals": [
+            ("deficit_pressure", 0.55),
+            ("debt_pressure", 0.30),
+            ("governing_overhead", 0.15),
+        ],
+    },
+    {
+        "id": "strengthen_state_capacity",
+        "name": "Strengthen state capacity",
+        "portfolio": "Interior",
+        "body": (
+            "Reduce administrative backlog and rebuild the institutions that "
+            "turn laws, appropriations and ministerial orders into delivered policy."
+        ),
+        "signals": [
+            ("bureaucratic_gap", 0.35),
+            ("ministry_delivery_gap", 0.35),
+            ("ministry_backlog", 0.20),
+            ("regional_reach_gap", 0.10),
+        ],
+    },
+    {
+        "id": "reduce_regional_inequality",
+        "name": "Reduce regional and land inequality",
+        "portfolio": "Interior",
+        "body": (
+            "Narrow the gap in work, services and security between the capital, "
+            "the industrial belt and rural districts without erasing local needs."
+        ),
+        "signals": [
+            ("regional_jobs_gap", 0.25),
+            ("regional_service_gap", 0.25),
+            ("rural_hardship", 0.30),
+            ("regional_pressure", 0.20),
+        ],
+    },
+]
+
+
+OBJECTIVE_BY_ID = {objective["id"]: objective for objective in REFORM_OBJECTIVES}
+
+
+SIGNAL_LABELS = {
+    "inflation_pressure": "inflation",
+    "real_income_loss": "real-income loss",
+    "household_hardship": "household hardship",
+    "unemployment_pressure": "national unemployment",
+    "employment_insecurity": "employment insecurity",
+    "regional_jobs_gap": "regional jobs gap",
+    "service_access_gap": "service access",
+    "public_delivery_gap": "public-service delivery",
+    "regional_reach_gap": "regional state reach",
+    "growth_gap": "weak growth",
+    "workforce_gap": "workforce capability",
+    "ministry_delivery_gap": "ministry delivery",
+    "deficit_pressure": "fiscal deficit",
+    "debt_pressure": "public debt",
+    "governing_overhead": "standing commitments",
+    "bureaucratic_gap": "bureaucratic capacity",
+    "ministry_backlog": "administrative backlog",
+    "regional_service_gap": "regional service gap",
+    "rural_hardship": "rural hardship",
+    "regional_pressure": "regional political pressure",
+}

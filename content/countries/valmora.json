@@ -1,0 +1,101 @@
+{
+  "id": "valmora",
+  "name": "Valmora",
+  "regime_type": "hybrid_regime",
+  "population": 14000000,
+  "bureaucratic_capacity": 0.42,
+  "national_traits": ["ethnically_divided", "weak_institutions", "high_corruption"],
+  "meta": {
+    "paper": "The Valmora Sentinel",
+    "short_description": "A fracturing state on the edge of collapse. A hollow unity government clings to power while an ethnically divided north, an armed nationalist bloc, and a furious populist militia pull the country toward civil war. The hardest chair in the world.",
+    "difficulty": "crisis",
+    "stability_value": 0.22,
+    "strengths": ["Nominal international recognition", "A last-chance unity mandate", "Resource deposits in the north"],
+    "weaknesses": ["Armed factions rejecting central authority", "Economic freefall", "Ethnic secession pressure", "Hollow, corrupt institutions"]
+  },
+  "economy": {
+    "gdp": 18000.0,
+    "growth_rate": -0.030,
+    "inflation": 0.140,
+    "unemployment": 0.240,
+    "public_debt_pct": 0.95,
+    "budget": {"revenue": 4200.0, "expenditure": 5600.0},
+    "sectors": [
+      {"id": "resources",   "name": "Resources",     "gdp_share": 0.30, "growth_rate": 0.010,  "employment_share": 0.18, "aligned_faction_ids": ["national_front"]},
+      {"id": "agriculture", "name": "Agriculture",   "gdp_share": 0.28, "growth_rate": 0.005,  "employment_share": 0.36, "aligned_faction_ids": ["northern_league"]},
+      {"id": "industry",    "name": "Industry",      "gdp_share": 0.24, "growth_rate": -0.010, "employment_share": 0.28, "aligned_faction_ids": ["peoples_militia"]},
+      {"id": "services",    "name": "Services",      "gdp_share": 0.18, "growth_rate": 0.008,  "employment_share": 0.18, "aligned_faction_ids": ["unity_government"]}
+    ]
+  },
+  "factions": [
+    {"id": "unity_government", "name": "Unity Government", "ideology": {"economic": 0.0, "social": 0.1}, "power": 0.5, "loyalty": 0.35, "seats": 30, "in_coalition": true, "support": 0.30, "color": "#c9a24a"},
+    {"id": "northern_league",  "name": "Northern League",  "ideology": {"economic": -0.2, "social": -0.6}, "power": 0.7, "loyalty": -0.75, "seats": 26, "in_coalition": false, "support": 0.26, "color": "#4a8fb0",
+      "grievances": [
+        {"source": "Central government neglect of the north", "severity": 0.80, "turns_active": 14},
+        {"source": "Suppression of regional autonomy",        "severity": 0.85, "turns_active": 9}
+      ],
+      "demands": [
+        {"description": "Regional autonomy for the north", "urgency": 0.90}
+      ]
+    },
+    {"id": "national_front",   "name": "National Front",   "ideology": {"economic": 0.3, "social": -0.8}, "power": 0.6, "loyalty": -0.60, "seats": 24, "in_coalition": false, "support": 0.24, "color": "#8a5a3c",
+      "grievances": [
+        {"source": "Economic collapse and national humiliation", "severity": 0.80, "turns_active": 12}
+      ],
+      "demands": [
+        {"description": "Emergency powers and a crackdown", "urgency": 0.75}
+      ]
+    },
+    {"id": "peoples_militia",  "name": "People's Militia", "ideology": {"economic": -0.8, "social": 0.2}, "power": 0.5, "loyalty": -0.80, "seats": 20, "in_coalition": false, "support": 0.20, "color": "#b03a3a",
+      "grievances": [
+        {"source": "Mass unemployment and hunger", "severity": 0.85, "turns_active": 16},
+        {"source": "Endemic state corruption",     "severity": 0.70, "turns_active": 11}
+      ],
+      "demands": [
+        {"description": "Emergency relief and land reform", "urgency": 0.85}
+      ]
+    }
+  ],
+  "cabinet": [
+    {"id": "vm1", "name": "Ilya Sarn",     "portfolio": "Finance",         "faction_id": "unity_government", "competence": 0.50, "loyalty": 0.55, "ambition": 0.40},
+    {"id": "vm2", "name": "Dragan Vos",    "portfolio": "Interior",        "faction_id": "unity_government", "competence": 0.45, "loyalty": 0.40, "ambition": 0.70},
+    {"id": "vm3", "name": "Lena Marek",    "portfolio": "Foreign Affairs", "faction_id": "unity_government", "competence": 0.58, "loyalty": 0.60, "ambition": 0.35},
+    {"id": "vm4", "name": "General Tovic", "portfolio": "Defense",         "faction_id": "national_front",   "competence": 0.62, "loyalty": 0.25, "ambition": 0.85},
+    {"id": "vm5", "name": "Petra Soln",    "portfolio": "Economy",         "faction_id": "unity_government", "competence": 0.48, "loyalty": 0.50, "ambition": 0.30},
+    {"id": "vm6", "name": "Anton Reku",    "portfolio": "Justice",         "faction_id": "unity_government", "competence": 0.44, "loyalty": 0.52, "ambition": 0.28}
+  ],
+  "starting_laws": [
+    {
+      "id": "state_of_emergency",
+      "name": "State of Emergency",
+      "description": "Temporary emergency powers granting the central government sweeping authority to hold the country together.",
+      "tier": "statutory",
+      "portfolio": "Interior",
+      "votes_for": 52, "votes_against": 48, "turns_active": 3,
+      "effects": {
+        "faction_loyalty_deltas": {
+          "northern_league": -0.02,
+          "peoples_militia": -0.02,
+          "national_front": 0.01
+        }
+      }
+    }
+  ],
+  "default_player": {
+    "name": "Kessa Dorn",
+    "title": "Prime Minister",
+    "faction_id": "unity_government",
+    "ideology_economic": 0.0,
+    "ideology_social": 0.1,
+    "approval": 0.28,
+    "political_capital": 35.0
+  },
+  "agenda": {"type": "survivor", "ally": "solheim"},
+  "neighbours": ["terand", "solheim", "krasova"],
+  "default_relations": {
+    "terand":  {"score": -0.45, "trade_volume": 300.0},
+    "solheim": {"score": 0.25,  "trade_volume": 500.0},
+    "krasova": {"score": -0.15, "trade_volume": 250.0},
+    "ardenia": {"score": 0.10,  "trade_volume": 200.0}
+  }
+}

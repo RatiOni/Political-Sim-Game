@@ -1,0 +1,68 @@
+{
+  "id": "nueva_costa",
+  "name": "Nueva Costa",
+  "regime_type": "presidential_democracy",
+  "population": 7500000,
+  "bureaucratic_capacity": 0.55,
+  "national_traits": ["young_democracy", "low_corruption", "agricultural"],
+  "meta": {
+    "short_description": "A hopeful young democracy a decade out of dictatorship: clean elections, fragile institutions, and enormous expectations. Its first serious crisis will test whether the new order holds.",
+    "difficulty": "normal",
+    "stability_value": 0.55,
+    "strengths": ["Genuine democratic legitimacy", "Reformist energy", "Clean new institutions"],
+    "weaknesses": ["Inexperienced, thin bureaucracy", "Restless old-regime remnants", "Populist temptation", "Commodity-dependent economy"]
+  },
+  "economy": {
+    "gdp": 26000.0,
+    "growth_rate": 0.028,
+    "inflation": 0.045,
+    "unemployment": 0.110,
+    "public_debt_pct": 0.50,
+    "budget": {"revenue": 7000.0, "expenditure": 7400.0},
+    "sectors": [
+      {"id": "agriculture", "name": "Agriculture",   "gdp_share": 0.30, "growth_rate": 0.018, "employment_share": 0.34, "aligned_faction_ids": ["rural_movement"]},
+      {"id": "services",    "name": "Services",       "gdp_share": 0.32, "growth_rate": 0.030, "employment_share": 0.32, "aligned_faction_ids": ["reform_coalition"]},
+      {"id": "industry",    "name": "Industry",       "gdp_share": 0.24, "growth_rate": 0.026, "employment_share": 0.24, "aligned_faction_ids": ["business_league"]},
+      {"id": "public",      "name": "Public Sector",  "gdp_share": 0.14, "growth_rate": 0.012, "employment_share": 0.10, "aligned_faction_ids": ["popular_front"]}
+    ]
+  },
+  "factions": [
+    {"id": "reform_coalition", "name": "Reform Coalition", "ideology": {"economic": 0.1, "social": 0.6}, "power": 0.6, "loyalty": 0.6,  "seats": 36, "in_coalition": true,  "support": 0.36, "color": "#e0b04a"},
+    {"id": "business_league",  "name": "Business League",  "ideology": {"economic": 0.6, "social": 0.1}, "power": 0.5, "loyalty": 0.2,  "seats": 22, "in_coalition": true,  "support": 0.22, "color": "#3b7dd8"},
+    {"id": "rural_movement",   "name": "Rural Movement",   "ideology": {"economic": -0.3, "social": -0.4}, "power": 0.4, "loyalty": 0.0,  "seats": 22, "in_coalition": false, "support": 0.22, "color": "#4caf7d"},
+    {"id": "popular_front",    "name": "Popular Front",    "ideology": {"economic": -0.7, "social": 0.3}, "power": 0.4, "loyalty": -0.4, "seats": 20, "in_coalition": false, "support": 0.20, "color": "#b03a3a",
+      "grievances": [
+        {"source": "Unmet post-transition expectations", "severity": 0.55, "turns_active": 7}
+      ],
+      "demands": [
+        {"description": "Public jobs programme", "urgency": 0.60}
+      ]
+    }
+  ],
+  "cabinet": [
+    {"id": "nc1", "name": "Elena Cruz",    "portfolio": "Finance",         "faction_id": "reform_coalition", "competence": 0.64, "loyalty": 0.66, "ambition": 0.30},
+    {"id": "nc2", "name": "Marco Ibarra",  "portfolio": "Interior",        "faction_id": "reform_coalition", "competence": 0.58, "loyalty": 0.60, "ambition": 0.35},
+    {"id": "nc3", "name": "Sofia Ramos",   "portfolio": "Foreign Affairs", "faction_id": "reform_coalition", "competence": 0.68, "loyalty": 0.64, "ambition": 0.40},
+    {"id": "nc4", "name": "Diego Solar",   "portfolio": "Defense",         "faction_id": "business_league",  "competence": 0.55, "loyalty": 0.45, "ambition": 0.50},
+    {"id": "nc5", "name": "Ana Vidal",     "portfolio": "Economy",         "faction_id": "business_league",  "competence": 0.66, "loyalty": 0.48, "ambition": 0.32},
+    {"id": "nc6", "name": "Luis Peralta",  "portfolio": "Justice",         "faction_id": "reform_coalition", "competence": 0.70, "loyalty": 0.68, "ambition": 0.22}
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Camila Ortiz",
+    "title": "President",
+    "faction_id": "reform_coalition",
+    "ideology_economic": 0.1,
+    "ideology_social": 0.5,
+    "approval": 0.54,
+    "political_capital": 46.0
+  },
+  "agenda": {"type": "reformer", "ally": "solheim"},
+  "neighbours": ["solheim", "merova", "veldoria"],
+  "default_relations": {
+    "solheim":  {"score": 0.45, "trade_volume": 1300.0},
+    "merova":   {"score": 0.30, "trade_volume": 700.0},
+    "veldoria": {"score": 0.35, "trade_volume": 900.0},
+    "qadir":    {"score": -0.15, "trade_volume": 400.0}
+  }
+}
