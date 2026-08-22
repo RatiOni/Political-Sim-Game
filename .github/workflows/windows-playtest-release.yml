@@ -6,6 +6,10 @@ on:
       - "v*-playtest.*"
   workflow_dispatch:
 
+concurrency:
+  group: windows-playtest-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-and-verify:
     runs-on: windows-latest
@@ -114,14 +118,10 @@ jobs:
           $notesPath = "dist/release-notes.md"
           Set-Content -LiteralPath $notesPath -Value $notes -Encoding utf8
 
-          $existingDraft = gh release view "$env:RELEASE_TAG" --json isDraft --jq '.isDraft' 2>$null
+          $existingRelease = gh release view "$env:RELEASE_TAG" --json isDraft --jq '.isDraft' 2>$null
           $viewExit = $LASTEXITCODE
           if ($viewExit -eq 0) {
-            if ($existingDraft.Trim() -ne "true") {
-              throw "Refusing to replace an existing public release for $env:RELEASE_TAG"
-            }
-            gh release delete "$env:RELEASE_TAG" --yes
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            throw "Refusing to create a release because one already exists for $env:RELEASE_TAG"
           } elseif ($viewExit -ne 1) {
             exit $viewExit
           }

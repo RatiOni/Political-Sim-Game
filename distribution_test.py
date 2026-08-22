@@ -286,6 +286,12 @@ def release_workflow_is_manual_or_tag_only():
     assert "actions/upload-artifact@v4" in workflow
     assert "pull_request:" not in workflow
     assert "branches:" not in workflow
+    assert re.search(
+        r"(?m)^concurrency:\n"
+        r"  group: windows-playtest-release-\$\{\{ github\.ref \}\}\n"
+        r"  cancel-in-progress: false$",
+        workflow,
+    )
 
     build = re.search(
         r"(?ms)^  build-and-verify:\n(?P<body>.*?)(?=^  release:\n)",
@@ -323,8 +329,18 @@ def release_workflow_is_manual_or_tag_only():
     assert "gh release upload" in release_body
     assert "gh release edit" in release_body
     assert "--draft=false" in release_body
-    assert "Refusing to replace an existing public release" in release_body
-    assert release_body.index("gh release create") < \
+    assert "gh release delete" not in workflow
+    existing_release = re.search(
+        r"(?ms)\$existingRelease = gh release view \"\$env:RELEASE_TAG\" "
+        r"--json isDraft --jq '.isDraft' 2>\$null\s*"
+        r"\$viewExit = \$LASTEXITCODE\s*"
+        r"if \(\$viewExit -eq 0\) \{\s*"
+        r"throw \"Refusing to create a release because one already exists",
+        release_body,
+    )
+    assert existing_release
+    assert release_body.index("gh release view") < \
+        release_body.index("gh release create") < \
         release_body.index("gh release upload") < \
         release_body.index("gh release edit")
 
