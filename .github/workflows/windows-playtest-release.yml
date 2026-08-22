@@ -1,0 +1,80 @@
+name: Windows playtest release
+
+on:
+  push:
+    tags:
+      - "v*-playtest.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14.6"
+          architecture: "x64"
+          cache: "pip"
+      - name: Install pinned dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Validate source and release tag
+        shell: pwsh
+        run: |
+          git diff --check
+          python distribution_test.py
+          if ("${{ github.event_name }}" -eq "push") {
+            python -c "import version; version.validate_tag('${{ github.ref_name }}')"
+          }
+      - name: Run engine suite
+        run: python smoke_test.py
+        env:
+          PYTHONUTF8: "1"
+      - name: Run GUI suite offscreen
+        run: python scripts/run_ui_smoke_offscreen.py
+        env:
+          PYTHONUTF8: "1"
+          QT_QPA_PLATFORM: "offscreen"
+      - name: Build and verify Windows package
+        shell: pwsh
+        run: scripts/build_windows.ps1 -Python python
+      - name: Upload inspected workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ardenia-Windows-playtest
+          path: |
+            dist/Ardenia-*-win64.zip
+            dist/Ardenia-*-win64.zip.sha256
+          if-no-files-found: error
+      - name: Publish tag-gated GitHub Release
+        if: github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = python -c "import version; print(version.VERSION)"
+          $commit = "${{ github.sha }}"
+          $zip = "dist/Ardenia-$version-win64.zip"
+          $sha = "$zip.sha256"
+          $notes = @"
+          Ardenia $version is an unsigned Windows 10/11 early playtest build.
+          Source commit: $commit
+
+          Download the ZIP, verify it with the attached SHA-256 file, extract the
+          complete Ardenia folder, and run Ardenia.exe. Python and Git are not
+          required. Windows SmartScreen may warn because this build is unsigned.
+
+          Saves: %LOCALAPPDATA%\Ardenia\saves
+          Crash logs: %LOCALAPPDATA%\Ardenia\logs
+
+          Follow PLAYTEST_README.txt inside the archive. Return recordings and
+          completed feedback only through the organizer's private channel.
+          "@
+          $notesPath = "dist/release-notes.md"
+          Set-Content -LiteralPath $notesPath -Value $notes -Encoding utf8
+          gh release create "${{ github.ref_name }}" $zip $sha `
+            --verify-tag --title "Ardenia $version — Windows playtest" `
+            --notes-file $notesPath

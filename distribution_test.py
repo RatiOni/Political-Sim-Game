@@ -270,6 +270,22 @@ def public_packet_is_neutral_private_and_versioned():
     assert "full name:" not in form.lower()
 
 
+def release_workflow_is_manual_or_tag_only():
+    workflow = (PROJECT_ROOT / ".github/workflows/windows-playtest-release.yml") \
+        .read_text(encoding="utf-8")
+    assert "workflow_dispatch:" in workflow
+    assert "v*-playtest.*" in workflow
+    assert "pull_request:" not in workflow
+    assert "branches:" not in workflow
+    assert "scripts/build_windows.ps1" in workflow
+    assert "scripts/run_ui_smoke_offscreen.py" in workflow
+    assert "git diff --check" in workflow
+    assert "gh release create" in workflow
+    assert "github.event_name == 'push'" in workflow
+    assert "github.sha" in workflow
+    assert "actions/upload-artifact@v4" in workflow
+
+
 if __name__ == "__main__":
     checks = [
         ("source and packaged user-data paths are separate",
@@ -293,6 +309,8 @@ if __name__ == "__main__":
          build_rejects_non_x64_toolchains),
         ("public tester packet is neutral, private and versioned",
          public_packet_is_neutral_private_and_versioned),
+        ("release workflow is manual or matching-tag only",
+         release_workflow_is_manual_or_tag_only),
     ]
     for label, test in checks:
         check(label, test)
