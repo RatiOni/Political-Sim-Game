@@ -1,11 +1,16 @@
 """Focused checks for the downloadable Windows playtest build."""
 
+from datetime import datetime
 import os
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 import app_paths
+import gui
+import packaged_verify
+import runtime_logging
 import version
 from engine import persistence
 from engine.campaign import default_config, generate_campaign
@@ -103,6 +108,67 @@ def version_controls_tag_archive_and_titles():
         raise AssertionError("a mismatched release tag must be rejected")
 
 
+def crash_logs_are_local_versioned_and_readable():
+    with tempfile.TemporaryDirectory() as tmp:
+        with patch.dict(os.environ, {
+                "ARDENIA_USER_DATA_DIR": str(Path(tmp).resolve())}):
+            try:
+                raise RuntimeError("packaged failure marker")
+            except RuntimeError as exc:
+                path = runtime_logging.write_crash_log(
+                    type(exc), exc, exc.__traceback__,
+                    when=datetime(2026, 8, 22, 12, 34, 56))
+            assert path.name == "crash-20260822-123456.txt"
+            text = path.read_text(encoding="utf-8")
+            assert "0.1.0-playtest.1" in text
+            assert "RuntimeError: packaged failure marker" in text
+            assert str(path).startswith(str(Path(tmp).resolve()))
+
+
+def packaged_verifier_uses_isolated_saves_and_required_files():
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication([])
+    with tempfile.TemporaryDirectory() as data_tmp, \
+            tempfile.TemporaryDirectory() as dist_tmp:
+        dist = Path(dist_tmp)
+        (dist / "PLAYTEST_README.txt").write_text("test", encoding="utf-8")
+        (dist / "FEEDBACK_TEMPLATE.txt").write_text("test", encoding="utf-8")
+        with patch.dict(os.environ, {
+                "ARDENIA_USER_DATA_DIR": str(Path(data_tmp).resolve())}):
+            report = packaged_verify.verify_build(app, dist)
+            assert "government campaign" in report
+            assert "opposition campaign" in report
+            assert not persistence.save_exists("_package_verify_government")
+            assert not persistence.save_exists("_package_verify_opposition")
+            assert not list((Path(data_tmp) / "logs").glob("verification-*.txt"))
+        (dist / "FEEDBACK_TEMPLATE.txt").unlink()
+        try:
+            packaged_verify.verify_build(app, dist)
+        except FileNotFoundError as exc:
+            assert "FEEDBACK_TEMPLATE.txt" in str(exc)
+        else:
+            raise AssertionError("missing tester files must fail verification")
+
+
+def fatal_hook_reports_when_log_creation_fails():
+    original = sys.excepthook
+    try:
+        with patch.object(runtime_logging, "write_crash_log",
+                          side_effect=OSError("read-only data directory")), \
+                patch.object(gui.QMessageBox, "critical") as critical:
+            gui.install_exception_hook()
+            try:
+                raise RuntimeError("fatal marker")
+            except RuntimeError as exc:
+                sys.excepthook(type(exc), exc, exc.__traceback__)
+            message = critical.call_args.args[2]
+            assert "could not be written" in message
+            assert "read-only data directory" in message
+    finally:
+        sys.excepthook = original
+
+
 if __name__ == "__main__":
     checks = [
         ("source and packaged user-data paths are separate",
@@ -113,6 +179,11 @@ if __name__ == "__main__":
          persistence_uses_runtime_directory_without_changing_schema),
         ("one version controls every public build identity",
          version_controls_tag_archive_and_titles),
+        ("crash logs are local, versioned and readable",
+         crash_logs_are_local_versioned_and_readable),
+        ("packaged verification isolates temporary saves and files",
+         packaged_verifier_uses_isolated_saves_and_required_files),
+        ("fatal hook reports log failures", fatal_hook_reports_when_log_creation_fails),
     ]
     for label, test in checks:
         check(label, test)
