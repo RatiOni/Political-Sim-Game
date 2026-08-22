@@ -31,6 +31,7 @@ from content import campaign_content
 from content import traits as traits_content
 from engine.campaign import CampaignConfig, generate_campaign
 from engine import persistence
+from version import window_title
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -45,6 +46,7 @@ class RootController(QStackedWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setWindowTitle(window_title())
         self.setStyleSheet(theme.stylesheet())
         self._menu = MainMenu()
         self._menu.new_game.connect(self._start_wizard)

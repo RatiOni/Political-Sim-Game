@@ -25,6 +25,7 @@ from PySide6.QtCore import Qt
 from ui import theme
 from ui.app import MainWindow
 from engine import player_ops as ops
+from version import VERSION
 
 
 def main():
@@ -42,7 +43,10 @@ def main():
             checks.append(("FAIL", f"{name}: {type(e).__name__}: {e}"))
 
     window = {}
-    check("MainWindow constructs with all panels", lambda: window.__setitem__("w", MainWindow()))
+    def _main_window_constructs():
+        window["w"] = MainWindow()
+        assert VERSION in window["w"].windowTitle()
+    check("MainWindow constructs with all panels", _main_window_constructs)
 
     if "w" in window:
         w = window["w"]
@@ -268,7 +272,10 @@ def main():
     from engine import persistence
 
     check("MainMenu constructs", lambda: MainMenu())
-    check("RootController constructs", lambda: RootController())
+    def _root_controller_constructs():
+        root = RootController()
+        assert VERSION in root.windowTitle()
+    check("RootController constructs", _root_controller_constructs)
     check("SettingsDialog + CreditsDialog construct",
           lambda: (SettingsDialog(), CreditsDialog()))
     check("LoadDialog constructs", lambda: LoadDialog())

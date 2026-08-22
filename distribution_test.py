@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import app_paths
+import version
 from engine import persistence
 from engine.campaign import default_config, generate_campaign
 
@@ -84,6 +85,24 @@ def persistence_uses_runtime_directory_without_changing_schema():
             assert not persistence.save_exists("package_path_test")
 
 
+def version_controls_tag_archive_and_titles():
+    assert version.APP_NAME == "Ardenia"
+    assert version.VERSION == "0.1.0-playtest.1"
+    assert version.WINDOWS_FILE_VERSION == (0, 1, 0, 1)
+    assert version.TAG == "v0.1.0-playtest.1"
+    assert version.ARCHIVE_FILENAME == "Ardenia-0.1.0-playtest.1-win64.zip"
+    assert version.VERSION in version.window_title()
+    assert version.window_title("Ardenia").startswith(
+        "Ardenia — a political simulation")
+    version.validate_tag(version.TAG)
+    try:
+        version.validate_tag("v0.1.0-playtest.2")
+    except ValueError as exc:
+        assert version.TAG in str(exc)
+    else:
+        raise AssertionError("a mismatched release tag must be rejected")
+
+
 if __name__ == "__main__":
     checks = [
         ("source and packaged user-data paths are separate",
@@ -92,6 +111,8 @@ if __name__ == "__main__":
          resources_are_read_only_and_independent_of_user_data),
         ("persistence resolves its save directory at operation time",
          persistence_uses_runtime_directory_without_changing_schema),
+        ("one version controls every public build identity",
+         version_controls_tag_archive_and_titles),
     ]
     for label, test in checks:
         check(label, test)

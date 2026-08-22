@@ -23,6 +23,7 @@ from ui.dialogs import (TurnSummaryDialog, DispatchDetailDialog,
 
 from main import build_sample_game
 from engine.turn import TurnEngine
+from version import window_title
 
 
 class MainWindow(QMainWindow):
@@ -47,7 +48,7 @@ class MainWindow(QMainWindow):
         # on an empty panel.
         self._dispatches = list(self.state.turn_log)
 
-        self.setWindowTitle(f"{self.state.country.name} — a political simulation")
+        self.setWindowTitle(window_title(self.state.country.name))
         # Designed around a 16:9 desktop while remaining usable when the
         # systems dock opens beside it.
         self.resize(1440, 860)
@@ -470,7 +471,7 @@ class MainWindow(QMainWindow):
                 self._set_clock_speed(0)
                 self._dispatches = []
                 # A loaded save may be a different country than the one on screen.
-                self.setWindowTitle(f"{self.state.country.name} — a political simulation")
+                self.setWindowTitle(window_title(self.state.country.name))
                 self._refresh_all()
                 self._log.set_dispatches([f"Loaded campaign: {self.state.player.name}, "
                                           f"{self.state.date_string()}."], self.state)
