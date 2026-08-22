@@ -15,6 +15,8 @@ import version
 from engine import persistence
 from engine.campaign import default_config, generate_campaign
 
+PROJECT_ROOT = Path(__file__).resolve().parent
+
 
 def check(name, fn):
     fn()
@@ -194,6 +196,46 @@ def fatal_hook_reports_when_log_creation_fails():
         sys.excepthook = original
 
 
+def build_definition_is_pinned_and_one_folder():
+    assert (PROJECT_ROOT / "requirements.txt").read_text(
+        encoding="utf-8").strip() == "PySide6==6.11.1"
+    build_requirements = (PROJECT_ROOT / "requirements-build.txt").read_text(
+        encoding="utf-8")
+    assert "-r requirements.txt" in build_requirements
+    assert "PyInstaller==6.16.0" in build_requirements
+    spec = (PROJECT_ROOT / "packaging/ardenia.spec").read_text(
+        encoding="utf-8")
+    assert "COLLECT(" in spec and 'name="Ardenia"' in spec
+    assert "console=False" in spec
+    assert "content/countries" in spec
+    assert "--onefile" not in spec
+    script = (PROJECT_ROOT / "scripts/build_windows.ps1").read_text(
+        encoding="utf-8")
+    assert "--verify-build" in script
+    assert "Get-FileHash" in script
+    assert "ARDENIA_USER_DATA_DIR" in script
+
+
+def public_packet_is_neutral_private_and_versioned():
+    guide = (PROJECT_ROOT / "distribution/PLAYTEST_README.txt").read_text(
+        encoding="utf-8")
+    form = (PROJECT_ROOT / "distribution/FEEDBACK_TEMPLATE.txt").read_text(
+        encoding="utf-8")
+    lower = (guide + form).lower()
+    for forbidden in ("regional inequality", "purchasing power",
+                      "suzerain", "paradox", "correct choice"):
+        assert forbidden not in lower
+    for required in ("0.1.0-playtest.1", "45 minutes", "screen recording",
+                     "webcam", "microphone", "private channel", "smartscreen"):
+        assert required in lower
+    for field in ("your role", "your goal", "first meaningful action",
+                  "opponent", "tradeoff", "consequence",
+                  "passage of time", "wanted to do"):
+        assert field in form.lower()
+    assert "email address:" not in form.lower()
+    assert "full name:" not in form.lower()
+
+
 if __name__ == "__main__":
     checks = [
         ("source and packaged user-data paths are separate",
@@ -211,6 +253,10 @@ if __name__ == "__main__":
         ("packaged verification rejects invalid restored campaigns",
          packaged_verifier_rejects_invalid_restored_campaign),
         ("fatal hook reports log failures", fatal_hook_reports_when_log_creation_fails),
+        ("build definition is pinned and produces a one-folder package",
+         build_definition_is_pinned_and_one_folder),
+        ("public tester packet is neutral, private and versioned",
+         public_packet_is_neutral_private_and_versioned),
     ]
     for label, test in checks:
         check(label, test)

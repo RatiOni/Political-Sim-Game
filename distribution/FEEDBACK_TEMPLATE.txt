@@ -1,0 +1,60 @@
+ARDENIA 0.1.0-playtest.1 — ASYNCHRONOUS PLAYTEST FEEDBACK
+
+Complete this only after playing. Return it and the screen recording through
+the organizer's private channel. Do not post either as a public GitHub issue.
+Do not add your full name, email address, or account name.
+
+CONSENT
+May the organizer retain this completed form as anonymized research? yes / no
+May the organizer retain the submitted screen recording? yes / no
+
+SESSION FACTS
+Windows version:
+Display resolution and scaling, if known:
+Government or opposition opening:
+Campaign party, difficulty, and seed, if known:
+Actual session length:
+Did you stop before 45 minutes? If so, when and why?
+Was microphone commentary recorded? yes / no
+
+YOUR EXPERIENCE
+1. In your own words, what happened during the session?
+
+2. What did you think your role was?
+
+3. What was your goal when you stopped?
+
+4. What was your first meaningful action? Approximately how long did it take
+   before you made it?
+
+5. Where did you search, wait, let time pass, or feel unsure what to do?
+   Give approximate times from the screen recording when possible.
+
+6. What was the first objective you chose, if any, and why?
+
+7. Who or what seemed like an opponent or pulled events in another direction?
+
+8. Which choice required a tradeoff or giving something up, if any?
+
+9. What consequence do you think followed from one of your choices, if any?
+
+10. What felt important while you were playing?
+
+11. What was something you wanted to do that you could not do?
+
+12. What did you expect to happen next?
+
+13. How did the passage of time feel? Answer in your own words first.
+
+14. After answering above, which is closest to how you would want time to
+    advance: daily real-time / next meaningful decision/date / monthly
+    advancement / another approach / no preference? Why?
+
+15. Did anything make the game appear unfinished or unavailable? What?
+
+16. Describe any crash, display, performance, control, or accessibility issue.
+    Include the approximate recording time and crash-log filename if relevant.
+
+17. What is the one thing you would most want changed before playing again?
+
+END OF FORM
