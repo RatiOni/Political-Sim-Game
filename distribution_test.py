@@ -2,6 +2,7 @@
 
 from datetime import datetime
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -216,6 +217,39 @@ def build_definition_is_pinned_and_one_folder():
     assert "ARDENIA_USER_DATA_DIR" in script
 
 
+def build_rejects_non_x64_toolchains():
+    script_path = PROJECT_ROOT / "scripts/build_windows.ps1"
+    script = script_path.read_text(encoding="utf-8")
+    assert "platform.machine()" in script
+    assert "struct.calcsize('P')" in script
+    assert "AMD64|64" in script
+    for signature in (
+            "3.14.6|6.11.1|6.16.0|ARM64|64",
+            "3.14.6|6.11.1|6.16.0|AMD64|32"):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_python = Path(tmp) / "fake-python.cmd"
+            fake_python.write_text(
+                "@echo off\n"
+                f"echo {signature.replace('|', '^|')}\n"
+                "exit /b 0\n",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [
+                    "powershell", "-ExecutionPolicy", "Bypass",
+                    "-File", str(script_path), "-Python", str(fake_python),
+                ],
+                cwd=PROJECT_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        output = result.stdout + result.stderr
+        assert result.returncode != 0
+        assert "Unsupported packaging toolchain" in output
+        assert signature in output
+
+
 def public_packet_is_neutral_private_and_versioned():
     guide = (PROJECT_ROOT / "distribution/PLAYTEST_README.txt").read_text(
         encoding="utf-8")
@@ -255,6 +289,8 @@ if __name__ == "__main__":
         ("fatal hook reports log failures", fatal_hook_reports_when_log_creation_fails),
         ("build definition is pinned and produces a one-folder package",
          build_definition_is_pinned_and_one_folder),
+        ("build rejects non-x64 toolchains",
+         build_rejects_non_x64_toolchains),
         ("public tester packet is neutral, private and versioned",
          public_packet_is_neutral_private_and_versioned),
     ]

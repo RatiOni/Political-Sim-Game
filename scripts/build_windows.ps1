@@ -27,9 +27,9 @@ function Invoke-Checked([scriptblock]$Command, [string]$Label) {
 Push-Location $repoRoot
 try {
     $toolchain = & $Python -c `
-        "import sys,PySide6,PyInstaller; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}|{PySide6.__version__}|{PyInstaller.__version__}')"
+        "import platform,struct,sys,PySide6,PyInstaller; bits=struct.calcsize('P')*8; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}|{PySide6.__version__}|{PyInstaller.__version__}|{platform.machine()}|{bits}')"
     if ($LASTEXITCODE -ne 0) { throw "Could not inspect packaging toolchain" }
-    if ($toolchain.Trim() -ne "3.14.6|6.11.1|6.16.0") {
+    if ($toolchain.Trim() -ne "3.14.6|6.11.1|6.16.0|AMD64|64") {
         throw "Unsupported packaging toolchain: $toolchain"
     }
 
