@@ -151,6 +151,31 @@ def packaged_verifier_uses_isolated_saves_and_required_files():
             raise AssertionError("missing tester files must fail verification")
 
 
+def packaged_verifier_rejects_invalid_restored_campaign():
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication([])
+    with tempfile.TemporaryDirectory() as data_tmp, \
+            tempfile.TemporaryDirectory() as dist_tmp:
+        dist = Path(dist_tmp)
+        (dist / "PLAYTEST_README.txt").write_text("test", encoding="utf-8")
+        (dist / "FEEDBACK_TEMPLATE.txt").write_text("test", encoding="utf-8")
+        invalid = generate_campaign(default_config())
+        invalid.country.id = "krasova"
+        with patch.dict(os.environ, {
+                "ARDENIA_USER_DATA_DIR": str(Path(data_tmp).resolve())}), \
+                patch.object(packaged_verify.persistence, "load_campaign",
+                             return_value=invalid):
+            try:
+                packaged_verify.verify_build(app, dist)
+            except RuntimeError as exc:
+                assert "restored campaign" in str(exc)
+            else:
+                raise AssertionError("invalid restored campaign must fail verification")
+            assert not persistence.save_exists("_package_verify_government")
+            assert not persistence.save_exists("_package_verify_opposition")
+
+
 def fatal_hook_reports_when_log_creation_fails():
     original = sys.excepthook
     try:
@@ -183,6 +208,8 @@ if __name__ == "__main__":
          crash_logs_are_local_versioned_and_readable),
         ("packaged verification isolates temporary saves and files",
          packaged_verifier_uses_isolated_saves_and_required_files),
+        ("packaged verification rejects invalid restored campaigns",
+         packaged_verifier_rejects_invalid_restored_campaign),
         ("fatal hook reports log failures", fatal_hook_reports_when_log_creation_fails),
     ]
     for label, test in checks:

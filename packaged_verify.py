@@ -34,19 +34,24 @@ def verify_build(app: QApplication,
         RootController()
         app.processEvents()
         foreign = build_state_for("krasova")
-        assert foreign.country.id == "krasova"
+        if foreign.country.id != "krasova":
+            raise RuntimeError("verification could not load the Krasova campaign")
         for role, slot in zip(("government", "opposition"), VERIFY_SLOTS):
             state = generate_campaign(CampaignConfig(
                 country_id="ardenia", opening_role=role,
                 background_id="none", seed=220826))
             persistence.save_campaign(state, slot=slot)
             restored = persistence.load_campaign(slot)
-            assert restored.country.id == "ardenia"
-            assert restored.player.in_government == state.player.in_government
+            if restored.country.id != "ardenia":
+                raise RuntimeError("verification restored campaign is not Ardenia")
+            if restored.player.in_government != state.player.in_government:
+                raise RuntimeError(
+                    "verification changed campaign government status after save/load")
             report.append(f"{role} campaign")
         marker = runtime_logging.write_log(
             "verification", "Ardenia packaged verification\n")
-        assert marker.read_text(encoding="utf-8").startswith("Ardenia")
+        if not marker.read_text(encoding="utf-8").startswith("Ardenia"):
+            raise RuntimeError("verification log is unreadable or malformed")
         report.append("resources, saves and logs")
         return report
     finally:
