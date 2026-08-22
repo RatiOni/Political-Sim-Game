@@ -363,6 +363,16 @@ def powershell_source_gate_failure_cannot_be_masked():
     assert result.returncode == 23
 
 
+def release_checklist_requires_clean_machine_and_frozen_sample():
+    checklist = (PROJECT_ROOT / "docs/playtests/WINDOWS_RELEASE_CHECKLIST.md") \
+        .read_text(encoding="utf-8").lower()
+    for required in ("clean windows", "without python", "government",
+                     "opposition", "autosave", "manual save", "load",
+                     "replace the extracted", "sha-256", "smartscreen",
+                     "freeze the build", "v0.1.0-playtest.1"):
+        assert required in checklist
+
+
 if __name__ == "__main__":
     checks = [
         ("source and packaged user-data paths are separate",
@@ -390,6 +400,8 @@ if __name__ == "__main__":
          release_workflow_is_manual_or_tag_only),
         ("PowerShell source-gate failures cannot be masked",
          powershell_source_gate_failure_cannot_be_masked),
+        ("release checklist requires clean-machine and frozen-sample gates",
+         release_checklist_requires_clean_machine_and_frozen_sample),
     ]
     for label, test in checks:
         check(label, test)
