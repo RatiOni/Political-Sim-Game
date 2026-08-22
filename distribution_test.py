@@ -2,6 +2,7 @@
 
 from datetime import datetime
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -281,9 +282,69 @@ def release_workflow_is_manual_or_tag_only():
     assert "scripts/run_ui_smoke_offscreen.py" in workflow
     assert "git diff --check" in workflow
     assert "gh release create" in workflow
-    assert "github.event_name == 'push'" in workflow
     assert "github.sha" in workflow
     assert "actions/upload-artifact@v4" in workflow
+    assert "pull_request:" not in workflow
+    assert "branches:" not in workflow
+
+    build = re.search(
+        r"(?ms)^  build-and-verify:\n(?P<body>.*?)(?=^  release:\n)",
+        workflow,
+    )
+    release = re.search(r"(?ms)^  release:\n(?P<body>.*)\Z", workflow)
+    assert build and release
+    build_body = build.group("body")
+    release_body = release.group("body")
+    assert re.search(r"(?m)^    permissions:\n      contents: read$", build_body)
+    assert "persist-credentials: false" in build_body
+    assert "fetch-depth: 2" in build_body
+    assert re.search(
+        r"git diff --check HEAD\^ HEAD\r?\n\s*"
+        r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+        build_body,
+    )
+    assert re.search(
+        r"python distribution_test\.py\r?\n\s*"
+        r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+        build_body,
+    )
+    assert "RELEASE_TAG: ${{ github.ref_name }}" in workflow
+    assert "os.environ['RELEASE_TAG']" in workflow
+    assert "$env:RELEASE_TAG" in workflow
+    assert re.search(r"(?m)^    needs: build-and-verify$", release_body)
+    assert re.search(r"(?m)^    if: github.event_name == 'push'$", release_body)
+    assert re.search(r"(?m)^    permissions:\n      contents: write$", release_body)
+    assert "actions/download-artifact@v4" in release_body
+    assert workflow.count("name: Ardenia-Windows-playtest") == 2
+    create = re.search(r"(?m)^\s*gh release create (?P<args>.*)$", release_body)
+    assert create and "--draft" in create.group("args")
+    assert "$zip" not in create.group("args")
+    assert "$sha" not in create.group("args")
+    assert "gh release upload" in release_body
+    assert "gh release edit" in release_body
+    assert "--draft=false" in release_body
+    assert "Refusing to replace an existing public release" in release_body
+    assert release_body.index("gh release create") < \
+        release_body.index("gh release upload") < \
+        release_body.index("gh release edit")
+
+
+def powershell_source_gate_failure_cannot_be_masked():
+    result = subprocess.run(
+        [
+            "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+            "-Command", (
+                "cmd /c exit 23; "
+                "if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; "
+                "cmd /c exit 0"
+            ),
+        ],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 23
 
 
 if __name__ == "__main__":
@@ -311,6 +372,8 @@ if __name__ == "__main__":
          public_packet_is_neutral_private_and_versioned),
         ("release workflow is manual or matching-tag only",
          release_workflow_is_manual_or_tag_only),
+        ("PowerShell source-gate failures cannot be masked",
+         powershell_source_gate_failure_cannot_be_masked),
     ]
     for label, test in checks:
         check(label, test)

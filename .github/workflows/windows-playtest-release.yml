@@ -6,41 +6,59 @@ on:
       - "v*-playtest.*"
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   build-and-verify:
     runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14.6"
           architecture: "x64"
           cache: "pip"
       - name: Install pinned dependencies
-        run: python -m pip install -r requirements-build.txt
-      - name: Validate source and release tag
         shell: pwsh
         run: |
-          git diff --check
+          python -m pip install -r requirements-build.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Validate source and release tag
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          git diff --check HEAD^ HEAD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python distribution_test.py
-          if ("${{ github.event_name }}" -eq "push") {
-            python -c "import version; version.validate_tag('${{ github.ref_name }}')"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($env:GITHUB_EVENT_NAME -eq "push") {
+            python -c "import os, version; version.validate_tag(os.environ['RELEASE_TAG'])"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
       - name: Run engine suite
-        run: python smoke_test.py
+        shell: pwsh
+        run: |
+          python smoke_test.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         env:
           PYTHONUTF8: "1"
       - name: Run GUI suite offscreen
-        run: python scripts/run_ui_smoke_offscreen.py
+        shell: pwsh
+        run: |
+          python scripts/run_ui_smoke_offscreen.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         env:
           PYTHONUTF8: "1"
           QT_QPA_PLATFORM: "offscreen"
       - name: Build and verify Windows package
         shell: pwsh
-        run: scripts/build_windows.ps1 -Python python
+        run: |
+          & scripts/build_windows.ps1 -Python python
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload inspected workflow artifact
         uses: actions/upload-artifact@v4
         with:
@@ -49,19 +67,39 @@ jobs:
             dist/Ardenia-*-win64.zip
             dist/Ardenia-*-win64.zip.sha256
           if-no-files-found: error
-      - name: Publish tag-gated GitHub Release
-        if: github.event_name == 'push'
+
+  release:
+    needs: build-and-verify
+    if: github.event_name == 'push'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified workflow artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Ardenia-Windows-playtest
+          path: dist
+      - name: Publish verified tag as a draft, then release it
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_COMMIT: ${{ github.sha }}
         run: |
-          $version = python -c "import version; print(version.VERSION)"
-          $commit = "${{ github.sha }}"
+          $ErrorActionPreference = "Stop"
+          $version = $env:RELEASE_TAG.Substring(1)
           $zip = "dist/Ardenia-$version-win64.zip"
           $sha = "$zip.sha256"
+          if (-not (Test-Path -LiteralPath $zip)) {
+            throw "Verified ZIP artifact is missing: $zip"
+          }
+          if (-not (Test-Path -LiteralPath $sha)) {
+            throw "Verified SHA-256 artifact is missing: $sha"
+          }
           $notes = @"
           Ardenia $version is an unsigned Windows 10/11 early playtest build.
-          Source commit: $commit
+          Source commit: $env:RELEASE_COMMIT
 
           Download the ZIP, verify it with the attached SHA-256 file, extract the
           complete Ardenia folder, and run Ardenia.exe. Python and Git are not
@@ -75,6 +113,31 @@ jobs:
           "@
           $notesPath = "dist/release-notes.md"
           Set-Content -LiteralPath $notesPath -Value $notes -Encoding utf8
-          gh release create "${{ github.ref_name }}" $zip $sha `
-            --verify-tag --title "Ardenia $version — Windows playtest" `
-            --notes-file $notesPath
+
+          $existingDraft = gh release view "$env:RELEASE_TAG" --json isDraft --jq '.isDraft' 2>$null
+          $viewExit = $LASTEXITCODE
+          if ($viewExit -eq 0) {
+            if ($existingDraft.Trim() -ne "true") {
+              throw "Refusing to replace an existing public release for $env:RELEASE_TAG"
+            }
+            gh release delete "$env:RELEASE_TAG" --yes
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } elseif ($viewExit -ne 1) {
+            exit $viewExit
+          }
+
+          gh release create "$env:RELEASE_TAG" --draft --verify-tag `
+            --title "Ardenia $version — Windows playtest" --notes-file $notesPath
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          gh release upload "$env:RELEASE_TAG" $zip $sha
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $assetNames = gh release view "$env:RELEASE_TAG" --json assets --jq '.assets[].name'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($assetNames -notcontains (Split-Path -Leaf $zip)) {
+            throw "Draft release is missing ZIP asset"
+          }
+          if ($assetNames -notcontains (Split-Path -Leaf $sha)) {
+            throw "Draft release is missing SHA-256 asset"
+          }
+          gh release edit "$env:RELEASE_TAG" --draft=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
