@@ -5962,3 +5962,52 @@ assert _six_months(guided, 5150) == _six_months(plain, 5150), \
     "guidance diverged the simulation over six months"
 print("  identical fingerprints at generation and after six months")
 print("  PASS: the guided opening is presentation, and provably nothing else")
+
+# ══════════════════════════════════════════════════════════════════════════
+# SECTION AI — MODIFIER-VISIBILITY GLYPH DATA
+# ══════════════════════════════════════════════════════════════════════════
+
+section("AI1: approval_forces classifies every lifecycle phase correctly")
+
+from ui import modifier_glyph
+from models.modifiers import Modifier
+
+class _AIState:
+    def __init__(self, modifiers):
+        self.modifiers = modifiers
+
+onset_mod = Modifier(id="m1", source="Pending reform", target="approval_bias",
+                      magnitude=0.05, onset_delay=3, ramp_duration=2, age=1)
+ramp_mod = Modifier(id="m2", source="New law phasing in", target="approval_bias",
+                     magnitude=0.08, onset_delay=0, ramp_duration=4, age=1)
+hold_mod = Modifier(id="m3", source="Popular reform", target="approval_bias",
+                     magnitude=0.10, onset_delay=0, ramp_duration=1,
+                     hold_duration=6, age=3)
+decay_mod = Modifier(id="m4", source="Scandal fading", target="approval_bias",
+                      magnitude=-0.06, onset_delay=0, ramp_duration=1,
+                      hold_duration=2, decay_duration=4, age=4)
+unrelated_mod = Modifier(id="m5", source="Inflation shock", target="inflation",
+                          magnitude=0.02, ramp_duration=1, age=0)
+
+state = _AIState([onset_mod, ramp_mod, hold_mod, decay_mod, unrelated_mod])
+forces = modifier_glyph.approval_forces(state)
+
+by_source = {f["source"]: f for f in forces}
+assert len(forces) == 4, f"expected 4 approval-targeted forces, got {len(forces)}: {forces}"
+assert "Inflation shock" not in by_source, "a non-approval modifier leaked into approval_forces"
+
+assert by_source["Pending reform"]["phase"] == "onset"
+assert by_source["New law phasing in"]["phase"] == "ramp"
+assert by_source["Popular reform"]["phase"] == "hold"
+assert by_source["Scandal fading"]["phase"] == "decay"
+
+assert by_source["Pending reform"]["sign"] == "positive"
+assert by_source["Popular reform"]["sign"] == "positive"
+assert by_source["Scandal fading"]["sign"] == "negative", \
+    "a negative-magnitude modifier must report sign='negative' even while its current_value is still small during decay"
+
+assert abs(by_source["Popular reform"]["strength"] - hold_mod.current_value()) < 1e-9
+
+print(f"  {len(forces)} forces classified: "
+      f"{sorted((f['source'], f['phase'], f['sign']) for f in forces)}")
+print("  PASS: onset/ramp/hold/decay and sign are read straight off Modifier, nothing reimplemented")
