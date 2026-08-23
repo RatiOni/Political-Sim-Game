@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from PySide6.QtWidgets import QApplication, QLabel, QPushButton
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QFontDatabase
 
 from ui import theme
 from ui.app import MainWindow
@@ -406,6 +407,19 @@ def main():
         app.processEvents()
         persistence.delete_save("autosave")
     check("game window launches from a generated campaign + autosaves", _launch_from_campaign)
+
+    def _public_sans_fonts_load():
+        import glob
+        font_files = sorted(glob.glob(
+            os.path.join(os.path.dirname(__file__), "ui", "assets", "fonts", "*.ttf")))
+        assert len(font_files) == 4, f"expected 4 Public Sans .ttf files, found {len(font_files)}"
+        families = set()
+        for path in font_files:
+            font_id = QFontDatabase.addApplicationFont(path)
+            assert font_id != -1, f"Qt rejected font file: {path}"
+            families.update(QFontDatabase.applicationFontFamilies(font_id))
+        assert "Public Sans" in families, f"no 'Public Sans' family registered, got {families}"
+    check("Public Sans font files load into QFontDatabase", _public_sans_fonts_load)
 
     print("\n" + "=" * 60)
     for status, name in checks:
