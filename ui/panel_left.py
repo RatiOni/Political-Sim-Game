@@ -16,12 +16,16 @@ Now:
      actually wants them.
 """
 
+import os
+
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QFrame, QToolButton)
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QUrl
+from PySide6.QtQuickWidgets import QQuickWidget
 
-from ui import theme, explain
+from ui import theme, explain, modifier_glyph
 from ui.widgets_statbar import VitalStat
+from ui.qml_bridge import VitalStatModel
 
 # Trend glyphs. A change smaller than the metric's own threshold reads as
 # "flat" rather than being dramatised into a direction.
@@ -135,29 +139,34 @@ class LeftPanel(QWidget):
         layout.setContentsMargins(15, 10, 15, 10)
         layout.setSpacing(2)
 
-        def _vital(label: str, metric_name: str) -> VitalStat:
-            if explain.has_breakdown(metric_name):
-                widget = _ClickableVital(label, metric_name)
-                widget.clicked.connect(self.metric_clicked)
-                return widget
-            return VitalStat(label)
-
         # ── Tier 1: the three that decide whether you survive ─────────────
+        # QML-hosted (see DESIGN.md) — the only place the modifier-visibility
+        # force-glyph currently applies is Approval, which is why only its
+        # model is built with a metric_name.
+        self._approval_model = VitalStatModel("Approval", metric_name="Approval")
+        self._stability_model = VitalStatModel("Stability")
+        self._pc_model = VitalStatModel("Political capital")
+        self._attention_model = VitalStatModel("Attention")
+        for model in (self._approval_model, self._stability_model,
+                      self._pc_model, self._attention_model):
+            model.clicked.connect(self.metric_clicked)
+
         self._role_title = _section_title("YOUR GOVERNMENT")
         layout.addWidget(self._role_title)
         layout.addSpacing(4)
-        self._v_approval  = _vital("Approval", "Approval")
-        self._v_stability = _vital("Stability", "Stability")
-        self._v_pc        = _vital("Political capital", "Pol. Capital")
-        # Government attention sits beside political capital because it is the
-        # other half of the same question: capital is what you can afford,
-        # attention is what you have room to actually do this month
-        # (engine/player_ops.py: MONTHLY_ATTENTION).
-        self._v_attention = VitalStat("Attention")
-        for widget in (self._v_approval, self._v_stability, self._v_pc,
-                       self._v_attention):
-            layout.addWidget(widget)
-            layout.addSpacing(3)
+
+        self._vitals_quick = QQuickWidget()
+        self._vitals_quick.setResizeMode(QQuickWidget.ResizeMode.SizeRootObjectToView)
+        self._vitals_quick.setFixedHeight(150)
+        ctx = self._vitals_quick.rootContext()
+        ctx.setContextProperty("approvalModel", self._approval_model)
+        ctx.setContextProperty("stabilityModel", self._stability_model)
+        ctx.setContextProperty("pcModel", self._pc_model)
+        ctx.setContextProperty("attentionModel", self._attention_model)
+        qml_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                 "ui", "qml", "VitalsPanel.qml")
+        self._vitals_quick.setSource(QUrl.fromLocalFile(qml_path))
+        layout.addWidget(self._vitals_quick)
 
         # ── Tier 2: the economy, as figures ───────────────────────────────
         layout.addSpacing(2)
@@ -259,26 +268,32 @@ class LeftPanel(QWidget):
 
         self._role_title.setText(
             "YOUR GOVERNMENT" if p.in_government else "YOUR OPPOSITION")
-        self._v_stability.set_label(
-            "Stability" if p.in_government else "Gov. stability")
+        # VitalStatModel.label has no public setter (Task 3 exposed it
+        # read-only via a Property), but it does declare labelChanged for
+        # exactly this kind of reactive relabel — mutate the backing field
+        # directly and emit it ourselves rather than silently losing the
+        # "Gov. stability" cue the opposition previously had.
+        stability_label = "Stability" if p.in_government else "Gov. stability"
+        if self._stability_model._label != stability_label:
+            self._stability_model._label = stability_label
+            self._stability_model.labelChanged.emit()
 
-        self._v_approval.set_value(
+        self._approval_model.refresh_from(
             p.approval, f"{p.approval*100:.0f}%",
-            theme.lerp_status_color(p.approval))
-        # Stability shows the figure AND the word: the old column showed a bar
-        # and a word with no number at all, which is unreadable.
-        self._v_stability.set_value(
+            theme.lerp_status_color(p.approval),
+            forces=modifier_glyph.approval_forces(state))
+        self._stability_model.refresh_from(
             state.stability.value, f"{state.stability.value*100:.0f}%",
             theme.lerp_status_color(state.stability.value),
             qualifier=state.stability.label())
-        self._v_pc.set_value(
+        self._pc_model.refresh_from(
             p.political_capital / 100.0, f"{p.political_capital:.0f}",
             theme.lerp_status_color(p.political_capital / 100.0))
 
         from engine import player_ops as ops
         left = ops.attention_remaining(state)
         total = ops.MONTHLY_ATTENTION
-        self._v_attention.set_value(
+        self._attention_model.refresh_from(
             left / max(1, total), f"{left} / {total}",
             theme.lerp_status_color(left / max(1, total)),
             qualifier=("committed" if left == 0 else "this month"),

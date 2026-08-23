@@ -443,6 +443,23 @@ def main():
         assert quick.errors() == [], f"QML reported errors: {quick.errors()}"
     check("VitalsPanel.qml loads with no QML errors", _vitals_panel_qml_loads)
 
+    def _left_panel_vitals_refresh_and_click():
+        # Built against a fresh sample state rather than reusing the
+        # MainWindow fixture, so this check is independent of whichever
+        # earlier check ran (or didn't) first.
+        from ui.panel_left import LeftPanel
+        from main import build_sample_game
+        st = build_sample_game()
+        panel = LeftPanel(st)
+        app.processEvents()
+        clicked = []
+        panel.metric_clicked.connect(lambda name: clicked.append(name))
+        panel.refresh(st)
+        assert panel._approval_model.readoutText.endswith("%")
+        panel._approval_model.activate()
+        assert clicked == ["Approval"], f"expected a click-through from QML to LeftPanel.metric_clicked, got {clicked}"
+    check("LeftPanel's QML vitals refresh and forward clicks", _left_panel_vitals_refresh_and_click)
+
     print("\n" + "=" * 60)
     for status, name in checks:
         print(f"  {status}  {name}")
