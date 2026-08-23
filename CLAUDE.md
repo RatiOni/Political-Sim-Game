@@ -13,6 +13,10 @@ A single-player political/state-management simulation game in pure Python. Two f
 
 This is a plain Python source tree run against the interpreter in `.venv`. Runtime and packaging dependencies are pinned in `requirements.txt` and `requirements-build.txt`; PySide6 is the sole runtime third-party dependency.
 
+## Design System
+
+Always read `DESIGN.md` before making any visual or UI decisions. It is the source of truth for the aesthetic direction, typography, color, spacing, layout and motion rules, and records the ongoing migration of `ui/` from Qt Widgets to Qt Quick/QML (PySide6 stays; only the presentation layer changes). Do not deviate from it without explicit user approval. In QA mode, flag any code that doesn't match `DESIGN.md`.
+
 ## Commands
 
 - **Run the GUI:** `.venv\Scripts\python.exe gui.py`
@@ -183,6 +187,8 @@ Reforms now begin with a persistent **objective**, not a pre-written bill. `cont
 `turn.py: _update_structural_inflation` — deficits push structural inflation up, growth above trend overheats it, an anchor pulls it toward ~2%. Policy modifiers layer on top of the organic base.
 
 ### One colour system per job
+
+**A QML migration is underway (see `DESIGN.md`) — the tokens below are the source of truth for `ui/theme.py`'s still-Widgets surfaces; `ui/qml/Theme.qml` ports the same hex values for QML surfaces as they migrate. Don't let the two drift: one hex value, two representations.**
 
 The base palette is **burgundy**, not the original navy: `BG`/`PANEL_BG`/`PANEL_RAISED` are a warm wine-red ramp with a gold `ACCENT`. If you darken them, darken them together or the surface hierarchy stops being legible. Two things were retuned *because* of that switch and should not be reverted piecemeal: `CRITICAL` is hotter and lighter than it was (the old `#e36b76` is almost exactly the new chrome colour, so "on fire" would have read as "background"), and `PRESSURE_CRITICAL` likewise — the old ramp topped out at `#ab4a52`, which is the burgundy itself. Colours picked against the navy live on as named constants (`TRACK_BG`, `ROW_LINE`, `MAP_*`) rather than hex literals in widgets, so the next palette change is one file.
 
