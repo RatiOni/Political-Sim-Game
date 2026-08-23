@@ -6011,3 +6011,40 @@ assert abs(by_source["Popular reform"]["strength"] - hold_mod.current_value()) <
 print(f"  {len(forces)} forces classified: "
       f"{sorted((f['source'], f['phase'], f['sign']) for f in forces)}")
 print("  PASS: onset/ramp/hold/decay and sign are read straight off Modifier, nothing reimplemented")
+
+section("AI2: VitalStatModel derives its animation duration from the dominant active force")
+
+from ui.qml_bridge import VitalStatModel, ms_for_phase
+
+no_forces_ms = ms_for_phase([])
+assert no_forces_ms == 200, f"flat 'value tick' duration should be 200ms, got {no_forces_ms}"
+
+ramp_forces = [{"source": "x", "phase": "ramp", "sign": "positive", "strength": 0.05}]
+ramp_ms = ms_for_phase(ramp_forces)
+assert 350 <= ramp_ms <= 900, f"a ramping force should map into the 350-900ms band, got {ramp_ms}"
+
+mixed_forces = [
+    {"source": "a", "phase": "hold", "sign": "positive", "strength": 0.02},
+    {"source": "b", "phase": "decay", "sign": "negative", "strength": 0.09},
+]
+mixed_ms = ms_for_phase(mixed_forces)
+assert 350 <= mixed_ms <= 900, f"the dominant (largest-strength) force should drive duration, got {mixed_ms}"
+# 'b' has the larger strength (0.09 > 0.02), so it should dominate over 'a'.
+solo_decay_ms = ms_for_phase([mixed_forces[1]])
+assert mixed_ms == solo_decay_ms, "the dominant force alone should reproduce the mixed-list duration"
+
+model = VitalStatModel("Approval", metric_name="Approval")
+model.refresh_from(value=0.48, readout="48%", color="#f0c66e",
+                    qualifier="", qualifier_color=None,
+                    forces=ramp_forces)
+assert model.value == 0.48
+assert model.readoutText == "48%"
+assert model.fillColor == "#f0c66e"
+assert len(model.forces) == 1
+assert model.animMs == ramp_ms
+
+clicks = []
+model.clicked.connect(lambda name: clicks.append(name))
+model.activate()
+assert clicks == ["Approval"], f"clicking an explainable vital should emit its metric name, got {clicks}"
+print("  PASS: duration tracks the dominant active force; click still emits the metric name")
