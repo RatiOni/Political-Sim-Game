@@ -1,2 +1,5 @@
 module ui.qml
 singleton Theme 1.0 Theme.qml
+ForceGlyph 1.0 ForceGlyph.qml
+VitalStat 1.0 VitalStat.qml
+VitalsPanel 1.0 VitalsPanel.qml

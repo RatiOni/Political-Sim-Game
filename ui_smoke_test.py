@@ -20,8 +20,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, os.path.dirname(__file__))
 
 from PySide6.QtWidgets import QApplication, QLabel, QPushButton
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QFontDatabase
+from PySide6.QtQuickWidgets import QQuickWidget
 
 from ui import theme
 from ui.app import MainWindow
@@ -420,6 +421,27 @@ def main():
             families.update(QFontDatabase.applicationFontFamilies(font_id))
         assert "Public Sans" in families, f"no 'Public Sans' family registered, got {families}"
     check("Public Sans font files load into QFontDatabase", _public_sans_fonts_load)
+
+    def _vitals_panel_qml_loads():
+        from ui.qml_bridge import VitalStatModel
+        quick = QQuickWidget()
+        quick.setResizeMode(QQuickWidget.ResizeMode.SizeRootObjectToView)
+        ctx = quick.rootContext()
+        approval = VitalStatModel("Approval", metric_name="Approval")
+        stability = VitalStatModel("Stability")
+        pc = VitalStatModel("Political capital")
+        attention = VitalStatModel("Attention")
+        ctx.setContextProperty("approvalModel", approval)
+        ctx.setContextProperty("stabilityModel", stability)
+        ctx.setContextProperty("pcModel", pc)
+        ctx.setContextProperty("attentionModel", attention)
+        qml_path = os.path.join(os.path.dirname(__file__), "ui", "qml", "VitalsPanel.qml")
+        quick.setSource(QUrl.fromLocalFile(qml_path))
+        app.processEvents()
+        assert quick.status() == QQuickWidget.Status.Ready, \
+            f"VitalsPanel.qml failed to load, status={quick.status()}, errors={quick.errors()}"
+        assert quick.errors() == [], f"QML reported errors: {quick.errors()}"
+    check("VitalsPanel.qml loads with no QML errors", _vitals_panel_qml_loads)
 
     print("\n" + "=" * 60)
     for status, name in checks:
