@@ -25,6 +25,7 @@ from PySide6.QtCore import Qt
 from ui import theme
 from ui.app import MainWindow
 from engine import player_ops as ops
+from version import VERSION
 
 
 def main():
@@ -42,7 +43,10 @@ def main():
             checks.append(("FAIL", f"{name}: {type(e).__name__}: {e}"))
 
     window = {}
-    check("MainWindow constructs with all panels", lambda: window.__setitem__("w", MainWindow()))
+    def _main_window_constructs():
+        window["w"] = MainWindow()
+        assert VERSION in window["w"].windowTitle()
+    check("MainWindow constructs with all panels", _main_window_constructs)
 
     if "w" in window:
         w = window["w"]
@@ -268,7 +272,10 @@ def main():
     from engine import persistence
 
     check("MainMenu constructs", lambda: MainMenu())
-    check("RootController constructs", lambda: RootController())
+    def _root_controller_constructs():
+        root = RootController()
+        assert VERSION in root.windowTitle()
+    check("RootController constructs", _root_controller_constructs)
     check("SettingsDialog + CreditsDialog construct",
           lambda: (SettingsDialog(), CreditsDialog()))
     check("LoadDialog constructs", lambda: LoadDialog())
@@ -354,34 +361,33 @@ def main():
 
     def _country_step_scope():
         from ui.menu import PLAYABLE_COUNTRY_IDS
+        from content import loader as country_loader
         step = CountrySelectStep()
-        rows = [(step._list.item(i), step._summaries[i]["id"])
-                for i in range(step._list.count())]
-        # All nine still appear — the locked ones are shown, not hidden.
-        assert len(rows) == 9, f"expected all nine countries listed, got {len(rows)}"
-        selectable = [cid for item, cid in rows
-                      if bool(item.flags() & Qt.ItemIsSelectable)]
-        assert selectable == ["ardenia"], f"only Ardenia may be selectable, got {selectable}"
-        for item, cid in rows:
-            if cid in PLAYABLE_COUNTRY_IDS:
-                continue
-            assert not (item.flags() & Qt.ItemIsEnabled), f"{cid} should be disabled"
-            assert "Coming Soon" in item.text(), f"{cid} needs a Coming Soon label"
-        # Ardenia is pre-selected, so the player can simply press Next.
+        rows = [step._list.item(i) for i in range(step._list.count())]
+        assert PLAYABLE_COUNTRY_IDS == {"ardenia"}
+        assert len(rows) == 1, f"expected one campaign country, got {len(rows)}"
+        assert [item.data(Qt.UserRole) for item in rows] == ["ardenia"]
+        assert [item.text() for item in rows] == ["Begin the Ardenia campaign"]
+        assert all("Coming Soon" not in item.text() for item in rows)
+        visible_copy = [label.text() for label in step.findChildren(QLabel)]
+        assert "Neighboring states remain active world actors." in visible_copy
+        # Ardenia is selected, so the player can simply press Next.
         assert step._list.currentRow() == 0
         assert step._summaries[0]["id"] == "ardenia"
-        # collect() refuses to hand back a locked country even if forced.
-        cfg = CampaignConfig(country_id="ardenia")
-        locked_row = next(i for i, (_, cid) in enumerate(rows) if cid != "ardenia")
-        step._list.setCurrentRow(locked_row)
+        cfg = CampaignConfig(country_id="krasova")
         step.collect(cfg)
-        assert cfg.country_id == "ardenia", "a locked country must never reach the config"
-        # The detail pane still renders for every country's data (they all
-        # remain live as world actors), so this stays exercised.
-        for i in range(step._list.count()):
-            step._on_select(i)
-            app.processEvents()
-    check("country step: Ardenia-only, other eight shown as Coming Soon",
+        assert cfg.country_id == "ardenia"
+        # Defensive collection must still reject an injected foreign id even
+        # though foreign countries no longer have visible campaign rows.
+        foreign = next(summary for summary in country_loader.list_country_summaries()
+                       if summary["id"] != "ardenia")
+        step._summaries[0] = foreign
+        step.collect(cfg)
+        assert cfg.country_id == "ardenia", "foreign selection must be rejected"
+        # Foreign countries remain fully constructible as world actors.
+        foreign_state = country_loader.build_state_for(foreign["id"])
+        assert foreign_state.country.id == foreign["id"]
+    check("country step: one confident Ardenia campaign with world actors intact",
           _country_step_scope)
 
     def _save_load_roundtrip():

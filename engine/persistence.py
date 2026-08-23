@@ -10,6 +10,8 @@ import os
 import json
 import dataclasses
 
+import app_paths
+
 from game_state import GameState, Player
 from models.country import Country
 from models.economy import Economy, Sector, Budget, Loan
@@ -37,7 +39,6 @@ from engine.households import ensure_households
 
 
 SAVE_VERSION = 1
-_SAVES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "saves")
 
 # The first party-current implementation used these broad labels in Ardenia.
 # Recognising the exact old sets lets existing saves enter the canonical bloc
@@ -529,12 +530,16 @@ def deserialize_state(data: dict) -> GameState:
 
 # ── File operations ─────────────────────────────────────────────────────────
 
+def _saves_dir():
+    return app_paths.saves_dir()
+
+
 def _ensure_saves_dir():
-    os.makedirs(_SAVES_DIR, exist_ok=True)
+    return app_paths.ensure_directory(_saves_dir())
 
 def _slot_path(slot: str) -> str:
     safe = "".join(c for c in slot if c.isalnum() or c in ("-", "_")).strip() or "save"
-    return os.path.join(_SAVES_DIR, f"{safe}.json")
+    return str(_saves_dir() / f"{safe}.json")
 
 def save_campaign(state: GameState, slot: str = "manual") -> str:
     _ensure_saves_dir()
@@ -554,15 +559,16 @@ def load_campaign(slot: str = "manual") -> GameState:
 
 def list_saves() -> list:
     """Return [{slot, label, date, country, leader}] for the load screen."""
-    if not os.path.isdir(_SAVES_DIR):
+    saves_dir = _saves_dir()
+    if not saves_dir.is_dir():
         return []
     out = []
-    for fname in sorted(os.listdir(_SAVES_DIR)):
-        if not fname.endswith(".json"):
+    for path in sorted(saves_dir.iterdir(), key=lambda item: item.name):
+        if path.suffix != ".json":
             continue
-        slot = fname[:-5]
+        slot = path.stem
         try:
-            with open(os.path.join(_SAVES_DIR, fname), "r", encoding="utf-8") as fh:
+            with path.open("r", encoding="utf-8") as fh:
                 data = json.load(fh)
             out.append({
                 "slot": slot,

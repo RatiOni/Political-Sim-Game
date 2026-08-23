@@ -1,0 +1,219 @@
+name: Windows playtest release
+
+on:
+  push:
+    tags:
+      - "v*-playtest.*"
+  workflow_dispatch:
+
+concurrency:
+  group: windows-playtest-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-verify:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    outputs:
+      build_commit: ${{ steps.build_provenance.outputs.build_commit }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14.6"
+          architecture: "x64"
+          cache: "pip"
+      - name: Install pinned dependencies
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements-build.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Validate source and release tag
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          git diff --check HEAD^ HEAD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python distribution_test.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($env:GITHUB_EVENT_NAME -eq "push") {
+            python -c "import os, version; version.validate_tag(os.environ['RELEASE_TAG'])"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Run engine suite
+        shell: pwsh
+        run: |
+          python smoke_test.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        env:
+          PYTHONUTF8: "1"
+      - name: Run GUI suite offscreen
+        shell: pwsh
+        run: |
+          python scripts/run_ui_smoke_offscreen.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        env:
+          PYTHONUTF8: "1"
+          QT_QPA_PLATFORM: "offscreen"
+      - name: Build and verify Windows package
+        shell: pwsh
+        run: |
+          & scripts/build_windows.ps1 -Python python
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record build provenance
+        id: build_provenance
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $buildCommit = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($buildCommit -notmatch "^[0-9a-f]{40}$") {
+            throw "Could not record the build commit"
+          }
+          Set-Content -LiteralPath "dist/build-commit.txt" `
+            -Value $buildCommit -Encoding ascii -NoNewline
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT `
+            -Value "build_commit=$buildCommit" -Encoding utf8
+      - name: Upload inspected workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ardenia-Windows-playtest
+          path: |
+            dist/Ardenia-*-win64.zip
+            dist/Ardenia-*-win64.zip.sha256
+            dist/build-commit.txt
+          if-no-files-found: error
+
+  release:
+    needs: build-and-verify
+    if: github.event_name == 'push'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified workflow artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Ardenia-Windows-playtest
+          path: dist
+      - name: Publish verified tag as a draft, then release it
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EXPECTED_BUILD_COMMIT: ${{ needs.build-and-verify.outputs.build_commit }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = $env:RELEASE_TAG.Substring(1)
+          $zip = "dist/Ardenia-$version-win64.zip"
+          $sha = "$zip.sha256"
+          $provenance = "dist/build-commit.txt"
+          if (-not (Test-Path -LiteralPath $zip)) {
+            throw "Verified ZIP artifact is missing: $zip"
+          }
+          if (-not (Test-Path -LiteralPath $sha)) {
+            throw "Verified SHA-256 artifact is missing: $sha"
+          }
+          if (-not (Test-Path -LiteralPath $provenance)) {
+            throw "Build provenance is missing: $provenance"
+          }
+          $buildCommit = (Get-Content -LiteralPath $provenance -Raw).Trim()
+          if ($buildCommit -notmatch "^[0-9a-f]{40}$") {
+            throw "Build provenance is not a commit SHA: $buildCommit"
+          }
+          if ($env:EXPECTED_BUILD_COMMIT -notmatch "^[0-9a-f]{40}$") {
+            throw "Build job output is not a commit SHA: $env:EXPECTED_BUILD_COMMIT"
+          }
+          if ($buildCommit -ne $env:EXPECTED_BUILD_COMMIT) {
+            throw "Downloaded artifact provenance does not match the build job output"
+          }
+          $notes = @"
+          Ardenia $version is an unsigned Windows 10/11 early playtest build.
+          Source commit: $buildCommit
+
+          Download the ZIP, verify it with the attached SHA-256 file, extract the
+          complete Ardenia folder, and run Ardenia.exe. Python and Git are not
+          required. Windows SmartScreen may warn because this build is unsigned.
+
+          Saves: %LOCALAPPDATA%\Ardenia\saves
+          Crash logs: %LOCALAPPDATA%\Ardenia\logs
+
+          Follow PLAYTEST_README.txt inside the archive. Return recordings and
+          completed feedback only through the organizer's private channel.
+          "@
+          $notesPath = "dist/release-notes.md"
+          Set-Content -LiteralPath $notesPath -Value $notes -Encoding utf8
+
+          $releasePagesJson = gh api --paginate --slurp `
+            "repos/$env:GH_REPO/releases?per_page=100"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $releasePages = ConvertFrom-Json -InputObject `
+            ($releasePagesJson -join [Environment]::NewLine)
+          $existingReleases = @(
+            foreach ($page in $releasePages) {
+              foreach ($release in $page) {
+                if ($release.tag_name -eq $env:RELEASE_TAG) {
+                  $release
+                }
+              }
+            }
+          )
+          if ($existingReleases.Count -ne 0) {
+            throw "Refusing to create a release because one already exists for $env:RELEASE_TAG"
+          }
+
+          $encodedTag = [Uri]::EscapeDataString($env:RELEASE_TAG)
+          $tagRef = gh api "repos/$env:GH_REPO/git/ref/tags/$encodedTag" `
+            --jq '.object.type + " " + .object.sha'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $tagRefLine = ($tagRef -join "").Trim()
+          if ($tagRefLine -notmatch "^(commit|tag) ([0-9a-f]{40})$") {
+            throw "Remote tag did not resolve to a Git object: $tagRefLine"
+          }
+          $remoteType = $Matches[1]
+          $remoteObject = $Matches[2]
+          $peelDepth = 0
+          while ($remoteType -eq "tag") {
+            $peelDepth += 1
+            if ($peelDepth -gt 10) {
+              throw "Remote tag nesting is unexpectedly deep"
+            }
+            $tagObject = gh api "repos/$env:GH_REPO/git/tags/$remoteObject" `
+              --jq '.object.type + " " + .object.sha'
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $tagObjectLine = ($tagObject -join "").Trim()
+            if ($tagObjectLine -notmatch "^(commit|tag) ([0-9a-f]{40})$") {
+              throw "Annotated tag did not peel to a Git object: $tagObjectLine"
+            }
+            $remoteType = $Matches[1]
+            $remoteObject = $Matches[2]
+          }
+          if ($remoteType -ne "commit") {
+            throw "Remote tag does not point to a commit"
+          }
+          $remoteCommit = $remoteObject
+          if ($remoteCommit -ne $buildCommit) {
+            throw "Remote tag moved after the build: expected $buildCommit, found $remoteCommit"
+          }
+
+          gh release create "$env:RELEASE_TAG" --draft --verify-tag `
+            --title "Ardenia $version — Windows playtest" --notes-file $notesPath
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          gh release upload "$env:RELEASE_TAG" $zip $sha
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $assetNames = gh release view "$env:RELEASE_TAG" --json assets --jq '.assets[].name'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($assetNames -notcontains (Split-Path -Leaf $zip)) {
+            throw "Draft release is missing ZIP asset"
+          }
+          if ($assetNames -notcontains (Split-Path -Leaf $sha)) {
+            throw "Draft release is missing SHA-256 asset"
+          }
+          gh release edit "$env:RELEASE_TAG" --draft=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

@@ -7,16 +7,20 @@ a save; AppController keeps the menu and game window alive and switches
 between them.
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 
+import app_paths
+import packaged_verify
+import runtime_logging
 from ui import theme
 from ui.menu import RootController
 from ui.app import MainWindow
+from version import APP_NAME
 
 
 class AppController:
@@ -44,15 +48,40 @@ class AppController:
         self.menu.show()
 
 
-def main():
-    app = QApplication(sys.argv)
+def install_exception_hook() -> None:
+    def handle(exc_type, exc_value, traceback_obj):
+        try:
+            try:
+                path = runtime_logging.write_crash_log(
+                    exc_type, exc_value, traceback_obj)
+                detail = f"A crash log was written to:\n{path}"
+            except Exception as log_error:
+                detail = f"The crash log could not be written:\n{log_error}"
+            if not app_paths.is_packaged():
+                sys.__excepthook__(exc_type, exc_value, traceback_obj)
+            QMessageBox.critical(
+                None, f"{APP_NAME} stopped unexpectedly",
+                f"Ardenia encountered an unexpected error.\n\n{detail}")
+        finally:
+            QApplication.exit(1)
+    sys.excepthook = handle
+
+
+def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv if argv is None else argv)
+    verifying = "--verify-build" in argv
+    qt_argv = [item for item in argv if item != "--verify-build"]
+    app = QApplication(qt_argv)
     app.setStyleSheet(theme.stylesheet())
+    if verifying:
+        return packaged_verify.run_verify_build(app)
+    install_exception_hook()
     controller = AppController()
     controller.show_menu()
     # Keep the controller alive for the lifetime of the app.
     app._controller = controller
-    sys.exit(app.exec())
+    return app.exec()
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -6,12 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A single-player political/state-management simulation game in pure Python. Two front-ends share one simulation engine:
 
-> **Current scope: Ardenia-only, by design.** A new campaign always plays **Ardenia**. The other eight countries are fully implemented as *data and as world actors* — AI governments with agendas and plans, diplomacy targets, map neighbours, civil-war candidates — and everything in `engine/` is country-agnostic (see "Country-neutral content"), but they are **not player-selectable yet**. The wizard's country step still lists all nine: Ardenia is pre-selected and selectable; the rest render greyed out, unclickable, tagged "Coming Soon", to signal the roadmap rather than hide it. The gate is one constant — `ui/menu.py: PLAYABLE_COUNTRY_IDS` — plus a guard in `CountrySelectStep.collect`; widening scope later means adding ids to that set, not unpicking anything. Do **not** remove the other eight from content, worldsim, or the map; `build_state_for(<any id>)` must keep working, and tests still exercise it.
+> **Current scope: Ardenia-only, by design.** A new campaign always plays **Ardenia**. The wizard presents one selected "Begin the Ardenia campaign" choice and explains that neighbouring states remain active world actors. The other eight countries are fully implemented as *data and as world actors* — AI governments with agendas and plans, diplomacy targets, map neighbours, civil-war candidates — and everything in `engine/` is country-agnostic (see "Country-neutral content"), but they are **not player-selectable yet**. The gate is one constant — `ui/menu.py: PLAYABLE_COUNTRY_IDS` — plus a guard in `CountrySelectStep.collect`; widening scope later means adding ids to that set, not unpicking anything. Do **not** remove the other eight from content, worldsim, or the map; `build_state_for(<any id>)` must keep working, and tests still exercise it.
 
 - **`gui.py`** — the real game: a PySide6 (Qt6) desktop app with a main menu, New Campaign wizard (country → character → difficulty → seed), world map, and save/load.
 - **`main.py`** — a terminal front-end that always starts the fixed Ardenia scenario. Fast iteration target; it's what `smoke_test.py` drives.
 
-No build system, linter, or dependency manifest — a plain source tree run against the interpreter in `.venv` (PySide6 is the only third-party dependency).
+This is a plain Python source tree run against the interpreter in `.venv`. Runtime and packaging dependencies are pinned in `requirements.txt` and `requirements-build.txt`; PySide6 is the sole runtime third-party dependency.
 
 ## Commands
 
@@ -25,6 +25,20 @@ No build system, linter, or dependency manifest — a plain source tree run agai
   `QDialog.exec = lambda self, *a, **k: 0` (plus `QMessageBox.exec`/`.information`) before `import ui_smoke_test; ui_smoke_test.main()`. The six system pages are no longer modal (they live in the desk overlay), so they test directly.
 - **The visual target** is `docs/ardenia_ui_mockup.html` — open it in a browser before changing dashboard layout.
 - Offscreen rendering has no fonts → text draws as boxes in screenshots. Register a TTF via `QFontDatabase.addApplicationFont(r"C:\Windows\Fonts\arialbd.ttf")` in the harness when a readable render matters.
+
+### Windows playtest distribution
+
+Focused distribution checks:
+  `.venv\Scripts\python.exe distribution_test.py`
+
+Local Windows package:
+  `powershell -ExecutionPolicy Bypass -File scripts\build_windows.ps1 -Python .venv\Scripts\python.exe`
+
+Manual workflow dispatch builds a private artifact. Only `v*-playtest.*` tags
+publish. Packaged saves/logs live under `%LOCALAPPDATA%\Ardenia`; source saves
+remain in `saves/`. A new public asset always receives a new version/tag.
+`ARDENIA_USER_DATA_DIR` is a test/build-only override, not a supported player
+setting. No private feedback address or participant material is committed.
 
 ## Architecture
 

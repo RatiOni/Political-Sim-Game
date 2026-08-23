@@ -22,7 +22,6 @@ from PySide6.QtWidgets import (QWidget, QStackedWidget, QVBoxLayout, QHBoxLayout
                                QButtonGroup, QRadioButton, QFrame, QScrollArea,
                                QCheckBox)
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor
 
 from ui import theme
 from ui.widgets_common import section_title, divider, body_label, KeyValueRow
@@ -32,6 +31,7 @@ from content import campaign_content
 from content import traits as traits_content
 from engine.campaign import CampaignConfig, generate_campaign
 from engine import persistence
+from version import window_title
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -46,6 +46,7 @@ class RootController(QStackedWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setWindowTitle(window_title())
         self.setStyleSheet(theme.stylesheet())
         self._menu = MainMenu()
         self._menu.new_game.connect(self._start_wizard)
@@ -245,9 +246,8 @@ class NewCampaignWizard(QWidget):
 # ── Step: country selection (Priority 3) ────────────────────────────────────
 
 # Which countries you may currently START a campaign as. The other eight
-# remain fully present in the world — AI actors, diplomacy targets, map
-# neighbours — they simply aren't playable yet, and the wizard says so
-# rather than hiding them.
+# remain fully present in the world — AI actors, diplomacy targets, and map
+# neighbours — while the wizard presents the active campaign choice clearly.
 PLAYABLE_COUNTRY_IDS = {"ardenia"}
 
 
@@ -261,34 +261,24 @@ class CountrySelectStep(QWidget):
         left_col = QVBoxLayout(left)
         left_col.setContentsMargins(0, 0, 0, 0)
         left_col.setSpacing(4)
-        left.setFixedWidth(240)      # fits the longest "… · Coming Soon" row
+        left.setFixedWidth(240)
 
         self._list = QListWidget()
         # No horizontal scrollbar for a name that runs long — elide instead.
         self._list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._list.setTextElideMode(Qt.ElideRight)
-        # Playable countries first, so the one you can pick is at the top.
-        self._summaries = sorted(
-            loader.list_country_summaries(),
-            key=lambda s: (s["id"] not in PLAYABLE_COUNTRY_IDS, s["name"]))
+        self._summaries = [
+            summary for summary in loader.list_country_summaries()
+            if summary["id"] in PLAYABLE_COUNTRY_IDS
+        ]
         for summ in self._summaries:
-            playable = summ["id"] in PLAYABLE_COUNTRY_IDS
-            item = QListWidgetItem(summ["name"] if playable
-                                   else f"{summ['name']}   ·  Coming Soon")
+            item = QListWidgetItem(f"Begin the {summ['name']} campaign")
             item.setData(Qt.UserRole, summ["id"])
-            if not playable:
-                # Visible, greyed, and genuinely unselectable — no flags for
-                # selection or interaction at all.
-                item.setFlags(Qt.NoItemFlags)
-                item.setForeground(QColor(theme.INK_DIM))
-                item.setToolTip(
-                    f"{summ['name']} is not yet playable — "
-                    f"{summ.get('meta', {}).get('short_description', '')}")
             self._list.addItem(item)
         self._list.currentRowChanged.connect(self._on_select)
         left_col.addWidget(self._list, stretch=1)
 
-        note = body_label("More nations become playable in a future update.",
+        note = body_label("Neighboring states remain active world actors.",
                           dim=True, small=True)
         note.setWordWrap(True)
         left_col.addWidget(note)
@@ -303,11 +293,8 @@ class CountrySelectStep(QWidget):
         self._detail.setWidget(self._detail_inner)
         layout.addWidget(self._detail, stretch=1)
 
-        # Ardenia is sorted first and is the only selectable entry.
-        first_playable = next((i for i, s in enumerate(self._summaries)
-                               if s["id"] in PLAYABLE_COUNTRY_IDS), None)
-        if first_playable is not None:
-            self._list.setCurrentRow(first_playable)
+        if self._summaries:
+            self._list.setCurrentRow(0)
 
     def _clear_detail(self):
         while self._detail_layout.count():
@@ -356,8 +343,8 @@ class CountrySelectStep(QWidget):
         row = self._list.currentRow()
         if 0 <= row < len(self._summaries):
             chosen = self._summaries[row]["id"]
-            # Belt and braces: the list can't select a locked country, but a
-            # campaign must never start as one regardless of how we got here.
+            # A campaign must never start as a foreign world actor, regardless
+            # of how a selection was injected.
             if chosen in PLAYABLE_COUNTRY_IDS:
                 config.country_id = chosen
 

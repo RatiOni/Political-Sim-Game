@@ -13,9 +13,9 @@
 
 This document is the canonical development mission for taking Ardenia from its current systems-alpha state to a credible Early Access release. It combines the current design audit, the diagnosis of the player experience, the intended identity of the game, the work that should be prioritised, the work that should be postponed, and the release gates that must be met before money is charged.
 
-It is deliberately not a list of every possible feature. Ardenia already contains more simulation than its current player experience can comfortably communicate. The task is to turn those systems into a coherent political career rather than continuously widening the simulation.
+It is deliberately not a list of every possible feature. Ardenia already contains more simulation than its current player experience can comfortably communicate. The task is to turn those systems into a coherent political career in which the player authors a contested political project, rather than continuously widening the simulation.
 
-Every proposed feature should be tested against this document. If a feature does not strengthen the core political cycle, improve the player's understanding of consequences, or help the game reach an Early Access gate, it should normally wait.
+Every proposed feature should be tested against this document. If a feature does not strengthen the core political cycle, give the player a meaningful authorship decision, improve their understanding of consequences, or help the game reach an Early Access gate, it should normally wait.
 
 ---
 
@@ -29,7 +29,7 @@ The defining player fantasy is:
 
 > I lead a political party through government and opposition in a country whose institutions, households, regions, parties, and neighbours continue to change. My promises can become laws, my laws can fail in administration, and the consequences become the politics of the next election.
 
-The Early Access mission is complete when a new player can finish an election cycle, explain what they tried to accomplish, understand why it succeeded or failed, and immediately imagine a different strategy for another campaign.
+The Early Access mission is complete when a new player can finish an election cycle, explain the political project they authored, the stakes and opposition that shaped it, why it succeeded or failed, and immediately imagine a different strategy for another campaign. Comprehension is required quality, not the product outcome: clear explanation cannot compensate for choices without stakes, opposition, or consequences.
 
 ---
 
@@ -76,7 +76,7 @@ The game is presently a strong systems alpha rather than an Early Access product
 
 Its internal simulation has moved well beyond a prototype. Budgets, ministries, laws, modifiers, households, regions, party blocs, elections, opposition, world actors, diplomacy, events, and persistence interact through a tested shared engine. The architecture is healthy enough to support substantial development without requiring a rewrite.
 
-The principal weakness is not a lack of systems. It is that the player sees the machinery as many separate screens, statistics, currencies, and buttons while the most important causal relationships remain hidden. The simulation is stronger than the game currently built around it.
+The principal weakness is not a lack of systems. It is that the player sees the machinery as many separate screens, statistics, currencies, and buttons while the most important causal relationships remain hidden and too few choices form a remembered, contested political project. The simulation is stronger than the game currently built around it.
 
 A likely public reaction to the current build would be:
 
@@ -142,7 +142,7 @@ If the player cannot answer these questions, adding another variable or event wi
 
 **Weakness:** Most days do not currently contain a meaningful development. The player often watches the date advance until a monthly update or modal interruption.
 
-**Direction:** Keep economic and household simulation primarily monthly. Make days meaningful through scheduled politics rather than daily statistical noise. The calendar should show upcoming votes, committee stages, coalition reviews, budget deadlines, diplomatic meetings, regional visits, strike deadlines, and election events. Quiet intervals should fast-forward cleanly.
+**Direction:** Keep economic and household simulation primarily monthly. Before deep generic stop infrastructure is built, compare real-time-with-pause, advance-to-next-decision, and monthly advancement through playtests of the same political slice. Make days meaningful through scheduled politics rather than daily statistical noise only if that comparison earns them. The calendar should show upcoming votes, committee stages, coalition reviews, budget deadlines, diplomatic meetings, regional visits, strike deadlines, and election events. Quiet intervals should fast-forward cleanly.
 
 ### 6.2 Macroeconomy
 
@@ -429,9 +429,9 @@ Parties, blocs, coalition partners, stakeholders, and voters should remember imp
 
 Government and opposition must receive different decisions and tools. The player may influence the country from opposition, but cannot exercise state power they do not possess.
 
-### Pillar V: The player should understand before being judged
+### Pillar V: Political authorship must be intelligible before judgment
 
-The game may preserve uncertainty, incomplete information, and unintended consequences. It must still explain the known direction, responsible institution, major risks, and eventual causal outcome.
+The game may preserve uncertainty, incomplete information, and unintended consequences. It must still explain the known direction, responsible institution, major risks, and eventual causal outcome. But explanation does not make a loop meaningful on its own: the player must choose a project with stakes, encounter opposition, make concessions or accept rejection, and live with remembered consequences.
 
 ### Pillar VI: Fewer deep actors are better than many shallow actors
 
@@ -453,7 +453,7 @@ World simulation, lore, diplomacy, and crises should be evaluated by how they af
 4. **First ninety days.** Guide a new player through choosing a programme, reading conditions, making a decision, and observing consequences.
 5. **Action forecast.** Show likely votes, political cost, fiscal effect, ministry load, household and regional direction, and major uncertainty.
 6. **Clear authority.** Label government, opposition, party, cabinet, and parliamentary decisions consistently.
-7. **Automatic pause rules.** Pause for mandatory decisions and important deadlines, not every flavour development.
+7. **Automatic pause rules.** After the time-model comparison, pause for demonstrated mandatory decisions and important deadlines, not every flavour development.
 
 ### P1: Required before Early Access
 
@@ -478,7 +478,7 @@ World simulation, lore, diplomacy, and crises should be evaluated by how they af
 
 ## 12. The reform system required for Early Access
 
-Reform design is the central pre-release mechanical project.
+Reform design is the central pre-release mechanical project because it is where political authorship becomes concrete. The first canonical slice must prove that a player can diagnose a problem, author a consequential response, meet durable opposition, and carry a remembered result into later judgment.
 
 ### 12.1 Reform stages
 
@@ -496,18 +496,19 @@ Every major reform should pass through these stages:
 10. **Evaluation:** After six, twelve, and twenty-four months, the game compares the objective's original diagnosis with current evidence.
 11. **Judgment:** Parties, stakeholders, regions, households, media, and voters interpret the record.
 
-### 12.2 Minimum reform breadth for Early Access
+### 12.2 Evidence-led reform breadth
 
-At least four substantially different reform families must be complete:
+Regional and land inequality is the default first canonical reform family. The live opening diagnosis ranks it first, and it naturally brings regional conditions, household experience, ministry delivery, funding, and political geography into one project. Purchasing power remains a valid later family and a valid shock-driven objective; it is not the default opening crisis.
 
-- Restore household purchasing power.
-- Secure work and modernise productive activity.
-- Rebuild public services and state capacity.
-- Reduce regional and land inequality.
+The reference regional-inequality reform must include one persistent named negotiating counterparty. That person must carry a specific demand, a concession or rejection, memory of the encounter, and a later judgment of the project. Their role must survive the project rather than ending at one consultation screen.
 
-Fiscal sustainability may be a fifth family or a cross-cutting constraint affecting the other four.
+Early Access breadth is an evidence gate, not a fixed quota:
 
-Each family must support at least three recognizably different approaches. Different approaches must change coalitions, distribution, administration, fiscal consequences, and implementation risk—not merely the size of one modifier.
+1. The first family proves that the complete diagnosis-to-judgment loop is enjoyable, consequential, and legible in unassisted play.
+2. The second family proves that the architecture generalizes without turning the first family into bespoke machinery.
+3. Observed replay needs determine whether a third or fourth family is required before Early Access.
+
+Each implemented family must support recognizably different approaches. Different approaches must change coalitions, distribution, administration, fiscal consequences, implementation risk, and the political record—not merely the size of one modifier. Fiscal sustainability may be a cross-cutting constraint or a later family when evidence supports it.
 
 ### 12.3 Reform success is not bill passage
 
@@ -639,145 +640,122 @@ These are foundational even when their presentation should become quieter.
 
 ## 17. Roadmap to Early Access
 
-The roadmap is organized around player-facing milestones, not arbitrary feature counts.
+The roadmap is organized around evidence-bearing player-facing milestones, not arbitrary feature counts. Comprehension work remains necessary throughout, but the immediate question is whether the player can author and be judged for a consequential political project.
 
-### Milestone 0: Mission baseline
+**Human evidence rule:** Every human evidence gate in this mission requires external human players. Automated suites and agent reviews may supplement those sessions, but cannot count toward, replace, or satisfy a human evidence gate.
 
-**Goal:** Establish the product direction and protect the working simulation.
+### Milestone 0: Protected baseline and unassisted evidence
+
+**Goal:** Protect the working simulation and learn how strangers actually experience the current build.
 
 **Deliverables:**
 
-- This mission document becomes the canonical roadmap.
-- Current automated tests remain green.
-- Major new work is evaluated against the governing cycle.
-- No new playable-country scope is introduced.
+- A protected Git baseline with the current automated suites recorded green.
+- Unassisted baseline playtests with external human players, with no developer explanation beyond ordinary onboarding.
+- Observation notes covering where players form, abandon, or cannot state a political purpose; which decisions cause hesitation; and whether their confusion concerns explanation, agency, stakes, or consequences.
+- Major new work evaluated against the governing cycle; no new playable-country scope.
 
 **Exit criteria:**
 
-- Development tasks can be assigned to a named milestone below.
-- Features that do not contribute to a milestone are explicitly deferred.
+- The baseline is recoverable and its known technical state is documented.
+- The team has external human evidence rather than an assumed comprehension diagnosis.
+- A narrow first prototype question is written from that evidence.
 
-### Milestone 1: The country explains itself
+**Existing foundations to retain and test:**
 
-**Goal:** Make the existing simulation understandable without developer knowledge.
+- The monthly causal digest is available in both front-ends and remains separate from public dispatches and the newspaper.
+- The decision queue and political calendar provide shared priorities, authority, deadlines, and known public dates.
+- The role-specific first ninety-day programme survives save/load and applies no hidden effects.
+- Parliamentary vote projections and the annual budget's ministry forecast exist; reform, household, regional, and major diplomatic forecasting remains incomplete.
+- Queue entries state authority and priority, but the wider dashboard still gives too many adjacent metrics equal visual weight.
+- Elections, pending situations, and new opposition-facing government bills currently pause the clock; generic queue-driven pausing must wait for the pacing evidence.
+
+### Milestone 1: Narrow diagnosis-to-judgment prototype
+
+**Goal:** Prove a single enjoyable, contested political project rather than build generic breadth prematurely.
 
 **Deliverables:**
 
-- Monthly causal digest connected to GUI and CLI.
-- Internal monthly report separated from the newspaper front page.
-- Unified decision queue.
-- Political calendar with deadlines and future events.
-- First ninety-day guided programme.
-- Action forecasts for laws, budget choices, programmes, and major diplomacy.
-- Clear metric hierarchy and authority labels.
-- Automatic-pause rules.
+- The regional-inequality reference reform: objective, instruments, scope, costing, consultation, compromise, authority, implementation, evaluation, and judgment.
+- Forecast and reporting for household and regional beneficiaries, ministry workload and delivery, and coalition and bloc reaction.
+- One persistent named negotiating counterparty with a demand, concession or rejection, memory, and later judgment.
+- A named project that opposition can prepare without exercising state authority and that survives into the political record.
+- The existing digest, decision queue, calendar, guided opening, and action forecasts used only as far as they make this project intelligible.
 
 **Acceptance criteria:**
 
-- A new player can identify the three most important current problems.
-- A new player can explain the leading cause of a material monthly change.
-- Required decisions cannot be mistaken for background information.
-- The player can see the next important scheduled political date.
-- No important action presents an unexplained cost or disabled state.
+- Two players can pursue the same diagnosed inequality through recognizably different reforms.
+- The project encounters meaningful opposition; concessions and rejection alter its route or record.
+- Bill passage does not guarantee delivery, and evaluation distinguishes technical, administrative, fiscal, political, and electoral outcomes.
+- Unassisted external human players can state what they authored, what was at stake, and why a material result followed.
 
-**Release state after milestone:** Closed systems alpha.
+**Release state after milestone:** Closed prototype playtest.
 
-#### Milestone 1 progress — 18 August 2026
+### Milestone 2: Time-model comparison
 
-- **Complete — Monthly causal digest.** The same read-only digest reaches the GUI and terminal after monthly simulation, visually separate from public dispatches and the newspaper.
-- **Complete — Unified decision queue foundation.** Government and opposition obligations share stable priorities, authority, destinations, and deadlines. The dashboard shows required and urgent work; the GUI and terminal briefings show the wider queue.
-- **Complete — Political calendar foundation.** The GUI and terminal show known public dates for decisions, monthly reports, government legislative windows, fiscal rollover, elections, regional-programme conclusions, and loan maturities without revealing hidden event follow-ups.
-- **Complete — First ninety-day guided programme.** Government and opposition each receive three role-specific programme choices. A selected programme tracks three achievements made through existing policy, parliamentary, party, cabinet, leadership, and regional actions; it appears in both Briefings, feeds the shared queue and calendar, survives save/load through campaign metadata, expires cleanly, and applies no hidden effects.
-- **Partial — Action forecasts.** Parliamentary vote projections and the annual budget's ministry forecast exist; reform, household, regional, and major diplomatic forecasts remain incomplete.
-- **Partial — Metric hierarchy and authority.** Queue entries state authority and priority, but the wider dashboard still gives too many adjacent metrics equal visual weight.
-- **Partial — Automatic pause rules.** Elections, pending situations, and new opposition-facing government bills pause the clock; the rule is not yet driven generically by required queue deadlines.
-
-**Next Milestone 1 deliverable:** drive automatic-pause behaviour from the shared required-decision queue, replacing the remaining system-specific pause checks.
-
-### Milestone 2: One complete reform journey
-
-**Goal:** Prove the entire governing cycle with one vertical slice.
+**Goal:** Choose the pacing model from evidence before building deep generic stop infrastructure.
 
 **Deliverables:**
 
-- One reform family supports objective, instruments, scope, costing, consultation, compromise, authority, implementation, evaluation, and judgment.
-- Household and regional beneficiaries are forecast and reported.
-- Ministry workload and delivery are forecast and reported.
-- Coalition and bloc reactions respond to proposal content.
-- The reform persists as a named political project.
-- Opposition can prepare the project without exercising state authority.
+- Comparable sessions with external human players for real-time-with-pause, advance-to-next-decision, and monthly advancement around the reference reform.
+- Human-playtest evidence on dead air, decision anticipation, missed obligations, perceived political rhythm, and comprehension of time-sensitive consequences.
+- A documented pacing decision and only the stop/calendar infrastructure justified by that decision.
 
 **Acceptance criteria:**
 
-- Two players can pursue the same objective through recognizably different reforms.
-- Bill passage does not guarantee delivery.
-- Evaluation can distinguish technical, administrative, fiscal, political, and electoral outcomes.
-- The reform becomes part of the player's record and the next election.
+- The chosen model produces a clearer and more satisfying political rhythm than the alternatives for the tested loop.
+- Automatic pauses, deadlines, and calendar surfaces are tied to demonstrated external human-player needs, not inherited implementation assumptions.
 
-**Release state after milestone:** Closed feature alpha.
+### Milestone 3: Evidence checkpoint and production decision
 
-### Milestone 3: Government is negotiated
-
-**Goal:** Turn elections and coalitions into playable political transitions.
+**Goal:** Decide what to productionize from external evidence, not from the size of a feature plan.
 
 **Deliverables:**
 
-- Structured post-election coalition talks.
-- Persistent coalition agreement.
-- Cabinet and programme negotiation.
-- Formal coalition and confidence-and-supply options.
-- Coalition review, dispute, renegotiation, and breakdown paths.
-- Government and opposition authority transitions preserve programmes, people, and promises.
-- First meaningful election retrospective.
+- External human-playtest findings for the protected baseline, reference reform, and time-model comparison.
+- A decision record identifying the winning loop, the evidence for it, its unresolved failures, and the scope deliberately deferred.
+- A production plan for the second reform family only if the first loop is enjoyable and the evidence supports generalization.
+
+**Acceptance criteria:**
+
+- The project can point to observed external human-player behavior showing whether political authorship, not explanation alone, is carrying the experience.
+- The immediate milestone ends at this external evidence checkpoint. No broad productionization begins before it.
+
+**Release state after milestone:** Evidence-backed production candidate.
+
+### Milestone 4: Productionize the winning loop
+
+**Goal:** Generalize only the loop that external evidence has validated.
+
+**Deliverables:**
+
+- A second reform family that proves the architecture generalizes without bespoke exceptions.
+- Structured post-election coalition talks, persistent coalition agreement, cabinet and programme negotiation, and government/opposition authority transitions that preserve projects, people, and promises.
+- Persistent representatives for the most important blocs and stakeholders, contextual consultation and resistance, and regional actors connected to implementation and support.
+- Consolidation of low-value fixed and repeatable actions once the replacement loop is established.
 
 **Acceptance criteria:**
 
 - More than one viable government can emerge from plausible election results.
-- The player may rationally reject office or accept junior office.
-- Coalition promises affect later votes and stability.
-- Losing office produces a coherent opposition state rather than an empty period.
+- Coalition promises affect later votes and stability; losing office produces a coherent opposition state.
+- The first and second families create different coalitions, distributional outcomes, administrative risks, and political records.
 
-### Milestone 4: Reform breadth and political society
+### Milestone 5: Evidence-led breadth and a full political career
 
-**Goal:** Create enough systemic breadth for replayable full campaigns.
-
-**Deliverables:**
-
-- At least four complete reform families.
-- Persistent representatives for the most important blocs and stakeholders.
-- Contextual consultation and resistance.
-- Regional actors connected to implementation and support.
-- Backgrounds affect access, information, and options rather than primarily buffs.
-- Low-value fixed and repeatable actions are consolidated.
-
-**Acceptance criteria:**
-
-- At least three substantially different governing strategies are viable.
-- Different reforms create different coalitions of household, regional, party, and stakeholder support.
-- No one fixed sequence dominates routine playtests.
-- Stakeholders matter through cooperation and resistance rather than purchasable approval.
-
-### Milestone 5: A full political career
-
-**Goal:** Make a complete election cycle satisfying and continued play meaningful.
+**Goal:** Establish replayable campaign breadth and a satisfying continued career at the level the evidence requires.
 
 **Deliverables:**
 
-- Election campaigns organize around salient issues, records, and promises.
-- Government inactivity and neglected objectives produce political consequences.
-- Political-capital overflow no longer makes prioritization irrelevant.
-- Opposition programmes convert into governing obligations after victory.
-- Election and term retrospectives use a functioning legacy record.
-- Players may continue through multiple elections.
-- Vetrenka and at least one major economic or institutional crisis can intersect the normal governing cycle.
+- A third or fourth reform family only if observed replay needs show it is required before Early Access.
+- Election campaigns organized around salient issues, records, and promises; functioning legacy and term retrospectives; continued play across elections.
+- Political consequences for inactivity and neglected objectives; opposition programmes that become governing obligations after victory.
+- Vetrenka and at least one major economic or institutional crisis intersecting the normal governing cycle.
 
 **Acceptance criteria:**
 
-- A new player can complete the first election cycle without developer assistance.
-- The election result can be explained through the preceding record.
-- A defeated player has immediate strategic decisions in opposition.
-- A victorious player inherits promises, coalition obligations, and administrative conditions.
-- A largely inactive government cannot reliably prosper without an explainable external reason.
+- A new player can complete the first election cycle without developer assistance and can explain the result through the preceding record.
+- A defeated player has immediate strategic decisions in opposition; a victorious player inherits promises, coalition obligations, and administrative conditions.
+- Playtests demonstrate several meaningfully different strategies and establish whether two, three, or four families supply sufficient replayability.
 
 **Release state after milestone:** Public playtest candidate.
 
@@ -817,7 +795,9 @@ Early Access should not be triggered by a date alone. All of the following gates
 ### 18.1 Core-loop gate
 
 - Diagnosis through electoral judgment works as one connected cycle.
-- At least four reform families are complete.
+- The first reform family has demonstrated, in unassisted external human play, an enjoyable complete loop of diagnosis, authorship, opposition, consequence, and judgment.
+- A second family has demonstrated that the loop's architecture generalizes.
+- The number of further families is justified by observed replay needs rather than an unconditional quota.
 - Coalition formation and maintenance are playable.
 - Government and opposition are both active roles.
 - One full election cycle feels like a culmination rather than a timer expiration.
@@ -852,12 +832,13 @@ Early Access should not be triggered by a date alone. All of the following gates
 
 ### 18.5 Playtest gate
 
-- At least 70% of unassisted testers complete the first ninety days.
+- At least 70% of unassisted external human testers complete the first ninety days.
 - At least 50% voluntarily reach the first election during the applicable test window.
-- Most testers can state their programme in their own words.
-- Fewer than 20% describe major outcomes as random or fundamentally unexplained.
-- Players demonstrate several different strategies.
-- The dominant requests concern expansion and depth, not basic navigation or comprehension.
+- Most external human testers can state their programme in their own words.
+- Most external human testers can identify the stakes, opposition, and remembered consequence of their principal political project.
+- Fewer than 20% of external human testers describe major outcomes as random or fundamentally unexplained.
+- External human players demonstrate several different strategies.
+- The dominant external human-player requests concern expansion and depth, not basic navigation or comprehension.
 
 ### 18.6 Product gate
 
@@ -1018,25 +999,26 @@ Early Access should expand a complete Ardenian political career, not ask custome
 
 ## 24. Immediate next milestone
 
-Development should now begin with **Milestone 1: The country explains itself**.
+Development should now complete **Milestone 0: Protected baseline and unassisted evidence**, then proceed through the deliberately narrow regional-inequality prototype and time-model comparison.
 
-The digest, shared decision queue, public political calendar, and role-specific first ninety-day programme are now implemented. The recommended remaining order is:
+The immediate sequence is:
 
-1. Drive required-decision pause behavior from the shared queue instead of individual hard-coded checks.
-2. Add forecasts to one high-value vertical slice, beginning with the active reform objective.
-3. Reorganize the main information hierarchy around outcomes, political judgment, governing ability, and threats.
-4. Test the new opening with players who have never read the project documentation.
+1. Protect and record the current Git and automated-test baseline.
+2. Run unassisted baseline playtests with external human players.
+3. Build only the regional-inequality diagnosis-to-judgment prototype, including its persistent named negotiating counterparty.
+4. Compare real-time-with-pause, advance-to-next-decision, and monthly advancement around that prototype.
+5. Stop at the external evidence checkpoint and choose the winning loop before productionizing generic systems or further reform families.
 
-No additional major simulation subsystem should be introduced before these remaining items make the current game materially easier to understand.
+The digest, shared decision queue, public political calendar, and role-specific first ninety-day programme are useful existing foundations. They should be extended only where evidence shows they make the tested political project more intelligible or consequential. No broad productionization, deep generic stop infrastructure, or additional major simulation subsystem should begin before the external evidence checkpoint.
 
 ---
 
 ## 25. Final release principle
 
-Ardenia will be ready for Early Access not when it has simulated the most things, but when the things it already simulates create a political story the player can understand, influence, and own.
+Ardenia will be ready for Early Access not when it has simulated the most things, but when the things it already simulates let the player author a political story with real stakes, opposition, and remembered consequences—and understand, influence, and own that story.
 
 The release test is:
 
-> A stranger completes an election cycle. They can explain what they promised, what they attempted, whom they persuaded, where the state failed, which people benefited, why the election moved, and what they would do differently next time.
+> A stranger completes an election cycle. They can explain what they promised, what political project they authored, whom they persuaded or failed to persuade, where the state failed, which people benefited, why the election moved, and what they would do differently next time.
 
 When that experience is reliable, Ardenia can enter Early Access with a clear identity, an honest scope, and a strong foundation for expansion.

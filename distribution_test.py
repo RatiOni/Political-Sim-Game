@@ -1,0 +1,553 @@
+"""Focused checks for the downloadable Windows playtest build."""
+
+from contextlib import ExitStack
+from datetime import datetime
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
+
+import app_paths
+import gui
+import packaged_verify
+import runtime_logging
+import version
+from engine import persistence
+from engine.campaign import default_config, generate_campaign
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+
+
+def check(name, fn):
+    fn()
+    print(f"PASS  {name}")
+
+
+def source_and_packaged_paths_are_separate():
+    assert app_paths.user_data_root(packaged=False, environ={}) == \
+        app_paths.PROJECT_ROOT
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp).resolve()
+        assert app_paths.user_data_root(
+            packaged=True,
+            environ={"ARDENIA_USER_DATA_DIR": str(base)},
+        ) == base
+        assert app_paths.saves_dir(
+            packaged=True,
+            environ={"ARDENIA_USER_DATA_DIR": str(base)},
+        ) == base / "saves"
+        assert app_paths.logs_dir(
+            packaged=True,
+            environ={"ARDENIA_USER_DATA_DIR": str(base)},
+        ) == base / "logs"
+        local = app_paths.user_data_root(
+            packaged=True,
+            environ={"LOCALAPPDATA": str(base)},
+        )
+        assert local == base / "Ardenia"
+    try:
+        app_paths.user_data_root(packaged=True, environ={})
+    except RuntimeError as exc:
+        assert "LOCALAPPDATA" in str(exc)
+    else:
+        raise AssertionError("packaged mode must reject an unavailable data root")
+    with tempfile.TemporaryDirectory() as tmp:
+        occupied = Path(tmp) / "not-a-directory"
+        occupied.write_text("occupied", encoding="utf-8")
+        try:
+            app_paths.ensure_directory(occupied)
+        except OSError:
+            pass
+        else:
+            raise AssertionError("a file cannot be accepted as a data directory")
+
+
+def resources_are_read_only_and_independent_of_user_data():
+    with tempfile.TemporaryDirectory() as tmp:
+        bundle = Path(tmp).resolve()
+        assert app_paths.resource_root(
+            packaged=True, bundle_root=bundle) == bundle
+        assert app_paths.resource_path(
+            "content/countries/ardenia.json",
+            packaged=True,
+            bundle_root=bundle,
+        ) == bundle / "content" / "countries" / "ardenia.json"
+        assert app_paths.resource_root(packaged=False) == app_paths.PROJECT_ROOT
+
+
+def persistence_uses_runtime_directory_without_changing_schema():
+    with tempfile.TemporaryDirectory() as tmp:
+        with patch.dict(os.environ, {
+                "ARDENIA_USER_DATA_DIR": str(Path(tmp).resolve())}):
+            state = generate_campaign(default_config())
+            path = Path(persistence.save_campaign(state, slot="package_path_test"))
+            assert path.parent == Path(tmp).resolve() / "saves"
+            assert persistence.save_exists("package_path_test")
+            listed = persistence.list_saves()
+            assert any(item["slot"] == "package_path_test" for item in listed)
+            restored = persistence.load_campaign("package_path_test")
+            assert persistence.serialize_state(restored) == \
+                persistence.serialize_state(state)
+            assert persistence.delete_save("package_path_test")
+            assert not persistence.save_exists("package_path_test")
+
+
+def version_controls_tag_archive_and_titles():
+    assert version.APP_NAME == "Ardenia"
+    assert version.VERSION == "0.1.0-playtest.1"
+    assert version.WINDOWS_FILE_VERSION == (0, 1, 0, 1)
+    assert version.TAG == "v0.1.0-playtest.1"
+    assert version.ARCHIVE_FILENAME == "Ardenia-0.1.0-playtest.1-win64.zip"
+    assert version.VERSION in version.window_title()
+    assert version.window_title("Ardenia").startswith(
+        "Ardenia — a political simulation")
+    version.validate_tag(version.TAG)
+    try:
+        version.validate_tag("v0.1.0-playtest.2")
+    except ValueError as exc:
+        assert version.TAG in str(exc)
+    else:
+        raise AssertionError("a mismatched release tag must be rejected")
+
+
+def crash_logs_are_local_versioned_and_readable():
+    with tempfile.TemporaryDirectory() as tmp:
+        with patch.dict(os.environ, {
+                "ARDENIA_USER_DATA_DIR": str(Path(tmp).resolve())}):
+            try:
+                raise RuntimeError("packaged failure marker")
+            except RuntimeError as exc:
+                path = runtime_logging.write_crash_log(
+                    type(exc), exc, exc.__traceback__,
+                    when=datetime(2026, 8, 22, 12, 34, 56))
+            assert path.name == "crash-20260822-123456.txt"
+            text = path.read_text(encoding="utf-8")
+            assert "0.1.0-playtest.1" in text
+            assert "Operating system:" in text
+            assert "Python runtime:" in text
+            assert "RuntimeError: packaged failure marker" in text
+            assert str(path).startswith(str(Path(tmp).resolve()))
+
+
+def packaged_verifier_uses_isolated_saves_and_required_files():
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication([])
+    with tempfile.TemporaryDirectory() as data_tmp, \
+            tempfile.TemporaryDirectory() as dist_tmp:
+        dist = Path(dist_tmp)
+        (dist / "PLAYTEST_README.txt").write_text("test", encoding="utf-8")
+        (dist / "FEEDBACK_TEMPLATE.txt").write_text("test", encoding="utf-8")
+        with patch.dict(os.environ, {
+                "ARDENIA_USER_DATA_DIR": str(Path(data_tmp).resolve())}):
+            report = packaged_verify.verify_build(app, dist)
+            assert "government campaign" in report
+            assert "opposition campaign" in report
+            assert not persistence.save_exists("_package_verify_government")
+            assert not persistence.save_exists("_package_verify_opposition")
+            assert not list((Path(data_tmp) / "logs").glob("verification-*.txt"))
+        (dist / "FEEDBACK_TEMPLATE.txt").unlink()
+        try:
+            packaged_verify.verify_build(app, dist)
+        except FileNotFoundError as exc:
+            assert "FEEDBACK_TEMPLATE.txt" in str(exc)
+        else:
+            raise AssertionError("missing tester files must fail verification")
+
+
+def packaged_verifier_rejects_invalid_restored_campaign():
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance() or QApplication([])
+    with tempfile.TemporaryDirectory() as data_tmp, \
+            tempfile.TemporaryDirectory() as dist_tmp:
+        dist = Path(dist_tmp)
+        (dist / "PLAYTEST_README.txt").write_text("test", encoding="utf-8")
+        (dist / "FEEDBACK_TEMPLATE.txt").write_text("test", encoding="utf-8")
+        invalid = generate_campaign(default_config())
+        invalid.country.id = "krasova"
+        with patch.dict(os.environ, {
+                "ARDENIA_USER_DATA_DIR": str(Path(data_tmp).resolve())}), \
+                patch.object(packaged_verify.persistence, "load_campaign",
+                             return_value=invalid):
+            try:
+                packaged_verify.verify_build(app, dist)
+            except RuntimeError as exc:
+                assert "restored campaign" in str(exc)
+            else:
+                raise AssertionError("invalid restored campaign must fail verification")
+            assert not persistence.save_exists("_package_verify_government")
+            assert not persistence.save_exists("_package_verify_opposition")
+
+
+def _run_fatal_qt_callback(*, packaged: bool,
+                           log_error: Exception | None = None):
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtCore import QTimer
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication.instance() or QApplication([])
+    original = sys.excepthook
+    messages = []
+    try:
+        with tempfile.TemporaryDirectory() as tmp, ExitStack() as stack:
+            stack.enter_context(patch.dict(os.environ, {
+                "ARDENIA_USER_DATA_DIR": str(Path(tmp).resolve()),
+            }))
+            stack.enter_context(patch.object(
+                app_paths, "is_packaged", return_value=packaged))
+            critical = stack.enter_context(patch.object(
+                gui.QMessageBox, "critical",
+                side_effect=lambda _parent, _title, message:
+                    messages.append(message),
+            ))
+            default_hook = stack.enter_context(
+                patch.object(sys, "__excepthook__"))
+            if log_error is not None:
+                stack.enter_context(patch.object(
+                    runtime_logging, "write_crash_log",
+                    side_effect=log_error,
+                ))
+
+            gui.install_exception_hook()
+
+            def fail_in_qt_callback():
+                raise RuntimeError("fatal Qt callback marker")
+
+            timeout = QTimer()
+            timeout.setSingleShot(True)
+            timeout.timeout.connect(lambda: app.exit(0))
+            timeout.start(1000)
+            QTimer.singleShot(0, fail_in_qt_callback)
+            exit_code = app.exec()
+            timeout.stop()
+
+            logs = list((Path(tmp) / "logs").glob("crash-*.txt"))
+            assert critical.call_count == 1
+            assert len(messages) == 1
+            assert exit_code != 0
+            if packaged:
+                default_hook.assert_not_called()
+            else:
+                default_hook.assert_called_once()
+            return messages[0], logs
+    finally:
+        sys.excepthook = original
+
+
+def fatal_hook_exits_qt_for_successful_and_failed_logs():
+    success_message, logs = _run_fatal_qt_callback(packaged=True)
+    assert "crash log was written" in success_message.lower()
+    assert len(logs) == 1
+
+    failed_message, logs = _run_fatal_qt_callback(
+        packaged=True,
+        log_error=OSError("read-only data directory"),
+    )
+    assert "could not be written" in failed_message
+    assert "read-only data directory" in failed_message
+    assert not logs
+
+
+def source_fatal_hook_preserves_console_traceback():
+    message, logs = _run_fatal_qt_callback(packaged=False)
+    assert "crash log was written" in message.lower()
+    assert len(logs) == 1
+
+
+def build_definition_is_pinned_and_one_folder():
+    assert (PROJECT_ROOT / "requirements.txt").read_text(
+        encoding="utf-8").strip() == "PySide6==6.11.1"
+    build_requirements = (PROJECT_ROOT / "requirements-build.txt").read_text(
+        encoding="utf-8")
+    assert "-r requirements.txt" in build_requirements
+    assert "PyInstaller==6.16.0" in build_requirements
+    spec = (PROJECT_ROOT / "packaging/ardenia.spec").read_text(
+        encoding="utf-8")
+    assert "COLLECT(" in spec and 'name="Ardenia"' in spec
+    assert "console=False" in spec
+    assert "content/countries" in spec
+    assert "--onefile" not in spec
+    script = (PROJECT_ROOT / "scripts/build_windows.ps1").read_text(
+        encoding="utf-8")
+    assert "--verify-build" in script
+    assert "Get-FileHash" in script
+    assert "ARDENIA_USER_DATA_DIR" in script
+
+
+def build_rejects_non_x64_toolchains():
+    script_path = PROJECT_ROOT / "scripts/build_windows.ps1"
+    script = script_path.read_text(encoding="utf-8")
+    assert "platform.machine()" in script
+    assert "struct.calcsize('P')" in script
+    assert "AMD64|64" in script
+    for signature in (
+            "3.14.6|6.11.1|6.16.0|ARM64|64",
+            "3.14.6|6.11.1|6.16.0|AMD64|32"):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_python = Path(tmp) / "fake-python.cmd"
+            fake_python.write_text(
+                "@echo off\n"
+                f"echo {signature.replace('|', '^|')}\n"
+                "exit /b 0\n",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [
+                    "powershell", "-ExecutionPolicy", "Bypass",
+                    "-File", str(script_path), "-Python", str(fake_python),
+                ],
+                cwd=PROJECT_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        output = result.stdout + result.stderr
+        assert result.returncode != 0
+        assert "Unsupported packaging toolchain" in output
+        assert signature in output
+
+
+def public_packet_is_neutral_private_and_versioned():
+    guide = (PROJECT_ROOT / "distribution/PLAYTEST_README.txt").read_text(
+        encoding="utf-8")
+    form = (PROJECT_ROOT / "distribution/FEEDBACK_TEMPLATE.txt").read_text(
+        encoding="utf-8")
+    lower = (guide + form).lower()
+    for forbidden in ("regional inequality", "purchasing power",
+                      "suzerain", "paradox", "correct choice"):
+        assert forbidden not in lower
+    for required in ("0.1.0-playtest.1", "45 minutes", "screen recording",
+                     "webcam", "microphone", "private channel", "smartscreen"):
+        assert required in lower
+    for field in ("your role", "your goal", "first meaningful action",
+                  "opponent", "tradeoff", "consequence",
+                  "passage of time", "wanted to do"):
+        assert field in form.lower()
+    assert "email address:" not in form.lower()
+    assert "full name:" not in form.lower()
+
+
+def release_workflow_is_manual_or_tag_only():
+    workflow = (PROJECT_ROOT / ".github/workflows/windows-playtest-release.yml") \
+        .read_text(encoding="utf-8")
+    assert "workflow_dispatch:" in workflow
+    assert "v*-playtest.*" in workflow
+    assert "pull_request:" not in workflow
+    assert "branches:" not in workflow
+    assert "scripts/build_windows.ps1" in workflow
+    assert "scripts/run_ui_smoke_offscreen.py" in workflow
+    assert "git diff --check" in workflow
+    assert "gh release create" in workflow
+    assert "actions/upload-artifact@v4" in workflow
+    assert "pull_request:" not in workflow
+    assert "branches:" not in workflow
+    assert re.search(
+        r"(?m)^concurrency:\n"
+        r"  group: windows-playtest-release-\$\{\{ github\.ref \}\}\n"
+        r"  cancel-in-progress: false$",
+        workflow,
+    )
+
+    build = re.search(
+        r"(?ms)^  build-and-verify:\n(?P<body>.*?)(?=^  release:\n)",
+        workflow,
+    )
+    release = re.search(r"(?ms)^  release:\n(?P<body>.*)\Z", workflow)
+    assert build and release
+    build_body = build.group("body")
+    release_body = release.group("body")
+    assert re.search(r"(?m)^    permissions:\n      contents: read$", build_body)
+    assert "build_commit: ${{ steps.build_provenance.outputs.build_commit }}" in \
+        build_body
+    assert "id: build_provenance" in build_body
+    assert "$env:GITHUB_OUTPUT" in build_body
+    assert "persist-credentials: false" in build_body
+    assert "fetch-depth: 2" in build_body
+    assert "git rev-parse HEAD" in build_body
+    assert "Set-Content -LiteralPath \"dist/build-commit.txt\"" in build_body
+    assert "dist/build-commit.txt" in build_body
+    assert re.search(
+        r"git diff --check HEAD\^ HEAD\r?\n\s*"
+        r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+        build_body,
+    )
+    assert re.search(
+        r"python distribution_test\.py\r?\n\s*"
+        r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+        build_body,
+    )
+    assert "RELEASE_TAG: ${{ github.ref_name }}" in workflow
+    assert "os.environ['RELEASE_TAG']" in workflow
+    assert "$env:RELEASE_TAG" in workflow
+    assert re.search(r"(?m)^    needs: build-and-verify$", release_body)
+    assert re.search(r"(?m)^    if: github.event_name == 'push'$", release_body)
+    assert re.search(r"(?m)^    permissions:\n      contents: write$", release_body)
+    assert "GH_REPO: ${{ github.repository }}" in release_body
+    assert "EXPECTED_BUILD_COMMIT: " \
+        "${{ needs.build-and-verify.outputs.build_commit }}" in release_body
+    assert "actions/checkout" not in release_body
+    assert "actions/download-artifact@v4" in release_body
+    assert workflow.count("name: Ardenia-Windows-playtest") == 2
+    assert "Get-Content -LiteralPath $provenance -Raw" in release_body
+    assert "$buildCommit -ne $env:EXPECTED_BUILD_COMMIT" in release_body
+    assert "github.sha" not in release_body
+    create = re.search(r"(?m)^\s*gh release create (?P<args>.*)$", release_body)
+    assert create and "--draft" in create.group("args")
+    assert "$zip" not in create.group("args")
+    assert "$sha" not in create.group("args")
+    assert "gh release upload" in release_body
+    assert "gh release edit" in release_body
+    assert "--draft=false" in release_body
+    assert "gh release delete" not in workflow
+    assert "gh api --paginate --slurp" in release_body
+    assert "releases?per_page=100" in release_body
+    assert "ConvertFrom-Json" in release_body
+    assert "$release.tag_name -eq $env:RELEASE_TAG" in release_body
+    assert "$existingReleases.Count -ne 0" in release_body
+    assert "git/ref/tags/$encodedTag" in release_body
+    assert 'while ($remoteType -eq "tag")' in release_body
+    assert "git/tags/$remoteObject" in release_body
+    assert 'if ($remoteType -ne "commit")' in release_body
+    assert 'if ($remoteCommit -ne $buildCommit)' in release_body
+    assert release_body.index("releases?per_page=100") < \
+        release_body.index("git/ref/tags/$encodedTag") < \
+        release_body.index('if ($remoteCommit -ne $buildCommit)') < \
+        release_body.index("gh release create") < \
+        release_body.index("gh release upload") < \
+        release_body.index("gh release edit")
+
+    for native_gate in (
+            r"git rev-parse HEAD\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"gh api --paginate --slurp `\r?\n\s*"
+            r"\"repos/\$env:GH_REPO/releases\?per_page=100\"\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"gh api \"repos/\$env:GH_REPO/git/ref/tags/\$encodedTag\" `\r?\n\s*"
+            r"--jq .*\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"gh api \"repos/\$env:GH_REPO/git/tags/\$remoteObject\" `\r?\n\s*"
+            r"--jq .*\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"gh release create .*`\r?\n\s*"
+            r"--title .*\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"gh release upload .*\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"\$assetNames = gh release view .*\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"gh release edit .*\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+    ):
+        assert re.search(native_gate, workflow)
+
+
+def powershell_source_gate_failure_cannot_be_masked():
+    result = subprocess.run(
+        [
+            "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+            "-Command", (
+                "cmd /c exit 23; "
+                "if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; "
+                "cmd /c exit 0"
+            ),
+        ],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 23
+
+
+def release_checklist_requires_clean_machine_and_frozen_sample():
+    checklist = (PROJECT_ROOT / "docs/playtests/WINDOWS_RELEASE_CHECKLIST.md") \
+        .read_text(encoding="utf-8")
+    lower = re.sub(r"\s+", " ", checklist.lower())
+    for required in ("clean windows", "without python", "government",
+                     "opposition", "autosave", "manual save", "load",
+                     "replace the extracted", "sha-256", "smartscreen",
+                     "freeze the build", "v0.1.0-playtest.1"):
+        assert required in lower
+
+    gate_numbers = re.findall(
+        r"(?m)^- \[ \] \*\*(\d+)\.", checklist)
+    assert gate_numbers == [str(number) for number in range(1, 13)]
+    evidence_lines = re.findall(r"(?mi)^\s*Evidence:\s+_*\s*$", checklist)
+    blank_evidence_lines = re.findall(
+        r"(?mi)^\s*Evidence:\s+_{10,}\s*$", checklist)
+    assert len(evidence_lines) == 12
+    assert len(blank_evidence_lines) == 12
+
+    for required in (
+            "do not recreate or move the same tag",
+            "fix forward on `main`",
+            "increment the playtest version",
+            "publish a new immutable tag",
+            "do not delete or replace a release asset once a session has used it",
+    ):
+        assert required in lower
+
+    for guide_name in ("AGENTS.md", "CLAUDE.md"):
+        guide = (PROJECT_ROOT / guide_name).read_text(encoding="utf-8")
+        section = re.search(
+            r"(?ms)^### Windows playtest distribution\s*\n"
+            r"(?P<body>.*?)(?=^### |\Z)",
+            guide,
+        )
+        assert section
+        body = re.sub(r"\s+", " ", section.group("body"))
+        for required in (
+                "distribution_test.py",
+                "scripts\\build_windows.ps1",
+                "Manual workflow dispatch builds a private artifact",
+                "Only `v*-playtest.*` tags publish",
+                "%LOCALAPPDATA%\\Ardenia",
+                "source saves",
+                "new public asset always receives a new version/tag",
+                "ARDENIA_USER_DATA_DIR",
+                "test/build-only override",
+                "No private feedback address or participant material is committed",
+        ):
+            assert required in body
+
+
+if __name__ == "__main__":
+    checks = [
+        ("source and packaged user-data paths are separate",
+         source_and_packaged_paths_are_separate),
+        ("bundled resources are independent of writable user data",
+         resources_are_read_only_and_independent_of_user_data),
+        ("persistence resolves its save directory at operation time",
+         persistence_uses_runtime_directory_without_changing_schema),
+        ("one version controls every public build identity",
+         version_controls_tag_archive_and_titles),
+        ("crash logs are local, versioned and readable",
+         crash_logs_are_local_versioned_and_readable),
+        ("packaged verification isolates temporary saves and files",
+         packaged_verifier_uses_isolated_saves_and_required_files),
+        ("packaged verification rejects invalid restored campaigns",
+         packaged_verifier_rejects_invalid_restored_campaign),
+        ("fatal Qt callbacks exit after successful and failed crash logs",
+         fatal_hook_exits_qt_for_successful_and_failed_logs),
+        ("source fatal callbacks preserve console traceback",
+         source_fatal_hook_preserves_console_traceback),
+        ("build definition is pinned and produces a one-folder package",
+         build_definition_is_pinned_and_one_folder),
+        ("build rejects non-x64 toolchains",
+         build_rejects_non_x64_toolchains),
+        ("public tester packet is neutral, private and versioned",
+         public_packet_is_neutral_private_and_versioned),
+        ("release workflow is manual or matching-tag only",
+         release_workflow_is_manual_or_tag_only),
+        ("PowerShell source-gate failures cannot be masked",
+         powershell_source_gate_failure_cannot_be_masked),
+        ("release checklist requires clean-machine and frozen-sample gates",
+         release_checklist_requires_clean_machine_and_frozen_sample),
+    ]
+    for label, test in checks:
+        check(label, test)
+    print(f"ALL {len(checks)} DISTRIBUTION CHECKS PASSED")
