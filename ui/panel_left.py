@@ -16,20 +16,28 @@ Now:
      actually wants them.
 """
 
-import os
-
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QFrame, QToolButton)
 from PySide6.QtCore import Qt, Signal, QUrl
 from PySide6.QtQuickWidgets import QQuickWidget
 
+import app_paths
 from ui import theme, explain, modifier_glyph
-from ui.widgets_statbar import VitalStat
 from ui.qml_bridge import VitalStatModel
 
 # Trend glyphs. A change smaller than the metric's own threshold reads as
 # "flat" rather than being dramatised into a direction.
 TREND_UP, TREND_DOWN, TREND_FLAT = "▲", "▼", "–"
+
+# Measured, not guessed (see the 2026-08-23 QML vitals fix-wave report):
+# ui/qml/VitalsPanel.qml's root implicitHeight, read offscreen via a
+# QQuickWidget with the same four VitalStatModel context properties this
+# panel wires up. 128px with no active force glyphs, 137px with Approval's
+# ForceGlyph showing a tick (the tallest valid state, since ForceGlyph is the
+# only row whose height varies and only Approval ever gets forces=). Fixed
+# per CLAUDE.md's "nothing on the dashboard may change size" rule -- this is
+# the correct constant for that rule, not a placeholder guess.
+VITALS_PANEL_HEIGHT = 137
 
 
 def _section_title(text: str) -> QLabel:
@@ -46,23 +54,6 @@ def _divider() -> QFrame:
     line.setStyleSheet(f"color: {theme.PANEL_EDGE}; background: {theme.PANEL_EDGE};")
     line.setFixedHeight(1)
     return line
-
-
-class _ClickableVital(VitalStat):
-    """A vital that emits a metric name when clicked, for opening a breakdown.
-    Only used for metrics ui/explain.py can actually explain, so a click can
-    never open an empty dialog."""
-    clicked = Signal(str)
-
-    def __init__(self, label: str, metric_name: str, parent=None):
-        super().__init__(label, parent=parent)
-        self._metric_name = metric_name
-        self.setCursor(Qt.PointingHandCursor)
-        self.setToolTip(f"Click for why {metric_name} is what it is")
-        self.set_explainable(True)
-
-    def mousePressEvent(self, event):
-        self.clicked.emit(self._metric_name)
 
 
 class _EconRow(QWidget):
@@ -142,10 +133,15 @@ class LeftPanel(QWidget):
         # ── Tier 1: the three that decide whether you survive ─────────────
         # QML-hosted (see DESIGN.md) — the only place the modifier-visibility
         # force-glyph currently applies is Approval, which is why only its
-        # model is built with a metric_name.
+        # model is built with a metric_name that has no corresponding
+        # ui/explain.py breakdown. Stability and Pol. Capital DO have real
+        # breakdowns (ui/explain.py: BREAKDOWNS) and must keep their
+        # metric_name to keep the ⓘ / click-to-explain affordance the old
+        # Widgets VitalStat gave them — explainable (click/ⓘ) and forces (the
+        # glyph) are independent; only Approval ever passes forces=.
         self._approval_model = VitalStatModel("Approval", metric_name="Approval")
-        self._stability_model = VitalStatModel("Stability")
-        self._pc_model = VitalStatModel("Political capital")
+        self._stability_model = VitalStatModel("Stability", metric_name="Stability")
+        self._pc_model = VitalStatModel("Political capital", metric_name="Pol. Capital")
         self._attention_model = VitalStatModel("Attention")
         for model in (self._approval_model, self._stability_model,
                       self._pc_model, self._attention_model):
@@ -157,15 +153,26 @@ class LeftPanel(QWidget):
 
         self._vitals_quick = QQuickWidget()
         self._vitals_quick.setResizeMode(QQuickWidget.ResizeMode.SizeRootObjectToView)
-        self._vitals_quick.setFixedHeight(150)
+        # Measured, not guessed: VITALS_PANEL_HEIGHT below is the QML root's
+        # own implicitHeight once loaded (see the constant's comment). Set
+        # immediately after setSource so there's no visible 0-height flash,
+        # then reconciled against the real root object below in case a
+        # future content change shifts it — "nothing on the dashboard may
+        # change size" (CLAUDE.md) means the WIDGET's height still has to be
+        # a fixed number, it just has to be the right one.
+        self._vitals_quick.setFixedHeight(VITALS_PANEL_HEIGHT)
         ctx = self._vitals_quick.rootContext()
         ctx.setContextProperty("approvalModel", self._approval_model)
         ctx.setContextProperty("stabilityModel", self._stability_model)
         ctx.setContextProperty("pcModel", self._pc_model)
         ctx.setContextProperty("attentionModel", self._attention_model)
-        qml_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                 "ui", "qml", "VitalsPanel.qml")
+        qml_path = str(app_paths.resource_path("ui/qml/VitalsPanel.qml"))
         self._vitals_quick.setSource(QUrl.fromLocalFile(qml_path))
+        root_obj = self._vitals_quick.rootObject()
+        if root_obj is not None:
+            measured = int(root_obj.property("implicitHeight"))
+            if measured > 0:
+                self._vitals_quick.setFixedHeight(measured)
         layout.addWidget(self._vitals_quick)
 
         # ── Tier 2: the economy, as figures ───────────────────────────────

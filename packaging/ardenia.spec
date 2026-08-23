@@ -6,7 +6,11 @@ a = Analysis(
     [str(project_root / "gui.py")],
     pathex=[str(project_root)],
     binaries=[],
-    datas=[(str(project_root / "content/countries"), "content/countries")],
+    datas=[
+        (str(project_root / "content/countries"), "content/countries"),
+        (str(project_root / "ui/qml"), "ui/qml"),
+        (str(project_root / "ui/assets/fonts"), "ui/assets/fonts"),
+    ],
     hiddenimports=[],
     hookspath=[],
     runtime_hooks=[],

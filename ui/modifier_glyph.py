@@ -29,7 +29,13 @@ def _phase_key(modifier) -> str:
 def forces_for(state, target: str) -> list[dict]:
     """Every Modifier currently targeting `target`, classified by phase and
     sign. Order is stable (insertion order of state.modifiers) so a glyph's
-    tick order doesn't shuffle between refreshes."""
+    tick order doesn't shuffle between refreshes.
+
+    `strength` is present here so a future glyph can length-code ticks
+    "loosely to relative strength" per DESIGN.md's Visual Language section,
+    but ui/qml/ForceGlyph.qml doesn't consume it yet (Phase 1 renders every
+    tick at a fixed width) — deliberately unimplemented, not an oversight;
+    real width scaling is follow-up-plan scope."""
     out = []
     for m in state.modifiers:
         if m.target != target:

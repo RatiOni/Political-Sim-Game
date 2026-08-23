@@ -13,6 +13,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtGui import QFontDatabase
 
 import app_paths
 import packaged_verify
@@ -21,6 +22,22 @@ from ui import theme
 from ui.menu import RootController
 from ui.app import MainWindow
 from version import APP_NAME
+
+
+# The four Public Sans weights DESIGN.md's Typography section calls for
+# (Regular/Medium/SemiBold/Bold) — bundled under ui/assets/fonts so QML's
+# `font.family: "Public Sans"` (ui/qml/Theme.qml) and Widgets' FONT_FAMILY
+# (ui/theme.py) resolve to the real face instead of a system substitute.
+PUBLIC_SANS_WEIGHTS = ("Regular", "Medium", "SemiBold", "Bold")
+
+
+def register_bundled_fonts() -> None:
+    for weight in PUBLIC_SANS_WEIGHTS:
+        path = app_paths.resource_path(f"ui/assets/fonts/PublicSans-{weight}.ttf")
+        font_id = QFontDatabase.addApplicationFont(str(path))
+        if font_id == -1:
+            runtime_logging.write_log(
+                "font-registration-failed", f"Qt rejected font file: {path}\n")
 
 
 class AppController:
@@ -72,6 +89,7 @@ def main(argv: list[str] | None = None) -> int:
     verifying = "--verify-build" in argv
     qt_argv = [item for item in argv if item != "--verify-build"]
     app = QApplication(qt_argv)
+    register_bundled_fonts()
     app.setStyleSheet(theme.stylesheet())
     if verifying:
         return packaged_verify.run_verify_build(app)

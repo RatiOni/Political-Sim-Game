@@ -32,14 +32,4 @@ QtObject {
     readonly property int durationShort: 200
     readonly property int durationMediumMin: 350
     readonly property int durationMediumMax: 900
-
-    function lerpStatusColor(value, higherIsBetter) {
-        var v = Math.max(0.0, Math.min(1.0, value));
-        if (!higherIsBetter) v = 1.0 - v;
-        if (v >= 0.75) return good;
-        if (v >= 0.55) return okay;
-        if (v >= 0.35) return warn;
-        if (v >= 0.20) return bad;
-        return critical;
-    }
 }

@@ -103,7 +103,7 @@ REL_HOSTILE  = "#c95d68"
 REL_PLAYER   = "#d9b867"
 REL_UNKNOWN  = "#3b4a5e"
 
-FONT_FAMILY   = "'Segoe UI', Inter, Arial, sans-serif"
+FONT_FAMILY   = "'Public Sans', 'Segoe UI', Inter, Arial, sans-serif"
 FONT_SIZE_PT  = 10
 FONT_SIZE_SM  = 9
 FONT_SIZE_LG  = 14

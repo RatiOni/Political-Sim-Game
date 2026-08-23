@@ -15,7 +15,13 @@ def ms_for_phase(forces: list[dict]) -> int:
     |current_value|) maps its phase onto the 350-900ms band: hold reads as
     an already-settled value (fast, near 350ms), onset/ramp/decay read as
     something still moving (slower, near 900ms) so the player's eye can
-    actually track the change happening."""
+    actually track the change happening.
+
+    Deliberate Phase-1 simplification: DESIGN.md describes duration as
+    derived from "the modifier's real remaining ramp/decay window" (i.e.
+    months-to-ms), but this only buckets by lifecycle *phase* (exactly 3
+    distinct outputs: 200 / ~730 / 350). A real months-remaining -> ms
+    mapping is follow-up-plan scope, not something to build here."""
     if not forces:
         return 200
     dominant = max(forces, key=lambda f: f["strength"])
@@ -37,7 +43,7 @@ class VitalStatModel(QObject):
 
     clicked = Signal(str)
 
-    def __init__(self, label: str, metric_name: str = None, parent=None):
+    def __init__(self, label: str, metric_name: str | None = None, parent=None):
         super().__init__(parent)
         self._label = label
         self._metric_name = metric_name
@@ -51,8 +57,8 @@ class VitalStatModel(QObject):
         self._explainable = metric_name is not None
 
     def refresh_from(self, value: float, readout: str, color: str,
-                      qualifier: str = "", qualifier_color: str = None,
-                      forces: list = None):
+                      qualifier: str = "", qualifier_color: str | None = None,
+                      forces: list[dict] | None = None):
         forces = forces or []
         self._value = max(0.0, min(1.0, value))
         self._readout_text = readout

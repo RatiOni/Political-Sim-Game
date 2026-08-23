@@ -20,9 +20,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, os.path.dirname(__file__))
 
 from PySide6.QtWidgets import QApplication, QLabel, QPushButton
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt, QUrl, QPoint, qInstallMessageHandler
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtQuickWidgets import QQuickWidget
+from PySide6.QtTest import QTest
 
 from ui import theme
 from ui.app import MainWindow
@@ -422,31 +423,92 @@ def main():
         assert "Public Sans" in families, f"no 'Public Sans' family registered, got {families}"
     check("Public Sans font files load into QFontDatabase", _public_sans_fonts_load)
 
+    def _public_sans_registered_by_real_gui_startup():
+        # The check above proves the .ttf files are valid and loadable; it
+        # does NOT prove gui.py's actual startup registers them — that
+        # registration call could be silently deleted from gui.main() and
+        # this suite would never notice. So this drives the real
+        # gui.main() code path instead of re-implementing registration.
+        # gui.main() constructs its own QApplication(argv), which would
+        # collide with the QApplication this test harness already owns; the
+        # "--verify-build" argv path is used because it returns instead of
+        # calling app.exec()'s blocking event loop (it fails fast on missing
+        # packaged-only files here, but only *after* the font registration
+        # and stylesheet lines run, which is the part under test).
+        import gui
+        original_qapplication = gui.QApplication
+        gui.QApplication = lambda argv: app
+        try:
+            gui.main(["--verify-build"])
+        finally:
+            gui.QApplication = original_qapplication
+        families = QFontDatabase.families()
+        assert "Public Sans" in families, (
+            "gui.main()'s real startup sequence did not register Public Sans — "
+            "has the register_bundled_fonts() call been removed from gui.py? "
+            f"got families containing 'Public': {[f for f in families if 'Public' in f]}")
+    check("gui.py's real startup (gui.main) registers Public Sans, not just the raw .ttf files",
+          _public_sans_registered_by_real_gui_startup)
+
     def _vitals_panel_qml_loads():
         from ui.qml_bridge import VitalStatModel
         quick = QQuickWidget()
         quick.setResizeMode(QQuickWidget.ResizeMode.SizeRootObjectToView)
         ctx = quick.rootContext()
         approval = VitalStatModel("Approval", metric_name="Approval")
-        stability = VitalStatModel("Stability")
-        pc = VitalStatModel("Political capital")
+        stability = VitalStatModel("Stability", metric_name="Stability")
+        pc = VitalStatModel("Political capital", metric_name="Pol. Capital")
         attention = VitalStatModel("Attention")
         ctx.setContextProperty("approvalModel", approval)
         ctx.setContextProperty("stabilityModel", stability)
         ctx.setContextProperty("pcModel", pc)
         ctx.setContextProperty("attentionModel", attention)
-        qml_path = os.path.join(os.path.dirname(__file__), "ui", "qml", "VitalsPanel.qml")
-        quick.setSource(QUrl.fromLocalFile(qml_path))
-        app.processEvents()
+
+        # errors()/status() alone let Critical #1 through: an illegal anchor
+        # on a Column child doesn't raise a QML *error*, it emits a runtime
+        # *warning* and silently disables the positioner. Capture every
+        # qDebug/qWarning/qCritical message for the duration of this load and
+        # fail on anything QML-sourced, then restore the previous handler so
+        # this doesn't leak into the rest of the suite.
+        captured = []
+        previous_handler = qInstallMessageHandler(
+            lambda msg_type, context, message: captured.append(message))
+        try:
+            qml_path = os.path.join(os.path.dirname(__file__), "ui", "qml", "VitalsPanel.qml")
+            quick.setSource(QUrl.fromLocalFile(qml_path))
+            app.processEvents()
+        finally:
+            qInstallMessageHandler(previous_handler)
+
         assert quick.status() == QQuickWidget.Status.Ready, \
             f"VitalsPanel.qml failed to load, status={quick.status()}, errors={quick.errors()}"
         assert quick.errors() == [], f"QML reported errors: {quick.errors()}"
-    check("VitalsPanel.qml loads with no QML errors", _vitals_panel_qml_loads)
+        qml_warnings = [m for m in captured if "QML " in m]
+        assert qml_warnings == [], f"QML reported warnings (not just errors): {qml_warnings}"
 
-    def _left_panel_vitals_refresh_and_click():
-        # Built against a fresh sample state rather than reusing the
-        # MainWindow fixture, so this check is independent of whichever
-        # earlier check ran (or didn't) first.
+        # Geometry: a real assertion on layout, not just "it loaded". This is
+        # the check that would have caught Critical #1 (all four vitals
+        # collapsing to height 0 at y=0, fully overlapping).
+        root = quick.rootObject()
+        implicit_height = root.property("implicitHeight")
+        assert implicit_height > 0, f"VitalsPanel root implicitHeight is {implicit_height}, expected > 0"
+        assert implicit_height < 400, \
+            f"VitalsPanel root implicitHeight is {implicit_height}, expected a sane ceiling (< 400)"
+        children = root.childItems()
+        assert len(children) == 4, f"expected 4 VitalStat children, got {len(children)}"
+        ys = [c.property("y") for c in children]
+        assert ys == sorted(ys) and len(set(ys)) == len(ys), \
+            f"VitalStat children are not laid out in strictly increasing y order (collapsed/overlapping?): {ys}"
+    check("VitalsPanel.qml loads with no QML errors or warnings, and lays out with real geometry",
+          _vitals_panel_qml_loads)
+
+    def _left_panel_vitals_python_signal_forwarding():
+        # Honest name: this only exercises the Python-side signal chain
+        # (VitalStatModel.activate() -> .clicked -> LeftPanel.metric_clicked)
+        # via a direct method call, never the actual QML MouseArea hit-test —
+        # see the check below for that. Built against a fresh sample state
+        # rather than reusing the MainWindow fixture, so this check is
+        # independent of whichever earlier check ran (or didn't) first.
         from ui.panel_left import LeftPanel
         from main import build_sample_game
         st = build_sample_game()
@@ -458,7 +520,37 @@ def main():
         assert panel._approval_model.readoutText.endswith("%")
         panel._approval_model.activate()
         assert clicked == ["Approval"], f"expected a click-through from QML to LeftPanel.metric_clicked, got {clicked}"
-    check("LeftPanel's QML vitals refresh and forward clicks", _left_panel_vitals_refresh_and_click)
+    check("LeftPanel's QML vitals refresh and forward the Python-side click signal",
+          _left_panel_vitals_python_signal_forwarding)
+
+    def _left_panel_vitals_real_mouse_click():
+        # Stronger coverage than the Python-signal check above: drives an
+        # actual QTest.mouseClick on the QQuickWidget's Approval row, so a
+        # mispositioned or non-functional click target (exactly what
+        # Critical #1's broken Column/MouseArea anchoring produced) would
+        # fail this check even if the Python signal wiring were fine.
+        from ui.panel_left import LeftPanel
+        from main import build_sample_game
+        st = build_sample_game()
+        panel = LeftPanel(st)
+        panel.refresh(st)
+        # QTest.mouseClick needs a real window handle to deliver events
+        # through — without .show() the offscreen QQuickWidget never gets
+        # one and the click silently goes nowhere.
+        panel.show()
+        app.processEvents()
+        clicked = []
+        panel.metric_clicked.connect(lambda name: clicked.append(name))
+        # Approval is the first VitalStat, occupying y=0 down to its own
+        # height at the top of the QQuickWidget — (10, 8) lands inside its
+        # MouseArea (anchors.fill over the whole Column) regardless of the
+        # panel's exact measured height.
+        QTest.mouseClick(panel._vitals_quick, Qt.LeftButton, pos=QPoint(10, 8))
+        app.processEvents()
+        assert clicked == ["Approval"], \
+            f"a real mouse click on the Approval vital did not reach LeftPanel.metric_clicked, got {clicked}"
+    check("LeftPanel's QML vitals forward a real QTest mouse click on the Approval hit target",
+          _left_panel_vitals_real_mouse_click)
 
     print("\n" + "=" * 60)
     for status, name in checks:
