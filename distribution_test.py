@@ -1,5 +1,6 @@
 """Focused checks for the downloadable Windows playtest build."""
 
+from contextlib import ExitStack
 from datetime import datetime
 import os
 import re
@@ -125,6 +126,8 @@ def crash_logs_are_local_versioned_and_readable():
             assert path.name == "crash-20260822-123456.txt"
             text = path.read_text(encoding="utf-8")
             assert "0.1.0-playtest.1" in text
+            assert "Operating system:" in text
+            assert "Python runtime:" in text
             assert "RuntimeError: packaged failure marker" in text
             assert str(path).startswith(str(Path(tmp).resolve()))
 
@@ -180,22 +183,79 @@ def packaged_verifier_rejects_invalid_restored_campaign():
             assert not persistence.save_exists("_package_verify_opposition")
 
 
-def fatal_hook_reports_when_log_creation_fails():
+def _run_fatal_qt_callback(*, packaged: bool,
+                           log_error: Exception | None = None):
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtCore import QTimer
+    from PySide6.QtWidgets import QApplication
+
+    app = QApplication.instance() or QApplication([])
     original = sys.excepthook
+    messages = []
     try:
-        with patch.object(runtime_logging, "write_crash_log",
-                          side_effect=OSError("read-only data directory")), \
-                patch.object(gui.QMessageBox, "critical") as critical:
+        with tempfile.TemporaryDirectory() as tmp, ExitStack() as stack:
+            stack.enter_context(patch.dict(os.environ, {
+                "ARDENIA_USER_DATA_DIR": str(Path(tmp).resolve()),
+            }))
+            stack.enter_context(patch.object(
+                app_paths, "is_packaged", return_value=packaged))
+            critical = stack.enter_context(patch.object(
+                gui.QMessageBox, "critical",
+                side_effect=lambda _parent, _title, message:
+                    messages.append(message),
+            ))
+            default_hook = stack.enter_context(
+                patch.object(sys, "__excepthook__"))
+            if log_error is not None:
+                stack.enter_context(patch.object(
+                    runtime_logging, "write_crash_log",
+                    side_effect=log_error,
+                ))
+
             gui.install_exception_hook()
-            try:
-                raise RuntimeError("fatal marker")
-            except RuntimeError as exc:
-                sys.excepthook(type(exc), exc, exc.__traceback__)
-            message = critical.call_args.args[2]
-            assert "could not be written" in message
-            assert "read-only data directory" in message
+
+            def fail_in_qt_callback():
+                raise RuntimeError("fatal Qt callback marker")
+
+            timeout = QTimer()
+            timeout.setSingleShot(True)
+            timeout.timeout.connect(lambda: app.exit(0))
+            timeout.start(1000)
+            QTimer.singleShot(0, fail_in_qt_callback)
+            exit_code = app.exec()
+            timeout.stop()
+
+            logs = list((Path(tmp) / "logs").glob("crash-*.txt"))
+            assert critical.call_count == 1
+            assert len(messages) == 1
+            assert exit_code != 0
+            if packaged:
+                default_hook.assert_not_called()
+            else:
+                default_hook.assert_called_once()
+            return messages[0], logs
     finally:
         sys.excepthook = original
+
+
+def fatal_hook_exits_qt_for_successful_and_failed_logs():
+    success_message, logs = _run_fatal_qt_callback(packaged=True)
+    assert "crash log was written" in success_message.lower()
+    assert len(logs) == 1
+
+    failed_message, logs = _run_fatal_qt_callback(
+        packaged=True,
+        log_error=OSError("read-only data directory"),
+    )
+    assert "could not be written" in failed_message
+    assert "read-only data directory" in failed_message
+    assert not logs
+
+
+def source_fatal_hook_preserves_console_traceback():
+    message, logs = _run_fatal_qt_callback(packaged=False)
+    assert "crash log was written" in message.lower()
+    assert len(logs) == 1
 
 
 def build_definition_is_pinned_and_one_folder():
@@ -282,7 +342,6 @@ def release_workflow_is_manual_or_tag_only():
     assert "scripts/run_ui_smoke_offscreen.py" in workflow
     assert "git diff --check" in workflow
     assert "gh release create" in workflow
-    assert "github.sha" in workflow
     assert "actions/upload-artifact@v4" in workflow
     assert "pull_request:" not in workflow
     assert "branches:" not in workflow
@@ -302,8 +361,15 @@ def release_workflow_is_manual_or_tag_only():
     build_body = build.group("body")
     release_body = release.group("body")
     assert re.search(r"(?m)^    permissions:\n      contents: read$", build_body)
+    assert "build_commit: ${{ steps.build_provenance.outputs.build_commit }}" in \
+        build_body
+    assert "id: build_provenance" in build_body
+    assert "$env:GITHUB_OUTPUT" in build_body
     assert "persist-credentials: false" in build_body
     assert "fetch-depth: 2" in build_body
+    assert "git rev-parse HEAD" in build_body
+    assert "Set-Content -LiteralPath \"dist/build-commit.txt\"" in build_body
+    assert "dist/build-commit.txt" in build_body
     assert re.search(
         r"git diff --check HEAD\^ HEAD\r?\n\s*"
         r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
@@ -320,8 +386,15 @@ def release_workflow_is_manual_or_tag_only():
     assert re.search(r"(?m)^    needs: build-and-verify$", release_body)
     assert re.search(r"(?m)^    if: github.event_name == 'push'$", release_body)
     assert re.search(r"(?m)^    permissions:\n      contents: write$", release_body)
+    assert "GH_REPO: ${{ github.repository }}" in release_body
+    assert "EXPECTED_BUILD_COMMIT: " \
+        "${{ needs.build-and-verify.outputs.build_commit }}" in release_body
+    assert "actions/checkout" not in release_body
     assert "actions/download-artifact@v4" in release_body
     assert workflow.count("name: Ardenia-Windows-playtest") == 2
+    assert "Get-Content -LiteralPath $provenance -Raw" in release_body
+    assert "$buildCommit -ne $env:EXPECTED_BUILD_COMMIT" in release_body
+    assert "github.sha" not in release_body
     create = re.search(r"(?m)^\s*gh release create (?P<args>.*)$", release_body)
     assert create and "--draft" in create.group("args")
     assert "$zip" not in create.group("args")
@@ -330,19 +403,46 @@ def release_workflow_is_manual_or_tag_only():
     assert "gh release edit" in release_body
     assert "--draft=false" in release_body
     assert "gh release delete" not in workflow
-    existing_release = re.search(
-        r"(?ms)\$existingRelease = gh release view \"\$env:RELEASE_TAG\" "
-        r"--json isDraft --jq '.isDraft' 2>\$null\s*"
-        r"\$viewExit = \$LASTEXITCODE\s*"
-        r"if \(\$viewExit -eq 0\) \{\s*"
-        r"throw \"Refusing to create a release because one already exists",
-        release_body,
-    )
-    assert existing_release
-    assert release_body.index("gh release view") < \
+    assert "gh api --paginate --slurp" in release_body
+    assert "releases?per_page=100" in release_body
+    assert "ConvertFrom-Json" in release_body
+    assert "$release.tag_name -eq $env:RELEASE_TAG" in release_body
+    assert "$existingReleases.Count -ne 0" in release_body
+    assert "git/ref/tags/$encodedTag" in release_body
+    assert 'while ($remoteType -eq "tag")' in release_body
+    assert "git/tags/$remoteObject" in release_body
+    assert 'if ($remoteType -ne "commit")' in release_body
+    assert 'if ($remoteCommit -ne $buildCommit)' in release_body
+    assert release_body.index("releases?per_page=100") < \
+        release_body.index("git/ref/tags/$encodedTag") < \
+        release_body.index('if ($remoteCommit -ne $buildCommit)') < \
         release_body.index("gh release create") < \
         release_body.index("gh release upload") < \
         release_body.index("gh release edit")
+
+    for native_gate in (
+            r"git rev-parse HEAD\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"gh api --paginate --slurp `\r?\n\s*"
+            r"\"repos/\$env:GH_REPO/releases\?per_page=100\"\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"gh api \"repos/\$env:GH_REPO/git/ref/tags/\$encodedTag\" `\r?\n\s*"
+            r"--jq .*\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"gh api \"repos/\$env:GH_REPO/git/tags/\$remoteObject\" `\r?\n\s*"
+            r"--jq .*\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"gh release create .*`\r?\n\s*"
+            r"--title .*\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"gh release upload .*\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"\$assetNames = gh release view .*\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+            r"gh release edit .*\r?\n\s*"
+            r"if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}",
+    ):
+        assert re.search(native_gate, workflow)
 
 
 def powershell_source_gate_failure_cannot_be_masked():
@@ -365,12 +465,54 @@ def powershell_source_gate_failure_cannot_be_masked():
 
 def release_checklist_requires_clean_machine_and_frozen_sample():
     checklist = (PROJECT_ROOT / "docs/playtests/WINDOWS_RELEASE_CHECKLIST.md") \
-        .read_text(encoding="utf-8").lower()
+        .read_text(encoding="utf-8")
+    lower = re.sub(r"\s+", " ", checklist.lower())
     for required in ("clean windows", "without python", "government",
                      "opposition", "autosave", "manual save", "load",
                      "replace the extracted", "sha-256", "smartscreen",
                      "freeze the build", "v0.1.0-playtest.1"):
-        assert required in checklist
+        assert required in lower
+
+    gate_numbers = re.findall(
+        r"(?m)^- \[ \] \*\*(\d+)\.", checklist)
+    assert gate_numbers == [str(number) for number in range(1, 13)]
+    evidence_lines = re.findall(r"(?mi)^\s*Evidence:\s+_*\s*$", checklist)
+    blank_evidence_lines = re.findall(
+        r"(?mi)^\s*Evidence:\s+_{10,}\s*$", checklist)
+    assert len(evidence_lines) == 12
+    assert len(blank_evidence_lines) == 12
+
+    for required in (
+            "do not recreate or move the same tag",
+            "fix forward on `main`",
+            "increment the playtest version",
+            "publish a new immutable tag",
+            "do not delete or replace a release asset once a session has used it",
+    ):
+        assert required in lower
+
+    for guide_name in ("AGENTS.md", "CLAUDE.md"):
+        guide = (PROJECT_ROOT / guide_name).read_text(encoding="utf-8")
+        section = re.search(
+            r"(?ms)^### Windows playtest distribution\s*\n"
+            r"(?P<body>.*?)(?=^### |\Z)",
+            guide,
+        )
+        assert section
+        body = re.sub(r"\s+", " ", section.group("body"))
+        for required in (
+                "distribution_test.py",
+                "scripts\\build_windows.ps1",
+                "Manual workflow dispatch builds a private artifact",
+                "Only `v*-playtest.*` tags publish",
+                "%LOCALAPPDATA%\\Ardenia",
+                "source saves",
+                "new public asset always receives a new version/tag",
+                "ARDENIA_USER_DATA_DIR",
+                "test/build-only override",
+                "No private feedback address or participant material is committed",
+        ):
+            assert required in body
 
 
 if __name__ == "__main__":
@@ -389,7 +531,10 @@ if __name__ == "__main__":
          packaged_verifier_uses_isolated_saves_and_required_files),
         ("packaged verification rejects invalid restored campaigns",
          packaged_verifier_rejects_invalid_restored_campaign),
-        ("fatal hook reports log failures", fatal_hook_reports_when_log_creation_fails),
+        ("fatal Qt callbacks exit after successful and failed crash logs",
+         fatal_hook_exits_qt_for_successful_and_failed_logs),
+        ("source fatal callbacks preserve console traceback",
+         source_fatal_hook_preserves_console_traceback),
         ("build definition is pinned and produces a one-folder package",
          build_definition_is_pinned_and_one_folder),
         ("build rejects non-x64 toolchains",

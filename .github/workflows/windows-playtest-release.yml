@@ -15,6 +15,8 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: read
+    outputs:
+      build_commit: ${{ steps.build_provenance.outputs.build_commit }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,6 +65,20 @@ jobs:
         run: |
           & scripts/build_windows.ps1 -Python python
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record build provenance
+        id: build_provenance
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $buildCommit = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($buildCommit -notmatch "^[0-9a-f]{40}$") {
+            throw "Could not record the build commit"
+          }
+          Set-Content -LiteralPath "dist/build-commit.txt" `
+            -Value $buildCommit -Encoding ascii -NoNewline
+          Add-Content -LiteralPath $env:GITHUB_OUTPUT `
+            -Value "build_commit=$buildCommit" -Encoding utf8
       - name: Upload inspected workflow artifact
         uses: actions/upload-artifact@v4
         with:
@@ -70,6 +86,7 @@ jobs:
           path: |
             dist/Ardenia-*-win64.zip
             dist/Ardenia-*-win64.zip.sha256
+            dist/build-commit.txt
           if-no-files-found: error
 
   release:
@@ -88,22 +105,37 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EXPECTED_BUILD_COMMIT: ${{ needs.build-and-verify.outputs.build_commit }}
           RELEASE_TAG: ${{ github.ref_name }}
-          RELEASE_COMMIT: ${{ github.sha }}
         run: |
           $ErrorActionPreference = "Stop"
           $version = $env:RELEASE_TAG.Substring(1)
           $zip = "dist/Ardenia-$version-win64.zip"
           $sha = "$zip.sha256"
+          $provenance = "dist/build-commit.txt"
           if (-not (Test-Path -LiteralPath $zip)) {
             throw "Verified ZIP artifact is missing: $zip"
           }
           if (-not (Test-Path -LiteralPath $sha)) {
             throw "Verified SHA-256 artifact is missing: $sha"
           }
+          if (-not (Test-Path -LiteralPath $provenance)) {
+            throw "Build provenance is missing: $provenance"
+          }
+          $buildCommit = (Get-Content -LiteralPath $provenance -Raw).Trim()
+          if ($buildCommit -notmatch "^[0-9a-f]{40}$") {
+            throw "Build provenance is not a commit SHA: $buildCommit"
+          }
+          if ($env:EXPECTED_BUILD_COMMIT -notmatch "^[0-9a-f]{40}$") {
+            throw "Build job output is not a commit SHA: $env:EXPECTED_BUILD_COMMIT"
+          }
+          if ($buildCommit -ne $env:EXPECTED_BUILD_COMMIT) {
+            throw "Downloaded artifact provenance does not match the build job output"
+          }
           $notes = @"
           Ardenia $version is an unsigned Windows 10/11 early playtest build.
-          Source commit: $env:RELEASE_COMMIT
+          Source commit: $buildCommit
 
           Download the ZIP, verify it with the attached SHA-256 file, extract the
           complete Ardenia folder, and run Ardenia.exe. Python and Git are not
@@ -118,12 +150,56 @@ jobs:
           $notesPath = "dist/release-notes.md"
           Set-Content -LiteralPath $notesPath -Value $notes -Encoding utf8
 
-          $existingRelease = gh release view "$env:RELEASE_TAG" --json isDraft --jq '.isDraft' 2>$null
-          $viewExit = $LASTEXITCODE
-          if ($viewExit -eq 0) {
+          $releasePagesJson = gh api --paginate --slurp `
+            "repos/$env:GH_REPO/releases?per_page=100"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $releasePages = ConvertFrom-Json -InputObject `
+            ($releasePagesJson -join [Environment]::NewLine)
+          $existingReleases = @(
+            foreach ($page in $releasePages) {
+              foreach ($release in $page) {
+                if ($release.tag_name -eq $env:RELEASE_TAG) {
+                  $release
+                }
+              }
+            }
+          )
+          if ($existingReleases.Count -ne 0) {
             throw "Refusing to create a release because one already exists for $env:RELEASE_TAG"
-          } elseif ($viewExit -ne 1) {
-            exit $viewExit
+          }
+
+          $encodedTag = [Uri]::EscapeDataString($env:RELEASE_TAG)
+          $tagRef = gh api "repos/$env:GH_REPO/git/ref/tags/$encodedTag" `
+            --jq '.object.type + " " + .object.sha'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $tagRefLine = ($tagRef -join "").Trim()
+          if ($tagRefLine -notmatch "^(commit|tag) ([0-9a-f]{40})$") {
+            throw "Remote tag did not resolve to a Git object: $tagRefLine"
+          }
+          $remoteType = $Matches[1]
+          $remoteObject = $Matches[2]
+          $peelDepth = 0
+          while ($remoteType -eq "tag") {
+            $peelDepth += 1
+            if ($peelDepth -gt 10) {
+              throw "Remote tag nesting is unexpectedly deep"
+            }
+            $tagObject = gh api "repos/$env:GH_REPO/git/tags/$remoteObject" `
+              --jq '.object.type + " " + .object.sha'
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $tagObjectLine = ($tagObject -join "").Trim()
+            if ($tagObjectLine -notmatch "^(commit|tag) ([0-9a-f]{40})$") {
+              throw "Annotated tag did not peel to a Git object: $tagObjectLine"
+            }
+            $remoteType = $Matches[1]
+            $remoteObject = $Matches[2]
+          }
+          if ($remoteType -ne "commit") {
+            throw "Remote tag does not point to a commit"
+          }
+          $remoteCommit = $remoteObject
+          if ($remoteCommit -ne $buildCommit) {
+            throw "Remote tag moved after the build: expected $buildCommit, found $remoteCommit"
           }
 
           gh release create "$env:RELEASE_TAG" --draft --verify-tag `
