@@ -72,6 +72,15 @@ class VitalStatModel(QObject):
         if self._explainable:
             self.clicked.emit(self._metric_name)
 
+    def set_label(self, text: str):
+        """Reactively relabel this vital (e.g. Stability -> "Gov. stability"
+        while in opposition). label is otherwise read-only via Property, so
+        this is the one sanctioned way to change it after construction."""
+        if text == self._label:
+            return
+        self._label = text
+        self.labelChanged.emit()
+
     label = Property(str, lambda self: self._label, notify=labelChanged)
     value = Property(float, lambda self: self._value, notify=valueChanged)
     readoutText = Property(str, lambda self: self._readout_text, notify=readoutTextChanged)

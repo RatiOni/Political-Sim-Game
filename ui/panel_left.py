@@ -268,15 +268,11 @@ class LeftPanel(QWidget):
 
         self._role_title.setText(
             "YOUR GOVERNMENT" if p.in_government else "YOUR OPPOSITION")
-        # VitalStatModel.label has no public setter (Task 3 exposed it
-        # read-only via a Property), but it does declare labelChanged for
-        # exactly this kind of reactive relabel — mutate the backing field
-        # directly and emit it ourselves rather than silently losing the
-        # "Gov. stability" cue the opposition previously had.
-        stability_label = "Stability" if p.in_government else "Gov. stability"
-        if self._stability_model._label != stability_label:
-            self._stability_model._label = stability_label
-            self._stability_model.labelChanged.emit()
+        # Reactive relabel (Stability -> "Gov. stability" while in
+        # opposition) via VitalStatModel.set_label, so the opposition cue
+        # the old VitalStat.set_label gave isn't silently lost.
+        self._stability_model.set_label(
+            "Stability" if p.in_government else "Gov. stability")
 
         self._approval_model.refresh_from(
             p.approval, f"{p.approval*100:.0f}%",
