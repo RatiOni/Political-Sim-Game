@@ -552,6 +552,49 @@ def main():
     check("LeftPanel's QML vitals forward a real QTest mouse click on the Approval hit target",
           _left_panel_vitals_real_mouse_click)
 
+    def _left_panel_vitals_populated_height_fits():
+        # A bare QQuickWidget (as in the earlier check) measures a
+        # different, SMALLER implicitHeight than one embedded in
+        # LeftPanel's real QVBoxLayout — confirmed empirically (108px bare
+        # vs. 149px embedded, same populated content). That gap is exactly
+        # what let a real regression through once already: the fixed panel
+        # height was measured at construction time, before refresh() had
+        # ever populated the models, and undershot the real content,
+        # clipping the Attention vital. This check reproduces the actual
+        # embedding (a real LeftPanel, shown, refreshed with a genuine
+        # Approval force so ForceGlyph renders its tallest state) and
+        # confirms the real content still fits inside the fixed height.
+        from ui.panel_left import LeftPanel, VITALS_PANEL_HEIGHT
+        from main import build_sample_game
+        from models.modifiers import Modifier
+        st = build_sample_game()
+        st.modifiers.append(Modifier(id="qa-probe", source="Probe reform",
+                                     target="approval_bias", magnitude=0.05,
+                                     onset_delay=0, ramp_duration=3, age=1))
+        panel = LeftPanel(st)
+        panel.show()
+        app.processEvents()
+        app.processEvents()
+        widget_height = panel._vitals_quick.height()
+        assert widget_height == VITALS_PANEL_HEIGHT, \
+            f"widget height {widget_height} should equal the fixed VITALS_PANEL_HEIGHT constant {VITALS_PANEL_HEIGHT}"
+        root_obj = panel._vitals_quick.rootObject()
+        real_height = root_obj.property("implicitHeight")
+        assert real_height <= widget_height, (
+            f"CLIPPING: real populated implicitHeight is {real_height}, but the "
+            f"fixed widget height is only {widget_height} — content is cut off. "
+            f"Re-measure (with a real refresh() + show(), not right after "
+            f"setSource()) and update ui/panel_left.VITALS_PANEL_HEIGHT.")
+        children = root_obj.childItems()
+        for child in children:
+            y, h = child.property("y"), child.property("height")
+            assert y + h <= widget_height, \
+                f"a VitalStat (y={y}, h={h}) extends past the widget's {widget_height}px height"
+        panel.hide()
+        app.processEvents()
+    check("LeftPanel's real, populated vitals panel fits inside its fixed height (no clipping)",
+          _left_panel_vitals_populated_height_fits)
+
     print("\n" + "=" * 60)
     for status, name in checks:
         print(f"  {status}  {name}")

@@ -29,15 +29,19 @@ from ui.qml_bridge import VitalStatModel
 # "flat" rather than being dramatised into a direction.
 TREND_UP, TREND_DOWN, TREND_FLAT = "▲", "▼", "–"
 
-# Measured, not guessed (see the 2026-08-23 QML vitals fix-wave report):
-# ui/qml/VitalsPanel.qml's root implicitHeight, read offscreen via a
-# QQuickWidget with the same four VitalStatModel context properties this
-# panel wires up. 128px with no active force glyphs, 137px with Approval's
-# ForceGlyph showing a tick (the tallest valid state, since ForceGlyph is the
-# only row whose height varies and only Approval ever gets forces=). Fixed
-# per CLAUDE.md's "nothing on the dashboard may change size" rule -- this is
-# the correct constant for that rule, not a placeholder guess.
-VITALS_PANEL_HEIGHT = 137
+# Measured, not guessed (see the 2026-08-23 QML vitals fix-wave and its
+# re-review): ui/qml/VitalsPanel.qml's root implicitHeight, measured AFTER a
+# real LeftPanel.refresh() call and a render pass -- not right after
+# setSource(), which reads the models' still-empty construction-time state
+# and undermeasures. Confirmed twice independently at 149px: with a real
+# Modifier on approval_bias so Approval's ForceGlyph renders a tick (the
+# tallest valid state, since ForceGlyph is the only row whose height varies
+# and only Approval ever gets forces=). Fixed per CLAUDE.md's "nothing on the
+# dashboard may change size" rule -- this is the correct constant for that
+# rule, not a placeholder guess. Re-measure and update this constant (with
+# the same real-refresh()-then-render methodology) if VitalStat.qml's content
+# ever changes.
+VITALS_PANEL_HEIGHT = 149
 
 
 def _section_title(text: str) -> QLabel:
@@ -153,13 +157,13 @@ class LeftPanel(QWidget):
 
         self._vitals_quick = QQuickWidget()
         self._vitals_quick.setResizeMode(QQuickWidget.ResizeMode.SizeRootObjectToView)
-        # Measured, not guessed: VITALS_PANEL_HEIGHT below is the QML root's
-        # own implicitHeight once loaded (see the constant's comment). Set
-        # immediately after setSource so there's no visible 0-height flash,
-        # then reconciled against the real root object below in case a
-        # future content change shifts it — "nothing on the dashboard may
-        # change size" (CLAUDE.md) means the WIDGET's height still has to be
-        # a fixed number, it just has to be the right one.
+        # Fixed at construction to VITALS_PANEL_HEIGHT (see its comment for
+        # how that number was derived) — "nothing on the dashboard may change
+        # size" (CLAUDE.md). No runtime self-correction here: reading
+        # implicitHeight this early (right after setSource, before refresh()
+        # has ever populated the models below) measures the EMPTY-model
+        # height and undermeasures the real content — that was the bug a
+        # prior version of this code had.
         self._vitals_quick.setFixedHeight(VITALS_PANEL_HEIGHT)
         ctx = self._vitals_quick.rootContext()
         ctx.setContextProperty("approvalModel", self._approval_model)
@@ -168,11 +172,6 @@ class LeftPanel(QWidget):
         ctx.setContextProperty("attentionModel", self._attention_model)
         qml_path = str(app_paths.resource_path("ui/qml/VitalsPanel.qml"))
         self._vitals_quick.setSource(QUrl.fromLocalFile(qml_path))
-        root_obj = self._vitals_quick.rootObject()
-        if root_obj is not None:
-            measured = int(root_obj.property("implicitHeight"))
-            if measured > 0:
-                self._vitals_quick.setFixedHeight(measured)
         layout.addWidget(self._vitals_quick)
 
         # ── Tier 2: the economy, as figures ───────────────────────────────
