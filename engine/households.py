@@ -152,9 +152,17 @@ def simulate_households(state):
             _clamp(employment_target) - household.employment_security) * 0.18
         household.employment_security = _clamp(household.employment_security)
 
-        public_delivery = (welfare * definition["service_dependence"]
-                           + education * (1.0 - definition["service_dependence"] * 0.45))
-        public_delivery /= max(0.01, 1.0 + (1.0 - definition["service_dependence"] * 0.45))
+        # Weighted mean of welfare/education delivery, weights summing to 1
+        # so a group facing perfectly-delivered welfare AND education always
+        # reads public_delivery == 1.0, whatever its service_dependence.
+        # (The old divisor used a different, unrelated normalizer and
+        # silently capped the achievable maximum below 1.0 for every group
+        # but pensioners.)
+        _sd = definition["service_dependence"]
+        _welfare_weight = _sd
+        _education_weight = 1.0 - _sd * 0.45
+        public_delivery = (welfare * _welfare_weight + education * _education_weight)
+        public_delivery /= max(0.01, _welfare_weight + _education_weight)
         service_target = region.state_reach * 0.58 + public_delivery * 0.42
         if household.group_id == "rural_households":
             service_target -= 0.10

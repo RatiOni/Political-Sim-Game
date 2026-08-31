@@ -1,0 +1,9 @@
+stdout encoding: cp1252
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Temp\claude\D--Political-Sim-Game\b95d34e5-553d-4327-992b-e099a4e651af\scratchpad\enc_test.py", line 4, in <module>
+    print("Testing em dash — and arrow \u21b3 and warn \u26a0")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pc\AppData\Local\Python\pythoncore-3.14-64\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u21b3' in position 28: character maps to <undefined>

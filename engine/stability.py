@@ -154,19 +154,48 @@ def _confidence_vote_tally(state):
     """
     An existential vote, not a policy vote: coalition members back the
     government almost by default (they lose their own posts too if it
-    falls), everyone else votes their general loyalty sign. Returns
-    (votes_for, votes_against, threshold).
+    falls), everyone else votes their general disposition toward it.
+    Returns (votes_for, votes_against, threshold).
+
+    ``Faction.loyalty`` is disposition toward the *player*, not toward
+    whoever actually governs — a meaningful stand-in for "backs the
+    government" only while the player leads it. When the player is in
+    opposition, a non-coalition faction's stance is instead read off its
+    ideological affinity to the ruling party, and the player's own
+    (non-coalition) party defaults to opposing a government it does not
+    lead — it is not "loyal to itself" in any sense relevant here.
     """
     coalition_ids = set(state.coalition_faction_ids())
     votes_for, votes_against = 0, 0
-    for faction in state.country.factions:
-        if faction.seats <= 0:
-            continue
-        if faction.id in coalition_ids or faction.loyalty >= 0:
-            votes_for += faction.seats
-        else:
-            votes_against += faction.seats
+    if state.player.in_government:
+        for faction in state.country.factions:
+            if faction.seats <= 0:
+                continue
+            if faction.id in coalition_ids or faction.loyalty >= 0:
+                votes_for += faction.seats
+            else:
+                votes_against += faction.seats
+    else:
+        ruling = next((f for f in state.country.factions
+                       if f.id == state.ruling_faction_id), None)
+        for faction in state.country.factions:
+            if faction.seats <= 0:
+                continue
+            if faction.id in coalition_ids:
+                votes_for += faction.seats
+            elif faction.id == state.player.faction_id:
+                votes_against += faction.seats
+            elif ruling is not None and _ideology_affinity(
+                    faction.effective_ideology(), ruling.effective_ideology()) >= 0.5:
+                votes_for += faction.seats
+            else:
+                votes_against += faction.seats
     return votes_for, votes_against, state.legislature.majority_threshold()
+
+
+def _ideology_affinity(a, b) -> float:
+    """0..1: how ideologically close two positions are (1.0 = identical)."""
+    return max(0.0, 1.0 - a.distance_to(b) / 2.83)
 
 
 def resolve_confidence_vote(state) -> str:

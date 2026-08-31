@@ -24,14 +24,47 @@ BLOC_POLICY_SALIENCE = 1.0
 _MAX_DIST = 2.83
 
 
-def predicted_support(faction, law: Law) -> float:
-    """-1..1 lean on a bill: loyalty blended with the bill's stake for this
-    faction, plus any lobbying banked for this vote."""
+def predicted_support(faction, law: Law, state: Optional[GameState] = None) -> float:
+    """-1..1 lean on a bill: government trust blended with the bill's stake
+    for this faction, plus any lobbying banked for this vote."""
     stake = law.effects.faction_loyalty_deltas.get(faction.id, 0.0)
     policy_lean = max(-1.0, min(1.0, stake * SALIENCE))
     lobbying = law.lobbying_bonus.get(faction.id, 0.0)
-    lean = faction.loyalty * 0.5 + policy_lean * 0.5 + lobbying
+    trust = _government_trust(state, faction, law)
+    lean = trust * 0.5 + policy_lean * 0.5 + lobbying
     return max(-1.0, min(1.0, lean))
+
+
+def _government_trust(state: Optional[GameState], faction, law: Law) -> float:
+    """-1..1: how much this faction trusts the bill's sponsor to govern.
+
+    ``Faction.loyalty`` is disposition toward the *player*, not toward
+    whoever actually proposed this bill — a correct stand-in for "trusts
+    the sponsor" only when the player themselves sponsored it (or ``state``
+    is unavailable, preserving old callers). The player's own sponsorship is
+    marked two different ways across the codebase — the literal string
+    ``"player"`` for ordinary bills (engine/player_ops.py) and the player's
+    own ``faction_id`` for budget bills (engine/budget.py) — both must be
+    recognized here, or a player-sponsored budget vote would wrongly take
+    the AI-sponsor branch below and ignore real faction loyalty entirely.
+    For an AI-government bill the player did not sponsor, trust is read off
+    the faction's actual relationship to that sponsor instead: full trust
+    for the sponsor itself, strong trust for the ruling coalition it leads,
+    and ideological affinity to the sponsor for everyone else — never the
+    faction's unrelated loyalty to the player.
+    """
+    player_sponsored = (not law.proposed_by or law.proposed_by == "player"
+                        or (state is not None and law.proposed_by == state.player.faction_id))
+    if state is None or player_sponsored:
+        return faction.loyalty
+    if faction.id == law.proposed_by:
+        return 1.0
+    if faction.in_coalition:
+        return 0.6
+    sponsor = next((f for f in state.country.factions if f.id == law.proposed_by), None)
+    if sponsor is None:
+        return faction.loyalty
+    return 2.0 * _affinity(faction.effective_ideology(), sponsor.effective_ideology()) - 1.0
 
 
 def _affinity(ideology, law_ideology) -> float:
@@ -39,8 +72,16 @@ def _affinity(ideology, law_ideology) -> float:
 
 
 def _split_seats_by_strength(wings, total_seats: int) -> dict:
-    """Largest-remainder split of a party's seats across its wings."""
-    exact = [(w, max(0.0, w.strength) * total_seats) for w in wings]
+    """Largest-remainder split of a party's seats across its wings.
+
+    Seat-conserving only when `strength` values already sum to ~1.0
+    (guaranteed by `Faction.normalize_wings()`); normalizes defensively here
+    too so a caller that skips that step still can't desync the seat total.
+    """
+    total_strength = sum(max(0.0, w.strength) for w in wings)
+    if total_strength <= 0:
+        total_strength = 1.0
+    exact = [(w, max(0.0, w.strength) / total_strength * total_seats) for w in wings]
     seats = {w.id: int(v) for w, v in exact}
     remainder = total_seats - sum(seats.values())
     order = sorted(exact, key=lambda t: -(t[1] - int(t[1])))
@@ -49,19 +90,20 @@ def _split_seats_by_strength(wings, total_seats: int) -> dict:
     return seats
 
 
-def wing_votes(faction, law: Law):
+def wing_votes(faction, law: Law, state: Optional[GameState] = None):
     """
     Per-wing (wing, seats, lean) when split voting is active — the party has
     ≥2 wings AND the bill carries an ideology — else None (the party votes as
     one bloc, exactly as before). A wing's lean is the party lean with its
-    discipline scaling the loyalty component, plus how much closer (or
-    further) the wing itself sits to the bill than the party centre does.
+    discipline scaling the government-trust component, plus how much closer
+    (or further) the wing itself sits to the bill than the party centre does.
     """
     if len(faction.wings) < 2 or law.ideology is None or faction.seats <= 0:
         return None
     stake = law.effects.faction_loyalty_deltas.get(faction.id, 0.0)
     policy_lean = max(-1.0, min(1.0, stake * SALIENCE))
     lobbying = law.lobbying_bonus.get(faction.id, 0.0)
+    trust = _government_trust(state, faction, law)
     party_affinity = _affinity(faction.effective_ideology(), law.ideology)
     seat_split = _split_seats_by_strength(faction.wings, faction.seats)
 
@@ -69,7 +111,7 @@ def wing_votes(faction, law: Law):
     for w in faction.wings:
         discipline = 0.5 + 0.5 * w.loyalty
         bloc_interest = max(-1.0, min(1.0, w.policy_biases.get(law.id, 0.0)))
-        lean = (faction.loyalty * 0.5 * discipline
+        lean = (trust * 0.5 * discipline
                 + policy_lean * 0.5
                 + lobbying
                 + (_affinity(w.ideology, law.ideology) - party_affinity) * WING_SALIENCE
@@ -88,9 +130,9 @@ def projected_votes(state: GameState, law: Law):
     for faction in state.country.factions:
         if faction.seats <= 0:
             continue
-        wv = wing_votes(faction, law)
+        wv = wing_votes(faction, law, state)
         if wv is None:
-            lean = predicted_support(faction, law)
+            lean = predicted_support(faction, law, state)
             if lean >= 0:
                 votes_for += faction.seats
             else:
@@ -111,7 +153,7 @@ def vote_rebellions(state: GameState, law: Law):
     own party's majority side, for display and dispatch."""
     out = []
     for faction in state.country.factions:
-        wv = wing_votes(faction, law)
+        wv = wing_votes(faction, law, state)
         if wv is None or faction.seats <= 0:
             continue
         f_for = sum(s for _, s, lean in wv if lean >= 0)

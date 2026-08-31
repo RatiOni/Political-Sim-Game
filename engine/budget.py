@@ -39,9 +39,24 @@ def _normalise_plan_envelopes(plan: AnnualBudget | None):
     if current | {"foreign_affairs"} == expected and "state_administration" in current:
         total = plan.expenditure
         foreign = round(total * ENVELOPE_BY_ID["foreign_affairs"]["share"], 1)
-        plan.allocations["foreign_affairs"] = foreign
-        plan.allocations["state_administration"] = round(
-            max(0.0, plan.allocations["state_administration"] - foreign), 1)
+        # Carve out of state_administration, but never manufacture money: a
+        # legacy save whose state_administration share was already below
+        # Foreign Affairs' target share must not have the carve exceed what
+        # is actually sitting there (the old max(0.0, ...) clamp let it,
+        # silently inflating the voted total). Any shortfall stays in
+        # state_administration instead, so the total is preserved exactly.
+        available = plan.allocations["state_administration"]
+        actual_foreign = min(foreign, max(0.0, available))
+        plan.allocations["foreign_affairs"] = round(actual_foreign, 1)
+        plan.allocations["state_administration"] = round(available - actual_foreign, 1)
+        return
+    if expected <= current:
+        # A superset: every recognized envelope is present, just alongside
+        # extra ids this build doesn't know (a future envelope, modded
+        # content). Preserve every real allocation instead of discarding the
+        # whole voted composition to a formulaic default — only drop what's
+        # actually unrecognized.
+        plan.allocations = {k: v for k, v in plan.allocations.items() if k in expected}
         return
     plan.allocations = default_allocations(plan.expenditure)
 
@@ -460,10 +475,15 @@ def apply_supplementary(state, portfolio: str, amount: float):
     active.supplements[portfolio] = active.portfolio_supplement(portfolio) + amount
 
     months = months_remaining_in_year(state)
-    state.modifiers = [m for m in state.modifiers
-                       if m.id != f"supplementary_{portfolio}_{state.year}"]
+    # id includes month, not just portfolio/year: a second supplementary for
+    # the same portfolio later in the same fiscal year must ADD its own
+    # Treasury cost, not overwrite the first one's modifier (which would
+    # silently drop the earlier tranche's cost while active.supplements
+    # keeps accumulating it as real spending power).
+    modifier_id = f"supplementary_{portfolio}_{state.year}_{state.month}"
+    state.modifiers = [m for m in state.modifiers if m.id != modifier_id]
     state.modifiers.append(Modifier(
-        id=f"supplementary_{portfolio}_{state.year}",
+        id=modifier_id,
         source=f"{portfolio} Supplementary Appropriation",
         target="budget_expenditure",
         magnitude=amount,

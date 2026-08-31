@@ -11,6 +11,17 @@ import textwrap
 # Allow running from the game/ directory directly
 sys.path.insert(0, os.path.dirname(__file__))
 
+# The dispatch feed and menus use box-drawing/arrow characters (—, ↳, ⚠, …).
+# Windows' legacy console codepage (cp1252/cp437) can't encode them, and
+# that's the DEFAULT whenever stdout isn't a UTF-8-capable terminal — e.g.
+# piped/redirected output, which is exactly how smoke_test.py and CI run
+# this front-end. Force UTF-8 so a random dispatch doesn't crash the game.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 from content.loader     import build_state_for
 from game_state         import GameState
 from engine.turn        import TurnEngine

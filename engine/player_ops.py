@@ -814,6 +814,11 @@ def op_improve_relations(state, country_id: str) -> ActionResult:
 
 @needs_attention("trade_agreement")
 def op_trade_agreement(state, country_id: str) -> ActionResult:
+    other = state.world_country(country_id)
+    if other is None:
+        return ActionResult(False, "No such country.")
+    if diplomacy.has_treaty(state, country_id, "trade"):
+        return ActionResult(False, f"A trade agreement with {other.name} already stands.")
     cost = COST_TRADE_AGREEMENT
     if not spend(state, cost):
         return ActionResult(False, f"Not enough political capital (need {cost:.0f}).")

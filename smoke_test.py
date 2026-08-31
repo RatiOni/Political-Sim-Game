@@ -18,6 +18,16 @@ Structure:
 import sys, os, copy, random
 sys.path.insert(0, os.path.dirname(__file__))
 
+# See main.py for why: Windows' default (non-UTF-8) console codepage can't
+# encode this suite's box-drawing/arrow output, and that default is what a
+# piped/redirected/CI run gets. Force UTF-8 so the suite doesn't abort on
+# the first dispatch that happens to contain one.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 from unittest.mock import patch
 
 from main import build_sample_game
@@ -4614,10 +4624,18 @@ untreated = fresh()
 treated = copy.deepcopy(untreated)
 assert player_ops.op_start_regional_program(
     treated, "zavost", "industrial_recovery").success
-baseline_spending = treated.country.economy.budget.expenditure
+# Treasury cost is a budget_expenditure Modifier booked once at launch (the
+# same non-accumulating pipeline every other in-year fiscal commitment
+# uses), annualised — not a raw += of one month's cost onto the annual
+# expenditure figure, which understated the true commitment 12x and was
+# wiped by the next _update_economy pulse before it could persist.
+program = treated.regional_programs[0]
+cost_modifier = next(m for m in treated.modifiers if m.source_id == program.id)
+assert cost_modifier.target == "budget_expenditure"
+assert cost_modifier.magnitude == program.monthly_cost * 12 == 110.0 * 12
+assert cost_modifier.institutional is False
 _region_engine.simulate_regions(untreated)
 _region_engine.simulate_regions(treated)
-assert treated.country.economy.budget.expenditure == baseline_spending + 110.0
 for _ in range(5):
     _region_engine.simulate_regions(untreated)
     _region_engine.simulate_regions(treated)
