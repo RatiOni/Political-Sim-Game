@@ -407,8 +407,12 @@ def _load_legacy(d):
         return None
     known = {f.name for f in dataclasses.fields(GovernmentLegacy)}
     lg = GovernmentLegacy(**{k: v for k, v in d.items() if k in known})
-    # Tuples become lists through JSON; normalise the history lists back.
-    lg.milestones = [tuple(x) if isinstance(x, list) else x for x in lg.milestones]
+    # Tuples become lists through JSON; normalise every (date_str, value)
+    # history list back, not just milestones.
+    for field_name in ("gdp_history", "approval_history", "coalition_history", "milestones"):
+        entries = getattr(lg, field_name, None)
+        if entries:
+            setattr(lg, field_name, [tuple(x) if isinstance(x, list) else x for x in entries])
     return lg
 
 def _load_election_result(d):
@@ -547,14 +551,39 @@ def save_campaign(state: GameState, slot: str = "manual") -> str:
     data = serialize_state(state)
     # A little human-readable header for the load screen.
     data["_label"] = f"{state.player.name} — {state.country.name} — {state.date_string()}"
-    with open(path, "w", encoding="utf-8") as fh:
+    # Write-then-replace, not write-in-place: the GUI autosaves every single
+    # turn, so this is the most exposed write in the game. Truncating the
+    # real file (the old "w" open) means a failure mid-write — disk full,
+    # a killed process, power loss — leaves a corrupt, unloadable file where
+    # the last GOOD save used to be. os.replace() is atomic on the same
+    # volume on both POSIX and Windows: a crash mid-write leaves either the
+    # old file or the fully-written new one, never a truncated hybrid.
+    tmp_path = f"{path}.tmp"
+    with open(tmp_path, "w", encoding="utf-8") as fh:
         json.dump(data, fh, indent=1)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp_path, path)
     return path
 
 def load_campaign(slot: str = "manual") -> GameState:
     path = _slot_path(slot)
     with open(path, "r", encoding="utf-8") as fh:
         data = json.load(fh)
+    save_version = data.get("save_version", 0)
+    if save_version > SAVE_VERSION:
+        # An OLDER save than this build understands degrades gracefully by
+        # design (missing fields -> model defaults). A NEWER one is the
+        # opposite case: fields this build has never heard of may have been
+        # renamed or restructured, and ".get(key, default)" can't tell
+        # "genuinely absent" from "moved" — it silently produces a
+        # plausible-looking but wrong campaign instead of failing loud.
+        import warnings
+        warnings.warn(
+            f"Save '{slot}' was written by a newer version (save_version="
+            f"{save_version}, this build understands up to {SAVE_VERSION}). "
+            "Some fields may load with wrong values rather than the save's "
+            "actual last-known state.", RuntimeWarning, stacklevel=2)
     return deserialize_state(data)
 
 def list_saves() -> list:

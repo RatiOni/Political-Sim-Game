@@ -87,6 +87,7 @@ class TurnEngine:
 
     def __init__(self):
         self.last_advance_monthly = False
+        self._advancing = False
 
     def advance_day(self, state: GameState) -> GameState:
         """Advance one calendar day, running a monthly pulse at rollover."""
@@ -117,48 +118,64 @@ class TurnEngine:
         return state
 
     def _run_monthly_pulse(self, state: GameState):
-        # Captured before anything below mutates state, so it is exactly
-        # last month's ending position — the "before" half of the digest a
-        # caller builds once this pulse returns (engine/digest.py). Persisted
-        # on GameState so it survives save/load; overwritten fresh every
-        # pulse, never accumulated.
-        state.last_snapshot = digest.snapshot(state)
-        state.turn += 1  # first, so state.turn == "the turn being processed" throughout
-        # A new month is a fresh diary: whatever the government committed its
-        # attention to last month is spent and gone. Deliberately a reset, not
-        # an accrual — unspent attention does not bank (engine/player_ops.py:
-        # MONTHLY_ATTENTION).
-        state.attention_spent = 0
-        budget.process_fiscal_year(state)
-        self._regenerate_political_capital(state)
-        self._simulate_domestic_government(state)
-        opposition.monthly_update(state)
-        ministries.simulate_ministries(state)
-        self._update_economy(state)
-        self._update_relations(state)
-        self._simulate_world(state)
-        self._process_loans(state)
-        self._update_faction_loyalty(state)
-        self._age_grievances(state)
-        regions.simulate_regions(state)
-        households.simulate_households(state)
-        self._update_approval(state)
-        self._update_stability(state)
-        self._update_ministers(state)
-        self._minister_crisis_check(state)
-        self._check_protests(state)
-        self._check_confidence_vote(state)
-        self._check_civil_war(state)
-        self._update_faction_support(state)
-        regions.update_party_support(state)
-        self._update_party_wings(state)
-        self._check_snap_election(state)
-        self._check_scheduled_election(state)
-        self._track_active_laws(state)
-        self._check_for_new_events(state)
-        self._rival_watch(state)
-        self._age_modifiers(state)
-        self._age_pending_events(state)
+        # Re-entrancy guard: nothing below is safe to run twice nested (a
+        # phase mutates state that a LATER phase reads this same pulse —
+        # see the phase-order docstring above). Every front-end funnels
+        # through this one method (advance/advance_day), so one flag here
+        # catches a nested advance() from ANY source — a dispatch callback,
+        # an EventOption.on_apply hook, a future GUI re-entry bug — instead
+        # of silently double-ticking modifiers/cooldowns or blowing the
+        # stack on state that's mid-mutation.
+        if self._advancing:
+            raise RuntimeError(
+                "TurnEngine.advance()/advance_day() called while a turn was "
+                "already being processed — the monthly pulse is not re-entrant.")
+        self._advancing = True
+        try:
+            # Captured before anything below mutates state, so it is exactly
+            # last month's ending position — the "before" half of the digest a
+            # caller builds once this pulse returns (engine/digest.py). Persisted
+            # on GameState so it survives save/load; overwritten fresh every
+            # pulse, never accumulated.
+            state.last_snapshot = digest.snapshot(state)
+            state.turn += 1  # first, so state.turn == "the turn being processed" throughout
+            # A new month is a fresh diary: whatever the government committed its
+            # attention to last month is spent and gone. Deliberately a reset, not
+            # an accrual — unspent attention does not bank (engine/player_ops.py:
+            # MONTHLY_ATTENTION).
+            state.attention_spent = 0
+            budget.process_fiscal_year(state)
+            self._regenerate_political_capital(state)
+            self._simulate_domestic_government(state)
+            opposition.monthly_update(state)
+            ministries.simulate_ministries(state)
+            self._update_economy(state)
+            self._update_relations(state)
+            self._simulate_world(state)
+            self._process_loans(state)
+            self._update_faction_loyalty(state)
+            self._age_grievances(state)
+            regions.simulate_regions(state)
+            households.simulate_households(state)
+            self._update_approval(state)
+            self._update_stability(state)
+            self._update_ministers(state)
+            self._minister_crisis_check(state)
+            self._check_protests(state)
+            self._check_confidence_vote(state)
+            self._check_civil_war(state)
+            self._update_faction_support(state)
+            regions.update_party_support(state)
+            self._update_party_wings(state)
+            self._check_snap_election(state)
+            self._check_scheduled_election(state)
+            self._track_active_laws(state)
+            self._check_for_new_events(state)
+            self._rival_watch(state)
+            self._age_modifiers(state)
+            self._age_pending_events(state)
+        finally:
+            self._advancing = False
 
     # ── Long-term modifier plumbing ──────────────────────────────────────────
 

@@ -3,6 +3,7 @@
 from content.regions import (ARDENIA_NATIONAL_SUPPORT_BASELINE,
                              ARDENIA_REGION_PROFILES, REGIONAL_PROGRAMS)
 from models.region import RegionState, RegionalProgram
+from models.modifiers import Modifier
 
 
 def _clamp(value, low=0.0, high=1.0):
@@ -272,6 +273,23 @@ def start_program(state, region_id: str, program_id: str) -> RegionalProgram:
         monthly_cost=definition["monthly_cost"],
     )
     state.regional_programs.append(program)
+    # Treasury cost is a budget_expenditure Modifier, not a one-off += onto
+    # the (annual) headline figure — the same non-accumulating pipeline
+    # every other in-year fiscal commitment uses (engine/budget.py:
+    # apply_supplementary). institutional=False: parliament committed this
+    # money for the programme's duration regardless of how well it is
+    # delivered — delivery quality already scales the programme's *effects*
+    # separately (program_delivery_quality), not its cost.
+    state.modifiers.append(Modifier(
+        id=f"regional_program_{program.id}",
+        source=f"{definition['name']} ({ARDENIA_REGION_PROFILES[region_id]['name']})",
+        target="budget_expenditure",
+        magnitude=program.monthly_cost * 12,
+        onset_delay=0, ramp_duration=1,
+        hold_duration=program.duration, decay_duration=0,
+        institutional=False,
+        source_id=program.id,
+    ))
     launch_pressure = definition.get("launch_pressure", 0.0)
     if launch_pressure:
         region = state.regions[region_id]
@@ -302,13 +320,12 @@ def _advance_programs(state) -> None:
         definition = REGIONAL_PROGRAMS.get(program.program_id)
         region = state.regions.get(program.region_id)
         if definition is None or region is None:
+            state.modifiers = [m for m in state.modifiers if m.source_id != program.id]
             continue
 
-        # The fiscal baseline is reconstructed earlier in the monthly pulse;
-        # programme commitments are then layered onto this month's headline
-        # expenditure. Organic inflation reads that deficit next month.
-        state.country.economy.budget.expenditure += program.monthly_cost
-
+        # Treasury cost is booked once, as a Modifier, when the programme
+        # starts (regions.start_program) — not re-added here every month.
+        # This phase only applies the programme's on-the-ground effects.
         quality = program_delivery_quality(state, program)
         regional_fit = definition.get("region_multipliers", {}).get(program.region_id, 1.0)
         scale = quality * regional_fit / max(1, program.duration)
@@ -328,6 +345,7 @@ def _advance_programs(state) -> None:
             region_name = ARDENIA_REGION_PROFILES[program.region_id]["name"]
             state.log(f"REGIONAL PROGRAMME — {definition['name']} concludes in "
                       f"{region_name}. Its gains now have to survive ordinary government.")
+            state.modifiers = [m for m in state.modifiers if m.source_id != program.id]
         else:
             still_active.append(program)
     state.regional_programs = still_active

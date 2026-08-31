@@ -65,9 +65,25 @@ def simulate_world(state):
     _update_world_relations(state)
     _pursue_agendas(state)
     _update_world_arcs(state)
+    # A live treaty is the SAME object referenced from both sides of a
+    # relation (propose_trade_agreement/sign_defense_pact), so walking only
+    # the player's relations used to age both sides "for free" — but that
+    # aliasing does not survive a save/load (each side becomes its own
+    # object), after which the world-side copy silently stopped aging.
+    # Walk every relation explicitly instead, deduped by object identity so
+    # a still-aliased (never-saved) treaty isn't double-incremented.
+    _aged_treaty_ids = set()
     for rel in state.country.relations.values():
         for treaty in rel.treaties:
-            treaty.turns_active += 1
+            if id(treaty) not in _aged_treaty_ids:
+                treaty.turns_active += 1
+                _aged_treaty_ids.add(id(treaty))
+    for other in state.world:
+        for rel in other.relations.values():
+            for treaty in rel.treaties:
+                if id(treaty) not in _aged_treaty_ids:
+                    treaty.turns_active += 1
+                    _aged_treaty_ids.add(id(treaty))
     for country in state.world:
         crisis.maybe_trigger_country_civil_war(state, country)
 

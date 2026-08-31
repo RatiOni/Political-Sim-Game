@@ -226,8 +226,21 @@ def break_treaty(state, country_id: str, treaty_id: str) -> str:
     treaty = next((t for t in rel_a.treaties if t.id == treaty_id), None)
     if treaty is None:
         return "No such treaty."
-    rel_a.treaties = [t for t in rel_a.treaties if t.id != treaty_id]
-    rel_b.treaties = [t for t in rel_b.treaties if t.id != treaty_id]
+    # Remove exactly the one matched instance, on both sides. A live treaty
+    # is the SAME Python object referenced from both relations (see
+    # propose_trade_agreement/sign_defense_pact), so identity comparison
+    # removes only it — a filter keyed on id alone would delete every
+    # treaty sharing that id in one action if ids were ever to collide.
+    rel_b_match = next((t for t in rel_b.treaties if t is treaty), None)
+    rel_a.treaties = [t for t in rel_a.treaties if t is not treaty]
+    if rel_b_match is not None:
+        rel_b.treaties = [t for t in rel_b.treaties if t is not rel_b_match]
+    else:
+        # Defensive fallback (e.g. a state that lost the identity link
+        # across save/load): remove the first id match on the other side.
+        idx = next((i for i, t in enumerate(rel_b.treaties) if t.id == treaty_id), None)
+        if idx is not None:
+            del rel_b.treaties[idx]
 
     penalty = -0.30 if treaty.type == "defense" else -0.20
     adjust_relation(state, country_id, penalty,

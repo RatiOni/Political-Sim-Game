@@ -101,6 +101,15 @@ def check_for_events(state: GameState):
             if event is None:
                 continue
             if not available_to_player(state, event):
+                # Defer, don't drop: the player's role (government/
+                # opposition) may simply not match this follow-up's
+                # audience right now. Silently discarding it here used to
+                # permanently kill a chain — including the once-only Vasca/
+                # Vetrenka arcs, whose root event's fire history is already
+                # stamped, so they could never restart even after the
+                # player regained office. Try again next turn instead.
+                sched["due_turn"] = state.turn + 1
+                state.scheduled_events.append(sched)
                 continue
             if not fired and random.random() < sched.get("chance", 1.0):
                 _fire(state, event)
