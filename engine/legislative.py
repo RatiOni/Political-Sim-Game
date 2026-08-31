@@ -41,15 +41,21 @@ def _government_trust(state: Optional[GameState], faction, law: Law) -> float:
     ``Faction.loyalty`` is disposition toward the *player*, not toward
     whoever actually proposed this bill — a correct stand-in for "trusts
     the sponsor" only when the player themselves sponsored it (or ``state``
-    is unavailable, preserving old callers). For an AI-government bill the
-    player did not sponsor (``law.proposed_by`` is a faction id, not
-    ``"player"``), trust is read off the faction's actual relationship to
-    that sponsor instead: full trust for the sponsor itself, strong trust
-    for the ruling coalition it leads, and ideological affinity to the
-    sponsor for everyone else — never the faction's unrelated loyalty to
-    the player.
+    is unavailable, preserving old callers). The player's own sponsorship is
+    marked two different ways across the codebase — the literal string
+    ``"player"`` for ordinary bills (engine/player_ops.py) and the player's
+    own ``faction_id`` for budget bills (engine/budget.py) — both must be
+    recognized here, or a player-sponsored budget vote would wrongly take
+    the AI-sponsor branch below and ignore real faction loyalty entirely.
+    For an AI-government bill the player did not sponsor, trust is read off
+    the faction's actual relationship to that sponsor instead: full trust
+    for the sponsor itself, strong trust for the ruling coalition it leads,
+    and ideological affinity to the sponsor for everyone else — never the
+    faction's unrelated loyalty to the player.
     """
-    if state is None or not law.proposed_by or law.proposed_by == "player":
+    player_sponsored = (not law.proposed_by or law.proposed_by == "player"
+                        or (state is not None and law.proposed_by == state.player.faction_id))
+    if state is None or player_sponsored:
         return faction.loyalty
     if faction.id == law.proposed_by:
         return 1.0

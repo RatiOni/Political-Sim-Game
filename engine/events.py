@@ -108,6 +108,20 @@ def check_for_events(state: GameState):
                 # Vetrenka arcs, whose root event's fire history is already
                 # stamped, so they could never restart even after the
                 # player regained office. Try again next turn instead.
+                #
+                # This can now retry silently for as long as the player's
+                # role stays mismatched (e.g. an entire term in opposition).
+                # Note it once, on the turn it first has to wait, rather
+                # than leaving the player with zero trace that a story beat
+                # is queued and blocked on them regaining office.
+                if not sched.get("_deferred_notice_shown"):
+                    sched["_deferred_notice_shown"] = True
+                    waiting_for = ("regain office" if getattr(event, "audience", "government")
+                                   != "opposition" else "return to opposition")
+                    state.log(
+                        f"A development ({sched.get('event_id')}) is queued and "
+                        f"awaiting your attention — it will surface once you "
+                        f"{waiting_for}.")
                 sched["due_turn"] = state.turn + 1
                 state.scheduled_events.append(sched)
                 continue
