@@ -5156,13 +5156,13 @@ from engine import stability as _household_stability
 section("AE1: Every Ardenian region contains a complete household society")
 state = fresh()
 group_ids = {group["id"] for group in _HOUSEHOLD_GROUPS}
-assert len(state.households) == len(state.regions) * len(group_ids) == 36
+assert len(state.households) == len(state.regions) * len(group_ids) == 54
 for region_id, shares in _HOUSEHOLD_SHARES.items():
     assert set(shares) == group_ids
     assert abs(sum(shares.values()) - 1.0) < 1e-9
     assert {household.group_id for household in state.households.values()
             if household.region_id == region_id} == group_ids
-print("  six social groups live separately in each of Ardenia's six regions")
+print("  six social groups live separately in each of Ardenia's nine regions")
 print("  PASS: national averages are built from a real social and regional distribution")
 
 
@@ -5291,7 +5291,7 @@ assert restored.households["zavost:urban_workers"].hardship == 0.81
 legacy = copy.deepcopy(payload)
 legacy.pop("households")
 migrated = _ministry_persistence.deserialize_state(legacy)
-assert len(migrated.households) == 36
+assert len(migrated.households) == 54
 assert all(household.real_income_index == 1.0 for household in migrated.households.values())
 print("  lived losses round-trip; older saves receive a neutral household baseline")
 print("  PASS: household conditions are campaign memory without breaking existing saves")

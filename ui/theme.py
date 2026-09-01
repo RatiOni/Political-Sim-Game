@@ -24,6 +24,9 @@ ACCENT       = "#f0b365"   # navigation and selection
 ACCENT_SOFT  = "#5c3a44"   # selected/hover surface
 HIGHLIGHT    = "#f7d99b"   # scarce attention colour
 MAP_SEA      = "#2a1922"
+MAP_NEIGHBOR_LAND = "#382932"  # continental context beyond Ardenia
+MAP_LAND_BORDER   = "#a88e98"  # sovereign frontier against land
+MAP_COASTLINE     = "#86b7c5"  # the Aster Sea edge only
 
 # Sunken track behind a bar fill — one step darker than the window.
 TRACK_BG    = "#211219"

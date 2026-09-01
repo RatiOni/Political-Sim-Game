@@ -38,6 +38,26 @@ def initial_region_states(country_id: str, national_support=None) -> dict:
     }
 
 
+def ensure_region_states(state) -> None:
+    """Add newly authored regions to an existing Ardenian campaign.
+
+    Region ids are persistent.  This migration is deliberately additive: an
+    old save keeps every live unemployment, reach, pressure, control and
+    electoral value it already accumulated, while only missing ids receive
+    authored starting conditions.
+    """
+    if state.country.id != "ardenia":
+        return
+    if state.regions is None:
+        state.regions = {}
+    national_support = {
+        faction.id: faction.support for faction in state.country.factions
+    }
+    defaults = initial_region_states("ardenia", national_support)
+    for region_id, region in defaults.items():
+        state.regions.setdefault(region_id, region)
+
+
 def _normalise_support(support: dict, faction_ids=None) -> dict:
     ids = list(faction_ids or support.keys())
     clean = {faction_id: max(0.0, support.get(faction_id, 0.0))

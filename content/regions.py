@@ -27,7 +27,7 @@ ARDENIA_NATIONAL_SUPPORT_BASELINE = {
 ARDENIA_REGION_PROFILES = {
     "vashtera": {
         "name": "Vashtera",
-        "population_weight": 0.28,
+        "population_weight": 0.22,
         "unemployment_gap": -0.035,
         "initial_unemployment": 0.075,
         "reach_offset": 0.17,
@@ -49,7 +49,7 @@ ARDENIA_REGION_PROFILES = {
     },
     "zavost": {
         "name": "Zavost",
-        "population_weight": 0.18,
+        "population_weight": 0.14,
         "unemployment_gap": 0.090,
         "initial_unemployment": 0.205,
         "reach_offset": -0.13,
@@ -71,7 +71,7 @@ ARDENIA_REGION_PROFILES = {
     },
     "sela": {
         "name": "Sela",
-        "population_weight": 0.20,
+        "population_weight": 0.16,
         "unemployment_gap": 0.025,
         "initial_unemployment": 0.135,
         "reach_offset": -0.20,
@@ -93,7 +93,7 @@ ARDENIA_REGION_PROFILES = {
     },
     "anera": {
         "name": "Anera",
-        "population_weight": 0.12,
+        "population_weight": 0.10,
         "unemployment_gap": 0.055,
         "initial_unemployment": 0.165,
         "reach_offset": -0.47,
@@ -115,7 +115,7 @@ ARDENIA_REGION_PROFILES = {
     },
     "kelvet": {
         "name": "Kelvet",
-        "population_weight": 0.14,
+        "population_weight": 0.11,
         "unemployment_gap": -0.010,
         "initial_unemployment": 0.100,
         "reach_offset": -0.23,
@@ -137,7 +137,7 @@ ARDENIA_REGION_PROFILES = {
     },
     "vetrenka": {
         "name": "Vetrenka",
-        "population_weight": 0.08,
+        "population_weight": 0.07,
         "unemployment_gap": 0.120,
         "initial_unemployment": 0.235,
         "reach_offset": -0.71,
@@ -155,6 +155,74 @@ ARDENIA_REGION_PROFILES = {
         "issue_body": (
             "The line has stopped moving, not become a border or a peace. Families, "
             "freight and armed men still live by rules Vashtera does not set."
+        ),
+    },
+    "karsen": {
+        "name": "Karsen",
+        "population_weight": 0.07,
+        "unemployment_gap": 0.045,
+        "initial_unemployment": 0.155,
+        "reach_offset": -0.34,
+        "initial_state_reach": 0.39,
+        "initial_pressure": 0.61,
+        "pressure_bias": 0.11,
+        "control": "limited",
+        "party_support": {
+            "liberal_democrats": 0.25, "national_conservatives": 0.46,
+            "social_democrats": 0.10, "agrarian_union": 0.17,
+            "workers_front": 0.02,
+        },
+        "issue_id": "highland_corridor",
+        "issue_name": "The highland corridor",
+        "issue_body": (
+            "Karsen's passes bind the northern districts to the capital, but winter roads, "
+            "thin public services and powerful local brokers make that connection fragile."
+        ),
+    },
+    "orvena": {
+        "name": "Orvena",
+        "population_weight": 0.07,
+        "unemployment_gap": 0.040,
+        "initial_unemployment": 0.150,
+        "reach_offset": -0.28,
+        "initial_state_reach": 0.47,
+        "initial_pressure": 0.64,
+        "pressure_bias": 0.12,
+        "control": "state",
+        "party_support": {
+            "liberal_democrats": 0.31, "national_conservatives": 0.43,
+            "social_democrats": 0.11, "agrarian_union": 0.12,
+            "workers_front": 0.03,
+        },
+        "issue_id": "western_lifeline",
+        "issue_name": "The western lifeline",
+        "issue_body": (
+            "Orvena is the loyal corridor between the separatist coast and the republic's "
+            "core. Displaced families, military traffic and the remaining western port "
+            "compete for the same roads and institutions."
+        ),
+    },
+    "darev": {
+        "name": "Darev",
+        "population_weight": 0.06,
+        "unemployment_gap": 0.070,
+        "initial_unemployment": 0.180,
+        "reach_offset": -0.31,
+        "initial_state_reach": 0.43,
+        "initial_pressure": 0.66,
+        "pressure_bias": 0.13,
+        "control": "limited",
+        "party_support": {
+            "liberal_democrats": 0.23, "national_conservatives": 0.49,
+            "social_democrats": 0.15, "agrarian_union": 0.09,
+            "workers_front": 0.04,
+        },
+        "issue_id": "eastern_frontier",
+        "issue_name": "The eastern frontier",
+        "issue_body": (
+            "Darev's border districts sit beyond the industrial belt, where smuggling, "
+            "security posts and neglected market towns turn foreign pressure into an "
+            "everyday domestic question."
         ),
     },
 }
@@ -233,7 +301,10 @@ REGIONAL_PROGRAMS = {
             "workers_front": 0.025, "social_democrats": 0.020,
             "liberal_democrats": -0.010,
         },
-        "region_multipliers": {"zavost": 1.25, "vashtera": 0.80, "anera": 0.85},
+        "region_multipliers": {
+            "zavost": 1.25, "darev": 1.05, "orvena": 0.95,
+            "vashtera": 0.80, "anera": 0.85, "karsen": 0.85,
+        },
         "blocked_controls": ["separatist"],
     },
     "administrative_deployment": {
@@ -254,7 +325,10 @@ REGIONAL_PROGRAMS = {
         "regional_support_deltas": {
             "liberal_democrats": 0.025, "agrarian_union": 0.010,
         },
-        "region_multipliers": {"anera": 1.25, "vashtera": 0.70, "vetrenka": 0.80},
+        "region_multipliers": {
+            "anera": 1.25, "karsen": 1.20, "darev": 1.15,
+            "orvena": 1.10, "vashtera": 0.70, "vetrenka": 0.80,
+        },
         "blocked_controls": ["separatist"],
     },
     "public_works": {
@@ -277,7 +351,10 @@ REGIONAL_PROGRAMS = {
             "social_democrats": 0.025, "agrarian_union": 0.020,
             "liberal_democrats": -0.010,
         },
-        "region_multipliers": {"sela": 1.15, "anera": 1.10, "vashtera": 0.80},
+        "region_multipliers": {
+            "sela": 1.15, "anera": 1.10, "karsen": 1.15,
+            "orvena": 1.10, "darev": 1.10, "vashtera": 0.80,
+        },
         "blocked_controls": ["separatist"],
     },
     "customs_enforcement": {
@@ -324,7 +401,10 @@ REGIONAL_PROGRAMS = {
             "national_conservatives": 0.035, "social_democrats": -0.015,
             "workers_front": -0.020,
         },
-        "region_multipliers": {"anera": 1.15, "vetrenka": 0.85},
+        "region_multipliers": {
+            "anera": 1.15, "karsen": 1.10, "orvena": 1.20,
+            "darev": 1.15, "vetrenka": 0.85,
+        },
         "blocked_controls": ["separatist"],
         "launch_pressure": 0.06,
     },

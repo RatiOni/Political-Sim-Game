@@ -7,9 +7,10 @@ COUNTRY_PROFILE = {
         "Ardenia is a small country that behaves like a large one because it "
         "has never been left alone: roughly 78,000 square kilometres and 6.4 "
         "million people on paper, closer to 6.0 million given who has left. A "
-        "mountain spine in the north descends through a wheat plain to a warm, "
-        "badly defended coast. Its politics is chiefly the argument among the "
-        "six regions laid across that geography."
+        "mountain wall in the north descends through a chain of basins toward "
+        "the Aster Sea in the west. The long eastern frontier is easier to "
+        "cross than the mountains and harder to ignore. Its politics is chiefly "
+        "the argument among the nine regions laid across that geography."
     ),
 }
 
@@ -17,8 +18,8 @@ KESLA = {
     "id": "kesla",
     "name": "The Kesla",
     "body": (
-        "The Kesla rises in the northern mountains, runs south-east through "
-        "Vashtera, and reaches the sea at Tavri. Ardenians locate more than "
+        "The Kesla rises in the northern mountains, bends through Karsen and "
+        "Vashtera, and reaches the western sea near Tavri. Ardenians locate more than "
         "places by it: above the Kesla means highland, poor, devout and "
         "Ardenian-speaking; below it means the plain, the towns and the mixed "
         "places."
@@ -62,6 +63,17 @@ REGIONS = [
         ),
     },
     {
+        "id": "darev",
+        "name": "Darev",
+        "body": (
+            "Darev is the republic's long eastern shoulder: dry market towns, "
+            "military roads and energy installations pressed between Zavost and "
+            "the Krasovan and Merovan frontiers. Vashtera calls it a strategic "
+            "corridor. The people who live there call it the place every army "
+            "crosses and every ministry remembers after the road has closed."
+        ),
+    },
+    {
         "id": "sela",
         "name": "The Sela",
         "body": (
@@ -84,10 +96,22 @@ REGIONS = [
         ),
     },
     {
+        "id": "karsen",
+        "name": "Karsen",
+        "body": (
+            "Karsen holds the north-central passes and the upper Kesla. Its "
+            "valleys contain hydro stations, garrison towns and communities that "
+            "can reach Vashtera in an afternoon when the road is open and not at "
+            "all when it is not. Control belongs formally to the republic and "
+            "practically to whoever keeps the pass, the transformer and the depot working."
+        ),
+    },
+    {
         "id": "kelvet",
         "name": "The Kelvet Coast",
         "body": (
-            "The southern coast holds the ports, fishing fleet, customs houses "
+            "The south-western approaches hold Tavri, the main loyalist port, "
+            "the fishing fleet, customs houses "
             "and container yards. Roughly nine-tenths of Ardenia's legal trade "
             "and effectively all of its illegal trade passes here. The Falcons "
             "were born on Kelvet, and nobody who governs Ardenia gets to be "
@@ -95,10 +119,21 @@ REGIONS = [
         ),
     },
     {
+        "id": "orvena",
+        "name": "Orvena",
+        "body": (
+            "Orvena is the loyalist western hinge between the central basin and "
+            "the Vetrenka line. Foothill farms, displaced families, Selvara's "
+            "small harbour and the only dependable road around the closed coast "
+            "give it more strategic weight than its population suggests. Every "
+            "proposal for Vetrenka begins by asking what Orvena can carry."
+        ),
+    },
+    {
         "id": "vetrenka",
         "name": "Vetrenka",
         "body": (
-            "The south-western coastal region is twelve per cent of the map, "
+            "The western coastal strip is twelve per cent of the map, "
             "three per cent of the population, and about a third of the useful "
             "coastline. It has held autonomy under three sovereigns, speaks a "
             "distinct dialect, and has shown no great attachment to Ardenia in "
@@ -170,6 +205,66 @@ CITIES = [
         "body": (
             "Vetrenka's capital is a port of roughly 55,000 that the Ardenian "
             "state has not entered since September 1992."
+        ),
+    },
+    {
+        "id": "karvel",
+        "name": "Karvel",
+        "region_id": "karsen",
+        "body": (
+            "Karvel guards the highest year-round approach to the northern passes. "
+            "It is a garrison, a livestock market and a queue of lorries waiting "
+            "for weather, paperwork or both to clear."
+        ),
+    },
+    {
+        "id": "lestara",
+        "name": "Lestara",
+        "region_id": "karsen",
+        "body": (
+            "Lestara is the upper Kesla rail junction, built where the gorge "
+            "allows one bridge and therefore gives one station master an "
+            "implausible amount of influence over the capital's supplies."
+        ),
+    },
+    {
+        "id": "ordel",
+        "name": "Ordel",
+        "region_id": "orvena",
+        "body": (
+            "Ordel is a foothill market swollen by families from the ceasefire "
+            "districts. Warehouses, aid offices and transport cooperatives have "
+            "made a temporary town into Orvena's administrative centre."
+        ),
+    },
+    {
+        "id": "selvara",
+        "name": "Selvara",
+        "region_id": "orvena",
+        "body": (
+            "Selvara's harbour is shallow, crowded and loyal. It cannot replace "
+            "Tavri, but during a closure or confrontation it is the western outlet "
+            "the government can still reach without crossing the Vetrenka line."
+        ),
+    },
+    {
+        "id": "meradin",
+        "name": "Meradin",
+        "region_id": "darev",
+        "body": (
+            "Meradin is Darev's frontier garrison and caravan market. The army, "
+            "customs service and three languages share its main street while "
+            "disagreeing about who has authority beyond it."
+        ),
+    },
+    {
+        "id": "azren",
+        "name": "Azren",
+        "region_id": "darev",
+        "body": (
+            "Azren grew around the eastern compressor station and the workers who "
+            "keep the Zovar line moving. Energy policy is not abstract there: it "
+            "is the shift roster, the border gate and the town heating system."
         ),
     },
 ]

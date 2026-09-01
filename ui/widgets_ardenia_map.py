@@ -15,9 +15,11 @@ from content.regions import CONTROL_LABELS, REGIONAL_ISSUES
 from engine import regions as region_engine
 from ui import theme
 from ui.ardenia_map_geometry import (
-    BORDER_LABELS, CEASEFIRE_LINE, CITY_MARKERS, COUNTRY_OUTLINE, KESLA_POINTS,
-    NORTHERN_RIDGES, REGION_COLORS, REGION_MAP_META, REGION_MAP_LABELS,
-    REGION_SHAPES, ROUTES,
+    BORDER_LABELS, CEASEFIRE_LINE, CHECKPOINTS, CITY_MARKERS,
+    COASTLINE_SEGMENTS, COUNTRY_OUTLINE, KESLA_POINTS, LAND_BORDER_SEGMENTS,
+    NEIGHBOR_LAND_SHAPES, NORTHERN_MOUNTAIN_FRONTIER, NORTHERN_RIDGES, PORTS,
+    REGION_COLORS, REGION_LABEL_ANCHORS, REGION_MAP_META, REGION_MAP_LABELS,
+    REGION_SHAPES, ROUTES, ROUTE_STYLE_HINTS,
 )
 
 
@@ -50,19 +52,32 @@ class ArdeniaMapWidget(QWidget):
     # Reserved band along the top for the legend, so a region can never be
     # drawn underneath it.
     LEGEND_BAND = 24
+    MAP_ASPECT = 1.45
 
     def _transform(self):
+        """Fit Ardenia at its canonical broad east-west aspect ratio.
+
+        The old square transform made the same coordinates look almost round
+        and left most of a wide dashboard panel unused.  Keeping the aspect in
+        the presentation transform means geometry stays in the simple 0..100
+        authoring space while every route, marker and click target receives the
+        identical projection.
+        """
         margin = 14
         top = margin + self.LEGEND_BAND
         usable_w = max(1, self.width() - 2 * margin)
         usable_h = max(1, self.height() - top - margin)
-        side = min(usable_w, usable_h)
-        return side, margin + (usable_w - side) / 2, top + (usable_h - side) / 2
+        map_w = min(usable_w, usable_h * self.MAP_ASPECT)
+        map_h = map_w / self.MAP_ASPECT
+        off_x = margin + (usable_w - map_w) / 2
+        off_y = top + (usable_h - map_h) / 2
+        return map_w, map_h, off_x, off_y
 
     def _point(self, point):
-        side, off_x, off_y = self._transform()
+        map_w, map_h, off_x, off_y = self._transform()
         x, y = point
-        return QPointF(off_x + x / 100.0 * side, off_y + y / 100.0 * side)
+        return QPointF(off_x + x / 100.0 * map_w,
+                       off_y + y / 100.0 * map_h)
 
     def _polygon(self, points):
         return QPolygonF([self._point(point) for point in points])
@@ -89,6 +104,18 @@ class ArdeniaMapWidget(QWidget):
         painter.setPen(pen)
         painter.setBrush(Qt.NoBrush)
         painter.drawPolyline(poly)
+
+    def _draw_geographic_context(self, painter):
+        """Place Ardenia on land while leaving the Aster Sea to its west.
+
+        A sea-coloured rectangle behind an isolated national polygon made the
+        old dashboard read as an island.  Neighbor silhouettes now continue
+        the northern, eastern and southern land frontiers to the viewport.
+        """
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QBrush(QColor(theme.MAP_NEIGHBOR_LAND)))
+        for shape in NEIGHBOR_LAND_SHAPES.values():
+            painter.drawPolygon(self._polygon(shape))
 
     def _draw_regions(self, painter):
         for region_id, shape in REGION_SHAPES.items():
@@ -125,9 +152,18 @@ class ArdeniaMapWidget(QWidget):
             painter.setPen(self._pen(border, width))
             painter.drawPolygon(polygon)
 
+        # Draw the whole outline quietly, then distinguish sea from sovereign
+        # land frontiers.  The player can now understand Ardenia's position
+        # without reading a label.
         painter.setBrush(Qt.NoBrush)
-        painter.setPen(self._pen(theme.INK_DIM, 2.2))
+        painter.setPen(self._pen(theme.INK_DIM, 1.0))
         painter.drawPolygon(self._polygon(COUNTRY_OUTLINE))
+        for points in LAND_BORDER_SEGMENTS.values():
+            self._draw_polyline(
+                painter, points, self._pen(theme.MAP_LAND_BORDER, 1.8))
+        for points in COASTLINE_SEGMENTS:
+            self._draw_polyline(
+                painter, points, self._pen(theme.MAP_COASTLINE, 2.6))
 
     @staticmethod
     def _draw_hatch(painter, rect, spacing=7.0):
@@ -174,6 +210,9 @@ class ArdeniaMapWidget(QWidget):
         # Northern ridges stay deliberately quiet: terrain informs politics,
         # but should not turn a strategy dashboard into a decorative map.
         ridge_pen = self._pen("#8e7885", 1.1)
+        self._draw_polyline(
+            painter, NORTHERN_MOUNTAIN_FRONTIER,
+            self._pen("#aa919b", 1.45, Qt.DashLine))
         for ridge in NORTHERN_RIDGES:
             self._draw_polyline(painter, ridge, ridge_pen)
 
@@ -181,15 +220,30 @@ class ArdeniaMapWidget(QWidget):
 
         for route in ROUTES:
             kind = route["kind"]
-            if kind == "rail":
-                pen = self._pen("#c3aeb8", 1.35, Qt.DashLine)
-            elif kind == "pipeline":
-                pen = self._pen("#d3a95a", 1.5, Qt.DashDotLine)
-            else:
-                pen = self._pen("#a89c93", 1.05, Qt.DotLine)
+            hints = ROUTE_STYLE_HINTS[kind]
+            line_style = {
+                "solid": Qt.SolidLine,
+                "dotted": Qt.DotLine,
+                "dashed": Qt.DashLine,
+                "dash_dot": Qt.DashDotLine,
+            }[hints["line"]]
+            pen = self._pen(hints["color"], hints["width"], line_style)
             self._draw_polyline(painter, route["points"], pen)
 
         self._draw_polyline(painter, CEASEFIRE_LINE, self._pen(theme.CRITICAL, 2.4, Qt.DashLine))
+
+        # Infrastructure symbols stay subordinate to cities.  Their presence
+        # makes the roads legible as a network without adding permanent text.
+        painter.setPen(self._pen(theme.BG, 1.0))
+        painter.setBrush(QBrush(QColor(theme.MAP_CITY_LABEL)))
+        for port in PORTS.values():
+            point = self._point(port["point"])
+            painter.drawRect(int(point.x() - 2.5), int(point.y() - 2.5), 5, 5)
+        painter.setPen(self._pen(theme.HIGHLIGHT, 1.6))
+        for checkpoint in CHECKPOINTS.values():
+            point = self._point(checkpoint["point"])
+            painter.drawLine(QPointF(point.x() - 3, point.y() - 3),
+                             QPointF(point.x() + 3, point.y() + 3))
 
 
     def _halo_text(self, painter, x, y, text, color, halo=3.5,
@@ -240,11 +294,11 @@ class ArdeniaMapWidget(QWidget):
         region_font.setBold(True)
         region_font.setLetterSpacing(QFont.AbsoluteSpacing, 1.6)
         painter.setFont(region_font)
-        for region_id, shape in REGION_SHAPES.items():
+        for region_id in REGION_SHAPES:
             label = REGION_MAP_LABELS[region_id]
             if not label:
                 continue
-            point = self._centroid(shape)
+            point = self._point(REGION_LABEL_ANCHORS[region_id])
             self._halo_text(painter, point.x(), point.y(), label,
                             theme.MAP_REGION_LABEL, halo=3.5, align_centre=True)
 
@@ -281,6 +335,8 @@ class ArdeniaMapWidget(QWidget):
         painter.setFont(border_font)
         for item in BORDER_LABELS:
             point = self._point(item["point"])
+            if item["id"] == "aster_sea":
+                continue
             self._halo_text(painter, point.x(), point.y(), item["name"],
                             theme.MAP_FOREIGN, halo=3.0, align_centre=True)
 
@@ -289,7 +345,9 @@ class ArdeniaMapWidget(QWidget):
         sea_font.setItalic(True)
         sea_font.setLetterSpacing(QFont.AbsoluteSpacing, 2.0)
         painter.setFont(sea_font)
-        sea = self._point((9, 83))
+        sea_item = next(item for item in BORDER_LABELS
+                        if item["id"] == "aster_sea")
+        sea = self._point(sea_item["point"])
         self._halo_text(painter, sea.x(), sea.y(), "ASTER SEA", theme.MAP_SEA_LABEL, halo=2.5)
 
     def _draw_legend(self, painter):
@@ -329,6 +387,7 @@ class ArdeniaMapWidget(QWidget):
         painter.setPen(self._pen(theme.PANEL_EDGE, 1.0))
         painter.drawRoundedRect(self.rect().adjusted(1, 1, -2, -2), 8, 8)
 
+        self._draw_geographic_context(painter)
         self._draw_regions(painter)
         self._draw_terrain_and_routes(painter)
         self._draw_labels(painter)

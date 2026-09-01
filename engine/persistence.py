@@ -32,7 +32,7 @@ from models.ministry import MinistryState
 from models.household import HouseholdGroupState
 from models.reform import ReformProject
 from content.lore import BLOCS as ARDENIAN_BLOCS, BLOC_PROFILES
-from engine.regions import initial_region_states, ensure_electoral_support
+from engine.regions import ensure_electoral_support, ensure_region_states
 from engine.budget import ensure_budget_state
 from engine.ministries import ensure_ministries
 from engine.households import ensure_households
@@ -468,11 +468,10 @@ def deserialize_state(data: dict) -> GameState:
                            for program in data.get("regional_programs", [])],
         legislature=legislature, cabinet=cabinet,
     )
-    # Campaigns saved before the regional layer receive Ardenia's canonical
-    # starting conditions. Other countries remain empty until authored.
-    if not state.regions:
-        state.regions = initial_region_states(
-            country.id, {faction.id: faction.support for faction in country.factions})
+    # Campaigns saved before the regional layer, and campaigns saved with an
+    # older subset of Ardenia's regions, receive only the missing canonical
+    # starting states. Existing live regional values are never overwritten.
+    ensure_region_states(state)
     ensure_electoral_support(state)
     state.day = data.get("day", 1)
     # Old saves only knew months. A monotonic approximate elapsed day keeps

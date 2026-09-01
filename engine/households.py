@@ -74,8 +74,19 @@ def initial_households(state) -> dict[str, HouseholdGroupState]:
 
 
 def ensure_households(state):
+    """Add any missing canonical household records without resetting history.
+
+    Older campaigns may contain a complete household layer for the original
+    six regions.  A truthiness-only migration would leave the three new
+    regions socially empty forever, while rebuilding the whole mapping would
+    erase accumulated income and hardship.  Merge only absent records.
+    """
+    canonical = initial_households(state)
     if not state.households:
-        state.households = initial_households(state)
+        state.households = canonical
+    else:
+        for household_id, household in canonical.items():
+            state.households.setdefault(household_id, household)
     return state.households
 
 

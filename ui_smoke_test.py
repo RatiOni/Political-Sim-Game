@@ -85,6 +85,33 @@ def main():
             assert set(w.state.regions) == region_ids
             assert w._map._region_fill("vashtera") != w._map._region_fill("vetrenka"), \
                 "live pressure should be legible in the regional map fill"
+
+            # One hand-checked point in every political face protects the
+            # clickable map contract when the cartography is redrawn: a region
+            # that paints as Ardenia but cannot be selected is a real UI bug.
+            strategic_edge_points = {
+                "anera": (30.0, 29.0),
+                "karsen": (56.0, 27.0),
+                "vashtera": (55.0, 48.0),
+                "zavost": (70.0, 46.0),
+                "darev": (86.0, 43.0),
+                "sela": (55.0, 65.0),
+                "kelvet": (26.0, 72.0),
+                "orvena": (30.0, 47.0),
+                "vetrenka": (17.0, 58.0),
+            }
+            for expected_region, map_point in strategic_edge_points.items():
+                actual = w._map._region_at(w._map._point(map_point))
+                assert actual == expected_region, \
+                    f"{map_point} should select {expected_region}, got {actual}"
+
+            # The map bible defines Ardenia as broad east-to-west and
+            # compressed north-to-south.  Protect that spatial identity from
+            # a square-fit regression in the responsive widget transform.
+            horizontal_span = w._map._point((100, 50)).x() - w._map._point((0, 50)).x()
+            vertical_span = w._map._point((50, 100)).y() - w._map._point((50, 0)).y()
+            assert horizontal_span / vertical_span >= 1.35, \
+                "Ardenia should render as a broad east-west country"
         check("Ardenia map covers every canonical region and city", _ardenia_map_canon)
 
         # ── System dock: the five pages live here now (non-modal tabs), so

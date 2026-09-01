@@ -509,7 +509,7 @@ class DifficultyStep(QWidget):
         self._skip_guidance.setStyleSheet(f"font-size: {theme.FONT_SIZE_PT}pt;")
         layout.addWidget(self._skip_guidance)
         layout.addWidget(body_label(
-            "A new government meets six regions, six ministries, seven spending "
+            "A new government meets nine regions, six ministries, seven spending "
             "envelopes and twelve party currents at once. Left on, a short note "
             "introduces one of them at a time over the first months. It never "
             "blocks an action or insists on an order, and each note goes away "

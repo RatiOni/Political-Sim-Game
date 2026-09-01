@@ -66,13 +66,24 @@ REGIONAL_HOUSEHOLD_SHARES = {
         "urban_workers": 0.07, "salaried_middle": 0.06, "small_business": 0.08,
         "rural_households": 0.48, "pensioners": 0.16, "insecure_households": 0.15,
     },
+    "karsen": {
+        "urban_workers": 0.08, "salaried_middle": 0.08, "small_business": 0.08,
+        "rural_households": 0.45, "pensioners": 0.15, "insecure_households": 0.16,
+    },
+    "orvena": {
+        "urban_workers": 0.15, "salaried_middle": 0.12, "small_business": 0.20,
+        "rural_households": 0.24, "pensioners": 0.14, "insecure_households": 0.15,
+    },
     "kelvet": {
         "urban_workers": 0.18, "salaried_middle": 0.18, "small_business": 0.24,
         "rural_households": 0.08, "pensioners": 0.14, "insecure_households": 0.18,
+    },
+    "darev": {
+        "urban_workers": 0.18, "salaried_middle": 0.09, "small_business": 0.11,
+        "rural_households": 0.26, "pensioners": 0.15, "insecure_households": 0.21,
     },
     "vetrenka": {
         "urban_workers": 0.10, "salaried_middle": 0.05, "small_business": 0.08,
         "rural_households": 0.28, "pensioners": 0.18, "insecure_households": 0.31,
     },
 }
-
