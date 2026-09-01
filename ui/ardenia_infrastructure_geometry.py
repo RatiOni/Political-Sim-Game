@@ -25,7 +25,7 @@ CITY_MARKERS = {
     "duvinsk": {
         "name": "Duvinsk",
         "region_id": "zavost",
-        "point": (78, 47),
+        "point": (76, 47),
         "city_type": "industrial_city",
         "importance": "national",
     },
@@ -129,7 +129,7 @@ ROUTES = [
         "endpoints": ("selvara", "meradin"),
         "points": [
             (13, 37), (24, 44), (35, 53), (48, 51), (62, 48),
-            (78, 47), (81, 54), (81, 58),
+            (76, 47), (81, 54), (81, 58),
         ],
         "checkpoint_ids": ("vetrenka_east_gate", "darev_frontier_post"),
     },
@@ -162,7 +162,7 @@ ROUTES = [
         "name": "Darev Frontier Road",
         "kind": "road",
         "endpoints": ("duvinsk", "azren"),
-        "points": [(78, 47), (83, 43), (87, 39)],
+        "points": [(76, 47), (83, 43), (87, 39)],
         "checkpoint_ids": ("azren_border_post",),
     },
     {
@@ -172,7 +172,7 @@ ROUTES = [
         "endpoints": ("tavri", "azren"),
         "points": [
             (22, 73), (35, 69), (49, 65), (55, 57), (62, 48),
-            (70, 46), (78, 47), (84, 43), (87, 39),
+            (70, 46), (76, 47), (84, 43), (87, 39),
         ],
     },
     {
@@ -197,7 +197,7 @@ ROUTES = [
         "endpoints": ("tavri", "azren"),
         "points": [
             (22, 73), (34, 75), (49, 65), (59, 59), (68, 55),
-            (78, 47), (83, 42), (87, 39),
+            (76, 47), (83, 42), (87, 39),
         ],
     },
 ]
