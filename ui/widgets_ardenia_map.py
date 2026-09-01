@@ -52,7 +52,12 @@ class ArdeniaMapWidget(QWidget):
     # Reserved band along the top for the legend, so a region can never be
     # drawn underneath it.
     LEGEND_BAND = 24
-    MAP_ASPECT = 1.45
+    # Ardenia is a long west-east state.  A 1.45 projection made the accepted
+    # silhouette read as a compact badge once nine regions, cities and routes
+    # were placed inside it.  The wider projection gives the western coast,
+    # capital basin and eastern frontier distinct geographic room without
+    # changing the shared normalized coordinates used by hit-testing.
+    MAP_ASPECT = 1.68
 
     def _transform(self):
         """Fit Ardenia at its canonical broad east-west aspect ratio.
