@@ -56,7 +56,11 @@ class FakeBridge:
 		_reconnect_attempts += 1
 		if scripted_reconnect_failures > 0:
 			scripted_reconnect_failures -= 1
-			bridge_failed.emit.call_deferred("Fake worker failed to restart.")
+			# Synchronous, matching the real bridge: _ensure_worker's own
+			# _fail() path emits bridge_failed inline, inside the same call
+			# stack as the Reconnect button's still-executing pressed
+			# handler — a real reentrancy case, not a next-frame one.
+			bridge_failed.emit("Fake worker failed to restart.")
 			return false
 		return true
 
@@ -314,7 +318,18 @@ func _run() -> void:
 	# --- Bounded bridge-failure recovery (G1 finding: no path back except
 	# a full app restart) ---
 	scene.apply_snapshot(fixture())
-	fake_bridge._saved = fixture()
+	# The saved state must genuinely differ from what's on screen when the
+	# worker dies, or a bug that left recovery a no-op could pass by
+	# coincidence (both being the same unmodified fixture). Advance and
+	# save first, then reset the display to the untouched baseline — only
+	# an actual load round trip can make the post-recovery snapshot match.
+	fake_bridge.request("advance_day")
+	fake_bridge.request("save", {"slot": "godot_slice"})
+	var expected_recovery: Dictionary = fake_bridge._saved.duplicate(true)
+	if not _check(expected_recovery["date"]["day_index"] != fixture()["date"]["day_index"],
+			"Saved fixture for recovery differs from the untouched baseline"):
+		return
+	scene.apply_snapshot(fixture())
 	fake_bridge.scripted_reconnect_failures = 1
 	fake_bridge.bridge_failed.emit("Fake worker crashed.")
 	await process_frame
@@ -329,14 +344,22 @@ func _run() -> void:
 			"A failed respawn attempt re-shows the recoverable error, not a crash"):
 		return
 	scene.find_child("ReconnectButton", true, false).pressed.emit()
+	# Checked before any await: apply_snapshot({}) runs synchronously inside
+	# _attempt_recovery, so the pre-crash dashboard must already be gone
+	# here — not merely once the (deferred) load response lands.
+	if not _check(scene.snapshot.is_empty()
+			and brief.find_child("PressureValue").text == "—",
+			"Recovery clears the rendered dashboard immediately, before the load response arrives"):
+		return
 	await process_frame
 	await process_frame
 	if not _check(scene.find_child("BridgeFailure", true, false) == null
 			and fake_bridge.requests[-1]["command"] == "load",
 			"A successful respawn clears the error and resumes via load, not the stale cache"):
 		return
-	if not _check(scene.snapshot == fake_bridge._saved,
-			"Recovered state is the client's own last save, not whatever was on screen when the worker died"):
+	if not _check(scene.snapshot == expected_recovery
+			and scene.snapshot["date"]["day_index"] != fixture()["date"]["day_index"],
+			"Recovered state is the client's own last save, not the untouched baseline that was on screen when the worker died"):
 		return
 	print("PASS: one failed respawn then a successful one recovers through a known save")
 

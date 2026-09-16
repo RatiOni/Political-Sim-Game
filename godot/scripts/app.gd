@@ -174,6 +174,7 @@ func _on_bridge_failed(message: String) -> void:
 	_bridge_dead = true
 	_paused = true
 	_request_id = 0
+	_recovering = false  # explicit: a new failure abandons any recovery in flight
 	_show_blocking_error(message, _bridge.can_reconnect())
 	_refresh_controls()
 
@@ -187,7 +188,11 @@ func _attempt_recovery() -> void:
 		return  # Reconnect failed; bridge_failed already re-fired above us.
 	_remove_blocking_error()
 	_bridge_dead = false
-	snapshot = {}
+	# apply_snapshot({}), not a bare assignment: this must clear every
+	# rendered widget (date, vitals, map, decisions...), not just the data
+	# dict, or the pre-crash dashboard keeps showing on screen — silently
+	# stale — for the length of the load round trip.
+	apply_snapshot({})
 	_recovering = true
 	_submit("load", {"slot": SAVE_SLOT})
 

@@ -201,6 +201,8 @@ func _fail(message: String) -> void:
 	bridge_failed.emit(message)
 
 func _open_log() -> void:
+	if _log != null:
+		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://logs"))
 	_log = FileAccess.open(LOG_PATH, FileAccess.WRITE)
 
@@ -216,6 +218,6 @@ func _close_pipe() -> void:
 			stream.close()
 	_pipe.clear()
 	_pending.clear()
-	if _log != null:
-		_log.close()
-		_log = null
+	# _log deliberately survives a reconnect's pipe teardown: it is the one
+	# continuous record of every attempt in a failure episode, and _open_log
+	# is now a no-op once it exists, so reconnecting never truncates it.
