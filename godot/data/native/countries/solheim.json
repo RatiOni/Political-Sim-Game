@@ -1,0 +1,258 @@
+{
+  "id": "solheim",
+  "name": "Solheim",
+  "regime_type": "parliamentary_democracy",
+  "population": 10500000,
+  "bureaucratic_capacity": 0.9,
+  "national_traits": [
+    "strong_institutions",
+    "low_corruption",
+    "trade_oriented"
+  ],
+  "meta": {
+    "short_description": "A prosperous social-democratic model nation: high taxes, a broad welfare state, deep institutions, and a consensual political culture. Wealthy, trusted, and admired — the standard others measure themselves against.",
+    "difficulty": "easy",
+    "stability_value": 0.85,
+    "strengths": [
+      "World-class institutions",
+      "Wealthy, egalitarian economy",
+      "Broad social consensus"
+    ],
+    "weaknesses": [
+      "High tax burden",
+      "Complacency",
+      "Exposed to global trade shocks",
+      "A target for authoritarian resentment"
+    ]
+  },
+  "economy": {
+    "gdp": 120000.0,
+    "growth_rate": 0.022,
+    "inflation": 0.018,
+    "unemployment": 0.045,
+    "public_debt_pct": 0.38,
+    "budget": {
+      "revenue": 34000.0,
+      "expenditure": 33500.0
+    },
+    "sectors": [
+      {
+        "id": "services",
+        "name": "Services",
+        "gdp_share": 0.5,
+        "growth_rate": 0.026,
+        "employment_share": 0.52,
+        "aligned_faction_ids": [
+          "social_democrats"
+        ]
+      },
+      {
+        "id": "industry",
+        "name": "Industry",
+        "gdp_share": 0.24,
+        "growth_rate": 0.02,
+        "employment_share": 0.22,
+        "aligned_faction_ids": [
+          "liberal_party"
+        ]
+      },
+      {
+        "id": "public",
+        "name": "Public Sector",
+        "gdp_share": 0.18,
+        "growth_rate": 0.014,
+        "employment_share": 0.2,
+        "aligned_faction_ids": [
+          "green_alliance"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.08,
+        "growth_rate": 0.01,
+        "employment_share": 0.06,
+        "aligned_faction_ids": [
+          "moderate_right"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "social_democrats",
+      "name": "Social Democrats",
+      "ideology": {
+        "economic": -0.5,
+        "social": 0.5
+      },
+      "power": 0.7,
+      "loyalty": 0.7,
+      "seats": 38,
+      "in_coalition": true,
+      "support": 0.38,
+      "color": "#d9534f",
+      "role": "@labour"
+    },
+    {
+      "id": "green_alliance",
+      "name": "Green Alliance",
+      "ideology": {
+        "economic": -0.4,
+        "social": 0.7
+      },
+      "power": 0.5,
+      "loyalty": 0.5,
+      "seats": 22,
+      "in_coalition": true,
+      "support": 0.22,
+      "color": "#4caf7d",
+      "role": "@labour"
+    },
+    {
+      "id": "liberal_party",
+      "name": "Liberal Party",
+      "ideology": {
+        "economic": 0.5,
+        "social": 0.4
+      },
+      "power": 0.5,
+      "loyalty": 0.1,
+      "seats": 24,
+      "in_coalition": false,
+      "support": 0.24,
+      "color": "#e0b04a",
+      "role": "@reform"
+    },
+    {
+      "id": "moderate_right",
+      "name": "Moderate Right",
+      "ideology": {
+        "economic": 0.4,
+        "social": -0.2
+      },
+      "power": 0.4,
+      "loyalty": -0.1,
+      "seats": 16,
+      "in_coalition": false,
+      "support": 0.16,
+      "color": "#3b7dd8",
+      "role": "@establishment"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "so1",
+      "name": "Astrid Holm",
+      "portfolio": "Finance",
+      "faction_id": "social_democrats",
+      "competence": 0.85,
+      "loyalty": 0.8,
+      "ambition": 0.25
+    },
+    {
+      "id": "so2",
+      "name": "Nils Ferd",
+      "portfolio": "Interior",
+      "faction_id": "social_democrats",
+      "competence": 0.78,
+      "loyalty": 0.72,
+      "ambition": 0.3
+    },
+    {
+      "id": "so3",
+      "name": "Greta Lund",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "green_alliance",
+      "competence": 0.82,
+      "loyalty": 0.68,
+      "ambition": 0.35
+    },
+    {
+      "id": "so4",
+      "name": "Bjorn Askel",
+      "portfolio": "Defense",
+      "faction_id": "social_democrats",
+      "competence": 0.74,
+      "loyalty": 0.7,
+      "ambition": 0.28
+    },
+    {
+      "id": "so5",
+      "name": "Mira Dahl",
+      "portfolio": "Economy",
+      "faction_id": "green_alliance",
+      "competence": 0.8,
+      "loyalty": 0.66,
+      "ambition": 0.22
+    },
+    {
+      "id": "so6",
+      "name": "Otto Vinter",
+      "portfolio": "Justice",
+      "faction_id": "social_democrats",
+      "competence": 0.83,
+      "loyalty": 0.78,
+      "ambition": 0.18
+    }
+  ],
+  "starting_laws": [
+    {
+      "id": "universal_welfare_act",
+      "name": "Universal Welfare Act",
+      "description": "The cornerstone social settlement: universal healthcare, education, and income support.",
+      "tier": "constitutional",
+      "portfolio": "Finance",
+      "votes_for": 74,
+      "votes_against": 26,
+      "turns_active": 40,
+      "effects": {
+        "faction_loyalty_deltas": {
+          "social_democrats": 0.005,
+          "green_alliance": 0.004,
+          "moderate_right": -0.005
+        }
+      }
+    }
+  ],
+  "default_player": {
+    "name": "Elin Vagen",
+    "title": "Prime Minister",
+    "faction_id": "social_democrats",
+    "ideology_economic": -0.4,
+    "ideology_social": 0.5,
+    "approval": 0.62,
+    "political_capital": 58.0
+  },
+  "agenda": {
+    "type": "trader",
+    "ally": "nueva_costa"
+  },
+  "neighbours": [
+    "terand",
+    "qadir",
+    "nueva_costa"
+  ],
+  "default_relations": {
+    "terand": {
+      "score": -0.5,
+      "trade_volume": 600.0
+    },
+    "qadir": {
+      "score": -0.3,
+      "trade_volume": 700.0
+    },
+    "nueva_costa": {
+      "score": 0.45,
+      "trade_volume": 1300.0
+    },
+    "veldoria": {
+      "score": 0.55,
+      "trade_volume": 1800.0
+    },
+    "valmora": {
+      "score": 0.25,
+      "trade_volume": 500.0
+    }
+  }
+}

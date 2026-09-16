@@ -1,22 +1,20 @@
-# Native rewrite agent guide
+# Native rewrite agent guide (RETIRED)
 
-> **SUPERSEDED 2026-09-16 — read `PLAN.md` at the repository root first.**
-> The parity-contract programme this guide governs (`N0`–`N6`, the
+> **RETIRED 2026-09-16 — read `docs/godot/AGENT_GUIDE.md` instead.**
+> The parity-contract programme this guide governed (`N0`–`N6`, the
 > `1e-9` oracle comparison, `PARITY_MATRIX.md` as a gate) has been cancelled by
 > the project owner. Ardenia is being *remade* in Godot as a game, with the
 > Python source as a design reference to read — not an oracle to match.
-> The coordination, handoff, and runtime-prohibition rules below still apply.
-> The parity rules and the reading order do not.
+> `docs/godot/AGENT_GUIDE.md` is the live cross-tool contract now — current
+> reading order, coordination rules, and the SDD ledger location. Everything
+> below this point is historical and does not bind.
 
-This file is the common working contract for Claude, OpenCode, Codex, and human contributors.
+This file was the common working contract for Claude, OpenCode, Codex, and human contributors during the parity programme.
 
-## Required reading order
+## Required reading order (historical — do not follow)
 
-1. `PLAN.md` (repository root) — current authority
-2. `AGENTS.md`
-3. `docs/EARLY_ACCESS_MISSION.md`
-4. `docs/godot/native_port/STATUS.md`
-
+~~1. `AGENTS.md`~~
+~~2. `docs/EARLY_ACCESS_MISSION.md`~~
 ~~3. `docs/superpowers/specs/2026-09-16-native-godot-rewrite-design.md`~~ (superseded)
 ~~4. `docs/superpowers/plans/2026-09-16-native-godot-rewrite-master.md`~~ (superseded)
 ~~5. the active phase plan~~ (superseded — `PLAN.md` carries the phase structure)

@@ -1,0 +1,225 @@
+{
+  "id": "veldoria",
+  "name": "Veldoria",
+  "regime_type": "parliamentary_democracy",
+  "population": 12000000,
+  "national_traits": [
+    "strong_institutions",
+    "trade_oriented",
+    "low_corruption"
+  ],
+  "meta": {
+    "short_description": "A prosperous, export-driven parliamentary democracy with deep institutions and a comfortable governing majority. A gentle place to learn the ropes.",
+    "difficulty": "easy",
+    "strengths": [
+      "Strong independent institutions",
+      "Wealthy trade-based economy",
+      "Stable, loyal coalition"
+    ],
+    "weaknesses": [
+      "Exposed to global trade shocks",
+      "Complacent electorate",
+      "Slow to reform"
+    ]
+  },
+  "economy": {
+    "gdp": 80000.0,
+    "growth_rate": 0.028,
+    "inflation": 0.021,
+    "unemployment": 0.058,
+    "public_debt_pct": 0.42,
+    "budget": {
+      "revenue": 21000.0,
+      "expenditure": 20500.0
+    },
+    "sectors": [
+      {
+        "id": "industry",
+        "name": "Industry",
+        "gdp_share": 0.28,
+        "growth_rate": 0.022,
+        "employment_share": 0.24,
+        "aligned_faction_ids": [
+          "moderate_conservatives"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.06,
+        "growth_rate": 0.008,
+        "employment_share": 0.07,
+        "aligned_faction_ids": [
+          "rural_league"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Services",
+        "gdp_share": 0.52,
+        "growth_rate": 0.034,
+        "employment_share": 0.55,
+        "aligned_faction_ids": [
+          "progressive_alliance"
+        ]
+      },
+      {
+        "id": "public",
+        "name": "Public Sector",
+        "gdp_share": 0.14,
+        "growth_rate": 0.012,
+        "employment_share": 0.14,
+        "aligned_faction_ids": [
+          "labour_party"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "progressive_alliance",
+      "name": "Progressive Alliance",
+      "ideology": {
+        "economic": 0.2,
+        "social": 0.7
+      },
+      "power": 0.7,
+      "loyalty": 0.7,
+      "seats": 42,
+      "in_coalition": true,
+      "support": 0.42,
+      "role": "@reform"
+    },
+    {
+      "id": "moderate_conservatives",
+      "name": "Moderate Conservatives",
+      "ideology": {
+        "economic": 0.5,
+        "social": -0.2
+      },
+      "power": 0.6,
+      "loyalty": 0.4,
+      "seats": 30,
+      "in_coalition": true,
+      "support": 0.3,
+      "role": "@business"
+    },
+    {
+      "id": "labour_party",
+      "name": "Labour Party",
+      "ideology": {
+        "economic": -0.6,
+        "social": 0.4
+      },
+      "power": 0.5,
+      "loyalty": -0.1,
+      "seats": 18,
+      "in_coalition": false,
+      "support": 0.18,
+      "role": "@labour"
+    },
+    {
+      "id": "rural_league",
+      "name": "Rural League",
+      "ideology": {
+        "economic": -0.1,
+        "social": -0.3
+      },
+      "power": 0.3,
+      "loyalty": 0.2,
+      "seats": 10,
+      "in_coalition": false,
+      "support": 0.1,
+      "role": "@agrarian"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "v1",
+      "name": "Klaas Berent",
+      "portfolio": "Finance",
+      "faction_id": "progressive_alliance",
+      "competence": 0.82,
+      "loyalty": 0.78,
+      "ambition": 0.25
+    },
+    {
+      "id": "v2",
+      "name": "Ingrid Solberg",
+      "portfolio": "Interior",
+      "faction_id": "moderate_conservatives",
+      "competence": 0.7,
+      "loyalty": 0.62,
+      "ambition": 0.3
+    },
+    {
+      "id": "v3",
+      "name": "Petra Voss",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "progressive_alliance",
+      "competence": 0.85,
+      "loyalty": 0.72,
+      "ambition": 0.4
+    },
+    {
+      "id": "v4",
+      "name": "Hendrik Aal",
+      "portfolio": "Defense",
+      "faction_id": "moderate_conservatives",
+      "competence": 0.68,
+      "loyalty": 0.6,
+      "ambition": 0.35
+    },
+    {
+      "id": "v5",
+      "name": "Mira Deval",
+      "portfolio": "Economy",
+      "faction_id": "progressive_alliance",
+      "competence": 0.8,
+      "loyalty": 0.75,
+      "ambition": 0.2
+    },
+    {
+      "id": "v6",
+      "name": "Otto Frisk",
+      "portfolio": "Justice",
+      "faction_id": "moderate_conservatives",
+      "competence": 0.76,
+      "loyalty": 0.66,
+      "ambition": 0.15
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Katarina Ruys",
+    "title": "Prime Minister",
+    "faction_id": "progressive_alliance",
+    "ideology_economic": 0.15,
+    "ideology_social": 0.6,
+    "approval": 0.58,
+    "political_capital": 55.0
+  },
+  "agenda": {
+    "type": "trader",
+    "ally": "ardenia"
+  },
+  "neighbours": [
+    "ardenia",
+    "krasova",
+    "merova"
+  ],
+  "default_relations": {
+    "ardenia": {
+      "score": 0.6,
+      "trade_volume": 2400.0
+    },
+    "krasova": {
+      "score": -0.35,
+      "trade_volume": 600.0
+    },
+    "merova": {
+      "score": 0.35,
+      "trade_volume": 1200.0
+    }
+  }
+}

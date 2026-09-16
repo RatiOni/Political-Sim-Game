@@ -1,0 +1,417 @@
+[
+  {
+    "id": "minimum_wage_act",
+    "name": "Minimum Wage Increase Act",
+    "description": "Raises the statutory minimum wage by 18%, indexed to inflation thereafter.",
+    "status": "draft",
+    "tier": "statutory",
+    "effects": {
+      "gdp_growth_delta": 0.0,
+      "unemployment_delta": 0.006,
+      "inflation_delta": 0.0,
+      "budget_revenue_delta": 0.0,
+      "budget_expenditure_delta": 120.0,
+      "faction_loyalty_deltas": {
+        "workers_front": 0.2,
+        "social_democrats": 0.12,
+        "national_conservatives": -0.1,
+        "liberal_democrats": -0.03
+      },
+      "faction_power_deltas": {},
+      "modifiers": [],
+      "one_time_debt_pct_delta": 0.0
+    },
+    "portfolio": "Economy",
+    "ideology": {
+      "economic": -0.6,
+      "social": 0.1
+    },
+    "lobbying_bonus": {},
+    "votes_for": 0,
+    "votes_against": 0,
+    "turns_active": 0,
+    "proposed_by": null
+  },
+  {
+    "id": "telecom_privatization_act",
+    "name": "Telecom Privatisation Act",
+    "description": "Sells the state telecom monopoly to private investors.",
+    "status": "draft",
+    "tier": "statutory",
+    "effects": {
+      "gdp_growth_delta": 0.004,
+      "unemployment_delta": 0.0,
+      "inflation_delta": 0.0,
+      "budget_revenue_delta": 600.0,
+      "budget_expenditure_delta": 0.0,
+      "faction_loyalty_deltas": {
+        "liberal_democrats": 0.08,
+        "national_conservatives": 0.1,
+        "workers_front": -0.2,
+        "social_democrats": -0.12
+      },
+      "faction_power_deltas": {
+        "national_conservatives": 0.04,
+        "workers_front": -0.03
+      },
+      "modifiers": [],
+      "one_time_debt_pct_delta": 0.0
+    },
+    "portfolio": "Economy",
+    "ideology": {
+      "economic": 0.7,
+      "social": 0.1
+    },
+    "lobbying_bonus": {},
+    "votes_for": 0,
+    "votes_against": 0,
+    "turns_active": 0,
+    "proposed_by": null
+  },
+  {
+    "id": "land_reform_act",
+    "name": "Land Reform Act",
+    "description": "Redistributes large agricultural holdings to smallholder farmers.",
+    "status": "draft",
+    "tier": "constitutional",
+    "effects": {
+      "gdp_growth_delta": -0.003,
+      "unemployment_delta": 0.0,
+      "inflation_delta": 0.0,
+      "budget_revenue_delta": 0.0,
+      "budget_expenditure_delta": 0.0,
+      "faction_loyalty_deltas": {
+        "agrarian_union": 0.22,
+        "workers_front": 0.1,
+        "national_conservatives": -0.18
+      },
+      "faction_power_deltas": {
+        "agrarian_union": 0.06,
+        "national_conservatives": -0.05
+      },
+      "modifiers": [],
+      "one_time_debt_pct_delta": 0.0
+    },
+    "portfolio": "Interior",
+    "ideology": {
+      "economic": -0.6,
+      "social": -0.1
+    },
+    "lobbying_bonus": {},
+    "votes_for": 0,
+    "votes_against": 0,
+    "turns_active": 0,
+    "proposed_by": null
+  },
+  {
+    "id": "defense_spending_act",
+    "name": "Defense Modernisation Act",
+    "description": "Significantly increases the defense budget and procurement spending.",
+    "status": "draft",
+    "tier": "statutory",
+    "effects": {
+      "gdp_growth_delta": 0.0,
+      "unemployment_delta": 0.0,
+      "inflation_delta": 0.0,
+      "budget_revenue_delta": 0.0,
+      "budget_expenditure_delta": 500.0,
+      "faction_loyalty_deltas": {
+        "national_conservatives": 0.18,
+        "social_democrats": -0.1,
+        "workers_front": -0.08
+      },
+      "faction_power_deltas": {},
+      "modifiers": [],
+      "one_time_debt_pct_delta": 0.0
+    },
+    "portfolio": "Defense",
+    "ideology": {
+      "economic": 0.2,
+      "social": -0.6
+    },
+    "lobbying_bonus": {},
+    "votes_for": 0,
+    "votes_against": 0,
+    "turns_active": 0,
+    "proposed_by": null
+  },
+  {
+    "id": "press_freedom_act",
+    "name": "Press Freedom Act",
+    "description": "Enshrines constitutional protections for independent media and whistleblowers.",
+    "status": "draft",
+    "tier": "constitutional",
+    "effects": {
+      "gdp_growth_delta": 0.0,
+      "unemployment_delta": 0.0,
+      "inflation_delta": 0.0,
+      "budget_revenue_delta": 0.0,
+      "budget_expenditure_delta": 0.0,
+      "faction_loyalty_deltas": {
+        "liberal_democrats": 0.15,
+        "social_democrats": 0.08,
+        "national_conservatives": -0.14
+      },
+      "faction_power_deltas": {},
+      "modifiers": [],
+      "one_time_debt_pct_delta": 0.0
+    },
+    "portfolio": "Justice",
+    "ideology": {
+      "economic": 0.1,
+      "social": 0.8
+    },
+    "lobbying_bonus": {},
+    "votes_for": 0,
+    "votes_against": 0,
+    "turns_active": 0,
+    "proposed_by": null
+  },
+  {
+    "id": "central_bank_independence_act",
+    "name": "Central Bank Independence Act",
+    "description": "Removes the central bank from direct executive control to anchor monetary credibility.",
+    "status": "draft",
+    "tier": "statutory",
+    "effects": {
+      "gdp_growth_delta": 0.0,
+      "unemployment_delta": 0.0,
+      "inflation_delta": -0.012,
+      "budget_revenue_delta": 0.0,
+      "budget_expenditure_delta": 0.0,
+      "faction_loyalty_deltas": {
+        "liberal_democrats": 0.1,
+        "national_conservatives": 0.04,
+        "workers_front": -0.06
+      },
+      "faction_power_deltas": {},
+      "modifiers": [],
+      "one_time_debt_pct_delta": 0.0
+    },
+    "portfolio": "Finance",
+    "ideology": {
+      "economic": 0.5,
+      "social": 0.2
+    },
+    "lobbying_bonus": {},
+    "votes_for": 0,
+    "votes_against": 0,
+    "turns_active": 0,
+    "proposed_by": null
+  },
+  {
+    "id": "emergency_price_controls",
+    "name": "Emergency Price Controls",
+    "description": "Executive order capping prices on staple goods to blunt inflation immediately.",
+    "status": "draft",
+    "tier": "executive_order",
+    "effects": {
+      "gdp_growth_delta": -0.006,
+      "unemployment_delta": 0.0,
+      "inflation_delta": -0.02,
+      "budget_revenue_delta": 0.0,
+      "budget_expenditure_delta": 0.0,
+      "faction_loyalty_deltas": {
+        "workers_front": 0.1,
+        "national_conservatives": -0.06
+      },
+      "faction_power_deltas": {},
+      "modifiers": [],
+      "one_time_debt_pct_delta": 0.0
+    },
+    "portfolio": "Economy",
+    "ideology": {
+      "economic": -0.5,
+      "social": -0.2
+    },
+    "lobbying_bonus": {},
+    "votes_for": 0,
+    "votes_against": 0,
+    "turns_active": 0,
+    "proposed_by": null
+  },
+  {
+    "id": "progressive_tax_reform_act",
+    "name": "Progressive Tax Reform Act",
+    "description": "Raises income and corporate tax rates on higher brackets to increase state revenue.",
+    "status": "draft",
+    "tier": "statutory",
+    "effects": {
+      "gdp_growth_delta": 0.0,
+      "unemployment_delta": 0.0,
+      "inflation_delta": 0.0,
+      "budget_revenue_delta": 0.0,
+      "budget_expenditure_delta": 0.0,
+      "faction_loyalty_deltas": {
+        "liberal_democrats": -0.03,
+        "social_democrats": 0.1,
+        "national_conservatives": -0.08,
+        "workers_front": 0.05
+      },
+      "faction_power_deltas": {},
+      "modifiers": [
+        {
+          "id": "tax_reform_revenue",
+          "source": "Progressive Tax Reform Act",
+          "target": "budget_revenue",
+          "magnitude": 500.0,
+          "onset_delay": 0,
+          "ramp_duration": 4,
+          "hold_duration": null,
+          "decay_duration": 0,
+          "age": 0,
+          "source_id": null,
+          "portfolio": "Finance",
+          "institutional": true
+        },
+        {
+          "id": "tax_reform_approval",
+          "source": "Progressive Tax Reform Act",
+          "target": "approval_bias",
+          "magnitude": -0.05,
+          "onset_delay": 2,
+          "ramp_duration": 10,
+          "hold_duration": null,
+          "decay_duration": 0,
+          "age": 0,
+          "source_id": null,
+          "portfolio": "Finance",
+          "institutional": true
+        }
+      ],
+      "one_time_debt_pct_delta": 0.0
+    },
+    "portfolio": "Finance",
+    "ideology": {
+      "economic": -0.6,
+      "social": 0.1
+    },
+    "lobbying_bonus": {},
+    "votes_for": 0,
+    "votes_against": 0,
+    "turns_active": 0,
+    "proposed_by": null
+  },
+  {
+    "id": "infrastructure_investment_act",
+    "name": "Infrastructure Investment Act",
+    "description": "A multi-year programme of road, rail, and grid construction, financed by new bond issuance.",
+    "status": "draft",
+    "tier": "statutory",
+    "effects": {
+      "gdp_growth_delta": 0.0,
+      "unemployment_delta": 0.0,
+      "inflation_delta": 0.0,
+      "budget_revenue_delta": 0.0,
+      "budget_expenditure_delta": 0.0,
+      "faction_loyalty_deltas": {
+        "national_conservatives": 0.06,
+        "agrarian_union": 0.08,
+        "liberal_democrats": 0.02
+      },
+      "faction_power_deltas": {},
+      "modifiers": [
+        {
+          "id": "infra_construction_cost",
+          "source": "Infrastructure Investment Act",
+          "target": "budget_expenditure",
+          "magnitude": 700.0,
+          "onset_delay": 0,
+          "ramp_duration": 2,
+          "hold_duration": 30,
+          "decay_duration": 6,
+          "age": 0,
+          "source_id": null,
+          "portfolio": "Economy",
+          "institutional": true
+        },
+        {
+          "id": "infra_growth_payoff",
+          "source": "Infrastructure Investment Act",
+          "target": "gdp_growth",
+          "magnitude": 0.007,
+          "onset_delay": 24,
+          "ramp_duration": 24,
+          "hold_duration": null,
+          "decay_duration": 0,
+          "age": 0,
+          "source_id": null,
+          "portfolio": "Economy",
+          "institutional": true
+        }
+      ],
+      "one_time_debt_pct_delta": 0.025
+    },
+    "portfolio": "Economy",
+    "ideology": {
+      "economic": 0.0,
+      "social": -0.1
+    },
+    "lobbying_bonus": {},
+    "votes_for": 0,
+    "votes_against": 0,
+    "turns_active": 0,
+    "proposed_by": null
+  },
+  {
+    "id": "education_modernisation_act",
+    "name": "Education Modernisation Act",
+    "description": "Overhauls curricula, teacher training, and school funding to raise long-run workforce quality.",
+    "status": "draft",
+    "tier": "statutory",
+    "effects": {
+      "gdp_growth_delta": 0.0,
+      "unemployment_delta": 0.0,
+      "inflation_delta": 0.0,
+      "budget_revenue_delta": 0.0,
+      "budget_expenditure_delta": 0.0,
+      "faction_loyalty_deltas": {
+        "liberal_democrats": 0.08,
+        "social_democrats": 0.1,
+        "national_conservatives": -0.04
+      },
+      "faction_power_deltas": {},
+      "modifiers": [
+        {
+          "id": "edu_funding_cost",
+          "source": "Education Modernisation Act",
+          "target": "budget_expenditure",
+          "magnitude": 180.0,
+          "onset_delay": 0,
+          "ramp_duration": 3,
+          "hold_duration": null,
+          "decay_duration": 0,
+          "age": 0,
+          "source_id": null,
+          "portfolio": null,
+          "institutional": true
+        },
+        {
+          "id": "edu_workforce_payoff",
+          "source": "Education Modernisation Act",
+          "target": "workforce_quality",
+          "magnitude": 0.22,
+          "onset_delay": 36,
+          "ramp_duration": 24,
+          "hold_duration": null,
+          "decay_duration": 0,
+          "age": 0,
+          "source_id": null,
+          "portfolio": null,
+          "institutional": true
+        }
+      ],
+      "one_time_debt_pct_delta": 0.0
+    },
+    "portfolio": null,
+    "ideology": {
+      "economic": -0.2,
+      "social": 0.3
+    },
+    "lobbying_bonus": {},
+    "votes_for": 0,
+    "votes_against": 0,
+    "turns_active": 0,
+    "proposed_by": null
+  }
+]

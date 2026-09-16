@@ -1,0 +1,44 @@
+[
+  {
+    "id": "easy",
+    "name": "Easy",
+    "description": "A stronger economy, a contented public, and a loyal coalition. Room to learn.",
+    "approval_delta": 0.08,
+    "political_capital_delta": 15.0,
+    "growth_delta": 0.01,
+    "inflation_delta": -0.008,
+    "debt_delta": -0.1,
+    "unemployment_delta": -0.02,
+    "stability_delta": 0.1,
+    "coalition_loyalty_delta": 0.15,
+    "opposition_power_delta": -0.1
+  },
+  {
+    "id": "normal",
+    "name": "Normal",
+    "description": "The starting position as written — balanced, and unforgiving of nothing in particular.",
+    "approval_delta": 0.0,
+    "political_capital_delta": 0.0,
+    "growth_delta": 0.0,
+    "inflation_delta": 0.0,
+    "debt_delta": 0.0,
+    "unemployment_delta": 0.0,
+    "stability_delta": 0.0,
+    "coalition_loyalty_delta": 0.0,
+    "opposition_power_delta": 0.0
+  },
+  {
+    "id": "hard",
+    "name": "Hard",
+    "description": "A weak coalition, high debt and inflation, a strong opposition, and little political capital to spare. Every month is a negotiation with disaster.",
+    "approval_delta": -0.06,
+    "political_capital_delta": -12.0,
+    "growth_delta": -0.01,
+    "inflation_delta": 0.015,
+    "debt_delta": 0.2,
+    "unemployment_delta": 0.03,
+    "stability_delta": -0.12,
+    "coalition_loyalty_delta": -0.15,
+    "opposition_power_delta": 0.12
+  }
+]

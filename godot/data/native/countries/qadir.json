@@ -1,0 +1,254 @@
+{
+  "id": "qadir",
+  "name": "Qadir",
+  "regime_type": "authoritarian",
+  "population": 9000000,
+  "bureaucratic_capacity": 0.7,
+  "national_traits": [
+    "resource_rich",
+    "theocratic",
+    "centralized"
+  ],
+  "meta": {
+    "short_description": "A cash-flush theocratic petro-state where religious authority and oil wealth hold a socially conservative order together. Stable on the surface, brittle underneath — the money buys quiet, not consent.",
+    "difficulty": "normal",
+    "stability_value": 0.72,
+    "strengths": [
+      "Vast oil revenues",
+      "Unifying religious authority",
+      "Low public debt"
+    ],
+    "weaknesses": [
+      "Restless reformist youth",
+      "Economy hostage to oil prices",
+      "Repression breeds hidden resentment"
+    ]
+  },
+  "economy": {
+    "gdp": 95000.0,
+    "growth_rate": 0.035,
+    "inflation": 0.03,
+    "unemployment": 0.07,
+    "public_debt_pct": 0.2,
+    "budget": {
+      "revenue": 26000.0,
+      "expenditure": 23000.0
+    },
+    "sectors": [
+      {
+        "id": "resources",
+        "name": "Oil & Gas",
+        "gdp_share": 0.52,
+        "growth_rate": 0.04,
+        "employment_share": 0.16,
+        "aligned_faction_ids": [
+          "clerical_council"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Services",
+        "gdp_share": 0.22,
+        "growth_rate": 0.03,
+        "employment_share": 0.34,
+        "aligned_faction_ids": [
+          "merchant_houses"
+        ]
+      },
+      {
+        "id": "public",
+        "name": "Public Sector",
+        "gdp_share": 0.16,
+        "growth_rate": 0.012,
+        "employment_share": 0.34,
+        "aligned_faction_ids": [
+          "clerical_council"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.1,
+        "growth_rate": 0.008,
+        "employment_share": 0.16,
+        "aligned_faction_ids": [
+          "tribal_confederation"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "clerical_council",
+      "name": "Clerical Council",
+      "ideology": {
+        "economic": 0.2,
+        "social": -0.9
+      },
+      "power": 0.9,
+      "loyalty": 0.7,
+      "seats": 44,
+      "in_coalition": true,
+      "support": 0.44,
+      "color": "#2e7d5b",
+      "role": "@nationalist"
+    },
+    {
+      "id": "merchant_houses",
+      "name": "Merchant Houses",
+      "ideology": {
+        "economic": 0.8,
+        "social": -0.3
+      },
+      "power": 0.7,
+      "loyalty": 0.4,
+      "seats": 28,
+      "in_coalition": true,
+      "support": 0.28,
+      "color": "#c8922e",
+      "role": "@business"
+    },
+    {
+      "id": "tribal_confederation",
+      "name": "Tribal Confederation",
+      "ideology": {
+        "economic": -0.1,
+        "social": -0.5
+      },
+      "power": 0.4,
+      "loyalty": 0.1,
+      "seats": 16,
+      "in_coalition": false,
+      "support": 0.16,
+      "color": "#9c6b3f",
+      "role": "@agrarian"
+    },
+    {
+      "id": "reform_youth",
+      "name": "Reform Youth",
+      "ideology": {
+        "economic": 0.1,
+        "social": 0.8
+      },
+      "power": 0.3,
+      "loyalty": -0.7,
+      "seats": 12,
+      "in_coalition": false,
+      "support": 0.12,
+      "color": "#5a8fd0",
+      "grievances": [
+        {
+          "source": "Religious social restrictions",
+          "severity": 0.65,
+          "turns_active": 9
+        },
+        {
+          "source": "No political voice",
+          "severity": 0.6,
+          "turns_active": 12
+        }
+      ],
+      "demands": [
+        {
+          "description": "Social liberalisation",
+          "urgency": 0.7
+        }
+      ],
+      "role": "@reform"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "qa1",
+      "name": "Sheikh Nadir",
+      "portfolio": "Finance",
+      "faction_id": "merchant_houses",
+      "competence": 0.72,
+      "loyalty": 0.6,
+      "ambition": 0.45
+    },
+    {
+      "id": "qa2",
+      "name": "Imam Halabi",
+      "portfolio": "Interior",
+      "faction_id": "clerical_council",
+      "competence": 0.66,
+      "loyalty": 0.85,
+      "ambition": 0.3
+    },
+    {
+      "id": "qa3",
+      "name": "Rashid Omar",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "clerical_council",
+      "competence": 0.7,
+      "loyalty": 0.72,
+      "ambition": 0.5
+    },
+    {
+      "id": "qa4",
+      "name": "General Faiz",
+      "portfolio": "Defense",
+      "faction_id": "clerical_council",
+      "competence": 0.64,
+      "loyalty": 0.68,
+      "ambition": 0.55
+    },
+    {
+      "id": "qa5",
+      "name": "Tariq Bassam",
+      "portfolio": "Economy",
+      "faction_id": "merchant_houses",
+      "competence": 0.75,
+      "loyalty": 0.5,
+      "ambition": 0.4
+    },
+    {
+      "id": "qa6",
+      "name": "Qadi Suleim",
+      "portfolio": "Justice",
+      "faction_id": "clerical_council",
+      "competence": 0.6,
+      "loyalty": 0.8,
+      "ambition": 0.2
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Salim al-Qadir",
+    "title": "Emir",
+    "faction_id": "clerical_council",
+    "ideology_economic": 0.3,
+    "ideology_social": -0.7,
+    "approval": 0.58,
+    "political_capital": 55.0
+  },
+  "agenda": {
+    "type": "hegemon",
+    "rival": "solheim",
+    "ally": "terand"
+  },
+  "neighbours": [
+    "terand",
+    "solheim",
+    "merova"
+  ],
+  "default_relations": {
+    "terand": {
+      "score": 0.35,
+      "trade_volume": 1400.0
+    },
+    "solheim": {
+      "score": -0.3,
+      "trade_volume": 700.0
+    },
+    "merova": {
+      "score": 0.15,
+      "trade_volume": 600.0
+    },
+    "krasova": {
+      "score": 0.2,
+      "trade_volume": 900.0
+    }
+  }
+}

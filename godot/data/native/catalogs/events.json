@@ -1,0 +1,3908 @@
+{
+  "events": [
+    {
+      "id": "labour_unrest_spreads",
+      "title": "Labour Unrest Spreads",
+      "description": "Strikes and demonstrations are building around a grievance that's gone unaddressed too long. The Interior Ministry wants a decision.",
+      "category": "Faction",
+      "condition": "has_serious_grievance",
+      "chance": 0.15,
+      "options": [
+        {
+          "id": "crackdown",
+          "label": "Crack down on the unrest",
+          "description": "Riot police clear the demonstrations. Order returns fast, at a cost to your standing with the streets and the wider public.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@labour": -0.15,
+              "@reform": -0.05,
+              "@nationalist": 0.06
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "unrest_crackdown_approval",
+                "source": "Labour Unrest Spreads",
+                "target": "approval_bias",
+                "magnitude": -0.03,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 6,
+                "decay_duration": 4,
+                "age": 0,
+                "source_id": null,
+                "portfolio": "Interior",
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 8,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "negotiate",
+          "label": "Negotiate with organizers",
+          "description": "Open a direct channel with strike leaders and offer concessions. Costs the treasury, buys goodwill.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 90.0,
+            "faction_loyalty_deltas": {
+              "@labour": 0.14,
+              "@agrarian": 0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 14,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "ignore",
+          "label": "Let it run its course",
+          "description": "You take no action. The unrest simmers a while longer and public patience wears thin.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@labour": -0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "unrest_ignore_approval",
+                "source": "Labour Unrest Spreads",
+                "target": "approval_bias",
+                "magnitude": -0.015,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 4,
+                "decay_duration": 2,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "ignore",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Interior"
+    },
+    {
+      "id": "border_incident",
+      "title": "Shots on the Ceasefire Line",
+      "description": "A patrol traded fire across the line last night. Nobody died, both sides say the other started it, and the ceasefire nobody signed in good faith held by about forty minutes. Foreign Affairs is waiting on your response.",
+      "category": "Diplomatic",
+      "condition": "any_cool_relation",
+      "chance": 0.1,
+      "options": [
+        {
+          "id": "protest_formally",
+          "label": "Lodge a formal protest",
+          "description": "A stern note through the usual channels. Firm, restrained, and unlikely to satisfy anyone who lost a cousin in 1992.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "__coolest__": -0.04
+          },
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "escalate",
+          "label": "Name them from the podium",
+          "description": "Say out loud what everyone believes about who armed the separatists. The chamber will love it. The embassy will not.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@nationalist": 0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "__coolest__": -0.12
+          },
+          "pc_cost": 5,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "de_escalate",
+          "label": "Seek quiet de-escalation",
+          "description": "Back-channel talks, no cameras, no communiqué. Cheaper than the alternative and impossible to claim credit for.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "__coolest__": 0.06
+          },
+          "pc_cost": 10,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "protest_formally",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Foreign Affairs"
+    },
+    {
+      "id": "cabinet_corruption_expose",
+      "title": "Cabinet Corruption Exposé",
+      "description": "An investigative report alleges a minister used their office for personal gain. The story is spreading fast.",
+      "category": "Cabinet",
+      "condition": "any_disloyal_minister",
+      "chance": 0.1,
+      "options": [
+        {
+          "id": "defend",
+          "label": "Publicly defend the minister",
+          "description": "You back your minister publicly. If the story holds up, this could look very bad later.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "expose_defend_approval",
+                "source": "Cabinet Corruption Exposé",
+                "target": "approval_bias",
+                "magnitude": -0.02,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 8,
+                "decay_duration": 4,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 10,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "quiet_resignation",
+          "label": "Ask for a quiet resignation",
+          "description": "A minister steps down before the story can grow. A brief embarrassment, then it passes.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "expose_resign_approval",
+                "source": "Cabinet Corruption Exposé",
+                "target": "approval_bias",
+                "magnitude": -0.01,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 3,
+                "decay_duration": 2,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "launch_inquiry",
+          "label": "Launch an independent inquiry",
+          "description": "Slower, more credible, and out of your hands once it starts.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@reform": 0.04,
+              "@nationalist": 0.03
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 12,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "defend",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "bumper_harvest",
+      "title": "Bumper Harvest",
+      "description": "An unusually strong harvest has left the country with a real, if modest, surplus. A rare piece of good news for the Economy Ministry to manage.",
+      "category": "Economic",
+      "condition": "<lambda>",
+      "chance": 0.06,
+      "options": [
+        {
+          "id": "stockpile",
+          "label": "Stockpile the surplus",
+          "description": "Bank the gains against leaner years ahead.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": -0.015
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "export",
+          "label": "Export the surplus",
+          "description": "Sell abroad for quick revenue.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 150.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@agrarian": 0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 4,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "subsidize",
+          "label": "Subsidize consumer prices",
+          "description": "Pass the windfall straight to households.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": -0.003,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@labour": 0.06,
+              "@agrarian": 0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "stockpile",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Economy"
+    },
+    {
+      "id": "currency_speculators_circle",
+      "title": "Currency Speculators Circle",
+      "description": "Investors are testing the currency's resolve, betting on either inflation or debt forcing your hand. Finance wants direction.",
+      "category": "Economic",
+      "condition": "<lambda>",
+      "chance": 0.12,
+      "options": [
+        {
+          "id": "rate_hike",
+          "label": "Raise interest rates sharply",
+          "description": "Defends the currency, chokes growth.",
+          "effects": {
+            "gdp_growth_delta": -0.006,
+            "unemployment_delta": 0.0,
+            "inflation_delta": -0.01,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 10,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "capital_controls",
+          "label": "Impose capital controls",
+          "description": "Blunt and unpopular with investors, but it buys room to breathe.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@nationalist": -0.05,
+              "@reform": -0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": -0.01
+          },
+          "relation_deltas": {},
+          "pc_cost": 14,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "do_nothing",
+          "label": "Ride it out",
+          "description": "Let the market find its own level. Risky if it doesn't stop on its own.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.006,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "do_nothing",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Finance"
+    },
+    {
+      "id": "rivals_scandal",
+      "title": "A Rival's Scandal",
+      "description": "An opposition figure has been caught in an embarrassing scandal of their own. How you handle it is entirely your call.",
+      "category": "Faction",
+      "condition": "has_opposition",
+      "chance": 0.08,
+      "options": [
+        {
+          "id": "press_advantage",
+          "label": "Press the political advantage",
+          "description": "Hammer the story in the press. Good for you, ugly politics.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@reform": 0.05
+            },
+            "faction_power_deltas": {
+              "@nationalist": -0.03
+            },
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 8,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "stay_above_it",
+          "label": "Stay above the fray",
+          "description": "Say nothing. Voters may reward the restraint — or may not notice at all.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "rival_scandal_restraint_approval",
+                "source": "A Rival's Scandal",
+                "target": "approval_bias",
+                "magnitude": 0.008,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 6,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "stay_above_it",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "trade_route_disruption",
+      "title": "Trade Route Disruption",
+      "description": "The corridors the Union built all run the wrong way for an independent country, and one of them has just closed. Your busiest trade relationship is rippling. Someone will feel the pinch.",
+      "category": "Economic",
+      "condition": "has_active_trade",
+      "chance": 0.09,
+      "options": [
+        {
+          "id": "absorb_cost",
+          "label": "Absorb the cost domestically",
+          "description": "Subsidize affected industries directly rather than let supply chains break.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 60.0,
+            "faction_loyalty_deltas": {
+              "@nationalist": 0.03
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "pass_to_consumers",
+          "label": "Let prices adjust",
+          "description": "Let the market absorb the shock. Cheaper for the state, harder on households.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.004,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@labour": -0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "pass_to_consumers",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Economy"
+    },
+    {
+      "id": "bank_run",
+      "title": "Run on the Provincial Bank",
+      "description": "Depositors are queueing around the block at one of the country's larger banks. If the panic spreads to the rest of the system, this stops being one bank's problem.",
+      "category": "Economic",
+      "condition": "fiscal_strain",
+      "chance": 0.08,
+      "options": [
+        {
+          "id": "guarantee",
+          "label": "Guarantee all deposits",
+          "description": "The treasury stands behind every account. Expensive, but the queues disperse by evening.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 180.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "bank_guarantee_calm",
+                "source": "Run on the Provincial Bank",
+                "target": "approval_bias",
+                "magnitude": 0.01,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 4,
+                "decay_duration": 2,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 10,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "arrange_rescue",
+          "label": "Arrange a private rescue",
+          "description": "Twist the arms of the big banking houses to absorb their failing rival. Cheaper for the state; the bankers will remember the favour they did you.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@business": 0.06,
+              "@establishment": 0.04,
+              "@reform": 0.03
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 14,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "let_it_fail",
+          "label": "Let it fail",
+          "description": "Depositors take the loss and the panic burns through the economy.",
+          "effects": {
+            "gdp_growth_delta": -0.005,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@labour": -0.08,
+              "@business": -0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "stake_reputation",
+          "label": "Stake your reputation on the numbers",
+          "description": "You ran monetary policy for a decade. Go on television with the balance sheet and dare the panic to argue with you.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "bankrun_credibility",
+                "source": "Run on the Provincial Bank",
+                "target": "inflation",
+                "magnitude": -0.005,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 4,
+                "decay_duration": 2,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 5,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": "check"
+        }
+      ],
+      "default_option_id": "let_it_fail",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Finance"
+    },
+    {
+      "id": "strike_wave",
+      "title": "Strike Wave",
+      "description": "Walkouts are spreading plant to plant — pay packets can't keep up, and the unions smell weakness. The next few days decide whether this stays economic or becomes political.",
+      "category": "Economic",
+      "condition": "labour_pressure",
+      "chance": 0.1,
+      "options": [
+        {
+          "id": "wage_deal",
+          "label": "Negotiate a wage deal",
+          "description": "Buy industrial peace with a settlement. Costs the budget, calms the shop floor.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 140.0,
+            "faction_loyalty_deltas": {
+              "@labour": 0.1,
+              "@business": -0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 12,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "hold_firm",
+          "label": "Hold firm",
+          "description": "No concessions under pressure. The unions may fold — or escalate.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@labour": -0.06,
+              "@nationalist": 0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": {
+            "event_id": "general_strike",
+            "delay": 3,
+            "chance": 0.6
+          },
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "send_police",
+          "label": "Clear the picket lines",
+          "description": "Order and open gates by the weekend — and a wound that will fester.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@labour": -0.14,
+              "@nationalist": 0.06
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 8,
+          "follow_up": {
+            "event_id": "general_strike",
+            "delay": 2,
+            "chance": 0.4
+          },
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "one_of_their_own",
+          "label": "Speak to them as one of their own",
+          "description": "You carried a union card before you carried a red box. Walk in without minders and settle it the old way.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@labour": 0.12
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "strike_settled_in_person",
+                "source": "Strike Wave",
+                "target": "approval_bias",
+                "magnitude": 0.012,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 4,
+                "decay_duration": 2,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 4,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": "check"
+        }
+      ],
+      "default_option_id": "hold_firm",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Economy"
+    },
+    {
+      "id": "general_strike",
+      "title": "General Strike",
+      "description": "It happened: the unions have called everyone out. Ports, rails, mills — the country is standing still, and everyone remembers how you handled the first wave.",
+      "category": "Economic",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "capitulate",
+          "label": "Concede the unions' demands",
+          "description": "End it today at the treasury's expense.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 260.0,
+            "faction_loyalty_deltas": {
+              "@labour": 0.12,
+              "@business": -0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 8,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "wait_out",
+          "label": "Wait them out",
+          "description": "Strikers don't get paid either. A grinding month for everyone.",
+          "effects": {
+            "gdp_growth_delta": -0.008,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "general_strike_approval",
+                "source": "General Strike",
+                "target": "approval_bias",
+                "magnitude": -0.03,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 4,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "emergency_powers",
+          "label": "Declare essential-services orders",
+          "description": "Force the ports and power stations open by decree. Effective, authoritarian, unforgotten.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@labour": -0.12,
+              "@reform": -0.06,
+              "@nationalist": 0.08
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 15,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "martial_ports",
+          "label": "Put the ports under military control",
+          "description": "Not a review, not an order — soldiers on the docks by morning. Only a leader of your temperament would dare.",
+          "effects": {
+            "gdp_growth_delta": 0.002,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@labour": -0.16,
+              "@reform": -0.1,
+              "@nationalist": 0.1
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "martial_ports_approval",
+                "source": "General Strike",
+                "target": "approval_bias",
+                "magnitude": -0.015,
+                "onset_delay": 1,
+                "ramp_duration": 2,
+                "hold_duration": 6,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 18,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": "check"
+        }
+      ],
+      "default_option_id": "wait_out",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Interior"
+    },
+    {
+      "id": "budget_windfall",
+      "title": "Revenue Windfall",
+      "description": "The mid-year figures are in and the treasury has collected meaningfully more than forecast. Everyone in cabinet has a plan for it by lunchtime.",
+      "category": "Economic",
+      "condition": "budget_surplus",
+      "chance": 0.07,
+      "options": [
+        {
+          "id": "pay_down_debt",
+          "label": "Pay down debt",
+          "description": "Quietly responsible.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": -0.02
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "public_works",
+          "label": "Announce public works",
+          "description": "Visible cranes in every district by spring.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 120.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "windfall_works_approval",
+                "source": "Revenue Windfall",
+                "target": "approval_bias",
+                "magnitude": 0.015,
+                "onset_delay": 1,
+                "ramp_duration": 2,
+                "hold_duration": 6,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "tax_rebate",
+          "label": "A one-off tax rebate",
+          "description": "Cheques in the post with the government's compliments.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": -100.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@reform": 0.05,
+              "@nationalist": 0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "pay_down_debt",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Finance"
+    },
+    {
+      "id": "defection_drama",
+      "title": "A Deputy Crosses the Floor",
+      "description": "A sitting deputy has renounced their party whip live on the evening news, citing 'a crisis of conscience'. Their old party wants blood; every other party wants the seat.",
+      "category": "Political",
+      "condition": "has_opposition",
+      "chance": 0.06,
+      "options": [
+        {
+          "id": "woo_defector",
+          "label": "Court the defector",
+          "description": "A warm handshake for the cameras — and their vote, most days.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@reform": 0.04,
+              "@nationalist": -0.06
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 8,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "stay_out",
+          "label": "Stay out of it",
+          "description": "Party quarrels are best watched from a safe distance.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "stay_out",
+      "once": false,
+      "cooldown": 12,
+      "audience": "any",
+      "portfolio": null
+    },
+    {
+      "id": "government_policy_retreat",
+      "title": "The Government Retreats",
+      "description": "After weeks of pressure, the government has abandoned one of its headline proposals. You cannot issue orders from opposition — but you can decide what political meaning the retreat will carry.",
+      "category": "Opposition",
+      "condition": "<lambda>",
+      "chance": 0.08,
+      "options": [
+        {
+          "id": "claim_victory",
+          "label": "Claim the retreat as your victory",
+          "description": "Put your front bench on every broadcast and argue that sustained opposition forced the reversal.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": "opposition_claims_retreat",
+          "requires": null
+        },
+        {
+          "id": "publish_alternative",
+          "label": "Publish the alternative",
+          "description": "Use the opening to explain what your party would do instead. A slower gain, but a stronger claim to be ready for office.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 8,
+          "follow_up": null,
+          "on_apply": "opposition_offers_alternative",
+          "requires": null
+        },
+        {
+          "id": "let_pass",
+          "label": "Let the government own its confusion",
+          "description": "Say little and trust voters to notice. Most will not.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": "opposition_misses_retreat",
+          "requires": null
+        }
+      ],
+      "default_option_id": "let_pass",
+      "once": false,
+      "cooldown": 10,
+      "audience": "opposition",
+      "portfolio": null
+    },
+    {
+      "id": "opposition_by_election",
+      "title": "A By-Election Opening",
+      "description": "A vacant constituency has produced an unexpected contest. This is not a decision about the country; it is a test of how your opposition party spends its limited people, money, and attention.",
+      "category": "Opposition",
+      "condition": "<lambda>",
+      "chance": 0.06,
+      "options": [
+        {
+          "id": "national_push",
+          "label": "Turn it into a national referendum",
+          "description": "Flood the district with organisers and make the government defend its national record.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 10,
+          "follow_up": null,
+          "on_apply": "by_election_national_push",
+          "requires": null
+        },
+        {
+          "id": "local_push",
+          "label": "Run a disciplined local campaign",
+          "description": "Keep the leader away, select a credible local voice, and build the organisation for the general election.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": "by_election_local_push",
+          "requires": null
+        },
+        {
+          "id": "stand_down",
+          "label": "Conserve resources",
+          "description": "Save the war chest for the national contest and surrender the initiative today.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": "by_election_stand_down",
+          "requires": null
+        }
+      ],
+      "default_option_id": "stand_down",
+      "once": false,
+      "cooldown": 14,
+      "audience": "opposition",
+      "portfolio": null
+    },
+    {
+      "id": "corruption_expose_media",
+      "title": "The Procurement Files",
+      "description": "A newspaper has published a cache of documents suggesting ministry contracts have been steered to friends of officials for years. The story has a name, a logo, and no intention of going away.",
+      "category": "Political",
+      "condition": "weak_state",
+      "chance": 0.08,
+      "options": [
+        {
+          "id": "full_inquiry",
+          "label": "Order a full public inquiry",
+          "description": "Let the chips fall. Credible — and once it starts, it doesn't answer to you.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@reform": 0.05,
+              "@establishment": -0.03
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 12,
+          "follow_up": {
+            "event_id": "corruption_trial",
+            "delay": 5,
+            "chance": 1.0
+          },
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "sack_officials",
+          "label": "Sack the named officials",
+          "description": "Swift, visible, and conveniently shallow.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "procurement_sack_approval",
+                "source": "The Procurement Files",
+                "target": "approval_bias",
+                "magnitude": 0.008,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 3,
+                "decay_duration": 2,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 8,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "ride_it_out",
+          "label": "Ride it out",
+          "description": "Newspapers need a new front page every day. Eventually.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "procurement_silence_approval",
+                "source": "The Procurement Files",
+                "target": "approval_bias",
+                "magnitude": -0.02,
+                "onset_delay": 0,
+                "ramp_duration": 2,
+                "hold_duration": 6,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "prosecute_yourself",
+          "label": "Take the brief yourself",
+          "description": "You argued before the high court for twenty years. Stand at the podium, walk the country through the evidence, and make the case no hired counsel could.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@reform": 0.06,
+              "@establishment": -0.03
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "procurement_lawyer_credibility",
+                "source": "The Procurement Files",
+                "target": "approval_bias",
+                "magnitude": 0.02,
+                "onset_delay": 0,
+                "ramp_duration": 2,
+                "hold_duration": 6,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 10,
+          "follow_up": {
+            "event_id": "corruption_trial",
+            "delay": 4,
+            "chance": 1.0
+          },
+          "on_apply": null,
+          "requires": "check"
+        }
+      ],
+      "default_option_id": "ride_it_out",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Justice"
+    },
+    {
+      "id": "corruption_trial",
+      "title": "The Procurement Trial Verdict",
+      "description": "The inquiry you ordered has ended in court, and the verdict lands today. Senior officials are going to prison — including two appointed under your government's watch.",
+      "category": "Political",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "accept_verdict",
+          "label": "Welcome the verdict",
+          "description": "Justice done, whatever it costs the government's friends.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@reform": 0.06,
+              "@labour": 0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "trial_credibility",
+                "source": "The Procurement Trial",
+                "target": "approval_bias",
+                "magnitude": 0.015,
+                "onset_delay": 0,
+                "ramp_duration": 2,
+                "hold_duration": 8,
+                "decay_duration": 4,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "pardon_quietly",
+          "label": "Arrange quiet pardons",
+          "description": "Loyalty repaid — if it stays quiet, which these things never do.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@reform": -0.08,
+              "@labour": -0.06
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "pardon_scandal",
+                "source": "The Procurement Trial",
+                "target": "approval_bias",
+                "magnitude": -0.03,
+                "onset_delay": 1,
+                "ramp_duration": 2,
+                "hold_duration": 8,
+                "decay_duration": 4,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 15,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "accept_verdict",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Justice"
+    },
+    {
+      "id": "judicial_crisis",
+      "title": "The Court Strikes Back",
+      "description": "The high court has ruled a pillar of the government's legislative programme unconstitutional in part. The justices are daring you to make it a fight.",
+      "category": "Political",
+      "condition": "has_active_law",
+      "chance": 0.05,
+      "options": [
+        {
+          "id": "comply",
+          "label": "Comply with the ruling",
+          "description": "Rule of law means losing gracefully sometimes.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": -60.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@reform": 0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "attack_court",
+          "label": "Denounce the court",
+          "description": "'Unelected judges against the people's government.' The base loves it; the institutions do not.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@nationalist": 0.05,
+              "@reform": -0.07
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 10,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "comply",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Justice"
+    },
+    {
+      "id": "media_empire",
+      "title": "The Chairman's Offer",
+      "description": "The owner of the country's largest media group requests a private dinner. Over dessert he offers 'a fairer hearing' for the government — and mentions, in passing, a broadcasting regulation he'd like relaxed.",
+      "category": "Political",
+      "condition": "<lambda>",
+      "chance": 0.05,
+      "options": [
+        {
+          "id": "take_deal",
+          "label": "Reach an understanding",
+          "description": "Warmer coverage within the week. He will collect eventually.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@reform": -0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "media_honeymoon",
+                "source": "The Chairman's Offer",
+                "target": "approval_bias",
+                "magnitude": 0.02,
+                "onset_delay": 0,
+                "ramp_duration": 2,
+                "hold_duration": 8,
+                "decay_duration": 4,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 5,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "decline",
+          "label": "Decline politely",
+          "description": "Dinner was excellent; the answer is no.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "decline",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "spy_scandal",
+      "title": "A Spy in the Ministry",
+      "description": "Counter-intelligence has caught an agent inside the defence ministry. The handler is known to them — the networks the old Union left behind were never rolled up, only reassigned. How loudly do you want this to get?",
+      "category": "Diplomatic",
+      "condition": "any_bad_relation",
+      "chance": 0.07,
+      "options": [
+        {
+          "id": "expel_diplomats",
+          "label": "Expel their diplomats",
+          "description": "A public row, embassy staff on the next flight home.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@nationalist": 0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "__most_hostile__": -0.1
+          },
+          "pc_cost": 8,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "quiet_protest",
+          "label": "Handle it quietly",
+          "description": "A discreet démarche and a traded prisoner. The public never knows.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "__most_hostile__": -0.03
+          },
+          "pc_cost": 4,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "double_agent",
+          "label": "Turn the agent",
+          "description": "Feed them what you want believed. Risky, invisible, delicious.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "double_agent_edge",
+                "source": "A Spy in the Ministry",
+                "target": "approval_bias",
+                "magnitude": 0.005,
+                "onset_delay": 2,
+                "ramp_duration": 2,
+                "hold_duration": 6,
+                "decay_duration": 2,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 12,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "quiet_protest",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Foreign Affairs"
+    },
+    {
+      "id": "refugee_crisis",
+      "title": "Refugees at the Border",
+      "description": "A neighbour's civil war has arrived at your frontier: thousands of families with everything they own on their backs. The border guards are asking for orders.",
+      "category": "Diplomatic",
+      "condition": "neighbour_in_civil_war",
+      "chance": 0.3,
+      "options": [
+        {
+          "id": "open_borders",
+          "label": "Open the border",
+          "description": "Do the decent thing and absorb the cost — economic and political.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 90.0,
+            "faction_loyalty_deltas": {
+              "@reform": 0.06,
+              "@labour": 0.04,
+              "@nationalist": -0.08
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 8,
+          "follow_up": {
+            "event_id": "integration_debate",
+            "delay": 6,
+            "chance": 0.8
+          },
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "camps",
+          "label": "Build border camps",
+          "description": "Shelter without settlement — the compromise that satisfies no one.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 50.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "close_border",
+          "label": "Seal the border",
+          "description": "Turn them back. The pictures will be terrible.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@nationalist": 0.07,
+              "@agrarian": 0.03,
+              "@reform": -0.08
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "border_shame",
+                "source": "Refugees at the Border",
+                "target": "approval_bias",
+                "magnitude": -0.01,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 5,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 4,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "camps",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Interior"
+    },
+    {
+      "id": "integration_debate",
+      "title": "The Integration Question",
+      "description": "Months on, the families you admitted are settling in — and the question of work permits, schools, and citizenship has reached the floor of the assembly, trailed by every prejudice in the country.",
+      "category": "Diplomatic",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "full_integration",
+          "label": "Fast-track work permits",
+          "description": "New taxpayers by year's end; new voters someday.",
+          "effects": {
+            "gdp_growth_delta": 0.002,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@reform": 0.05,
+              "@labour": 0.04,
+              "@nationalist": -0.06
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 8,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "slow_path",
+          "label": "A cautious, staged path",
+          "description": "Reviews, quotas, and committees. Slow satisfies the middle.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 4,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "slow_path",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "student_movement",
+      "title": "The Students Are Marching",
+      "description": "A student movement has grown out of the universities — idealistic, loud, and photogenic. Their demands are a mix of the impossible and the overdue.",
+      "category": "Social",
+      "condition": "<lambda>",
+      "chance": 0.06,
+      "options": [
+        {
+          "id": "meet_leaders",
+          "label": "Meet their leaders",
+          "description": "Tea, cameras, and one achievable concession.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@labour": 0.04,
+              "@reform": 0.03
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 5,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "dismiss_them",
+          "label": "Dismiss them as naive",
+          "description": "'They'll grow up.' Their parents vote, though.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "student_dismissal",
+                "source": "The Students Are Marching",
+                "target": "approval_bias",
+                "magnitude": -0.008,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 4,
+                "decay_duration": 2,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "meet_leaders",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "faith_and_state",
+      "title": "Faith and State",
+      "description": "A dispute over religious symbols in public schools has escalated from a local quarrel into a national argument about what kind of country this is.",
+      "category": "Social",
+      "condition": "<lambda>",
+      "chance": 0.04,
+      "options": [
+        {
+          "id": "secular_line",
+          "label": "Hold a firm secular line",
+          "description": "The state has no favourite gods.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@reform": 0.05,
+              "@nationalist": -0.06
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "tradition_line",
+          "label": "Defend tradition",
+          "description": "Some things predate the republic and will outlast it.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@nationalist": 0.06,
+              "@reform": -0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "local_choice",
+          "label": "Leave it to local councils",
+          "description": "Federalism: the art of making problems someone else's.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 2,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "local_choice",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "natural_disaster",
+      "title": "The River Breaks Its Banks",
+      "description": "A week of rain has put three districts underwater. Farms, mills, and homes are gone; the cameras are already there, and so must you be.",
+      "category": "Wildcard",
+      "condition": "<lambda>",
+      "chance": 0.03,
+      "options": [
+        {
+          "id": "full_mobilisation",
+          "label": "Full national mobilisation",
+          "description": "Army engineers, emergency housing, a visibly present government.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 160.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "disaster_leadership",
+                "source": "The River Breaks Its Banks",
+                "target": "approval_bias",
+                "magnitude": 0.02,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 5,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 10,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "standard_relief",
+          "label": "Standard relief effort",
+          "description": "Competent, procedural, forgettable.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 80.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 4,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "standard_relief",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Interior"
+    },
+    {
+      "id": "assassination_scare",
+      "title": "A Shot Outside the Assembly",
+      "description": "A gunman was wrestled down metres from a cabinet minister this morning. Nobody was hurt — this time. The security services want sweeping new powers by tonight.",
+      "category": "Wildcard",
+      "condition": "shaky_government",
+      "chance": 0.05,
+      "options": [
+        {
+          "id": "security_crackdown",
+          "label": "Grant the sweeping powers",
+          "description": "Safer streets, colder civil liberties.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "@nationalist": 0.06,
+              "@reform": -0.06,
+              "@labour": -0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 8,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "measured_review",
+          "label": "A measured security review",
+          "description": "Fix the failures without rewriting the constitution overnight.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 4,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "soldiers_composure",
+          "label": "A soldier's composure",
+          "description": "You've been shot at by professionals. Walk the same route tomorrow, unhurried, and let the country draw its own conclusion.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "scare_composure",
+                "source": "A Shot Outside the Assembly",
+                "target": "approval_bias",
+                "magnitude": 0.015,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 5,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 2,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": "check"
+        }
+      ],
+      "default_option_id": "measured_review",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Interior"
+    },
+    {
+      "id": "party_leadership_challenge",
+      "title": "A Challenge From Within",
+      "description": "Your own party's leading wing has run out of patience with you. A letter with too many signatures is circulating, and tonight's party meeting has one unwritten agenda item: whether you still speak for them.",
+      "category": "Political",
+      "condition": "restless_own_party",
+      "chance": 0.5,
+      "options": [
+        {
+          "id": "face_down",
+          "label": "Face them down",
+          "description": "Walk into the meeting alone and remind them who wins them elections. It works — this time — and it costs them nothing to hate you quietly.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 12,
+          "follow_up": null,
+          "on_apply": "challenge_face_down",
+          "requires": null
+        },
+        {
+          "id": "accommodate",
+          "label": "Bend toward the wing",
+          "description": "Adopt half their platform as your own. Cheaper than a war — but you become a little more like them.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 5,
+          "follow_up": null,
+          "on_apply": "challenge_accommodate",
+          "requires": null
+        },
+        {
+          "id": "purge",
+          "label": "Purge the ringleaders",
+          "description": "Deselect them, demote them, brief against them. The wing shrinks; the whole party remembers how.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "purge_fallout",
+                "source": "A Challenge From Within",
+                "target": "approval_bias",
+                "magnitude": -0.01,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 5,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 18,
+          "follow_up": null,
+          "on_apply": "challenge_purge",
+          "requires": null
+        }
+      ],
+      "default_option_id": "face_down",
+      "once": false,
+      "cooldown": 18,
+      "audience": "any",
+      "portfolio": null
+    },
+    {
+      "id": "vetrenka_friction",
+      "title": "Another Week on the Line",
+      "description": "The ceasefire holds the way it always holds. This week it was the usual: shooting across the contact line that both sides insist began with the other, a dispute over men held since 1992, and a Krasovan 'peacekeeping' convoy on a road it has no business using. The Foreign Ministry wants to know how loudly to object.",
+      "category": "Diplomatic",
+      "condition": "vetrenka_friction_due",
+      "chance": 0.4,
+      "options": [
+        {
+          "id": "absorb",
+          "label": "Absorb it and say nothing",
+          "description": "Log the violation, brief nobody, move on. It costs nothing this week and a little of something harder to name.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": "vetrenka_absorb",
+          "requires": null
+        },
+        {
+          "id": "protest",
+          "label": "Protest through the mediators",
+          "description": "Put it on the record with the monitors and the embassies. Nothing changes on the ground, but the file grows, and one day the file may matter.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "krasova": -0.03
+          },
+          "pc_cost": 5,
+          "follow_up": null,
+          "on_apply": "vetrenka_protest",
+          "requires": null
+        },
+        {
+          "id": "respond",
+          "label": "Respond in kind",
+          "description": "Return fire, close the road, hold their convoy at the checkpoint for a day. The line quietens for a fortnight afterwards. It always does. It never lasts.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 40.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": 0.06,
+              "social_democrats": -0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "krasova": -0.06
+          },
+          "pc_cost": 8,
+          "follow_up": null,
+          "on_apply": "vetrenka_respond",
+          "requires": null
+        }
+      ],
+      "default_option_id": "absorb",
+      "once": false,
+      "cooldown": 6,
+      "audience": "government",
+      "portfolio": "Foreign Affairs"
+    },
+    {
+      "id": "vetrenka_crossroads",
+      "title": "Someone Offers to Mediate",
+      "description": "A delegation from the international monitors has asked for a meeting, and everyone knows what about. After a year of incidents on the line, there is an appetite abroad for a framework — and the quiet suggestion that if Ardenia will not discuss one, others will discuss it without her. The chamber has been arguing about Vetrenka since before this government existed. Now it has to decide.",
+      "category": "Diplomatic",
+      "condition": "vetrenka_crossroads_ready",
+      "chance": 0.5,
+      "options": [
+        {
+          "id": "settlement",
+          "label": "Enter the peace process",
+          "description": "Negotiate in good faith, with mediators in the room and the possibility of an outcome nobody in the chamber has publicly accepted. Slow, expensive, and the only path that closes this.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.1,
+              "liberal_democrats": 0.06,
+              "social_democrats": 0.06
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 18,
+          "follow_up": null,
+          "on_apply": "vetrenka_open_talks",
+          "requires": null
+        },
+        {
+          "id": "reassert",
+          "label": "Prepare to retake the region",
+          "description": "Reject the framework, mobilise, and finish the war the State Council lost. The army is not what it was in 1992 — and neither, everyone assumes, is the force waiting on the other side.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 260.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": 0.14,
+              "social_democrats": -0.1,
+              "liberal_democrats": -0.06
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "krasova": -0.15
+          },
+          "pc_cost": 25,
+          "follow_up": null,
+          "on_apply": "vetrenka_launch_offensive",
+          "requires": null
+        },
+        {
+          "id": "formalise",
+          "label": "Freeze it properly",
+          "description": "Accept the line as an administrative fact without ever saying the word recognition. Trade resumes, the shooting mostly stops, and a fifth of the country stays gone for as long as anyone can see.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.16,
+              "liberal_democrats": 0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "krasova": 0.1
+          },
+          "pc_cost": 10,
+          "follow_up": null,
+          "on_apply": "vetrenka_formalise",
+          "requires": null
+        }
+      ],
+      "default_option_id": "formalise",
+      "once": true,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Foreign Affairs"
+    },
+    {
+      "id": "vetrenka_settled",
+      "title": "The Framework Is Initialled",
+      "description": "It took eleven months, four venues and a formula on the status question so carefully worded that both delegations were able to tell their capitals they had won. The shooting stops. The displaced get a mechanism. Nobody gets to say the word they wanted to say.",
+      "category": "Diplomatic",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "sign_it",
+          "label": "Sign it",
+          "description": "Put your name on the thing that ends it, and accept that the name on it will be the one history argues about.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.14,
+              "liberal_democrats": 0.08,
+              "social_democrats": 0.08
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "vetrenka_peace_dividend",
+                "source": "The Framework Is Initialled",
+                "target": "approval_bias",
+                "magnitude": 0.025,
+                "onset_delay": 1,
+                "ramp_duration": 3,
+                "hold_duration": null,
+                "decay_duration": 0,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "krasova": 0.2
+          },
+          "pc_cost": 8,
+          "follow_up": null,
+          "on_apply": "vetrenka_settle",
+          "requires": null
+        }
+      ],
+      "default_option_id": "sign_it",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "vetrenka_talks_fail",
+      "title": "The Talks Collapse",
+      "description": "They collapsed over the sequencing of a paragraph nobody outside the room could explain. What everyone understood was the photograph of the empty table, and the fact that the government spent a year of its authority on it and came home with the paragraph unresolved.",
+      "category": "Diplomatic",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "walk_away",
+          "label": "Blame them and walk away",
+          "description": "Publish your version first. The line goes back to what it was, only colder, and next time the mediators call somebody else will take the meeting.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": 0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "vetrenka_failed_talks",
+                "source": "The Talks Collapse",
+                "target": "approval_bias",
+                "magnitude": -0.025,
+                "onset_delay": 0,
+                "ramp_duration": 2,
+                "hold_duration": 8,
+                "decay_duration": 4,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "krasova": -0.08
+          },
+          "pc_cost": 4,
+          "follow_up": null,
+          "on_apply": "vetrenka_talks_failed",
+          "requires": null
+        }
+      ],
+      "default_option_id": "walk_away",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "vetrenka_retaken",
+      "title": "The Flag Over Vetrenka",
+      "description": "Nine days, further than anyone in the ministry privately expected, and the separatist command has withdrawn across the water rather than be encircled. Ardenian troops are in the regional capital. What the pictures do not show is the third of the population that left with them, and the fact that the region is now a place your army has to hold.",
+      "category": "Diplomatic",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "garrison",
+          "label": "Hold it and govern it",
+          "description": "Occupation, administration, reconstruction, and an insurgency that has simply changed address.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 200.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": 0.16,
+              "social_democrats": -0.06
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "vetrenka_victory",
+                "source": "The Flag Over Vetrenka",
+                "target": "approval_bias",
+                "magnitude": 0.03,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 8,
+                "decay_duration": 6,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "krasova": -0.2
+          },
+          "pc_cost": 14,
+          "follow_up": null,
+          "on_apply": "vetrenka_won",
+          "requires": null
+        }
+      ],
+      "default_option_id": "garrison",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "vetrenka_rout",
+      "title": "The Offensive Breaks",
+      "description": "It went wrong on the second day and comprehensively by the fourth. Krasovan aircraft were over the corridor within a week — 'protecting peacekeepers', a phrase their foreign ministry had clearly prepared some time ago. The line is now further inland than it was, and the government is explaining why.",
+      "category": "Diplomatic",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "accept_ceasefire",
+          "label": "Take the ceasefire offered",
+          "description": "Sign what is put in front of you, on worse terms than the one you rejected, and survive the week.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.12,
+              "social_democrats": -0.08,
+              "workers_front": -0.06
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "vetrenka_defeat",
+                "source": "The Offensive Breaks",
+                "target": "approval_bias",
+                "magnitude": -0.045,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 10,
+                "decay_duration": 6,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "krasova": -0.25
+          },
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": "vetrenka_lost",
+          "requires": null
+        }
+      ],
+      "default_option_id": "accept_ceasefire",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "vetrenka_partition",
+      "title": "A Line on the Map, Quietly",
+      "description": "No treaty, no ceremony, no word said aloud. Customs posts become permanent, the crossing reopens on published hours, and the official maps go to the printers with a dotted line where a border is not. The National Conservatives have called it the second February Intervention, which is unfair, and effective.",
+      "category": "Diplomatic",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "let_it_stand",
+          "label": "Let it stand",
+          "description": "Say nothing, sign nothing, change nothing. The cheapest thing this government will ever do, and the one it will be remembered for.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.18,
+              "liberal_democrats": 0.05,
+              "social_democrats": 0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "vetrenka_surrendered",
+                "source": "A Line on the Map, Quietly",
+                "target": "approval_bias",
+                "magnitude": -0.02,
+                "onset_delay": 0,
+                "ramp_duration": 2,
+                "hold_duration": null,
+                "decay_duration": 0,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {
+            "krasova": 0.15
+          },
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": "vetrenka_partitioned",
+          "requires": null
+        }
+      ],
+      "default_option_id": "let_it_stand",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "vetrenka_normalised",
+      "title": "The Crossing Opens on Schedule",
+      "description": "Five months on, the extraordinary has become the timetable. Lorries queue at the crossing on published hours, families visit on day permits, and the argument about what to call the line has moved from the chamber to the letters page. Nobody has forgiven it. Everybody has stopped organising against it.",
+      "category": "Diplomatic",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "say_nothing",
+          "label": "Say nothing and let it settle",
+          "description": "Do not defend it, do not repeat it, do not give it a name. It survives on being boring.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.04,
+              "liberal_democrats": 0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": "vetrenka_normal",
+          "requires": null
+        }
+      ],
+      "default_option_id": "say_nothing",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "vetrenka_backlash",
+      "title": "\"Who Gave It Away?\"",
+      "description": "The National Conservatives have found their campaign and it is a single question, asked at every rally, printed on every leaflet, put to every minister who steps outside. Veterans' associations have joined it. So, quietly, have people who voted for this government. There is no rebutting the question, because the answer is you.",
+      "category": "Domestic",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "ride_it_out",
+          "label": "Ride it out",
+          "description": "Take the losses, refuse the fight you cannot win, and hope the question gets old before the government does.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.1,
+              "social_democrats": -0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "vetrenka_betrayal",
+                "source": "\"Who Gave It Away?\"",
+                "target": "approval_bias",
+                "magnitude": -0.04,
+                "onset_delay": 0,
+                "ramp_duration": 2,
+                "hold_duration": 12,
+                "decay_duration": 8,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": "vetrenka_backlash_lands",
+          "requires": null
+        }
+      ],
+      "default_option_id": "ride_it_out",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "vasca_stirs",
+      "title": "The West Is Talking Again",
+      "description": "A customs post in the western districts was raided in the night — weapons taken, nobody hurt, nobody caught. Two days later a recording surfaced in the markets: an older man's voice, unhurried, talking about a republic that was stolen twice. The Interior Ministry will not say on the record that it is Dorin Vasca. They will not say it isn't.",
+      "category": "Political",
+      "condition": "vasca_stirring",
+      "chance": 0.22,
+      "options": [
+        {
+          "id": "crackdown",
+          "label": "Send the security services west",
+          "description": "Sweep the districts, arrest the network, finish what the Turn of the Year left undone. If the ministries are up to it. They may not be.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 110.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": 0.08,
+              "liberal_democrats": -0.04,
+              "social_democrats": -0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 16,
+          "follow_up": null,
+          "on_apply": "vasca_crackdown",
+          "requires": null
+        },
+        {
+          "id": "amnesty",
+          "label": "Offer terms to the rank and file",
+          "description": "Amnesty for anyone who walks out of the hills by spring; nothing at all for Vasca himself. Isolate the man from the grievance. The National Conservatives will call it surrender before you finish announcing it.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.1,
+              "social_democrats": 0.06,
+              "liberal_democrats": 0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 12,
+          "follow_up": null,
+          "on_apply": "vasca_amnesty",
+          "requires": null
+        },
+        {
+          "id": "downplay",
+          "label": "Call it banditry and move on",
+          "description": "A criminal matter for the district police. Say the name as little as possible; a ghost you refuse to discuss is still a ghost, and cheaper this month.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": "vasca_downplay",
+          "requires": null
+        },
+        {
+          "id": "lead_it",
+          "label": "Go west and run it yourself",
+          "description": "You commanded men in that country once. Take the operation personally, and take the consequences personally with it.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 90.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": 0.1,
+              "liberal_democrats": -0.03
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "vasca_personal_command",
+                "source": "The West Is Talking Again",
+                "target": "approval_bias",
+                "magnitude": 0.015,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 5,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 20,
+          "follow_up": null,
+          "on_apply": "vasca_lead_personally",
+          "requires": "check"
+        }
+      ],
+      "default_option_id": "downplay",
+      "once": true,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": "Interior"
+    },
+    {
+      "id": "vasca_crackdown_works",
+      "title": "They Took Him Near the Border",
+      "description": "It was ordinary in the end. A roadblock, a car that turned around too slowly, and an old man in the back seat who gave a false name to soldiers young enough to be his grandchildren. He asked to be allowed to walk to the vehicle himself. They let him.",
+      "category": "Political",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "public_trial",
+          "label": "Try him in open court",
+          "description": "Everything on the record, in front of the cameras, for as long as it takes. It will be ugly, and it will be the most convincing thing this republic has done.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "liberal_democrats": 0.08,
+              "social_democrats": 0.05,
+              "national_conservatives": -0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "vasca_trial_legitimacy",
+                "source": "They Took Him Near the Border",
+                "target": "approval_bias",
+                "magnitude": 0.02,
+                "onset_delay": 1,
+                "ramp_duration": 2,
+                "hold_duration": 10,
+                "decay_duration": 4,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 10,
+          "follow_up": null,
+          "on_apply": "vasca_taken",
+          "requires": null
+        },
+        {
+          "id": "quiet_detention",
+          "label": "Hold him quietly",
+          "description": "No trial, no platform, no martyr. Also no answer to the question of what kind of state does that.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "liberal_democrats": -0.06,
+              "national_conservatives": 0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": "vasca_taken",
+          "requires": null
+        }
+      ],
+      "default_option_id": "public_trial",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "vasca_crackdown_fails",
+      "title": "The Sweep Comes Back Empty",
+      "description": "Three weeks, four districts, two hundred arrests and not one of them him. What the operation did find was every family in the west with a story about soldiers in their kitchen at four in the morning. Recruitment in the hills has never been easier.",
+      "category": "Political",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "escalate",
+          "label": "Go back in harder",
+          "description": "Double the deployment and accept what that means. The alternative is admitting the first attempt was a mistake, which is politically worse and factually true.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 140.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": 0.07,
+              "social_democrats": -0.08,
+              "workers_front": -0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 18,
+          "follow_up": {
+            "event_id": "vasca_last_stand",
+            "delay": 3,
+            "chance": 1.0
+          },
+          "on_apply": "vasca_backlash",
+          "requires": null
+        },
+        {
+          "id": "pull_back",
+          "label": "Withdraw and say little",
+          "description": "Pull the units back to barracks and let the story die of boredom. The west remains the west.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.08
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "vasca_failed_sweep",
+                "source": "The Sweep Comes Back Empty",
+                "target": "approval_bias",
+                "magnitude": -0.02,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 6,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 4,
+          "follow_up": null,
+          "on_apply": "vasca_pull_back",
+          "requires": null
+        }
+      ],
+      "default_option_id": "pull_back",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "vasca_amnesty_holds",
+      "title": "They Come Down From the Hills",
+      "description": "Not all of them, and not at once. But through the spring they came down in ones and twos — men who had been fighting for a president nobody had seen in a year, and who wanted, mostly, to go home. What is left up there is smaller than it was, older, and no longer an army.",
+      "category": "Political",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "formalise",
+          "label": "Write the amnesty into law",
+          "description": "Make it permanent and make it public, so the next man who considers the hills knows exactly what the door back looks like.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "social_democrats": 0.06,
+              "liberal_democrats": 0.05,
+              "national_conservatives": -0.07
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "vasca_amnesty_law",
+                "source": "They Come Down From the Hills",
+                "target": "approval_bias",
+                "magnitude": 0.015,
+                "onset_delay": 1,
+                "ramp_duration": 2,
+                "hold_duration": 12,
+                "decay_duration": 4,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 12,
+          "follow_up": null,
+          "on_apply": "vasca_amnesty_worked",
+          "requires": null
+        },
+        {
+          "id": "let_it_lie",
+          "label": "Take the win quietly",
+          "description": "No ceremony, no legislation, no chance for anyone to make a speech about it. Some victories keep better in the dark.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": "vasca_amnesty_worked",
+          "requires": null
+        }
+      ],
+      "default_option_id": "let_it_lie",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "vasca_regroups",
+      "title": "He Used the Winter",
+      "description": "The amnesty emptied the fringes of his movement and left the core of it — and the core, it turns out, was what mattered. They spent the quiet months organising. The customs posts are being hit again, competently this time, by men who know which nights the patrols change.",
+      "category": "Political",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "hold_the_line",
+          "label": "Reinforce and contain",
+          "description": "Hold the district boundaries, protect the posts, and accept that this is now a standing commitment rather than a problem you are solving.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 100.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": 0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 12,
+          "follow_up": {
+            "event_id": "vasca_last_stand",
+            "delay": 4,
+            "chance": 1.0
+          },
+          "on_apply": "vasca_grows",
+          "requires": null
+        },
+        {
+          "id": "second_offer",
+          "label": "Offer him terms directly",
+          "description": "Stop pretending he is a criminal matter and treat him as what he is: a man with a following, who might yet be bought with something other than money.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.12,
+              "liberal_democrats": -0.03
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 15,
+          "follow_up": {
+            "event_id": "vasca_last_stand",
+            "delay": 2,
+            "chance": 1.0
+          },
+          "on_apply": "vasca_grows",
+          "requires": null
+        }
+      ],
+      "default_option_id": "hold_the_line",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "vasca_emboldened",
+      "title": "A Government That Does Not Look",
+      "description": "Calling it banditry worked for about a season. It is harder now: the western districts have stopped forwarding tax receipts, two district administrators have resigned citing their families, and the recording in the markets has been followed by three more. He is no longer denying it is him.",
+      "category": "Political",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "belated_action",
+          "label": "Act now, late",
+          "description": "Everything the security option would have cost in the autumn, plus a year of him recruiting on your indifference.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 160.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": 0.05,
+              "social_democrats": -0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 20,
+          "follow_up": {
+            "event_id": "vasca_last_stand",
+            "delay": 3,
+            "chance": 1.0
+          },
+          "on_apply": "vasca_grows",
+          "requires": null
+        },
+        {
+          "id": "keep_ignoring",
+          "label": "Still not a national question",
+          "description": "Say nothing again. The west is a long way from Vashtera and the budget is due.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.06,
+              "liberal_democrats": -0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "vasca_neglect",
+                "source": "A Government That Does Not Look",
+                "target": "approval_bias",
+                "magnitude": -0.02,
+                "onset_delay": 0,
+                "ramp_duration": 2,
+                "hold_duration": 8,
+                "decay_duration": 4,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": {
+            "event_id": "vasca_last_stand",
+            "delay": 5,
+            "chance": 1.0
+          },
+          "on_apply": "vasca_grows",
+          "requires": null
+        }
+      ],
+      "default_option_id": "keep_ignoring",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "vasca_last_stand",
+      "title": "The Compound at Drevna",
+      "description": "They have him located — a farm compound above the Drevna valley, thirty or forty men, and a road in that can be watched but not easily driven. For the first time since the Turn of the Year, the government knows where Dorin Vasca is sleeping. What happens next is a decision, not an intelligence problem.",
+      "category": "Political",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "storm_it",
+          "label": "Take the compound",
+          "description": "Go in before dawn and end it. Whatever is written about how it ended will be written afterwards, by people who weren't there.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 90.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": 0.08,
+              "social_democrats": -0.06,
+              "liberal_democrats": -0.04
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 18,
+          "follow_up": null,
+          "on_apply": "vasca_storm",
+          "requires": null
+        },
+        {
+          "id": "negotiate_exit",
+          "label": "Offer him a plane",
+          "description": "Safe passage, a third country, and a public statement that costs him more than prison would. He is old and he is tired and he has read the same histories you have.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.1,
+              "social_democrats": 0.05,
+              "liberal_democrats": 0.05
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 14,
+          "follow_up": null,
+          "on_apply": "vasca_exile",
+          "requires": null
+        },
+        {
+          "id": "let_it_lie",
+          "label": "Watch the road and wait",
+          "description": "Do nothing, keep the compound under observation, and let the question stay open for whoever governs next.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {
+              "national_conservatives": -0.06
+            },
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": "vasca_unresolved",
+          "requires": null
+        }
+      ],
+      "default_option_id": "let_it_lie",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "a_schemer_stirs",
+      "title": "A Minister Is Counting Votes",
+      "description": "Your whips report a pattern: one of your ministers has been holding meetings that appear on no diary, with people who have no business in their department. Nothing provable. Everything obvious.",
+      "category": "Political",
+      "condition": "schemer_plotting",
+      "chance": 0.45,
+      "options": [
+        {
+          "id": "confront",
+          "label": "Confront them privately",
+          "description": "Summon them, alone, and let them know you know. It forces their hand — one way or the other.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 8,
+          "follow_up": {
+            "event_id": "a_schemer_confronted",
+            "delay": 2,
+            "chance": 1.0
+          },
+          "on_apply": "schemer_noted",
+          "requires": null
+        },
+        {
+          "id": "wait",
+          "label": "Let it play out",
+          "description": "Say nothing. Watch who visits them. A plot you can see is worth more than one you've driven underground — until it isn't.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": {
+            "event_id": "a_schemer_moves",
+            "delay": 3,
+            "chance": 1.0
+          },
+          "on_apply": "schemer_noted",
+          "requires": null
+        }
+      ],
+      "default_option_id": "wait",
+      "once": false,
+      "cooldown": 24,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "a_schemer_confronted",
+      "title": "The Minister Denies Everything",
+      "description": "They sat across from you and denied all of it, pleasantly, for forty minutes. Then, at the door, they mentioned how many colleagues share their concerns about the government's direction. It was not a threat. It was an invoice.",
+      "category": "Political",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "buy_off",
+          "label": "Pay the invoice",
+          "description": "Give them the brief they want and the standing that comes with it. They will be loyal, and they will never forget that you blinked.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 14,
+          "follow_up": null,
+          "on_apply": "schemer_buy_off",
+          "requires": null
+        },
+        {
+          "id": "demand_resignation",
+          "label": "Demand their resignation",
+          "description": "End it now, publicly, while you still hold the initiative. Their allies will not forgive it.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "schemer_purge_cost",
+                "source": "A Minister Is Counting Votes",
+                "target": "approval_bias",
+                "magnitude": -0.012,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 5,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 16,
+          "follow_up": null,
+          "on_apply": "schemer_resign",
+          "requires": null
+        }
+      ],
+      "default_option_id": "buy_off",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "a_schemer_moves",
+      "title": "The Numbers Are Real",
+      "description": "You let it run, and now you can see the shape of it: a bloc of names, a date, and a candidate. Your minister has stopped pretending to count and started pretending to be reluctant.",
+      "category": "Political",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "crush_late",
+          "label": "Break them now, whatever it costs",
+          "description": "Sack them and everyone who signed. It works. The party will be smaller and angrier, and so will you.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 22,
+          "follow_up": null,
+          "on_apply": "schemer_crush",
+          "requires": null
+        },
+        {
+          "id": "expose",
+          "label": "Put the whole thing in the papers",
+          "description": "Brief the lobby correspondents yourself. Plots die in daylight — and so does the fiction that your house is in order.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "schemer_exposed_press",
+                "source": "The Numbers Are Real",
+                "target": "approval_bias",
+                "magnitude": -0.02,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 4,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 10,
+          "follow_up": null,
+          "on_apply": "schemer_expose",
+          "requires": null
+        },
+        {
+          "id": "too_late",
+          "label": "There is nothing left to do",
+          "description": "You have no votes to spare and no time to find them. It happens now, and it happens to you.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": {
+            "event_id": "a_schemer_triumphant",
+            "delay": 1,
+            "chance": 1.0
+          },
+          "on_apply": "schemer_ascend",
+          "requires": null
+        }
+      ],
+      "default_option_id": "too_late",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    },
+    {
+      "id": "a_schemer_triumphant",
+      "title": "Your Minister Has the Numbers",
+      "description": "It is done in a committee room with the lights on. Your minister has the signatures, the press has the story, and the party has a question to answer about who leads it.",
+      "category": "Political",
+      "condition": "never",
+      "chance": 0.0,
+      "options": [
+        {
+          "id": "concede_ground",
+          "label": "Give ground and survive",
+          "description": "Concede the policy, keep the office, and let them believe they won. Most of politics is deciding what losing looks like.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 6,
+          "follow_up": {
+            "event_id": "party_leadership_challenge",
+            "delay": 2,
+            "chance": 0.9
+          },
+          "on_apply": "schemer_ascend",
+          "requires": null
+        },
+        {
+          "id": "fight_it_out",
+          "label": "Make them do it in the open",
+          "description": "No deal. Let them table the motion and count the votes in front of the cameras. You may lose. They will bleed either way.",
+          "effects": {
+            "gdp_growth_delta": 0.0,
+            "unemployment_delta": 0.0,
+            "inflation_delta": 0.0,
+            "budget_revenue_delta": 0.0,
+            "budget_expenditure_delta": 0.0,
+            "faction_loyalty_deltas": {},
+            "faction_power_deltas": {},
+            "modifiers": [
+              {
+                "id": "schemer_open_fight",
+                "source": "Your Minister Has the Numbers",
+                "target": "approval_bias",
+                "magnitude": -0.015,
+                "onset_delay": 0,
+                "ramp_duration": 1,
+                "hold_duration": 6,
+                "decay_duration": 3,
+                "age": 0,
+                "source_id": null,
+                "portfolio": null,
+                "institutional": true
+              }
+            ],
+            "one_time_debt_pct_delta": 0.0
+          },
+          "relation_deltas": {},
+          "pc_cost": 18,
+          "follow_up": {
+            "event_id": "party_leadership_challenge",
+            "delay": 1,
+            "chance": 1.0
+          },
+          "on_apply": "schemer_ascend",
+          "requires": null
+        }
+      ],
+      "default_option_id": "concede_ground",
+      "once": false,
+      "cooldown": 12,
+      "audience": "government",
+      "portfolio": null
+    }
+  ],
+  "ardenia_only_events": [
+    "vasca_amnesty_holds",
+    "vasca_crackdown_fails",
+    "vasca_crackdown_works",
+    "vasca_emboldened",
+    "vasca_last_stand",
+    "vasca_regroups",
+    "vasca_stirs",
+    "vetrenka_backlash",
+    "vetrenka_crossroads",
+    "vetrenka_friction",
+    "vetrenka_normalised",
+    "vetrenka_partition",
+    "vetrenka_retaken",
+    "vetrenka_rout",
+    "vetrenka_settled",
+    "vetrenka_talks_fail"
+  ]
+}
