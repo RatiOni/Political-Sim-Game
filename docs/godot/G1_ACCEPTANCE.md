@@ -6,7 +6,7 @@
 
 **Evaluated revision:** `fd245e33b8772cab6bc3651b86e683bb8264864d`
 
-The vertical-slice architecture remains viable and the rendered Godot client is a clearer national dashboard than the reference client. G1 cannot proceed yet because a genuinely matched seeded journey is not reproducible across fresh client processes, unexpected command arguments can mutate state, and the required headed Windows scaling and live game-feel checks are incomplete.
+The vertical-slice architecture remains viable and the rendered Godot client is a clearer national dashboard than the reference client. G1 cannot proceed yet because a genuinely matched seeded journey is not reproducible across fresh client processes, unexpected command arguments can mutate state, an unexpected worker failure has no recovery path, and the required headed Windows scaling and live game-feel checks are incomplete.
 
 ## Matched journey
 
@@ -24,11 +24,11 @@ With the random stream fixed inside one process, the direct Python route and the
 - expenditure: `13059.418441126416`; and
 - monthly explanation: three digest lines.
 
-The fresh worker loaded the same date, objective, economy headline, and Vashtera regional data, then shut down with exit code `0` and no traceback.
+The fresh worker loaded the same date, objective, economy headline, and full Vashtera snapshot object (`id`, `pressure`, `unemployment`, and `state_reach`), then shut down with exit code `0` and no traceback.
 
 This controlled comparison is not enough to pass the simulation condition. `new_campaign` accepts no campaign configuration or seed, and `CampaignConfig.resolved_seed()` uses Python's process-randomised `hash()`. Three fresh interpreters returned three different “default” seeds (`1672854011`, `1713842757`, and `1023534015`). The two clients therefore cannot currently be given the same explicit seed through the G1 command contract.
 
-Region selection is presentation state, not authoritative campaign state. The Godot scene keeps its selected region while loading a save in the same client, but an arbitrary selection is not restored after client exit; a fresh client starts on its hard-coded Vashtera default. The save correctly retains Vashtera's simulation data, but this does not prove selection persistence.
+Region selection is presentation state, not authoritative campaign state. The Godot scene keeps its selected region while loading a save in the same client, but an arbitrary selection is not restored after client exit; a fresh client starts on its hard-coded Vashtera default. The probe proves that Vashtera's complete authoritative region snapshot survives save, worker exit, and fresh-worker load. It does not prove that the client's selected-region id survives application exit.
 
 ## Acceptance table
 
@@ -36,7 +36,7 @@ Region selection is presentation state, not authoritative campaign state. The Go
 | --- | --- | --- |
 | Simulation | **REVISE** | Controlled direct-Python/worker routing produced identical serialized state after objective adoption and a monthly advance. A normal cross-process matched-seed run is not reproducible because the worker cannot receive a seed and the default seed changes between processes. |
 | Safety | **REVISE** | Unknown commands raise `ValueError` without mutation. Invalid arguments do not: `advance_day` accepted `{"unexpected": true}` and advanced `day_index` from `0` to `1`. Per-command argument shapes are not enforced. |
-| Reliability | **PASS** | Invalid request-shape recovery, clean worker shutdown, live Godot client shutdown, isolated save/load, and fresh-worker reload passed. Malformed bridge responses produce a blocking local error instead of continuing on stale state. Automatic restart after an unexpected worker crash is not claimed. |
+| Reliability | **REVISE** | Invalid request-shape handling, clean worker/client shutdown, isolated save/load, and fresh-worker reload passed. An unexpected worker exit or malformed bridge response safely blocks mutation behind an error overlay, but `app.gd` sets the bridge dead and provides no retry or worker restart. Restarting the application is the only recovery path, so the gate's bridge-failure recovery condition is not met. |
 | Readability | **REVISE** | Rendered captures and geometry checks passed at true 1920×1080 and 1280×720 with no overlap, viewport escape, or sub-44-pixel button. At 1280×720 Godot retained the map, region brief, objective, time controls, decision rail, and report; the Qt reference grew to 1280×780 and clipped the lower dispatch area. Actual Windows 125% and 150% display-scaling sessions were not run, so that part of the condition remains open. |
 | Game feel | **REVISE** | Render inspection shows clearer selection, stronger map hierarchy, visible speed controls, an adjacent objective action, and a dedicated month-end report. The automated scene journey proves input and acknowledgement, but uses a deterministic fake bridge. A headed normal-user journey did not prove live decision arrival and month-end explanation against the reference client. |
 | Performance | **PASS** | In the isolated worker run, startup was `148.755 ms`; 100 normal snapshot round trips had `10.088 ms` median and `11.644 ms` maximum latency. Automated interaction and rendered capture showed no visible stall. This is local development evidence, not packaged-build profiling. |
@@ -54,8 +54,9 @@ Region selection is presentation state, not authoritative campaign state. The Go
 
 1. Make the G1 campaign configuration and seed explicit at the `new_campaign` boundary, and add a fresh-process parity check that does not depend on resetting global RNG inside one interpreter.
 2. Define allowed argument keys for every bridge command and reject extra or missing arguments before any mutation. Add a regression check proving the serialized state is unchanged.
-3. Decide whether selected region must survive client restart. If yes, persist it as client settings/presentation state without changing the campaign save schema; if no, amend the G1 journey wording to require region-data read-back rather than selection persistence.
-4. Run the real Godot and reference clients through the complete journey at 1920×1080, 1280×720, and actual Windows 125% and 150% scaling. Record a human check of decision arrival, action acknowledgement, and the live month-end explanation.
+3. Add a bounded retry/restart path for an unexpected worker or protocol failure, then prove the client can resume from a known authoritative state without silently continuing from stale presentation data.
+4. Decide whether selected region must survive client restart. If yes, persist it as client settings/presentation state without changing the campaign save schema; if no, amend the G1 journey wording to require region-data read-back rather than selection persistence.
+5. Run the real Godot and reference clients through the complete journey at 1920×1080, 1280×720, and actual Windows 125% and 150% scaling. Record a human check of decision arrival, action acknowledgement, and the live month-end explanation.
 
 These are bounded G1 corrections. The evidence does not justify abandoning the Godot presentation path, changing the Python-authoritative architecture, or beginning complete presentation migration in parallel.
 

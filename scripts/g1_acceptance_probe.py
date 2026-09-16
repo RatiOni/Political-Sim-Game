@@ -123,6 +123,8 @@ def _worker_lifecycle_and_performance():
             "objective_id": "reduce_regional_inequality"})
         advanced, _ = exchange(process, 103, "advance_month")
         saved_state = advanced["payload"]["state"]
+        saved_vashtera = next((row for row in saved_state["regions"]
+                               if row["id"] == "vashtera"), None)
         exchange(process, 104, "save", {"slot": "g1_probe"})
         exchange(process, 105, "shutdown")
         process.stdin.close()
@@ -136,12 +138,15 @@ def _worker_lifecycle_and_performance():
         second_exit = process.wait(timeout=15)
         second_errors = process.stderr.read()
         loaded_state = loaded["payload"]["state"]
+        loaded_vashtera = next((row for row in loaded_state["regions"]
+                                if row["id"] == "vashtera"), None)
         readback_matches = all((
             loaded_state["date"] == saved_state["date"],
             loaded_state["reform"]["active"]["objective_id"]
             == "reduce_regional_inequality",
             loaded_state["economy"] == saved_state["economy"],
-            any(row["id"] == "vashtera" for row in loaded_state["regions"]),
+            saved_vashtera is not None,
+            loaded_vashtera == saved_vashtera,
         ))
         lifecycle_passed = all((
             created["ok"], first_exit == 0, second_exit == 0,
@@ -151,7 +156,7 @@ def _worker_lifecycle_and_performance():
         print(f"{'PASS' if lifecycle_passed else 'FAIL'}  fresh-worker save/load and clean shutdown")
         print("  loaded:", loaded_state["date"]["text"],
               loaded_state["reform"]["active"]["objective_id"],
-              loaded_state["economy"], "vashtera_present=True")
+              loaded_state["economy"], f"vashtera={loaded_vashtera}")
         print("  latency_ms:", f"startup={startup_ms:.3f}",
               f"snapshot_median={statistics.median(timings):.3f}",
               f"snapshot_max={max(timings):.3f}")
