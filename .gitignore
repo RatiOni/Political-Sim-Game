@@ -25,6 +25,12 @@ dist/
 .worktrees/
 worktrees/
 
+# Godot generated files and build output
+godot/.godot/
+godot/.mono/
+godot/bin/
+godot/export/
+
 # OS metadata
 .DS_Store
 Thumbs.db
