@@ -92,7 +92,63 @@ func _check(condition: bool, message: String) -> bool:
 		quit(1)
 	return condition
 
+func _bridge_contract_checks() -> bool:
+	var bridge_script = load("res://scripts/bridge/simulation_bridge.gd")
+	var resolver = bridge_script.new()
+	var prior_override := OS.get_environment("ARDENIA_PYTHON_EXECUTABLE")
+	OS.set_environment("ARDENIA_PYTHON_EXECUTABLE", "")
+	var executable: String = resolver._resolve_python(ProjectSettings.globalize_path("res://..").simplify_path())
+	OS.set_environment("ARDENIA_PYTHON_EXECUTABLE", prior_override)
+	resolver.free()
+	if not _check(executable.is_absolute_path() and FileAccess.file_exists(executable), "Default Python resolver finds an absolute worktree-compatible executable"):
+		return false
+
+	var malformed := [
+		{"version": 1, "id": 1, "payload": {}},
+		{"version": 1, "id": 1, "ok": "yes", "payload": {}},
+		{"version": 1, "id": 1, "ok": true},
+		{"version": 1, "id": 1, "ok": true, "payload": []},
+		{"version": 1, "id": 1, "ok": false, "error": []},
+		{"version": 1, "id": 1, "ok": false, "error": {"code": 4, "message": "bad"}},
+		{"version": 1, "id": 1, "ok": false, "error": {"code": "bad"}},
+		{"version": 1, "id": 1, "ok": true, "payload": {}, "extra": true},
+	]
+	for response in malformed:
+		var bridge = bridge_script.new()
+		var failures: Array[String] = []
+		var replies: Array[Dictionary] = []
+		bridge.bridge_failed.connect(func(message: String): failures.append(message))
+		bridge.response_received.connect(func(_id: int, reply: Dictionary): replies.append(reply))
+		bridge._pending[1] = "snapshot"
+		bridge._parse_response(JSON.stringify(response))
+		if not _check(bridge._failed and failures.size() == 1 and replies.is_empty(), "Malformed response fails before emission: " + JSON.stringify(response)):
+			bridge.free()
+			return false
+		bridge.free()
+	var bridge = bridge_script.new()
+	var replies: Array[Dictionary] = []
+	bridge.response_received.connect(func(_id: int, reply: Dictionary): replies.append(reply))
+	bridge._pending[2] = "snapshot"
+	bridge._parse_response(JSON.stringify({"version": 1, "id": 2, "ok": true, "payload": {"state": {}}}))
+	if not _check(replies.size() == 1 and not bridge._failed, "Complete protocol response emits once"):
+		bridge.free()
+		return false
+	bridge.free()
+	bridge = bridge_script.new()
+	replies = []
+	bridge.response_received.connect(func(_id: int, reply: Dictionary): replies.append(reply))
+	bridge._pending[3] = "load"
+	bridge._parse_response(JSON.stringify({"version": 1, "id": 3, "ok": false, "error": {"code": "bad_request", "message": "No save."}}))
+	if not _check(replies.size() == 1 and not bridge._failed, "Complete protocol failure envelope emits once"):
+		bridge.free()
+		return false
+	bridge.free()
+	print("PASS: default Python resolution and strict response-envelope validation")
+	return true
+
 func _run() -> void:
+	if not _bridge_contract_checks():
+		return
 	if not _check(ResourceLoader.exists("res://scenes/main.tscn"), "main.tscn exists"):
 		return
 	var scene = load("res://scenes/main.tscn").instantiate()

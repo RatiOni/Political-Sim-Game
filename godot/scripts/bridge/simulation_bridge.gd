@@ -5,7 +5,6 @@ signal bridge_failed(message: String)
 
 const PROTOCOL_VERSION := 1
 const LOG_PATH := "user://logs/godot_bridge.log"
-const DEFAULT_PYTHON := ".venv\\Scripts\\python.exe"
 const SHUTDOWN_TIMEOUT_MS := 400
 
 var _pipe: Dictionary = {}
@@ -54,10 +53,11 @@ func _ensure_worker() -> bool:
 	if not _pipe.is_empty():
 		return _is_running()
 	_open_log()
-	var executable := OS.get_environment("ARDENIA_PYTHON_EXECUTABLE")
-	if executable.is_empty():
-		executable = DEFAULT_PYTHON
 	var repository_root := ProjectSettings.globalize_path("res://..").simplify_path()
+	var executable := _resolve_python(repository_root)
+	if executable.is_empty():
+		_fail("The Ardenia Python environment could not be found. See %s." % LOG_PATH)
+		return false
 	var python_path := OS.get_environment("PYTHONPATH")
 	OS.set_environment("PYTHONPATH", repository_root if python_path.is_empty() else repository_root + ";" + python_path)
 	_pipe = OS.execute_with_pipe(
@@ -67,6 +67,26 @@ func _ensure_worker() -> bool:
 		return false
 	_append_log("Started simulation worker (pid %s).\n" % _pipe["pid"])
 	return true
+
+func _resolve_python(repository_root: String) -> String:
+	var override := OS.get_environment("ARDENIA_PYTHON_EXECUTABLE")
+	if not override.is_empty():
+		var candidate := override if override.is_absolute_path() else repository_root.path_join(override)
+		candidate = candidate.simplify_path()
+		return candidate if FileAccess.file_exists(candidate) else ""
+	var local := repository_root.path_join(".venv/Scripts/python.exe").simplify_path()
+	if FileAccess.file_exists(local):
+		return local
+	var output := []
+	var exit_code := OS.execute("git", PackedStringArray([
+		"-C", repository_root, "rev-parse", "--path-format=absolute", "--git-common-dir"
+	]), output, true)
+	if exit_code == 0 and not output.is_empty():
+		var common_git_directory := str(output[0]).strip_edges().simplify_path()
+		var shared := common_git_directory.get_base_dir().path_join(".venv/Scripts/python.exe").simplify_path()
+		if FileAccess.file_exists(shared):
+			return shared
+	return ""
 
 func _write_request(request_id: int, command: String, args: Dictionary) -> void:
 	var stream: FileAccess = _pipe.get("stdio")
@@ -113,10 +133,7 @@ func _parse_lines() -> void:
 
 func _parse_response(line: String) -> void:
 	var response = JSON.parse_string(line)
-	if not response is Dictionary \
-			or not _is_json_integer(response.get("version")) \
-			or int(response["version"]) != PROTOCOL_VERSION \
-			or not _is_json_integer(response.get("id")):
+	if not _valid_response(response):
 		_fail("The simulation worker returned an invalid protocol response. See %s." % LOG_PATH)
 		return
 	var request_id: int = response["id"]
@@ -125,6 +142,24 @@ func _parse_response(line: String) -> void:
 		return
 	_pending.erase(request_id)
 	response_received.emit(request_id, response)
+
+func _valid_response(response: Variant) -> bool:
+	if not response is Dictionary \
+			or response.size() != 4 \
+			or not _is_json_integer(response.get("version")) \
+			or int(response["version"]) != PROTOCOL_VERSION \
+			or not _is_json_integer(response.get("id")) \
+			or typeof(response.get("ok")) != TYPE_BOOL:
+		return false
+	if response["ok"]:
+		return response.has("payload") and response["payload"] is Dictionary \
+			and not response.has("error")
+	if not response.has("error") or not response["error"] is Dictionary \
+			or response.has("payload"):
+		return false
+	var error: Dictionary = response["error"]
+	return error.size() == 2 and typeof(error.get("code")) == TYPE_STRING \
+		and typeof(error.get("message")) == TYPE_STRING
 
 func _is_json_integer(value: Variant) -> bool:
 	return (typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT) \

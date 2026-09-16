@@ -24,7 +24,12 @@ try {
         throw "Godot bridge checks failed with exit code $LASTEXITCODE"
     }
     $env:ARDENIA_PYTHON_EXECUTABLE = $python
-    $env:PYTHONPATH = $repositoryRoot
+    $env:PYTHONPATH = if ([string]::IsNullOrEmpty($env:PYTHONPATH)) {
+        $repositoryRoot
+    }
+    else {
+        "$repositoryRoot;$env:PYTHONPATH"
+    }
     & $godot --path godot
     exit $LASTEXITCODE
 }
