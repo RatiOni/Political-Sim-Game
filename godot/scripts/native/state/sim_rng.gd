@@ -59,6 +59,20 @@ static func from_seed(seed: int) -> SimRng:
 	return rng
 
 
+## Direct PCG32 seeding — bypasses from_seed's SplitMix64 mixing and sets
+## (initstate, initseq) exactly as given, matching pcg_basic.c's
+## `pcg32_srandom_r`. Production code should call `from_seed` (a single seed
+## is easier to carry around than a matched pair, and mixing avoids a weak
+## stream from a poorly-chosen raw seed); this exists so this file's
+## algorithm can be pinned against PCG32's own published reference vectors —
+## see godot/tests/native/test_foundation_mechanics.gd — without reaching
+## into private members to do it.
+static func from_state_seq(initstate: int, initseq: int) -> SimRng:
+	var rng := SimRng.new()
+	rng._seed(initstate, initseq)
+	return rng
+
+
 ## The save/load boundary: RNG state persists as a plain Dictionary inside
 ## the save file, exactly like any other serialized GameState field.
 func to_dict() -> Dictionary:
@@ -111,6 +125,12 @@ func _seed(initstate: int, initseq: int) -> void:
 
 func _step() -> int:
 	var oldstate := _state
+	# No masking needed here specifically: uint64 modular arithmetic and
+	# signed-int64 two's-complement wraparound are the same bit pattern for
+	# both `+` and `*`, and GDScript already wraps silently on overflow (see
+	# the file header) — so this line is bit-identical to the reference
+	# `state = state * 6364136223846793005 + inc` even though `_state`/
+	# `oldstate` are declared as (signed) `int`.
 	_state = oldstate * MULT_64 + _inc
 	var xorshifted: int = _ushr64(_ushr64(oldstate, 18) ^ oldstate, 27) & MASK_32
 	var rot: int = _ushr64(oldstate, 59) & 0x1F

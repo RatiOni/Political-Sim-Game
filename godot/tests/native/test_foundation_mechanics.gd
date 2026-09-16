@@ -229,6 +229,30 @@ func _test_age_all(t) -> void:
 
 # ── SimRng ───────────────────────────────────────────────────────────────
 
+func _test_rng_matches_published_reference_vector(t) -> void:
+	# Pins the actual PCG32 algorithm (shift amounts, rotate direction, LCG
+	# constant) against the generator's own published reference vector, so a
+	# future accidental edit to _step()/_ushr64()/_rotr32() that broke
+	# correctness while still passing every self-consistency test above
+	# (determinism, round-trip, output ranges) would be caught here.
+	#
+	# Reference: the official pcg32 demo seeds via
+	# `pcg32_srandom_r(&rng, 42u, 54u)` (see pcg_basic.c / pcg-random.org)
+	# and its first output words, in hex, are:
+	#   a15c02b7 7b47f409 ba1d3330 83d2f293 bfa4784b cbed606e ...
+	# `from_state_seq` seeds PCG32 directly with that same (initstate,
+	# initseq) pair, bypassing from_seed's SplitMix64 mixing, so this
+	# reproduces the reference sequence exactly rather than some mixed
+	# derivative of it.
+	var rng := SimRng.from_state_seq(42, 54)
+	var expected_hex := [
+		"a15c02b7", "7b47f409", "ba1d3330", "83d2f293", "bfa4784b", "cbed606e",
+	]
+	for expected in expected_hex:
+		var actual := "%08x" % rng.next_u32()
+		t.equal(actual, expected, "PCG32 reference vector (seed 42, seq 54): next draw")
+
+
 func _test_rng_determinism(t) -> void:
 	var a := SimRng.from_seed(12345)
 	var b := SimRng.from_seed(12345)
@@ -329,6 +353,7 @@ func _initialize() -> void:
 	_test_modifier_institutional_flag_not_discounted_here(t)
 	_test_age_all(t)
 
+	_test_rng_matches_published_reference_vector(t)
 	_test_rng_determinism(t)
 	_test_rng_round_trip(t)
 	_test_rng_rejects_malformed_seed(t)
