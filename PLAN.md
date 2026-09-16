@@ -107,6 +107,208 @@ appears.
 *Playable result:* the current dashboard runs with zero Python. Date advances,
 campaigns start, saves reload.
 
+#### Phase 1 tasks
+
+Decomposed for subagent dispatch. No task here produces or checks oracle
+parity — tests are functional (does the mechanic behave correctly), not
+comparative (does it match Python's number). State is typed GDScript classes;
+raw `Dictionary`/`Array` is normal and expected at JSON I/O boundaries (content
+loading, save files) but never the canonical in-memory representation of
+campaign state.
+
+### Task 1: Native content export and content repository
+
+**Files:**
+- Create: `scripts/native_port/export_native_content.py`
+- Create: `godot/data/native/catalog_manifest.json`
+- Create: `godot/data/native/countries/*.json` (all nine countries)
+- Create: `godot/data/native/catalogs/*.json` (bills, budget envelopes, reform
+  objectives/instruments/scopes, traits, events, dispatch pools, press
+  templates, household groups, regions and programmes, backgrounds,
+  difficulties)
+- Create: `godot/data/native/lore/*.json` (the Ardenian lore package —
+  timeline, geography, society, institutions, economy, parties, figures)
+- Create: `godot/scripts/native/content/content_repository.gd`
+- Create: `godot/tests/native/test_content_repository.gd`
+
+**Interfaces:**
+- Produces: `ContentRepository.load_all() -> Dictionary` (raw content lookup by
+  id, keyed by catalog — this is the JSON I/O boundary, not campaign state)
+- Produces: development command `export_native_content.py --write`, the only
+  writer of `godot/data/native/**/*.json`
+
+**Read first:** `content/loader.py`, `content/countries/*.json`,
+`content/bills.py`, `content/budget.py`, `content/reforms.py`,
+`content/traits.py`, `content/events.py`, `content/households.py`,
+`content/regions.py`, `content/campaign_content.py`, `content/lore/` — these
+are the design reference. Reproduce their *content and structure*, not their
+Python code. Python callables (event conditions, requirements, appliers)
+become stable symbolic string ids; do not try to serialize Python behavior —
+Task 2's game systems will implement the actual logic natively in GDScript
+against these ids.
+
+- [ ] Write `export_native_content.py`: reads the Python content modules via
+      the existing `.venv` interpreter, emits one JSON file per catalog listed
+      above, and writes `catalog_manifest.json` (schema version, file list,
+      per-catalog id counts).
+- [ ] Run `export_native_content.py --write` twice; require no diff on the
+      second run (deterministic export).
+- [ ] Implement `ContentRepository.load_all()`: reads `catalog_manifest.json`,
+      loads every listed file, rejects duplicate ids within a catalog, and
+      returns clear errors (not partial data) on a missing or malformed file.
+- [ ] Write `test_content_repository.gd`: loads all content, asserts all nine
+      countries are present with their factions/wings, asserts the Ardenian
+      bloc set (twelve currents) loads correctly, asserts every catalog listed
+      in the manifest is non-empty, asserts duplicate-id rejection actually
+      rejects.
+- [ ] Run the test via the existing N0 harness:
+      `& "D:\Godot\Godot_v4.7.2-stable_win64_console.exe" --headless --path godot --script res://tests/native/test_content_repository.gd`
+- [ ] Run `D:\Political Sim Game\.venv\Scripts\python.exe smoke_test.py` to
+      confirm the Python source is untouched and still passes (it is the
+      reference; this task must not edit it).
+- [ ] Commit `feat(godot): export native content and add content repository`.
+
+### Task 2: Typed campaign state and the new-campaign factory
+
+**Files:**
+- Create: `godot/scripts/native/state/game_state.gd` (typed class, `extends RefCounted`)
+- Create: `godot/scripts/native/state/country.gd`, `faction.gd`, `region.gd`,
+  `household_group.gd`, `minister.gd`, `economy.gd`, `modifier.gd`,
+  `annual_budget.gd`, `ministry_state.gd` (typed classes matching
+  `models/*.py` field-for-field, as a design reference)
+- Create: `godot/scripts/native/state/game_factory.gd`
+- Create: `godot/scripts/native/state/state_validator.gd`
+- Create: `godot/tests/native/test_game_factory.gd`
+
+**Interfaces:**
+- Consumes: `ContentRepository.load_all()` from Task 1.
+- Produces: `GameFactory.new_campaign(config: Dictionary) -> GameState` —
+  `config` carries country (Ardenia only — validate and reject others),
+  background id, difficulty id, opening role, and an explicit integer seed.
+- Produces: `StateValidator.validate(state: GameState) -> PackedStringArray` —
+  empty array means valid.
+
+**Read first:** `content/loader.py: build_state_for`, `game_state.py`,
+`models/country.py`, `models/faction.py`, `engine/campaign.py`.
+
+- [ ] Write `test_game_factory.gd`: constructs a campaign with a fixed seed,
+      asserts Ardenia's player/party/government are set correctly for each of
+      the three opening roles (contextual/government/opposition), asserts all
+      eight other countries exist as world actors with bilateral relations
+      wired for every country pair, asserts `StateValidator.validate()` passes
+      on the result.
+- [ ] Run the test; expect missing-script failure.
+- [ ] Implement the typed state classes and `GameFactory`. Ardenia is the only
+      player-selectable country — enforce this the same way
+      `ui/menu.py: PLAYABLE_COUNTRY_IDS` does in the Python build, referenced
+      as the design pattern, not imported.
+- [ ] Implement `StateValidator`: required fields present, faction seats sum
+      correctly per country, relation symmetry, numeric ranges sane.
+- [ ] Run the test; all assertions pass.
+- [ ] Commit `feat(godot): add typed native campaign state and factory`.
+
+### Task 3: Calendar, modifiers, and serializable RNG
+
+**Files:**
+- Create: `godot/scripts/native/state/sim_rng.gd`
+- Create: `godot/scripts/native/sim/calendar.gd`
+- Create: `godot/scripts/native/sim/modifiers.gd`
+- Create: `godot/tests/native/test_foundation_mechanics.gd`
+
+**Interfaces:**
+- Produces: `SimRng.from_seed(seed: int)`, `next_u32() -> int`,
+  `next_float() -> float`, `choose_index(size: int) -> int`,
+  `to_dict() -> Dictionary`, `from_dict(data: Dictionary) -> SimRng` (the save
+  boundary — RNG state persists as a dict inside the save file, same as any
+  other serialized field).
+- Produces: `Calendar.advance_day(state: GameState) -> bool` (return value:
+  did the month roll over).
+- Produces: `Modifiers.current_value(modifier: Modifier) -> float`,
+  `is_expired(modifier: Modifier) -> bool`, `age_all(state: GameState) -> void`.
+
+**Read first:** `models/modifiers.py` (the onset/ramp/hold/decay lifecycle —
+"the engine recomputes each modifier's current value fresh every turn —
+nothing accumulates" is load-bearing, per `CLAUDE.md`), the calendar logic in
+`engine/turn.py` and `game_state.py`.
+
+- [ ] Write failing tests: leap years, month/year rollover, `day_index`
+      continuity, modifier onset/ramp/hold/decay/expiry (including
+      `institutional=False` never being discounted), RNG replay after a
+      `to_dict()`/`from_dict()` round trip, RNG rejecting a malformed seed.
+- [ ] Run test; expect missing-script failure.
+- [ ] Implement one small, well-known PRNG algorithm (e.g. PCG32 or
+      xorshift64*) using GDScript's signed 64-bit `int` with explicit masking
+      after every transition — GDScript has no unsigned 64-bit type and
+      silently wraps on overflow, so mask deliberately rather than relying on
+      wraparound. Document the algorithm and constants in the file. This RNG
+      only needs to be deterministic *within the Godot build* across
+      platforms — it is not required to reproduce Python's `random` stream.
+- [ ] Port the calendar and modifier lifecycle logic as a design reference —
+      same phases, same formulas — written idiomatically in GDScript.
+- [ ] Run the tests twice; require byte-identical RNG sequence across runs
+      and all calendar/modifier assertions passing.
+- [ ] Commit `feat(godot): add native calendar, modifiers, and rng`.
+
+### Task 4: Native persistence and the NativeGame state owner
+
+**Files:**
+- Create: `godot/scripts/native/state/save_store.gd`
+- Create: `godot/scripts/native/native_game.gd`
+- Modify: `godot/project.godot` (register `NativeGame` autoload; remove
+  `SimulationBridge` from production autoloads)
+- Modify: `godot/scripts/app.gd`, `godot/scripts/menu.gd`,
+  `godot/scripts/game_flow.gd` (read from `NativeGame` instead of submitting
+  bridge requests)
+- Create: `godot/tests/native/test_native_persistence.gd`
+- Create: `godot/tests/native/test_native_game.gd`
+
+**Interfaces:**
+- Consumes: `GameFactory`, `SimRng`, `Calendar`, `Modifiers` from Tasks 2-3.
+- Produces: `SaveStore.save_slot(slot: String, state: GameState) -> Dictionary`
+  and `load_slot(slot: String) -> Dictionary`, each `{ok, state|error}`. Save
+  format is native-only — no Python save compatibility required (Global
+  Constraint: no existing players).
+- Produces `NativeGame` (autoload) signals `state_changed(snapshot)`,
+  `fatal_error(message)`; methods `new_campaign(config)`, `advance_day()`,
+  `save(slot)`, `load(slot)`, `snapshot()`.
+
+**Read first:** `engine/persistence.py` (the hand-written, versioned,
+tolerant-of-missing-fields approach is the pattern worth keeping, even though
+the schema itself is new), the current bridge-era `godot/scripts/app.gd` and
+`godot/scripts/bridge/simulation_bridge.gd` (being replaced — read for the
+UI-facing contract shape, e.g. what `apply_snapshot` expects, so the swap is
+close to drop-in).
+
+- [ ] Write failing tests: exact save/load round trip including RNG
+      continuity, corrupt-JSON rejection, unsupported version rejection, path
+      traversal rejected by a slot regex `^[a-z0-9_-]{1,48}$`, atomic
+      write-then-replace survives an interrupted write (verify via a `.tmp`
+      file left behind and a `.bak` recovery path).
+- [ ] Write a `NativeGame` test: start seed `424242`, advance one day, save,
+      replace in-memory state with a second campaign, load, assert full
+      restoration including RNG state.
+- [ ] Run tests; expect missing-script failures.
+- [ ] Implement `SaveStore` under `user://saves/` with atomic
+      write-then-replace and `.bak` recovery.
+- [ ] Implement `NativeGame`: one private state field, one in-flight-operation
+      guard, calls `StateValidator` after any state replacement (new
+      campaign or load), returns deep-duplicated read-only snapshots.
+- [ ] Register `NativeGame` as the sole production autoload; remove
+      `SimulationBridge` from `project.godot`'s production autoload list (it
+      may remain in the tree for reference but must not be loaded by
+      `scenes/menu.tscn` or `scenes/main.tscn`).
+- [ ] Update `app.gd`/`menu.gd`/`game_flow.gd` to call `NativeGame` directly
+      (no request/response round trip needed — it's in-process now) instead of
+      `_bridge.request(...)`. Keep the existing UI layout, header, map, and
+      Save/Load buttons from the bridge era; only the data source changes.
+- [ ] Run all native tests and the full N0 harness; grep the Godot process
+      tree during a manual launch to confirm no Python child process starts.
+- [ ] Manually launch
+      `& "D:\Godot\Godot_v4.7.2-stable_win64_console.exe" --path godot` and
+      play through: new campaign, region selection, objective adoption, a few
+      days of advance, save, quit, relaunch, continue.
+- [ ] Commit `feat(godot): own native campaign lifecycle and cut the bridge`.
+
 ### Phase 2 — The monthly simulation
 
 Port the monthly pulse as game systems, in the phase order `engine/turn.py`
