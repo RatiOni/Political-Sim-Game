@@ -219,6 +219,99 @@ def worker_round_trip_preserves_saved_objective():
                 process.wait()
 
 
+def _spawn_worker():
+    return subprocess.Popen(
+        [sys.executable, "-u", "-m", "godot_bridge.worker"],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, encoding="utf-8")
+
+
+def _exchange(process, request_id, command, args=None):
+    request = {"version": 1, "id": request_id,
+               "command": command, "args": args or {}}
+    process.stdin.write(json.dumps(request, separators=(",", ":")) + "\n")
+    process.stdin.flush()
+    line = process.stdout.readline()
+    assert line, "worker exited without returning a response"
+    response = json.loads(line)
+    assert response["id"] == request_id
+    return response
+
+
+def _stop(process):
+    try:
+        if process.poll() is None:
+            _exchange(process, 999, "shutdown")
+            process.stdin.close()
+            process.wait(timeout=15)
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait()
+
+
+def seeded_new_campaign_is_reproducible_across_fresh_workers():
+    with tempfile.TemporaryDirectory() as user_data:
+        environment = os.environ.copy()
+        environment["ARDENIA_USER_DATA_DIR"] = user_data
+        processes = [subprocess.Popen(
+            [sys.executable, "-u", "-m", "godot_bridge.worker"],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, text=True, encoding="utf-8",
+            env=environment) for _ in range(2)]
+        try:
+            snapshots = []
+            for process in processes:
+                created = _exchange(process, 1, "new_campaign",
+                                    {"seed": 424242})
+                assert created["ok"] is True
+                snapshot = _exchange(process, 2, "snapshot")
+                assert snapshot["ok"] is True
+                snapshots.append(snapshot["payload"])
+            assert (json.dumps(snapshots[0], sort_keys=True)
+                    == json.dumps(snapshots[1], sort_keys=True))
+        finally:
+            for process in processes:
+                _stop(process)
+
+        process = _spawn_worker()
+        try:
+            rejected_bool = _exchange(
+                process, 1, "new_campaign", {"seed": True})
+            assert rejected_bool["ok"] is False
+            assert rejected_bool["error"]["code"] == "bad_request"
+            rejected_str = _exchange(
+                process, 2, "new_campaign", {"seed": "abc"})
+            assert rejected_str["ok"] is False
+            assert rejected_str["error"]["code"] == "bad_request"
+        finally:
+            _stop(process)
+
+
+def unexpected_arguments_are_rejected_without_mutation():
+    process = _spawn_worker()
+    try:
+        assert _exchange(process, 1, "new_campaign")["ok"] is True
+        before = _exchange(process, 2, "snapshot")
+        day_index = before["payload"]["state"]["date"]["day_index"]
+
+        rejected_day = _exchange(
+            process, 3, "advance_day", {"unexpected": True})
+        assert rejected_day["ok"] is False
+        assert rejected_day["error"]["code"] == "bad_request"
+
+        rejected_objective = _exchange(process, 4, "adopt_objective", {
+            "objective_id": "reduce_regional_inequality", "extra": 1})
+        assert rejected_objective["ok"] is False
+        assert rejected_objective["error"]["code"] == "bad_request"
+
+        after = _exchange(process, 5, "snapshot")
+        assert after["payload"]["state"]["date"]["day_index"] == day_index
+        assert after["payload"]["state"]["reform"]["active"] is None
+    finally:
+        _stop(process)
+
+
 if __name__ == "__main__":
     checks = [("canonical state is JSON serializable",
                canonical_state_is_json_serializable),
@@ -235,7 +328,11 @@ if __name__ == "__main__":
                ("worker survives an invalid command shape",
                 worker_survives_an_invalid_command_shape),
                ("worker round trip preserves saved objective",
-                worker_round_trip_preserves_saved_objective)]
+                worker_round_trip_preserves_saved_objective),
+               ("seeded new_campaign is reproducible across fresh workers",
+                seeded_new_campaign_is_reproducible_across_fresh_workers),
+               ("unexpected arguments are rejected without mutation",
+                unexpected_arguments_are_rejected_without_mutation)]
     for label, test in checks:
         check(label, test)
     print(f"ALL {len(checks)} GODOT BRIDGE CHECKS PASSED")
