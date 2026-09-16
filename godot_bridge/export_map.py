@@ -61,8 +61,8 @@ def export_map() -> dict:
 
 def main() -> None:
     output = Path(__file__).resolve().parent.parent / "godot" / "data" / "ardenia_map.json"
-    output.write_text(json.dumps(export_map(), indent=2, ensure_ascii=False) + "\n",
-                      encoding="utf-8")
+    with output.open("w", encoding="utf-8", newline="\n") as stream:
+        stream.write(json.dumps(export_map(), indent=2, ensure_ascii=False) + "\n")
 
 
 if __name__ == "__main__":

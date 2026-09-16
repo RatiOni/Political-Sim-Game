@@ -3,7 +3,9 @@
 import json
 import subprocess
 import sys
+from pathlib import Path
 
+from content.lore import REGIONS
 from engine import digest, persistence
 from engine.campaign import default_config, generate_campaign
 from engine.turn import TurnEngine
@@ -44,12 +46,16 @@ def map_export_preserves_live_region_ids():
     state = generate_campaign(default_config())
     payload = export_map()
     exported = {item["id"] for item in payload["regions"]}
-    assert exported == set(state.regions)
+    assert set(payload) == {"outline", "regions", "labels", "cities", "routes",
+                            "ports", "ceasefire_line", "neighbors"}
+    assert exported == set(state.regions) == {region["id"] for region in REGIONS}
     assert len(exported) == 9
     assert all(len(item["points"]) >= 3 for item in payload["regions"])
     assert all(0 <= coordinate <= 100
                for item in payload["regions"]
                for point in item["points"] for coordinate in point)
+    asset = Path(__file__).parent / "godot" / "data" / "ardenia_map.json"
+    assert json.loads(asset.read_text(encoding="utf-8")) == payload
 
 
 def protocol_rejects_untrusted_shapes():
