@@ -2,6 +2,9 @@
 
 | id | Python source | native target | proof type | fixture/test | state |
 | --- | --- | --- | --- | --- | --- |
+| n0.contract_runner | N/A — port infrastructure | `test_support.gd` + `run_contract_tests.gd` | exact | `run_contract_tests.gd` | PASS |
+| n0.oracle_fixture | `engine/campaign.py` + `engine/persistence.py` | frozen opening-state oracle only; no runtime implementation claimed | exact | government/opposition seed `424242` fixtures | PASS |
+| n0.cross_runtime_probe | frozen government oracle fixture | `emit_fixture_snapshot.gd` + `compare_native_snapshot.py` | exact + tolerant numeric | emitter round trip and deliberate `$.country.economy.gdp` mismatch | PASS |
 | engine.__init__ | `engine/__init__.py` | TBD | contract | TBD | PLANNED |
 | engine.actions | `engine/actions.py` | TBD | contract | TBD | PLANNED |
 | engine.budget | `engine/budget.py` | TBD | contract | TBD | PLANNED |
