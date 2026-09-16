@@ -1,8 +1,10 @@
 """Focused checks for the Godot migration contract."""
 
 import json
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from content.lore import REGIONS
@@ -171,6 +173,52 @@ def worker_survives_an_invalid_command_shape():
             process.wait()
 
 
+def worker_round_trip_preserves_saved_objective():
+    with tempfile.TemporaryDirectory() as user_data:
+        environment = os.environ.copy()
+        environment["ARDENIA_USER_DATA_DIR"] = user_data
+        process = subprocess.Popen(
+            [sys.executable, "-u", "-m", "godot_bridge.worker"],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, encoding="utf-8", env=environment)
+
+        def exchange(request_id, command, args=None):
+            request = {"version": 1, "id": request_id,
+                       "command": command, "args": args or {}}
+            process.stdin.write(json.dumps(request, separators=(",", ":")) + "\n")
+            process.stdin.flush()
+            line = process.stdout.readline()
+            assert line.endswith("\n"), "worker response was not one JSON line"
+            response = json.loads(line)
+            assert response["id"] == request_id
+            assert response["version"] == 1
+            return response
+
+        try:
+            assert exchange(20, "new_campaign")["ok"] is True
+            initial = exchange(21, "snapshot")
+            assert initial["payload"]["state"]["reform"]["active"] is None
+            adopted = exchange(22, "adopt_objective", {
+                "objective_id": "reduce_regional_inequality"})
+            assert adopted["payload"]["result"]["success"] is True
+            advanced = exchange(23, "advance_day")
+            saved_day = advanced["payload"]["state"]["date"]["day_index"]
+            assert exchange(24, "save", {"slot": "godot_slice"})["ok"] is True
+            loaded = exchange(25, "load", {"slot": "godot_slice"})
+            state = loaded["payload"]["state"]
+            assert state["date"]["day_index"] == saved_day
+            assert state["reform"]["active"]["objective_id"] == \
+                "reduce_regional_inequality"
+            assert exchange(26, "shutdown")["payload"] == {"shutdown": True}
+            process.stdin.close()
+            assert process.wait(timeout=15) == 0
+            assert "Traceback" not in process.stderr.read()
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+
+
 if __name__ == "__main__":
     checks = [("canonical state is JSON serializable",
                canonical_state_is_json_serializable),
@@ -184,8 +232,10 @@ if __name__ == "__main__":
                allowed_commands_use_existing_engine_paths),
               ("worker requires an explicit campaign",
                worker_requires_an_explicit_campaign),
-              ("worker survives an invalid command shape",
-               worker_survives_an_invalid_command_shape)]
+               ("worker survives an invalid command shape",
+                worker_survives_an_invalid_command_shape),
+               ("worker round trip preserves saved objective",
+                worker_round_trip_preserves_saved_objective)]
     for label, test in checks:
         check(label, test)
     print(f"ALL {len(checks)} GODOT BRIDGE CHECKS PASSED")

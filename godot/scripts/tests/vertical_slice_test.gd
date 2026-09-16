@@ -23,8 +23,65 @@ static func fixture() -> Dictionary:
 			{"id": "workers", "name": "Workers' Front", "seats": 88, "support": 0.29, "loyalty": 0.4, "in_coalition": false, "color": "#b86b5b"}],
 		"decisions": [{"id": "fixture_review", "priority": 1, "tag": "REVIEW", "title": "Regional pressure: Vashtera", "detail": "Review the selected region before choosing an intervention.", "page": "regions", "authority": "Prime Minister", "days_remaining": 3, "due_text": "3 days remaining", "region_id": "vashtera"}],
 		"calendar": [], "digest": ["Static report preview. Monthly causes and consequences will be supplied by the Python engine."],
-		"reform": {"active": null, "objectives": []},
+		"reform": {"active": null, "objectives": [{"id": "reduce_regional_inequality", "name": "Reduce regional inequality", "portfolio": "Interior", "body": "Close the pressure gap.", "score": 0.72, "urgency": "Urgent"}]},
 		"dispatches": ["PRESENTATION FIXTURE — figures and briefing text are synthetic, not a campaign.", "Select a region on the map or use the arrow keys while the map has focus."]}
+
+class FakeBridge:
+	extends Node
+	signal response_received(request_id: int, payload: Dictionary)
+	signal bridge_failed(message: String)
+
+	var requests: Array[Dictionary] = []
+	var _initial: Dictionary
+	var _state: Dictionary
+	var _saved: Dictionary = {}
+	var _next_id := 1
+
+	func _init(value: Dictionary) -> void:
+		_initial = value.duplicate(true)
+		_state = _initial.duplicate(true)
+
+	func request(command: String, args: Dictionary = {}) -> int:
+		var request_id := _next_id
+		_next_id += 1
+		requests.append({"id": request_id, "command": command, "args": args.duplicate(true)})
+		var payload: Dictionary = {}
+		var ok := true
+		match command:
+			"new_campaign":
+				_state = _initial.duplicate(true)
+				payload = {"state": _state.duplicate(true)}
+			"advance_day":
+				_state["date"]["day_index"] += 1
+				_state["date"]["day"] += 1
+				_state["date"]["text"] = "%d March 1993" % _state["date"]["day"]
+				payload = {"state": _state.duplicate(true)}
+			"adopt_objective":
+				_state["reform"]["active"] = {"objective_id": args.get("objective_id", ""), "name": "Reduce regional inequality"}
+				payload = {"result": {"success": true, "message": "Objective adopted."}, "state": _state.duplicate(true)}
+			"save":
+				_saved = _state.duplicate(true)
+				payload = {"state": _state.duplicate(true)}
+			"load":
+				if _saved.is_empty():
+					ok = false
+				else:
+					_state = _saved.duplicate(true)
+					payload = {"state": _state.duplicate(true)}
+			"shutdown":
+				payload = {"shutdown": true}
+			_:
+				ok = false
+		var response := {"version": 1, "id": request_id, "ok": ok}
+		if ok:
+			response["payload"] = payload
+		else:
+			response["error"] = {"code": "bad_request", "message": "Fake rejected command."}
+		_reply.call_deferred(request_id, response)
+		return request_id
+
+	func _reply(request_id: int, response: Dictionary) -> void:
+		response_received.emit(request_id, response)
 
 func _initialize() -> void:
 	_run.call_deferred()
@@ -39,8 +96,14 @@ func _run() -> void:
 	if not _check(ResourceLoader.exists("res://scenes/main.tscn"), "main.tscn exists"):
 		return
 	var scene = load("res://scenes/main.tscn").instantiate()
+	var fake_bridge := FakeBridge.new(fixture())
+	root.add_child(fake_bridge)
+	scene.set_bridge(fake_bridge)
 	root.add_child(scene)
-	await process_frame
+	for frame in range(3):
+		await process_frame
+	if not _check(fake_bridge.requests.size() == 1 and fake_bridge.requests[0]["command"] == "new_campaign", "Startup requests a live campaign through the injected bridge"):
+		return
 	for required in ["DateLabel", "PlayButton", "SpeedControls", "DecisionQueue", "ArdeniaMap", "RegionBrief", "MonthlyReport"]:
 		if not _check(scene.find_child(required, true, false) != null, "Required node: " + required):
 			return
@@ -52,7 +115,7 @@ func _run() -> void:
 		return
 	if not _check(brief.find_child("PressureValue").text == "62%", "Selected region pressure comes from snapshot"):
 		return
-	print("PASS: required scene nodes, static snapshot, Vashtera selection and pressure")
+	print("PASS: required scene nodes, fake-bridge startup, Vashtera selection and pressure")
 	var updated := fixture()
 	updated["regions"][6]["pressure"] = 0.77
 	scene.apply_snapshot(updated)
@@ -128,8 +191,47 @@ func _run() -> void:
 				if not _check(root.get_texture().get_image().save_png(path) == OK, "Save screenshot " + path):
 					return
 				print("CAPTURE: " + path)
+	var action = brief.find_child("RegionAction")
+	if not _check(not action.disabled, "Live objective action is enabled when idle"):
+		return
+	action.pressed.emit()
+	if not _check(action.disabled and fake_bridge.requests[-1]["command"] == "adopt_objective", "Objective command disables mutating controls in flight"):
+		return
+	await process_frame
+	await process_frame
+	if not _check(scene.snapshot["reform"]["active"]["objective_id"] == "reduce_regional_inequality", "Objective response replaces the displayed snapshot"):
+		return
+	var play = scene.find_child("PlayButton")
+	play.pressed.emit()
+	scene._process(2.0)
+	if not _check(play.disabled and fake_bridge.requests[-1]["command"] == "advance_day", "Running clock submits one advance_day request"):
+		return
+	await process_frame
+	await process_frame
+	if not _check(scene.snapshot["date"]["day_index"] == 1, "Clock response advances the displayed day"):
+		return
+	var save_event := InputEventAction.new()
+	save_event.action = "save"
+	save_event.pressed = true
+	scene._unhandled_key_input(save_event)
+	await process_frame
+	await process_frame
+	scene._process(2.0)
+	await process_frame
+	await process_frame
+	if not _check(scene.snapshot["date"]["day_index"] == 2, "Campaign advances after save"):
+		return
+	var load_event := InputEventAction.new()
+	load_event.action = "load"
+	load_event.pressed = true
+	scene._unhandled_key_input(load_event)
+	await process_frame
+	await process_frame
+	if not _check(fake_bridge.requests[-1]["command"] == "load" and scene.snapshot["date"]["day_index"] == 1 and scene.snapshot["reform"]["active"]["objective_id"] == "reduce_regional_inequality", "Named-slot load restores date and objective"):
+		return
+	print("PASS: fake bridge exercises objective, clock, save and load without spawning Python")
 	scene.apply_snapshot({})
 	if not _check(brief.find_child("PressureValue").text == "—" and scene.find_child("NextDecision").disabled and map.regions.is_empty(), "Missing data clears stale values and decisions"):
 		return
-	print("PASS: empty snapshot clears stale state; no simulation worker started")
+	print("PASS: empty snapshot clears stale state; fake bridge only")
 	quit(0)
