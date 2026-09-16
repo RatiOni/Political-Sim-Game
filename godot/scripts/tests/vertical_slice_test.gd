@@ -348,4 +348,27 @@ func _run() -> void:
 			"Exhausted reconnect attempts show a permanent failure with no retry control"):
 		return
 	print("PASS: bounded reconnect attempts stop retrying and surface a permanent failure")
+
+	# --- Recovery falls back to a fresh campaign when there is no save yet
+	# (the load->new_campaign path traced but not exercised by Task 9) ---
+	fake_bridge._reconnect_attempts = 0
+	fake_bridge._saved = {}
+	fake_bridge.bridge_failed.emit("Fake worker crashed a third time.")
+	await process_frame
+	if not _check(scene.find_child("ReconnectButton", true, false) != null,
+			"A reset attempt budget shows Reconnect again after a fresh crash"):
+		return
+	scene.find_child("ReconnectButton", true, false).pressed.emit()
+	await process_frame
+	await process_frame
+	if not _check(fake_bridge.requests[-2]["command"] == "load"
+			and fake_bridge.requests[-1]["command"] == "new_campaign",
+			"A load against no saved state falls back to a fresh campaign"):
+		return
+	if not _check(scene.find_child("BridgeFailure", true, false) == null
+			and not scene.snapshot.is_empty()
+			and scene.snapshot["reform"]["active"] == null,
+			"Recovery via new_campaign applies a genuine fresh snapshot, not stale data"):
+		return
+	print("PASS: recovery with no prior save falls back to a fresh campaign, not stale data")
 	quit(0)
