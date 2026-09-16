@@ -37,6 +37,14 @@ class Worker:
             return failure(request_id, "internal_error", "The bridge request failed.")
 
 
+def _request_id(line):
+    try:
+        candidate = json.loads(line)
+    except Exception:
+        return None
+    return candidate.get("id") if isinstance(candidate, dict) else None
+
+
 def main() -> int:
     worker = Worker()
     print("Ardenia bridge worker started.", file=sys.stderr, flush=True)
@@ -45,14 +53,12 @@ def main() -> int:
             request = parse_request(line)
             response = worker.handle(request)
         except ValueError as exc:
-            request_id = None
-            try:
-                candidate = json.loads(line)
-                if isinstance(candidate, dict):
-                    request_id = candidate.get("id")
-            except json.JSONDecodeError:
-                pass
-            response = failure(request_id, "bad_request", str(exc))
+            response = failure(_request_id(line), "bad_request", str(exc))
+            request = None
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
+            response = failure(
+                _request_id(line), "internal_error", "The bridge request failed.")
             request = None
 
         print(json.dumps(response, separators=(",", ":")), flush=True)

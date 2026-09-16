@@ -1,6 +1,8 @@
 """Focused checks for the Godot migration contract."""
 
 import json
+import subprocess
+import sys
 
 from engine import digest, persistence
 from engine.campaign import default_config, generate_campaign
@@ -46,6 +48,7 @@ def protocol_rejects_untrusted_shapes():
         json.dumps([]),
         json.dumps({"version": 2, "id": 1, "command": "snapshot", "args": {}}),
         json.dumps({"version": 1, "id": True, "command": "snapshot", "args": {}}),
+        json.dumps({"version": 1, "id": 1, "command": [], "args": {}}),
         json.dumps({"version": 1, "id": 1, "command": "__import__", "args": {}}),
         json.dumps({"version": 1, "id": 1, "command": "snapshot", "args": []}),
     ):
@@ -109,6 +112,46 @@ def worker_requires_an_explicit_campaign():
     assert worker.state.country.id == "ardenia"
 
 
+def worker_survives_an_invalid_command_shape():
+    process = subprocess.Popen(
+        [sys.executable, "-u", "-m", "godot_bridge.worker"],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, encoding="utf-8")
+
+    def exchange(request):
+        process.stdin.write(json.dumps(request) + "\n")
+        process.stdin.flush()
+        line = process.stdout.readline()
+        assert line, "worker exited without returning a response"
+        return json.loads(line)
+
+    try:
+        created = exchange({
+            "version": 1, "id": 10, "command": "new_campaign", "args": {}})
+        assert created["ok"] is True
+
+        rejected = exchange({
+            "version": 1, "id": 11, "command": [], "args": {}})
+        assert rejected["id"] == 11
+        assert rejected["ok"] is False
+        assert rejected["error"]["code"] == "bad_request"
+
+        recovered = exchange({
+            "version": 1, "id": 12, "command": "snapshot", "args": {}})
+        assert recovered["ok"] is True
+        assert recovered["payload"]["state"]["date"]["day_index"] == 0
+
+        stopped = exchange({
+            "version": 1, "id": 13, "command": "shutdown", "args": {}})
+        assert stopped["ok"] is True
+        process.stdin.close()
+        assert process.wait(timeout=15) == 0
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait()
+
+
 if __name__ == "__main__":
     checks = [("canonical state is JSON serializable",
                canonical_state_is_json_serializable),
@@ -119,7 +162,9 @@ if __name__ == "__main__":
               ("allowed commands use existing engine paths",
                allowed_commands_use_existing_engine_paths),
               ("worker requires an explicit campaign",
-               worker_requires_an_explicit_campaign)]
+               worker_requires_an_explicit_campaign),
+              ("worker survives an invalid command shape",
+               worker_survives_an_invalid_command_shape)]
     for label, test in checks:
         check(label, test)
     print(f"ALL {len(checks)} GODOT BRIDGE CHECKS PASSED")

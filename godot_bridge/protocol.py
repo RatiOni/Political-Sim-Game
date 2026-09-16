@@ -21,7 +21,8 @@ def parse_request(line: str) -> dict:
         raise ValueError("unsupported protocol version")
     if type(request.get("id")) is not int or request["id"] < 0:
         raise ValueError("request id must be a non-negative integer")
-    if request.get("command") not in COMMANDS:
+    command = request.get("command")
+    if not isinstance(command, str) or command not in COMMANDS:
         raise ValueError("command is not allowed")
     if not isinstance(request.get("args", {}), dict):
         raise ValueError("args must be an object")
