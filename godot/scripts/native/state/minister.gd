@@ -15,7 +15,14 @@ const TRAIT_EFFECTS := {
 	"loyalist": {"label": "Loyalist", "competence_delta": -0.05, "threat_mult": 0.5,
 		"loyalty_floor": 0.55},
 	"grandee": {"label": "Grandee", "threat_mult": 0.8, "stability_bonus": 0.05},
-	"schemer": {"label": "Schemer", "threat_mult": 1.0, "loyalty_drift": -0.005},
+	# "grows" is per-turn schemer drift (competence, ambition) — inert until a
+	# future task wires up the turn loop, but CLAUDE.md (Section U0) documents
+	# that omitting it here was a real, previously-fixed bug in the Python
+	# reference: without it (or loyalty_drift), threat_level() = ambition *
+	# (1 - loyalty) caps a minister appointed at loyalty 0.5 at 0.475 threat,
+	# so the schemer arc and the minister_restless warning could never fire.
+	"schemer": {"label": "Schemer", "threat_mult": 1.0, "loyalty_drift": -0.005,
+		"grows": [0.004, 0.008]},
 }
 
 ## Deterministic round-robin fallback for authored cabinets whose JSON

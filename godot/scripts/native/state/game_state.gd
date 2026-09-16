@@ -83,8 +83,11 @@ var civil_war_risk: float = 0.0
 var civil_war: bool = false
 
 ## Plain scalar stand-in for Python's GovernmentStability aggregate — see
-## header note.
-var stability_value: float = 0.7
+## header note. Default matches models/stability.py: GovernmentStability.value
+## (0.55), since Ardenia's own content/countries/ardenia.json has no
+## meta.stability_value key and so hits this exact fallback in a real
+## campaign — must match the Python reference, not drift from it.
+var stability_value: float = 0.55
 
 ## Generation metadata (difficulty, seed, background, opening role, national
 ## traits) as a plain Dictionary, matching Python's campaign_meta.
