@@ -10,6 +10,7 @@ var _decision_index := -1
 var _bridge: Node
 var _request_id := 0
 var _bridge_dead := false
+var _recovering := false
 var _paused := true
 var _speed := 1
 var _clock_elapsed := 0.0
@@ -149,10 +150,19 @@ func _on_response_received(request_id: int, response: Dictionary) -> void:
 		return
 	_request_id = 0
 	if not response.get("ok", false):
+		if _recovering:
+			# The last known save could not be loaded (most likely: this
+			# client never saved one). Fall back to a fresh campaign — a
+			# second, different known state — rather than retrying the
+			# same failing load or falling through to the stale snapshot.
+			_recovering = false
+			_submit("new_campaign")
+			return
 		var error: Dictionary = response.get("error", {})
 		_set_status("REQUEST FAILED / %s" % error.get("message", "Unknown error"))
 		_refresh_controls()
 		return
+	_recovering = false
 	var payload: Dictionary = response.get("payload", {})
 	if payload.has("state"):
 		apply_snapshot(payload["state"])
@@ -164,8 +174,22 @@ func _on_bridge_failed(message: String) -> void:
 	_bridge_dead = true
 	_paused = true
 	_request_id = 0
-	_show_blocking_error(message)
+	_show_blocking_error(message, _bridge.can_reconnect())
 	_refresh_controls()
+
+## Retry the worker once, bounded by the bridge's own attempt cap. On a
+## fresh worker, the old in-memory campaign is gone — it lived only in the
+## dead process — so recovery resumes from a known state: this client's own
+## last save, or (if none) a brand new campaign. It never keeps showing the
+## stale cached snapshot as if nothing happened.
+func _attempt_recovery() -> void:
+	if not _bridge.reconnect():
+		return  # Reconnect failed; bridge_failed already re-fired above us.
+	_remove_blocking_error()
+	_bridge_dead = false
+	snapshot = {}
+	_recovering = true
+	_submit("load", {"slot": SAVE_SLOT})
 
 func _toggle_pause() -> void:
 	if _request_id != 0 or _bridge_dead:
@@ -198,21 +222,44 @@ func _set_status(message: String) -> void:
 	find_child("PreviewStatus").text = message
 	find_child("Footer").text = "MINISTERIAL WIRE  /  %s" % message
 
-func _show_blocking_error(message: String) -> void:
+func _show_blocking_error(message: String, recoverable: bool) -> void:
+	_remove_blocking_error()
 	_set_status("SIMULATION BRIDGE FAILED")
 	var blocker := ColorRect.new()
 	blocker.name = "BridgeFailure"
 	blocker.color = Color(0.05, 0.06, 0.06, 0.96)
 	blocker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	blocker.mouse_filter = Control.MOUSE_FILTER_STOP
+	var box := VBoxContainer.new()
+	box.name = "BridgeFailureBox"
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 48)
 	var label := Label.new()
-	label.text = "SIMULATION UNAVAILABLE\n\n%s\n\nLog: user://logs/godot_bridge.log" % message
+	label.name = "BridgeFailureLabel"
+	var closing := "The application can retry the simulation worker." if recoverable \
+		else "No retries remain. Restart the application."
+	label.text = "SIMULATION UNAVAILABLE\n\n%s\n\n%s\n\nLog: user://logs/godot_bridge.log" % [message, closing]
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 48)
-	blocker.add_child(label)
+	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(label)
+	if recoverable:
+		var button := Button.new()
+		button.name = "ReconnectButton"
+		button.text = "Reconnect"
+		button.custom_minimum_size = Vector2(160, 44)
+		button.pressed.connect(_attempt_recovery)
+		box.add_child(button)
+	blocker.add_child(box)
 	add_child(blocker)
+
+func _remove_blocking_error() -> void:
+	var existing := find_child("BridgeFailure", true, false)
+	if existing == null:
+		return
+	existing.get_parent().remove_child(existing)
+	existing.queue_free()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:

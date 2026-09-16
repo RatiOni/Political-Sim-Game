@@ -6,7 +6,9 @@ signal bridge_failed(message: String)
 const PROTOCOL_VERSION := 1
 const LOG_PATH := "user://logs/godot_bridge.log"
 const SHUTDOWN_TIMEOUT_MS := 400
+const MAX_RECONNECT_ATTEMPTS := 3
 
+var _reconnect_attempts := 0
 var _pipe: Dictionary = {}
 var _pending: Dictionary = {}
 var _next_request_id := 1
@@ -23,6 +25,26 @@ func request(command: String, args: Dictionary = {}) -> int:
 	_pending[request_id] = command
 	_write_request(request_id, command, args)
 	return request_id
+
+## Whether an unexpected worker exit still has a bounded retry left. G1
+## finding: a dead worker previously had no recovery but a full app restart.
+func can_reconnect() -> bool:
+	return _failed and _reconnect_attempts < MAX_RECONNECT_ATTEMPTS
+
+## Attempt one bounded respawn after an unexpected worker exit. Returns
+## true only if a fresh worker process actually started; the caller must
+## not assume the old in-memory campaign survived — it did not, because it
+## lived only in the dead process. The caller resumes from a known state
+## (a save, or a fresh campaign), never from the stale cached snapshot.
+func reconnect() -> bool:
+	if not can_reconnect():
+		return false
+	_reconnect_attempts += 1
+	_close_pipe()
+	_failed = false
+	_shutting_down = false
+	_stdout_buffer = ""
+	return _ensure_worker()
 
 func shutdown() -> void:
 	if _pipe.is_empty():
@@ -141,6 +163,9 @@ func _parse_response(line: String) -> void:
 		_fail("The simulation worker returned an unknown request id. See %s." % LOG_PATH)
 		return
 	_pending.erase(request_id)
+	# A genuinely complete round trip means the worker is healthy again;
+	# a fresh run of failures after this gets its own full attempt budget.
+	_reconnect_attempts = 0
 	response_received.emit(request_id, response)
 
 func _valid_response(response: Variant) -> bool:

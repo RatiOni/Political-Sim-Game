@@ -31,15 +31,34 @@ class FakeBridge:
 	signal response_received(request_id: int, payload: Dictionary)
 	signal bridge_failed(message: String)
 
+	const MAX_RECONNECT_ATTEMPTS := 3
+
 	var requests: Array[Dictionary] = []
 	var _initial: Dictionary
 	var _state: Dictionary
 	var _saved: Dictionary = {}
 	var _next_id := 1
+	# Test-scripted respawn behaviour, mirroring simulation_bridge.gd's real
+	# process-restart contract without spawning Python.
+	var _reconnect_attempts := 0
+	var scripted_reconnect_failures := 0
 
 	func _init(value: Dictionary) -> void:
 		_initial = value.duplicate(true)
 		_state = _initial.duplicate(true)
+
+	func can_reconnect() -> bool:
+		return _reconnect_attempts < MAX_RECONNECT_ATTEMPTS
+
+	func reconnect() -> bool:
+		if not can_reconnect():
+			return false
+		_reconnect_attempts += 1
+		if scripted_reconnect_failures > 0:
+			scripted_reconnect_failures -= 1
+			bridge_failed.emit.call_deferred("Fake worker failed to restart.")
+			return false
+		return true
 
 	func request(command: String, args: Dictionary = {}) -> int:
 		var request_id := _next_id
@@ -81,6 +100,7 @@ class FakeBridge:
 		return request_id
 
 	func _reply(request_id: int, response: Dictionary) -> void:
+		_reconnect_attempts = 0
 		response_received.emit(request_id, response)
 
 func _initialize() -> void:
@@ -290,4 +310,42 @@ func _run() -> void:
 	if not _check(brief.find_child("PressureValue").text == "—" and scene.find_child("NextDecision").disabled and map.regions.is_empty(), "Missing data clears stale values and decisions"):
 		return
 	print("PASS: empty snapshot clears stale state; fake bridge only")
+
+	# --- Bounded bridge-failure recovery (G1 finding: no path back except
+	# a full app restart) ---
+	scene.apply_snapshot(fixture())
+	fake_bridge._saved = fixture()
+	fake_bridge.scripted_reconnect_failures = 1
+	fake_bridge.bridge_failed.emit("Fake worker crashed.")
+	await process_frame
+	if not _check(scene.find_child("BridgeFailure", true, false) != null
+			and scene.find_child("ReconnectButton", true, false) != null,
+			"Recoverable failure shows a blocking error with a Reconnect control"):
+		return
+	scene.find_child("ReconnectButton", true, false).pressed.emit()
+	await process_frame
+	if not _check(scene.find_child("BridgeFailure", true, false) != null
+			and scene.find_child("ReconnectButton", true, false) != null,
+			"A failed respawn attempt re-shows the recoverable error, not a crash"):
+		return
+	scene.find_child("ReconnectButton", true, false).pressed.emit()
+	await process_frame
+	await process_frame
+	if not _check(scene.find_child("BridgeFailure", true, false) == null
+			and fake_bridge.requests[-1]["command"] == "load",
+			"A successful respawn clears the error and resumes via load, not the stale cache"):
+		return
+	if not _check(scene.snapshot == fake_bridge._saved,
+			"Recovered state is the client's own last save, not whatever was on screen when the worker died"):
+		return
+	print("PASS: one failed respawn then a successful one recovers through a known save")
+
+	fake_bridge._reconnect_attempts = FakeBridge.MAX_RECONNECT_ATTEMPTS
+	fake_bridge.bridge_failed.emit("Fake worker crashed again.")
+	await process_frame
+	if not _check(scene.find_child("BridgeFailure", true, false) != null
+			and scene.find_child("ReconnectButton", true, false) == null,
+			"Exhausted reconnect attempts show a permanent failure with no retry control"):
+		return
+	print("PASS: bounded reconnect attempts stop retrying and surface a permanent failure")
 	quit(0)
