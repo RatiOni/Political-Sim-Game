@@ -54,6 +54,7 @@
 | models.roles | `models/roles.py` | TBD | contract | TBD | PLANNED |
 | models.stability | `models/stability.py` | TBD | contract | TBD | PLANNED |
 | models.wing | `models/wing.py` | TBD | contract | TBD | PLANNED |
+| game_state | `game_state.py` | frozen opening-state oracle only; no runtime implementation claimed | exact | government/opposition seed `424242` fixtures | PASS |
 | content.__init__ | `content/__init__.py` | TBD | contract | TBD | PLANNED |
 | content.bills | `content/bills.py` | TBD | contract | TBD | PLANNED |
 | content.budget | `content/budget.py` | TBD | contract | TBD | PLANNED |
@@ -68,6 +69,14 @@
 | content.reforms | `content/reforms.py` | TBD | contract | TBD | PLANNED |
 | content.regions | `content/regions.py` | TBD | contract | TBD | PLANNED |
 | content.traits | `content/traits.py` | TBD | contract | TBD | PLANNED |
+| content.lore.__init__ | `content/lore/__init__.py` | TBD | contract | TBD | PLANNED |
+| content.lore.economy | `content/lore/economy.py` | TBD | contract | TBD | PLANNED |
+| content.lore.figures | `content/lore/figures.py` | TBD | contract | TBD | PLANNED |
+| content.lore.geography | `content/lore/geography.py` | TBD | contract | TBD | PLANNED |
+| content.lore.institutions | `content/lore/institutions.py` | TBD | contract | TBD | PLANNED |
+| content.lore.parties | `content/lore/parties.py` | TBD | contract | TBD | PLANNED |
+| content.lore.society | `content/lore/society.py` | TBD | contract | TBD | PLANNED |
+| content.lore.timeline | `content/lore/timeline.py` | TBD | contract | TBD | PLANNED |
 | op.select_opening_programme | `engine/player_ops.py:op_select_opening_programme` | TBD | operation | TBD | PLANNED |
 | op.adopt_reform_objective | `engine/player_ops.py:op_adopt_reform_objective` | TBD | operation | TBD | PLANNED |
 | op.start_regional_program | `engine/player_ops.py:op_start_regional_program` | TBD | operation | TBD | PLANNED |

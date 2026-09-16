@@ -20,6 +20,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIR = ROOT / "godot" / "data" / "native" / "fixtures"
+PARITY_MATRIX = ROOT / "docs" / "godot" / "native_port" / "PARITY_MATRIX.md"
 SEED = 424242
 WINDOWS_ABSOLUTE_PATH = re.compile(r"^[A-Za-z]:[\\/]")
 
@@ -38,6 +39,7 @@ from content.traits import all_traits
 from engine import player_ops
 from engine.campaign import CampaignConfig, generate_campaign
 from engine.persistence import serialize_state
+from engine.turn import TurnEngine
 
 
 # These labels are copied from TurnEngine's authoritative monthly-pulse
@@ -65,8 +67,84 @@ MONTHLY_PHASES = [
     "Snap election check, then scheduled election check",
     "Track active law duration",
     "Dynamic event check (engine/events.py), then the rival's jibe watch (engine/roleplay.py)",
-    "Age modifiers, then pending events — always last, so this turn's calculations used start-of-turn values",
+    "Age modifiers, then pending events — always last, so this turn's calculations used start-of-turn values.",
 ]
+
+
+def _documented_monthly_phases() -> list[str]:
+    """Read the numbered phase contract from TurnEngine's source docstring."""
+    phases: list[str] = []
+    expected_number = 1
+    for line in inspect.getdoc(TurnEngine).splitlines():
+        match = re.match(r"\s*(\d+)\.\s+(.*)", line)
+        if match:
+            number = int(match.group(1))
+            assert number == expected_number, "TurnEngine phase numbers are not consecutive"
+            phases.append(match.group(2).strip())
+            expected_number += 1
+        elif phases and line.strip():
+            phases[-1] += " " + line.strip()
+    assert phases, "TurnEngine docstring has no numbered monthly phases"
+    return phases
+
+
+def _validated_monthly_phases() -> list[str]:
+    documented = _documented_monthly_phases()
+    assert documented == MONTHLY_PHASES, (
+        "manifest MONTHLY_PHASES drifted from TurnEngine's authoritative docstring"
+    )
+    return documented
+
+
+def _actual_port_rows() -> dict[str, str]:
+    """Return the source inventory that the parity matrix must represent."""
+    rows = {"game_state": "game_state.py"}
+    for directory in ("engine", "models", "content"):
+        for path in sorted((ROOT / directory).glob("*.py")):
+            source = path.relative_to(ROOT).as_posix()
+            rows[source.removesuffix(".py").replace("/", ".")] = source
+    for path in sorted((ROOT / "content" / "lore").glob("*.py")):
+        source = path.relative_to(ROOT).as_posix()
+        rows[source.removesuffix(".py").replace("/", ".")] = source
+    for operation in _public_operations():
+        rows["op." + operation.removeprefix("op_")] = (
+            "engine/player_ops.py:" + operation
+        )
+    return rows
+
+
+def _matrix_rows() -> dict[str, str]:
+    """Parse the two fields needed for inventory coverage from the Markdown table."""
+    rows: dict[str, str] = {}
+    for line in PARITY_MATRIX.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|") or line.startswith("| ---"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) < 2 or cells[0] == "id":
+            continue
+        assert cells[0] not in rows, "duplicate parity-matrix id: " + cells[0]
+        rows[cells[0]] = cells[1].replace("`", "")
+    return rows
+
+
+def _assert_parity_inventory() -> None:
+    expected = _actual_port_rows()
+    actual = _matrix_rows()
+    missing = [
+        "%s (%s)" % (row_id, source)
+        for row_id, source in expected.items()
+        if source not in actual.get(row_id, "")
+    ]
+    inventory_prefixes = ("engine.", "models.", "content.", "op.")
+    stale = sorted(
+        row_id for row_id in actual
+        if (row_id == "game_state" or row_id.startswith(inventory_prefixes))
+        and row_id not in expected
+    )
+    assert not missing and not stale, (
+        "PARITY_MATRIX inventory drift: missing=" + ", ".join(missing)
+        + "; stale=" + ", ".join(stale)
+    )
 
 
 def _canonical_json(value: dict) -> str:
@@ -160,6 +238,7 @@ def _fixture_spec(filename: str, opening_role: str, state: dict) -> dict:
 
 
 def export_all(output_dir: Path = FIXTURE_DIR) -> None:
+    monthly_phases = _validated_monthly_phases()
     government = _campaign_fixture("government")
     opposition = _campaign_fixture("opposition")
     assert government["player"]["in_government"] is True
@@ -174,7 +253,7 @@ def export_all(output_dir: Path = FIXTURE_DIR) -> None:
         "source_commit": _source_commit(),
         "catalogs": _catalogs(),
         "operations": _public_operations(),
-        "monthly_phases": MONTHLY_PHASES,
+        "monthly_phases": monthly_phases,
         "fixtures": {
             "campaign_government_seed_424242": _fixture_spec(
                 government_name, "government", government),
@@ -190,6 +269,7 @@ def export_all(output_dir: Path = FIXTURE_DIR) -> None:
 
 def self_test() -> None:
     """Prove complete exported fixtures remain byte-stable and portable."""
+    _assert_parity_inventory()
     with tempfile.TemporaryDirectory() as first_dir, tempfile.TemporaryDirectory() as second_dir:
         first_root = Path(first_dir)
         second_root = Path(second_dir)

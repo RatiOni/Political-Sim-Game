@@ -92,6 +92,17 @@ def self_test() -> None:
     assert compare({"score": 0.2}, {"score": 0.2 + NUMERIC_TOLERANCE * 2}) == [
         "$.score: expected 0.2, got 0.200000002"]
     assert compare({"seats": 100}, {"seats": 100.0}) == []
+    assert compare({"enabled": True}, {"enabled": 1}) == [
+        "$.enabled: expected True (bool), got 1 (int)"]
+    assert compare({"country": {}}, {"country": []}) == [
+        "$.country: expected object, got list"]
+    assert compare({"regions": ["anera", "sela"]},
+                   {"regions": ["sela", "anera", "zavost"]}) == [
+        "$.regions: expected length 2, got 3",
+        "$.regions[0]: expected 'anera' (str), got 'sela' (str)",
+        "$.regions[1]: expected 'sela' (str), got 'anera' (str)"]
+    assert compare({"ruling_faction_id": None}, {"ruling_faction_id": "ld"}) == [
+        "$.ruling_faction_id: expected None (NoneType), got 'ld' (str)"]
     # Keep collecting after the first mismatch.
     assert compare({"a": 1, "b": 2}, {"a": 0, "c": 3}) == [
         "$.a: expected 1, got 0", "$.b: missing in native", "$.c: unexpected in native"]
