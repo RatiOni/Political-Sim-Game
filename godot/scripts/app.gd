@@ -32,7 +32,16 @@ func _ready() -> void:
 		_bridge = get_node("/root/SimulationBridge")
 	_bridge.connect("response_received", _on_response_received)
 	_bridge.connect("bridge_failed", _on_bridge_failed)
-	_submit("new_campaign")
+	find_child("SaveButton").pressed.connect(func(): _submit("save", {"slot": SAVE_SLOT}))
+	find_child("LoadButton").pressed.connect(func(): _submit("load", {"slot": SAVE_SLOT}))
+	if GameFlow.start_mode == "continue":
+		# Reuses the bridge-recovery fallback: if this client has no save
+		# under SAVE_SLOT, the load fails and _on_response_received falls
+		# back to new_campaign instead of surfacing an error.
+		_recovering = true
+		_submit("load", {"slot": SAVE_SLOT})
+	else:
+		_submit("new_campaign")
 
 func _process(delta: float) -> void:
 	if _paused or _request_id != 0 or _bridge_dead or snapshot.is_empty():
@@ -222,6 +231,8 @@ func _refresh_controls() -> void:
 		button.disabled = not ready
 		button.button_pressed = index + 1 == _speed
 	%RegionBrief.find_child("RegionAction").disabled = not ready or _selected_objective_id.is_empty()
+	find_child("SaveButton").disabled = not ready
+	find_child("LoadButton").disabled = not ready
 
 func _set_status(message: String) -> void:
 	find_child("PreviewStatus").text = message

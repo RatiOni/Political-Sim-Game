@@ -108,6 +108,22 @@ layout_mode = 2
 theme_type_variation = &"Section"
 text = "STATIC PREVIEW"
 
+[node name="SaveButton" type="Button" parent="Margin/Layout/Header"]
+custom_minimum_size = Vector2(72, 44)
+layout_mode = 2
+size_flags_vertical = 4
+disabled = true
+text = "Save"
+tooltip_text = "F5"
+
+[node name="LoadButton" type="Button" parent="Margin/Layout/Header"]
+custom_minimum_size = Vector2(72, 44)
+layout_mode = 2
+size_flags_vertical = 4
+disabled = true
+text = "Load"
+tooltip_text = "F9"
+
 [node name="DecisionRail" type="PanelContainer" parent="Margin/Layout"]
 layout_mode = 2
 
