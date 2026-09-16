@@ -1,0 +1,225 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/app.gd" id="1"]
+[ext_resource type="Theme" path="res://theme/ardenia_theme.tres" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/map/ardenia_map.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/panels/region_brief.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/panels/monthly_report.tscn" id="5"]
+
+[node name="App" type="PanelContainer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2")
+theme_type_variation = &"App"
+script = ExtResource("1")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="Layout" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Header" type="HBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+
+[node name="Identity" type="VBoxContainer" parent="Margin/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="Country" type="Label" parent="Margin/Layout/Header/Identity"]
+layout_mode = 2
+theme_type_variation = &"Title"
+text = "ARDENIA"
+
+[node name="OfficeLabel" type="Label" parent="Margin/Layout/Header/Identity"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Office of the Prime Minister"
+text_overrun_behavior = 3
+
+[node name="DateLabel" type="Label" parent="Margin/Layout/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(192, 0)
+layout_mode = 2
+text = "Awaiting snapshot"
+
+[node name="PlayButton" type="Button" parent="Margin/Layout/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(116, 44)
+layout_mode = 2
+size_flags_vertical = 4
+disabled = true
+text = "Paused"
+tooltip_text = "Space: pause / resume. Disabled in this static preview."
+
+[node name="SpeedControls" type="HBoxContainer" parent="Margin/Layout/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_constants/separation = 4
+
+[node name="Speed1" type="Button" parent="Margin/Layout/Header/SpeedControls"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+disabled = true
+text = "1"
+tooltip_text = "Speed 1 / keyboard 1"
+
+[node name="Speed2" type="Button" parent="Margin/Layout/Header/SpeedControls"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+disabled = true
+text = "2"
+tooltip_text = "Speed 2 / keyboard 2"
+
+[node name="Speed3" type="Button" parent="Margin/Layout/Header/SpeedControls"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+disabled = true
+text = "3"
+tooltip_text = "Speed 3 / keyboard 3"
+
+[node name="Speed4" type="Button" parent="Margin/Layout/Header/SpeedControls"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+disabled = true
+text = "4"
+tooltip_text = "Speed 4 / keyboard 4"
+
+[node name="Speed5" type="Button" parent="Margin/Layout/Header/SpeedControls"]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+disabled = true
+text = "5"
+tooltip_text = "Speed 5 / keyboard 5"
+
+[node name="PreviewStatus" type="Label" parent="Margin/Layout/Header"]
+layout_mode = 2
+theme_type_variation = &"Section"
+text = "STATIC PREVIEW"
+
+[node name="DecisionRail" type="PanelContainer" parent="Margin/Layout"]
+layout_mode = 2
+
+[node name="Content" type="HBoxContainer" parent="Margin/Layout/DecisionRail"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Margin/Layout/DecisionRail/Content"]
+layout_mode = 2
+theme_type_variation = &"Section"
+text = "ON YOUR DESK"
+
+[node name="DecisionQueue" type="ScrollContainer" parent="Margin/Layout/DecisionRail/Content"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_scroll_mode = 0
+
+[node name="DecisionItems" type="VBoxContainer" parent="Margin/Layout/DecisionRail/Content/DecisionQueue"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="NextDecision" type="Button" parent="Margin/Layout/DecisionRail/Content"]
+custom_minimum_size = Vector2(152, 44)
+layout_mode = 2
+size_flags_vertical = 4
+text = "Next decision  N"
+
+[node name="Body" type="HBoxContainer" parent="Margin/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="NationalPanel" type="PanelContainer" parent="Margin/Layout/Body"]
+custom_minimum_size = Vector2(256, 0)
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="Margin/Layout/Body/NationalPanel"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Content" type="VBoxContainer" parent="Margin/Layout/Body/NationalPanel/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Heading" type="Label" parent="Margin/Layout/Body/NationalPanel/Scroll/Content"]
+layout_mode = 2
+theme_type_variation = &"Section"
+text = "STATE OF THE REPUBLIC"
+
+[node name="StabilityLabel" type="Label" parent="Margin/Layout/Body/NationalPanel/Scroll/Content"]
+layout_mode = 2
+theme_type_variation = &"Title"
+text = "—"
+
+[node name="VitalsText" type="Label" parent="Margin/Layout/Body/NationalPanel/Scroll/Content"]
+layout_mode = 2
+text = "Awaiting national figures."
+autowrap_mode = 3
+
+[node name="Rule" type="HSeparator" parent="Margin/Layout/Body/NationalPanel/Scroll/Content"]
+layout_mode = 2
+
+[node name="AssemblyHeading" type="Label" parent="Margin/Layout/Body/NationalPanel/Scroll/Content"]
+layout_mode = 2
+theme_type_variation = &"Section"
+text = "NATIONAL ASSEMBLY"
+
+[node name="AssemblyText" type="Label" parent="Margin/Layout/Body/NationalPanel/Scroll/Content"]
+layout_mode = 2
+text = "Awaiting assembly snapshot."
+autowrap_mode = 3
+
+[node name="MapPanel" type="VBoxContainer" parent="Margin/Layout/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MapHeader" type="HBoxContainer" parent="Margin/Layout/Body/MapPanel"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Margin/Layout/Body/MapPanel/MapHeader"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Section"
+text = "THE REPUBLIC / REGIONAL PRESSURE"
+
+[node name="MapHint" type="Label" parent="Margin/Layout/Body/MapPanel/MapHeader"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Click or use arrow keys"
+
+[node name="ArdeniaMap" parent="Margin/Layout/Body/MapPanel" instance=ExtResource("3")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="MapLegend" type="Label" parent="Margin/Layout/Body/MapPanel"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Fill: lower → higher pressure   •   Gold: selection   •   Dashed: ceasefire"
+autowrap_mode = 3
+
+[node name="RegionBrief" parent="Margin/Layout/Body" instance=ExtResource("4")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+
+[node name="MonthlyReport" parent="Margin/Layout" instance=ExtResource("5")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Footer" type="Label" parent="Margin/Layout"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "MINISTERIAL WIRE  /  PRESENTATION STUDY     •     No simulation worker is running."
+text_overrun_behavior = 3

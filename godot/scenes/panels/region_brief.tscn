@@ -1,0 +1,64 @@
+[gd_scene format=3]
+
+[node name="RegionBrief" type="PanelContainer"]
+custom_minimum_size = Vector2(304, 0)
+size_flags_horizontal = 3
+
+[node name="Content" type="VBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="Eyebrow" type="Label" parent="Content"]
+layout_mode = 2
+theme_type_variation = &"Section"
+text = "REGIONAL BRIEF / SELECTED"
+
+[node name="RegionName" type="Label" parent="Content"]
+layout_mode = 2
+theme_type_variation = &"Title"
+text = "Select a region"
+text_overrun_behavior = 3
+
+[node name="RegionId" type="Label" parent="Content"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "—"
+
+[node name="Rule" type="HSeparator" parent="Content"]
+layout_mode = 2
+
+[node name="PressureHeading" type="Label" parent="Content"]
+layout_mode = 2
+text = "Regional pressure"
+
+[node name="PressureValue" type="Label" parent="Content"]
+layout_mode = 2
+theme_type_variation = &"Metric"
+text = "—"
+
+[node name="Details" type="ScrollContainer" parent="Content"]
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Rows" type="VBoxContainer" parent="Content/Details"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="RegionMetrics" type="Label" parent="Content/Details/Rows"]
+layout_mode = 2
+text = "No regional snapshot received."
+autowrap_mode = 3
+
+[node name="SourceNote" type="Label" parent="Content/Details/Rows"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Pressure, jobs and state reach are supplied by the simulation."
+autowrap_mode = 3
+
+[node name="RegionAction" type="Button" parent="Content"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+disabled = true
+text = "Regional intervention"
+tooltip_text = "Static preview. Actions connect to the Python engine in the next slice."
