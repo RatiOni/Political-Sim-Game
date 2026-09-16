@@ -8,6 +8,7 @@ from engine import digest, persistence
 from engine.campaign import default_config, generate_campaign
 from engine.turn import TurnEngine
 from godot_bridge.actions import dispatch
+from godot_bridge.export_map import export_map
 from godot_bridge.presentation import state_snapshot
 from godot_bridge.protocol import parse_request, success, failure
 from godot_bridge.worker import Worker
@@ -37,6 +38,18 @@ def canonical_state_is_json_serializable():
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     assert json.loads(encoded)["country"]["id"] == "ardenia"
     assert payload["day"] == 1
+
+
+def map_export_preserves_live_region_ids():
+    state = generate_campaign(default_config())
+    payload = export_map()
+    exported = {item["id"] for item in payload["regions"]}
+    assert exported == set(state.regions)
+    assert len(exported) == 9
+    assert all(len(item["points"]) >= 3 for item in payload["regions"])
+    assert all(0 <= coordinate <= 100
+               for item in payload["regions"]
+               for point in item["points"] for coordinate in point)
 
 
 def protocol_rejects_untrusted_shapes():
@@ -155,6 +168,8 @@ def worker_survives_an_invalid_command_shape():
 if __name__ == "__main__":
     checks = [("canonical state is JSON serializable",
                canonical_state_is_json_serializable),
+              ("map export preserves live region ids",
+               map_export_preserves_live_region_ids),
               ("protocol rejects untrusted shapes",
                protocol_rejects_untrusted_shapes),
               ("snapshot is bounded and read only",
