@@ -1,5 +1,13 @@
 # Ardenia Native Godot Rewrite Design
 
+> **SUPERSEDED 2026-09-16 - read `PLAN.md` at the repository root.**
+> The parity-contract programme (`N0`-`N6`, `1e-9` oracle comparison,
+> `PARITY_MATRIX.md` as a gate) was cancelled by the project owner. Ardenia is
+> being remade in Godot as a game, using the Python source as a design reference
+> to read rather than an oracle to match. This document is retained as the
+> record of a direction not taken. Do not execute it.
+
+
 **Decision:** Replace the Python/PySide application with a Godot 4.7.2 game whose complete runtime is GDScript and committed game data.
 
 **Baseline:** `codex/godot-foundation` at `e4cffca`. The existing Godot slice, bridge, menu, map, Save/Load controls, seeded-worker checks, and recovery tests are evidence and reusable presentation work. They are not the final runtime architecture.

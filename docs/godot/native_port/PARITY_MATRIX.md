@@ -1,5 +1,13 @@
 # Native parity matrix
 
+> **SUPERSEDED 2026-09-16 - read `PLAN.md` at the repository root.**
+> The parity-contract programme (`N0`-`N6`, `1e-9` oracle comparison,
+> `PARITY_MATRIX.md` as a gate) was cancelled by the project owner. Ardenia is
+> being remade in Godot as a game, using the Python source as a design reference
+> to read rather than an oracle to match. This document is retained as the
+> record of a direction not taken. Do not execute it.
+
+
 | id | Python source | native target | proof type | fixture/test | state |
 | --- | --- | --- | --- | --- | --- |
 | n0.contract_runner | N/A — port infrastructure | `test_support.gd` + `run_contract_tests.gd` | exact | `run_contract_tests.gd` | PASS |

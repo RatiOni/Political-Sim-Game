@@ -1,5 +1,13 @@
 # Native Godot Phase 6 — Export and Cutover Implementation Plan
 
+> **SUPERSEDED 2026-09-16 - read `PLAN.md` at the repository root.**
+> The parity-contract programme (`N0`-`N6`, `1e-9` oracle comparison,
+> `PARITY_MATRIX.md` as a gate) was cancelled by the project owner. Ardenia is
+> being remade in Godot as a game, using the Python source as a design reference
+> to read rather than an oracle to match. This document is retained as the
+> record of a direction not taken. Do not execute it.
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Produce and independently verify a downloadable native Windows Ardenia build with no Python runtime.
