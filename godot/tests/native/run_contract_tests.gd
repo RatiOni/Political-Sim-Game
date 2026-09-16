@@ -24,11 +24,17 @@ func _initialize() -> void:
 		var roles: Array = []
 		for fixture_id in fixture_ids:
 			var specification: Dictionary = fixtures[fixture_id]
+			var opening_role: String = specification.get("opening_role", "")
+			var expected_opening_role := "government" if fixture_id == "campaign_government_seed_424242" else "opposition"
+			t.equal(opening_role, expected_opening_role,
+				"%s names its opening role" % fixture_id)
 			var fixture = _load_json(FIXTURE_DIRECTORY + specification.get("file", ""))
 			t.truth(fixture is Dictionary, "%s parses" % fixture_id)
 			if fixture is Dictionary:
 				var player: Dictionary = fixture.get("player", {})
 				var expected_role: bool = specification.get("player_in_government", false)
+				t.equal(expected_role, opening_role == "government",
+					"%s role matches in_government" % fixture_id)
 				t.equal(player.get("in_government"), expected_role,
 					"%s preserves in_government" % fixture_id)
 				t.equal(fixture.get("campaign_meta", {}).get("seed"), 424242,

@@ -189,17 +189,21 @@ def export_all(output_dir: Path = FIXTURE_DIR) -> None:
 
 
 def self_test() -> None:
-    """Prove the writer is byte-stable and cannot leak repository paths."""
-    value = {"answer": 42, "nested": {"id": "ardenia"}}
-    with tempfile.TemporaryDirectory() as temp_dir:
-        first = Path(temp_dir) / "first.json"
-        second = Path(temp_dir) / "second.json"
-        export_fixture(first, value)
-        export_fixture(second, value)
-        first_bytes = first.read_bytes()
-        assert first_bytes == second.read_bytes(), "canonical exports differ"
-        assert first_bytes.endswith(b"\n"), "canonical export lacks trailing newline"
-        assert str(ROOT).encode("utf-8") not in first_bytes, "repository path leaked"
+    """Prove complete exported fixtures remain byte-stable and portable."""
+    with tempfile.TemporaryDirectory() as first_dir, tempfile.TemporaryDirectory() as second_dir:
+        first_root = Path(first_dir)
+        second_root = Path(second_dir)
+        export_all(first_root)
+        export_all(second_root)
+        first_paths = sorted(path.relative_to(first_root) for path in first_root.rglob("*.json"))
+        second_paths = sorted(path.relative_to(second_root) for path in second_root.rglob("*.json"))
+        assert first_paths == second_paths, "fixture file sets differ"
+        for relative_path in first_paths:
+            first_bytes = (first_root / relative_path).read_bytes()
+            second_bytes = (second_root / relative_path).read_bytes()
+            assert first_bytes == second_bytes, "canonical exports differ: %s" % relative_path
+            assert first_bytes.endswith(b"\n"), "canonical export lacks trailing newline"
+            assert str(ROOT).encode("utf-8") not in first_bytes, "repository path leaked"
 
 
 def main() -> None:
