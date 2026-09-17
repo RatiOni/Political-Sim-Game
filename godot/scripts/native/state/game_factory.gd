@@ -35,8 +35,10 @@ extends RefCounted
 ##     rebuild the cabinet the way `elections.configure_government` does —
 ##     that requires `cabinet_ops.generate_candidate` (name generation etc.),
 ##     which is out of scope. The authored cabinet from content stays as-is.
-##   - regions/households/ministries/active_budget are left at their empty
-##     defaults — see game_state.gd's header note.
+##   - regions are seeded here (Task 8: `RegionsSim.ensure_region_states`
+##     post-assembly, additive so old saves keep live values); households /
+##     ministries / active_budget are still left at their empty defaults — see
+##     game_state.gd's header note.
 
 const PLAYABLE_COUNTRY_IDS: Array[String] = ["ardenia"]
 
@@ -186,6 +188,8 @@ static func new_campaign(content: Dictionary, config: Dictionary) -> GameState:
 		"seed": seed_raw,
 		"national_traits": player_country.national_traits.duplicate(),
 	}
+
+	RegionsSim.ensure_region_states(state)
 
 	return state
 

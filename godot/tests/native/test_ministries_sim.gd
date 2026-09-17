@@ -255,16 +255,29 @@ func _test_capacity_responds_to_stability(t, content: Dictionary) -> void:
 
 # ── Workload sources ──────────────────────────────────────────────────────
 
-func _test_workload_is_only_ordinary_administration_on_a_fresh_campaign(t, content: Dictionary) -> void:
+func _test_workload_sources_on_a_fresh_campaign(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	t.truth(state != null, "campaign builds")
 	if state == null:
 		return
+	# Task 8 seeds regions at factory time, so a fresh campaign's Interior
+	# legitimately carries a regional-pressure source on top of ordinary
+	# administration (mean seeded pressure 0.602 > the 0.45 threshold).
+	# Every other portfolio still has exactly one source.
+	var pressure_total := 0.0
+	for region in state.regions.values():
+		pressure_total += (region as RegionState).pressure
+	var expected_rp := (pressure_total / state.regions.size() - 0.45) * 0.90
 	for portfolio in ALL_PORTFOLIOS:
 		var breakdown: Dictionary = MinistriesSimScript.workload_breakdown(state, portfolio)
-		t.equal(breakdown.size(), 1, "%s has only the ordinary-administration source on a fresh campaign" % portfolio)
 		t.near(float(breakdown.get("ordinary administration", -1.0)), MinistriesSimScript.BASE_WORKLOAD, 0.0001,
 			"%s ordinary administration matches BASE_WORKLOAD" % portfolio)
+		if portfolio == "Interior":
+			t.equal(breakdown.size(), 2, "Interior also carries the seeded regional-pressure source")
+			t.near(float(breakdown.get("regional pressure", -1.0)), expected_rp, 0.0001,
+				"Interior regional pressure matches the seeded mean pressure")
+		else:
+			t.equal(breakdown.size(), 1, "%s has only the ordinary-administration source on a fresh campaign" % portfolio)
 
 
 func _test_workload_counts_treaties_and_sanctions_for_foreign_affairs_only(t, content: Dictionary) -> void:
@@ -367,17 +380,24 @@ func _test_simulate_recovers_backlog_gradually_when_capacity_exceeds_workload(t,
 	state.active_budget.allocations["state_administration"] = 100.0   # ratio exactly 1.0
 	var ministries: Dictionary = MinistriesSimScript.ensure_ministries(state)
 	var interior: MinistryState = ministries["Interior"]
-	# capacity = 1.45 * 1.0 * 1.0 * 1.0 * 1.0 = 1.45; workload = 0.65 (ordinary
-	# administration only) -> ample spare capacity (0.80).
+	# capacity = 1.45 * 1.0 * 1.0 * 1.0 * 1.0 = 1.45; workload = 0.65 ordinary
+	# administration + the seeded regional-pressure source (Task 8 seeds
+	# regions at factory time; mean seeded pressure 0.602 clears the 0.45
+	# threshold) -> still ample spare capacity.
+	var pressure_total := 0.0
+	for region in state.regions.values():
+		pressure_total += (region as RegionState).pressure
+	var workload := 0.65 + (pressure_total / state.regions.size() - 0.45) * 0.90
 	interior.backlog = 3.0
 	interior.months_overloaded = 2
 
 	MinistriesSimScript.simulate(state)
 
-	# recovered = min(3.0, (1.45-0.65)*0.22) = 0.176 -> new backlog 2.824.
+	# recovered = min(3.0, (1.45-workload)*0.22) -> new backlog 3.0-recovered.
+	var recovered: float = minf(3.0, (1.45 - workload) * 0.22)
 	t.near(interior.capacity, 1.45, 0.01, "capacity matches the hand-computed value")
-	t.near(interior.workload, 0.65, 0.0001, "workload is ordinary administration alone")
-	t.near(interior.backlog, 3.0 - 0.176, 0.001,
+	t.near(interior.workload, workload, 0.0001, "workload is ordinary administration plus seeded regional pressure")
+	t.near(interior.backlog, 3.0 - recovered, 0.001,
 		"backlog clears by only the bounded recovered share, not instantly to zero")
 	t.truth(interior.backlog > 2.5, "a large backlog does not clear in a single turn even with spare capacity")
 	t.equal(interior.delivery, 1.0, "delivery is full once served demand meets capacity")
@@ -465,7 +485,7 @@ func _initialize() -> void:
 		_test_capacity_responds_to_bureaucratic_capacity(t, content)
 		_test_capacity_responds_to_stability(t, content)
 
-		_test_workload_is_only_ordinary_administration_on_a_fresh_campaign(t, content)
+		_test_workload_sources_on_a_fresh_campaign(t, content)
 		_test_workload_counts_treaties_and_sanctions_for_foreign_affairs_only(t, content)
 		_test_workload_counts_debt_administration_for_finance_only(t, content)
 		_test_workload_counts_civil_war_crisis_load_per_portfolio(t, content)

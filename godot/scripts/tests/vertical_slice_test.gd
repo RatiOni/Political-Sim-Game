@@ -84,8 +84,12 @@ func _run() -> void:
 	map.select_region("vashtera")
 	if not _check(brief.find_child("RegionId").text == "vashtera", "Selected region id is displayed"):
 		return
-	if not _check(brief.find_child("PressureValue").text == "—",
-			"Pressure reads empty: the regional layer has no native backend yet"):
+	var live_pressure := 0.0
+	for r in (native_game.snapshot()["regions"] as Array):
+		if (r as Dictionary).get("id") == "vashtera":
+			live_pressure = float((r as Dictionary).get("pressure", 0.0))
+	if not _check(brief.find_child("PressureValue").text == "%d%%" % int(round(live_pressure * 100.0)),
+			"Pressure reads the live seeded value (regional layer is native since Task 8)"):
 		return
 	print("PASS: Vashtera selection displays through the native snapshot")
 	var enriched: Dictionary = native_game.snapshot()
