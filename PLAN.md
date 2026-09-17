@@ -329,15 +329,19 @@ load-bearing because later phases read earlier same-turn results). Phase 2
 implements this subset, in this order:
 
 ```
-budget.process_fiscal_year        (Task 1)
-_regenerate_political_capital     (Task 1)
-ministries.simulate_ministries    (Task 2)
-_update_economy (+6 sub-phases)   (Task 3)
-regions.simulate_regions          (Task 4)
-households.simulate_households    (Task 5)
-_update_approval                  (Task 6)
-_update_stability                 (Task 6)
+budget.process_fiscal_year        (Task 5)
+_regenerate_political_capital     (Task 5)
+ministries.simulate_ministries    (Task 6)
+_update_economy (+6 sub-phases)   (Task 7)
+regions.simulate_regions          (Task 8)
+households.simulate_households    (Task 9)
+_update_approval                  (Task 10)
+_update_stability                 (Task 10)
 ```
+
+Numbered globally, continuing from Phase 1's Tasks 1-4 (the `task-brief`
+tooling matches `### Task N` by number across the whole plan file, not
+per-phase — task numbers must be unique file-wide).
 
 Everything else in `_run_monthly_pulse` (domestic-government/opposition
 simulation, world relations and worldsim, loans, faction loyalty and
@@ -346,18 +350,18 @@ faction support, elections, law tracking, events, rival watch) is later-phase
 territory (Phase 3/4) and stays out of scope here — do not implement it early
 just because it's in the same Python method.
 
-**Testing pattern, same as Phase 1:** each of Tasks 1-5 builds and unit-tests
+**Testing pattern, same as Phase 1:** each of Tasks 5-9 builds and unit-tests
 one subsystem function against a constructed `GameState`, called directly —
-not yet wired into `NativeGame`'s monthly pulse. **Task 6 does the
-integration**: it adds approval/stability, then wires all of Tasks 1-5's
+not yet wired into `NativeGame`'s monthly pulse. **Task 10 does the
+integration**: it adds approval/stability, then wires all of Tasks 5-9's
 functions plus its own into `NativeGame`'s monthly-rollover path in the exact
 order above (currently that path only calls `Modifiers.age_all()`, from
 Phase 1 Task 4), and proves the whole chain with an end-to-end test that
 advances a real campaign through a month boundary and checks fields from
 every subsystem moved. This mirrors how Phase 1 Task 4 was the integration
-point for Tasks 1-3.
+point for Phase 1's Tasks 1-3.
 
-### Task 1: Annual budget and political capital
+### Task 5: Annual budget and political capital
 
 **Files:**
 - Create: `godot/scripts/native/sim/budget_sim.gd`
@@ -399,7 +403,7 @@ gap.
 - [ ] Run test; all assertions pass.
 - [ ] Commit `feat(godot): add native budget rollover and political capital`.
 
-### Task 2: Ministry capacity, workload, delivery, backlog
+### Task 6: Ministry capacity, workload, delivery, backlog
 
 **Files:**
 - Create: `godot/scripts/native/sim/ministries_sim.gd`
@@ -423,7 +427,7 @@ field names you're computing into).
       opposition-cabinet finding; handle a missing/mismatched minister
       gracefully, don't crash), bureaucratic capacity, and stability; workload
       accumulates from whatever sources natively exist today (active laws:
-      none yet, so 0 — same reasoning as Task 1; regional pressure and civil
+      none yet, so 0 — same reasoning as Task 5; regional pressure and civil
       war ARE native today via Phase 1's typed classes); backlog only clears
       with spare capacity, never instantly; `months_overloaded` increments
       correctly.
@@ -437,7 +441,7 @@ field names you're computing into).
 - [ ] Run test; all assertions pass.
 - [ ] Commit `feat(godot): add native ministry capacity and delivery`.
 
-### Task 3: The monthly economy
+### Task 7: The monthly economy
 
 **Files:**
 - Create: `godot/scripts/native/sim/economy_sim.gd`
@@ -461,9 +465,9 @@ formula surface in Phase 2; read it once, fully, before writing any test.
 - [ ] Write failing tests: workforce quality and bureaucratic capacity respond
       to their documented inputs; sector `gdp_share`/`growth_rate` evolve
       plausibly (not fixed); structural fiscal baseline reflects
-      `active_budget`'s size and composition once Task 1 exists (if Task 1
+      `active_budget`'s size and composition once Task 5 exists (if Task 5
       isn't complete when this task starts per the ledger, coordinate — this
-      task consumes Task 1's `active_budget`); inflation drifts toward
+      task consumes Task 5's `active_budget`); inflation drifts toward
       `INFLATION_ANCHOR`, pushed by deficit and overheating, bounded by
       `STRUCTURAL_INFLATION_MAX`; active modifiers apply to growth/
       unemployment/inflation/debt exactly once per pulse (no double-application
@@ -475,7 +479,7 @@ formula surface in Phase 2; read it once, fully, before writing any test.
 - [ ] Run test; all assertions pass.
 - [ ] Commit `feat(godot): add native monthly economy simulation`.
 
-### Task 4: Regional conditions
+### Task 8: Regional conditions
 
 **Files:**
 - Create: `godot/scripts/native/sim/regions_sim.gd`
@@ -510,7 +514,7 @@ seeding too — check the factory's header note).
 - [ ] Run test; all assertions pass.
 - [ ] Commit `feat(godot): add native regional simulation`.
 
-### Task 5: The household economy
+### Task 9: The household economy
 
 **Files:**
 - Create: `godot/scripts/native/sim/households_sim.gd`
@@ -529,7 +533,7 @@ national figures are population-weighted aggregates, not a second economy;
 countries without authored data keep an empty ledger), `content/households.py`
 (already exported by Phase 1 Task 1 under
 `godot/data/native/catalogs/household_groups.json`; likely needs seeding into
-`state.households` by this task, same pattern as Task 4's regions).
+`state.households` by this task, same pattern as Task 8's regions).
 
 - [ ] Write failing tests: Ardenia's 36 household groups seed correctly;
       inflation/growth/local unemployment/state reach move
@@ -542,7 +546,7 @@ countries without authored data keep an empty ledger), `content/households.py`
 - [ ] Run test; all assertions pass.
 - [ ] Commit `feat(godot): add native household economy simulation`.
 
-### Task 6: Approval, stability, the monthly digest, and full pulse integration
+### Task 10: Approval, stability, the monthly digest, and full pulse integration
 
 **Files:**
 - Create: `godot/scripts/native/sim/stability_sim.gd`
