@@ -34,3 +34,52 @@ func portfolio_supplement(portfolio: String) -> float:
 
 func forecast_balance() -> float:
 	return forecast_revenue - expenditure()
+
+
+func to_dict() -> Dictionary:
+	return {
+		"year": year,
+		"allocations": allocations.duplicate(true),
+		"status": status,
+		"source": source,
+		"proposed_by": proposed_by,
+		"proposed_turn": proposed_turn,
+		"forecast_revenue": forecast_revenue,
+		"votes_for": votes_for,
+		"votes_against": votes_against,
+		"lobbying_bonus": lobbying_bonus.duplicate(true),
+		"supplements": supplements.duplicate(true),
+	}
+
+
+static func from_dict(data: Dictionary) -> AnnualBudget:
+	if not (data is Dictionary):
+		push_error("AnnualBudget.from_dict: expected a Dictionary, got %s" % [data])
+		return null
+	var b := AnnualBudget.new()
+	b.year = _int_field(data, "year", 0)
+	var allocations_data: Variant = data.get("allocations", {})
+	b.allocations = allocations_data.duplicate(true) if allocations_data is Dictionary else {}
+	b.status = String(data.get("status", "draft"))
+	b.source = String(data.get("source", "inherited"))
+	b.proposed_by = String(data.get("proposed_by", ""))
+	b.proposed_turn = _int_field(data, "proposed_turn", -1)
+	b.forecast_revenue = float(data.get("forecast_revenue", 0.0))
+	b.votes_for = _int_field(data, "votes_for", 0)
+	b.votes_against = _int_field(data, "votes_against", 0)
+	var lobbying_data: Variant = data.get("lobbying_bonus", {})
+	b.lobbying_bonus = lobbying_data.duplicate(true) if lobbying_data is Dictionary else {}
+	var supplements_data: Variant = data.get("supplements", {})
+	b.supplements = supplements_data.duplicate(true) if supplements_data is Dictionary else {}
+	return b
+
+
+## JSON boundary: Godot parses every JSON number as float, so a whole-number
+## float must read back as an int wherever an int field is expected.
+static func _int_field(data: Dictionary, key: String, fallback: int) -> int:
+	var v: Variant = data.get(key, fallback)
+	if typeof(v) == TYPE_INT:
+		return v
+	if typeof(v) == TYPE_FLOAT and v == floorf(v) and absf(v) <= 9007199254740992.0:
+		return int(v)
+	return fallback

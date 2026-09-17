@@ -28,3 +28,40 @@ func status_label() -> String:
 	if hardship >= 0.30:
 		return "Insecure"
 	return "Secure"
+
+
+func to_dict() -> Dictionary:
+	return {
+		"id": id,
+		"group_id": group_id,
+		"region_id": region_id,
+		"population_share": population_share,
+		"nominal_income_index": nominal_income_index,
+		"living_cost_index": living_cost_index,
+		"real_income_index": real_income_index,
+		"employment_security": employment_security,
+		"service_access": service_access,
+		"hardship": hardship,
+		"confidence": confidence,
+		"last_real_income_index": last_real_income_index,
+	}
+
+
+static func from_dict(data: Dictionary) -> HouseholdGroupState:
+	if not (data is Dictionary):
+		push_error("HouseholdGroupState.from_dict: expected a Dictionary, got %s" % [data])
+		return null
+	var h := HouseholdGroupState.new()
+	h.id = String(data.get("id", ""))
+	h.group_id = String(data.get("group_id", ""))
+	h.region_id = String(data.get("region_id", ""))
+	h.population_share = float(data.get("population_share", 0.0))
+	h.nominal_income_index = float(data.get("nominal_income_index", 1.0))
+	h.living_cost_index = float(data.get("living_cost_index", 1.0))
+	h.real_income_index = float(data.get("real_income_index", 1.0))
+	h.employment_security = float(data.get("employment_security", 0.7))
+	h.service_access = float(data.get("service_access", 0.6))
+	h.hardship = float(data.get("hardship", 0.3))
+	h.confidence = float(data.get("confidence", 0.5))
+	h.last_real_income_index = float(data.get("last_real_income_index", 1.0))
+	return h

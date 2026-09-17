@@ -1,114 +1,26 @@
 extends SceneTree
 
-# Deliberately synthetic presentation data. Never a campaign or engine substitute.
-static func fixture() -> Dictionary:
-	return {
-		"date": {"text": "1 March 1993", "year": 1993, "month": 3, "day": 1, "day_index": 0, "turn": 0},
-		"player": {"name": "Alexei Varen", "title": "Prime Minister", "party_id": "liberal_democrats", "in_government": true, "approval": 0.54, "political_capital": 42.0},
-		"headline": {"stability": "Fragile", "attention_spent": 0},
-		"economy": {"growth": -0.024, "unemployment": 0.137, "inflation": 0.186, "debt": 0.64, "revenue": 1200, "expenditure": 1380},
-		"regions": [
-			{"id": "anera", "pressure": 0.32, "unemployment": 0.11, "state_reach": 0.55},
-			{"id": "darev", "pressure": 0.61, "unemployment": 0.14, "state_reach": 0.43},
-			{"id": "karsen", "pressure": 0.46, "unemployment": 0.12, "state_reach": 0.56},
-			{"id": "kelvet", "pressure": 0.28, "unemployment": 0.09, "state_reach": 0.68},
-			{"id": "orvena", "pressure": 0.44, "unemployment": 0.13, "state_reach": 0.61},
-			{"id": "sela", "pressure": 0.38, "unemployment": 0.12, "state_reach": 0.48},
-			{"id": "vashtera", "pressure": 0.62, "unemployment": 0.15, "state_reach": 0.72},
-			{"id": "vetrenka", "pressure": 0.84, "unemployment": 0.24, "state_reach": 0.18},
-			{"id": "zavost", "pressure": 0.57, "unemployment": 0.17, "state_reach": 0.59}],
-		"factions": [
-			{"id": "liberal_democrats", "name": "Liberal Democrats", "seats": 92, "support": 0.31, "loyalty": 0.7, "in_coalition": true, "color": "#b9a16e"},
-			{"id": "agrarians", "name": "Agrarian Union", "seats": 64, "support": 0.21, "loyalty": 0.6, "in_coalition": true, "color": "#829582"},
-			{"id": "workers", "name": "Workers' Front", "seats": 88, "support": 0.29, "loyalty": 0.4, "in_coalition": false, "color": "#b86b5b"}],
-		"decisions": [{"id": "fixture_review", "priority": 1, "tag": "REVIEW", "title": "Regional pressure: Vashtera", "detail": "Review the selected region before choosing an intervention.", "page": "regions", "authority": "Prime Minister", "days_remaining": 3, "due_text": "3 days remaining", "region_id": "vashtera"}],
-		"calendar": [], "digest": ["Static report preview. Monthly causes and consequences will be supplied by the Python engine."],
-		"reform": {"active": null, "objectives": [{"id": "reduce_regional_inequality", "name": "Reduce regional inequality", "portfolio": "Interior", "body": "Close the pressure gap.", "score": 0.72, "urgency": "Urgent"}]},
-		"dispatches": ["PRESENTATION FIXTURE — figures and briefing text are synthetic, not a campaign.", "Select a region on the map or use the arrow keys while the map has focus."]}
+# Post-bridge journey test: drives the real menu/app scenes through the real
+# NativeGame autoload (fixed seed 424242 — no FakeBridge, no Python worker)
+# and asserts the same journey: startup, region selection, time advance,
+# save, quit-equivalent state drop, reload restoration. The objective action
+# has no native backend yet, so it must read as disabled-with-a-note, never
+# as a working control and never as an error.
 
-class FakeBridge:
-	extends Node
-	signal response_received(request_id: int, payload: Dictionary)
-	signal bridge_failed(message: String)
+const APP_SLOT := "godot_slice"
+const FIXED_SEED := 424242
 
-	const MAX_RECONNECT_ATTEMPTS := 3
 
-	var requests: Array[Dictionary] = []
-	var _initial: Dictionary
-	var _state: Dictionary
-	var _saved: Dictionary = {}
-	var _next_id := 1
-	# Test-scripted respawn behaviour, mirroring simulation_bridge.gd's real
-	# process-restart contract without spawning Python.
-	var _reconnect_attempts := 0
-	var scripted_reconnect_failures := 0
+static func _wipe_app_slot() -> void:
+	for suffix in ["", ".tmp", ".bak"]:
+		var path := "user://saves/%s.json%s" % [APP_SLOT, suffix]
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(path)
 
-	func _init(value: Dictionary) -> void:
-		_initial = value.duplicate(true)
-		_state = _initial.duplicate(true)
-
-	func can_reconnect() -> bool:
-		return _reconnect_attempts < MAX_RECONNECT_ATTEMPTS
-
-	func reconnect() -> bool:
-		if not can_reconnect():
-			return false
-		_reconnect_attempts += 1
-		if scripted_reconnect_failures > 0:
-			scripted_reconnect_failures -= 1
-			# Synchronous, matching the real bridge: _ensure_worker's own
-			# _fail() path emits bridge_failed inline, inside the same call
-			# stack as the Reconnect button's still-executing pressed
-			# handler — a real reentrancy case, not a next-frame one.
-			bridge_failed.emit("Fake worker failed to restart.")
-			return false
-		return true
-
-	func request(command: String, args: Dictionary = {}) -> int:
-		var request_id := _next_id
-		_next_id += 1
-		requests.append({"id": request_id, "command": command, "args": args.duplicate(true)})
-		var payload: Dictionary = {}
-		var ok := true
-		match command:
-			"new_campaign":
-				_state = _initial.duplicate(true)
-				payload = {"state": _state.duplicate(true)}
-			"advance_day":
-				_state["date"]["day_index"] += 1
-				_state["date"]["day"] += 1
-				_state["date"]["text"] = "%d March 1993" % _state["date"]["day"]
-				payload = {"state": _state.duplicate(true)}
-			"adopt_objective":
-				_state["reform"]["active"] = {"objective_id": args.get("objective_id", ""), "name": "Reduce regional inequality"}
-				payload = {"result": {"success": true, "message": "Objective adopted."}, "state": _state.duplicate(true)}
-			"save":
-				_saved = _state.duplicate(true)
-				payload = {"state": _state.duplicate(true)}
-			"load":
-				if _saved.is_empty():
-					ok = false
-				else:
-					_state = _saved.duplicate(true)
-					payload = {"state": _state.duplicate(true)}
-			"shutdown":
-				payload = {"shutdown": true}
-			_:
-				ok = false
-		var response := {"version": 1, "id": request_id, "ok": ok}
-		if ok:
-			response["payload"] = payload
-		else:
-			response["error"] = {"code": "bad_request", "message": "Fake rejected command."}
-		_reply.call_deferred(request_id, response)
-		return request_id
-
-	func _reply(request_id: int, response: Dictionary) -> void:
-		_reconnect_attempts = 0
-		response_received.emit(request_id, response)
 
 func _initialize() -> void:
 	_run.call_deferred()
+
 
 func _check(condition: bool, message: String) -> bool:
 	if not condition:
@@ -116,92 +28,73 @@ func _check(condition: bool, message: String) -> bool:
 		quit(1)
 	return condition
 
-func _bridge_contract_checks() -> bool:
-	var bridge_script = load("res://scripts/bridge/simulation_bridge.gd")
-	var resolver = bridge_script.new()
-	var prior_override := OS.get_environment("ARDENIA_PYTHON_EXECUTABLE")
-	OS.set_environment("ARDENIA_PYTHON_EXECUTABLE", "")
-	var executable: String = resolver._resolve_python(ProjectSettings.globalize_path("res://..").simplify_path())
-	OS.set_environment("ARDENIA_PYTHON_EXECUTABLE", prior_override)
-	resolver.free()
-	if not _check(executable.is_absolute_path() and FileAccess.file_exists(executable), "Default Python resolver finds an absolute worktree-compatible executable"):
-		return false
 
-	var malformed := [
-		{"version": 1, "id": 1, "payload": {}},
-		{"version": 1, "id": 1, "ok": "yes", "payload": {}},
-		{"version": 1, "id": 1, "ok": true},
-		{"version": 1, "id": 1, "ok": true, "payload": []},
-		{"version": 1, "id": 1, "ok": false, "error": []},
-		{"version": 1, "id": 1, "ok": false, "error": {"code": 4, "message": "bad"}},
-		{"version": 1, "id": 1, "ok": false, "error": {"code": "bad"}},
-		{"version": 1, "id": 1, "ok": true, "payload": {}, "extra": true},
-	]
-	for response in malformed:
-		var bridge = bridge_script.new()
-		var failures: Array[String] = []
-		var replies: Array[Dictionary] = []
-		bridge.bridge_failed.connect(func(message: String): failures.append(message))
-		bridge.response_received.connect(func(_id: int, reply: Dictionary): replies.append(reply))
-		bridge._pending[1] = "snapshot"
-		bridge._parse_response(JSON.stringify(response))
-		if not _check(bridge._failed and failures.size() == 1 and replies.is_empty(), "Malformed response fails before emission: " + JSON.stringify(response)):
-			bridge.free()
-			return false
-		bridge.free()
-	var bridge = bridge_script.new()
-	var replies: Array[Dictionary] = []
-	bridge.response_received.connect(func(_id: int, reply: Dictionary): replies.append(reply))
-	bridge._pending[2] = "snapshot"
-	bridge._parse_response(JSON.stringify({"version": 1, "id": 2, "ok": true, "payload": {"state": {}}}))
-	if not _check(replies.size() == 1 and not bridge._failed, "Complete protocol response emits once"):
-		bridge.free()
+func _autoload_checks() -> bool:
+	if not _check(ProjectSettings.has_setting("autoload/NativeGame"),
+			"NativeGame is registered as a production autoload"):
 		return false
-	bridge.free()
-	bridge = bridge_script.new()
-	replies = []
-	bridge.response_received.connect(func(_id: int, reply: Dictionary): replies.append(reply))
-	bridge._pending[3] = "load"
-	bridge._parse_response(JSON.stringify({"version": 1, "id": 3, "ok": false, "error": {"code": "bad_request", "message": "No save."}}))
-	if not _check(replies.size() == 1 and not bridge._failed, "Complete protocol failure envelope emits once"):
-		bridge.free()
+	if not _check(not ProjectSettings.has_setting("autoload/SimulationBridge"),
+			"SimulationBridge is no longer a production autoload"):
 		return false
-	bridge.free()
-	print("PASS: default Python resolution and strict response-envelope validation")
+	if not _check(root.get_node_or_null("NativeGame") != null,
+			"NativeGame singleton is live in the autoload tree"):
+		return false
+	print("PASS: NativeGame autoload registered, SimulationBridge removed")
 	return true
 
+
 func _run() -> void:
-	if not _bridge_contract_checks():
+	if not _autoload_checks():
 		return
+	_wipe_app_slot()
+	var game_flow = root.get_node("GameFlow")
+	var native_game = root.get_node("NativeGame")
+	game_flow.start_mode = "new"
+	game_flow.pending_seed = FIXED_SEED
 	if not _check(ResourceLoader.exists("res://scenes/main.tscn"), "main.tscn exists"):
 		return
 	var scene = load("res://scenes/main.tscn").instantiate()
-	var fake_bridge := FakeBridge.new(fixture())
-	root.add_child(fake_bridge)
-	scene.set_bridge(fake_bridge)
 	root.add_child(scene)
 	for frame in range(3):
 		await process_frame
-	if not _check(fake_bridge.requests.size() == 1 and fake_bridge.requests[0]["command"] == "new_campaign", "Startup requests a live campaign through the injected bridge"):
+	if not _check(not scene.snapshot.is_empty(), "Startup applies a native campaign snapshot"):
 		return
+	if not _check(str(scene.snapshot["date"]["text"]) == "1 Mar 1993",
+			"Seed-424242 campaign opens on 1 Mar 1993"):
+		return
+	if not _check(scene.snapshot == native_game.snapshot(),
+			"The displayed snapshot is the NativeGame snapshot"):
+		return
+	print("PASS: startup starts a native campaign through NativeGame directly")
 	for required in ["DateLabel", "PlayButton", "SpeedControls", "DecisionQueue", "ArdeniaMap", "RegionBrief", "MonthlyReport"]:
 		if not _check(scene.find_child(required, true, false) != null, "Required node: " + required):
 			return
-	scene.apply_snapshot(fixture())
+	# Continue-with-no-save starts fresh (the bridge-era recovery path,
+	# preserved): with no save on disk, a starting load falls back to a
+	# brand new campaign instead of surfacing an error.
+	scene._starting = true
+	scene._do_load()
+	if not _check(scene.snapshot["date"]["day_index"] == 0,
+			"A starting load with no save falls back to a fresh campaign"):
+		return
+	print("PASS: continue-with-no-save starts a fresh campaign")
+	scene.apply_snapshot(native_game.snapshot())
 	var map = scene.find_child("ArdeniaMap", true, false)
-	map.select_region("vashtera")
 	var brief = scene.find_child("RegionBrief", true, false)
+	map.select_region("vashtera")
 	if not _check(brief.find_child("RegionId").text == "vashtera", "Selected region id is displayed"):
 		return
-	if not _check(brief.find_child("PressureValue").text == "62%", "Selected region pressure comes from snapshot"):
+	if not _check(brief.find_child("PressureValue").text == "—",
+			"Pressure reads empty: the regional layer has no native backend yet"):
 		return
-	print("PASS: required scene nodes, fake-bridge startup, Vashtera selection and pressure")
-	var updated := fixture()
-	updated["regions"][6]["pressure"] = 0.77
-	scene.apply_snapshot(updated)
-	if not _check(brief.find_child("PressureValue").text == "77%" and is_equal_approx(map.regions["vashtera"]["pressure"], 0.77), "Brief and map refresh from a replacement snapshot"):
+	print("PASS: Vashtera selection displays through the native snapshot")
+	var enriched: Dictionary = native_game.snapshot()
+	enriched["regions"] = [{"id": "vashtera", "pressure": 0.77,
+		"unemployment": 0.12, "state_reach": 0.5}]
+	scene.apply_snapshot(enriched)
+	if not _check(brief.find_child("PressureValue").text == "77%" and is_equal_approx(map.regions["vashtera"]["pressure"], 0.77), "Brief and map still refresh from a replacement snapshot"):
 		return
-	scene.apply_snapshot(fixture())
+	scene.apply_snapshot(native_game.snapshot())
 	for action in ["pause", "speed_1", "speed_2", "speed_3", "speed_4", "speed_5", "back", "next_decision", "save", "load"]:
 		if not _check(InputMap.has_action(action) and not InputMap.action_get_events(action).is_empty(), "Keyboard binding: " + action):
 			return
@@ -255,13 +148,13 @@ func _run() -> void:
 		if not _check(map.selected_id == "vashtera", "Pointer selects Vashtera through transformed geometry"):
 			return
 		map.select_region("anera")
-		scene.find_child("NextDecision").pressed.emit()
-		if not _check(map.selected_id == "vashtera", "Next decision selects its associated region"):
+		if not _check(scene.find_child("NextDecision").disabled,
+				"Next decision is disabled while no native decisions exist"):
 			return
 		for button in scene.find_children("*", "Button", true, false):
 			if not _check(button.size.y >= 44.0, "44 px target: " + button.name):
 				return
-		print("PASS: %dx%d viewport bounds, non-overlap, hit testing, Tab/arrow/pointer/hover/decision selection, 44 px controls" % [dimensions.x, dimensions.y])
+		print("PASS: %dx%d viewport bounds, non-overlap, hit testing, Tab/arrow/pointer/hover, 44 px controls" % [dimensions.x, dimensions.y])
 		for argument in OS.get_cmdline_user_args():
 			if argument.begins_with("--capture-dir="):
 				if not _check(DisplayServer.get_name() != "headless", "Screenshot requires a rendering display"):
@@ -271,127 +164,81 @@ func _run() -> void:
 				if not _check(root.get_texture().get_image().save_png(path) == OK, "Save screenshot " + path):
 					return
 				print("CAPTURE: " + path)
+	# No native backend yet: the objective action must be visibly disabled
+	# with its reason attached — never silently dead, never erroring.
 	var action = brief.find_child("RegionAction")
-	if not _check(not action.disabled, "Live objective action is enabled when idle"):
+	if not _check(action.disabled, "Objective action is disabled with no native backend"):
 		return
-	action.pressed.emit()
-	if not _check(action.disabled and fake_bridge.requests[-1]["command"] == "adopt_objective", "Objective command disables mutating controls in flight"):
+	if not _check(str(action.tooltip_text).find("native backend") >= 0,
+			"The disabled objective control carries its explanatory note"):
 		return
-	await process_frame
-	await process_frame
-	if not _check(scene.snapshot["reform"]["active"]["objective_id"] == "reduce_regional_inequality", "Objective response replaces the displayed snapshot"):
-		return
+	print("PASS: adopt control is disabled-with-note, not silently dead")
 	var play = scene.find_child("PlayButton")
 	play.pressed.emit()
 	scene._process(2.0)
-	if not _check(play.disabled and fake_bridge.requests[-1]["command"] == "advance_day", "Running clock submits one advance_day request"):
+	if not _check(scene.snapshot["date"]["day_index"] == 1
+			and str(scene.snapshot["date"]["text"]) == "2 Mar 1993",
+			"Running clock advances one native day"):
 		return
-	await process_frame
-	await process_frame
-	if not _check(scene.snapshot["date"]["day_index"] == 1, "Clock response advances the displayed day"):
-		return
+	print("PASS: pause/speed clock calls advance_day directly")
 	var save_event := InputEventAction.new()
 	save_event.action = "save"
 	save_event.pressed = true
 	scene._unhandled_key_input(save_event)
-	await process_frame
-	await process_frame
+	if not _check(FileAccess.file_exists("user://saves/%s.json" % APP_SLOT),
+			"Save shortcut writes the named slot"):
+		return
 	scene._process(2.0)
-	await process_frame
-	await process_frame
 	if not _check(scene.snapshot["date"]["day_index"] == 2, "Campaign advances after save"):
 		return
 	var load_event := InputEventAction.new()
 	load_event.action = "load"
 	load_event.pressed = true
 	scene._unhandled_key_input(load_event)
-	await process_frame
-	await process_frame
-	if not _check(fake_bridge.requests[-1]["command"] == "load" and scene.snapshot["date"]["day_index"] == 1 and scene.snapshot["reform"]["active"]["objective_id"] == "reduce_regional_inequality", "Named-slot load restores date and objective"):
+	if not _check(scene.snapshot["date"]["day_index"] == 1
+			and str(scene.snapshot["date"]["text"]) == "2 Mar 1993",
+			"Named-slot load restores the saved day"):
 		return
-	print("PASS: fake bridge exercises objective, clock, save and load without spawning Python")
+	print("PASS: save shortcut, clock advance, and load restoration through NativeGame")
+	# Quit-equivalent: drop the displayed state entirely, then reload from
+	# disk — the relaunch restores the saved campaign, not a blank screen.
 	scene.apply_snapshot({})
 	if not _check(brief.find_child("PressureValue").text == "—" and scene.find_child("NextDecision").disabled and map.regions.is_empty(), "Missing data clears stale values and decisions"):
 		return
-	print("PASS: empty snapshot clears stale state; fake bridge only")
-
-	# --- Bounded bridge-failure recovery (G1 finding: no path back except
-	# a full app restart) ---
-	scene.apply_snapshot(fixture())
-	# The saved state must genuinely differ from what's on screen when the
-	# worker dies, or a bug that left recovery a no-op could pass by
-	# coincidence (both being the same unmodified fixture). Advance and
-	# save first, then reset the display to the untouched baseline — only
-	# an actual load round trip can make the post-recovery snapshot match.
-	fake_bridge.request("advance_day")
-	fake_bridge.request("save", {"slot": "godot_slice"})
-	var expected_recovery: Dictionary = fake_bridge._saved.duplicate(true)
-	if not _check(expected_recovery["date"]["day_index"] != fixture()["date"]["day_index"],
-			"Saved fixture for recovery differs from the untouched baseline"):
+	scene._do_load()
+	if not _check(scene.snapshot["date"]["day_index"] == 1
+			and str(scene.snapshot["date"]["text"]) == "2 Mar 1993"
+			and brief.find_child("RegionId").text == map.selected_id,
+			"Reload after a full state drop restores the saved campaign"):
 		return
-	scene.apply_snapshot(fixture())
-	fake_bridge.scripted_reconnect_failures = 1
-	fake_bridge.bridge_failed.emit("Fake worker crashed.")
-	await process_frame
-	if not _check(scene.find_child("BridgeFailure", true, false) != null
-			and scene.find_child("ReconnectButton", true, false) != null,
-			"Recoverable failure shows a blocking error with a Reconnect control"):
+	print("PASS: empty snapshot clears stale state; reload restores the save")
+	# Fatal native errors surface through the existing blocking-error path.
+	native_game.fatal_error.emit("Journey-test fatal.")
+	if not _check(scene.find_child("FatalError", true, false) != null
+			and scene.find_child("PlayButton", true, false).disabled,
+			"fatal_error shows a blocking error and halts the clock"):
 		return
-	scene.find_child("ReconnectButton", true, false).pressed.emit()
-	await process_frame
-	if not _check(scene.find_child("BridgeFailure", true, false) != null
-			and scene.find_child("ReconnectButton", true, false) != null,
-			"A failed respawn attempt re-shows the recoverable error, not a crash"):
+	print("PASS: fatal_error display via the blocking-error path")
+	# Menu, last: button presses queue a scene change, so assert
+	# synchronously and quit before it can run.
+	var menu = load("res://scenes/menu.tscn").instantiate()
+	root.add_child(menu)
+	menu.find_child("NewCampaignButton", true, false).pressed.emit()
+	if not _check(game_flow.start_mode == "new"
+			and typeof(game_flow.pending_seed) == TYPE_INT
+			and game_flow.pending_seed >= 0,
+			"Menu New Campaign arms a fresh mode plus an explicit int seed"):
 		return
-	scene.find_child("ReconnectButton", true, false).pressed.emit()
-	# Checked before any await: apply_snapshot({}) runs synchronously inside
-	# _attempt_recovery, so the pre-crash dashboard must already be gone
-	# here — not merely once the (deferred) load response lands.
-	if not _check(scene.snapshot.is_empty()
-			and brief.find_child("PressureValue").text == "—",
-			"Recovery clears the rendered dashboard immediately, before the load response arrives"):
+	menu.find_child("ContinueButton", true, false).pressed.emit()
+	if not _check(game_flow.start_mode == "continue",
+			"Menu Continue arms continue mode"):
 		return
-	await process_frame
-	await process_frame
-	if not _check(scene.find_child("BridgeFailure", true, false) == null
-			and fake_bridge.requests[-1]["command"] == "load",
-			"A successful respawn clears the error and resumes via load, not the stale cache"):
+	print("PASS: menu drives GameFlow with an explicit seed, no bridge involved")
+	_wipe_app_slot()
+	var residue := false
+	for suffix in ["", ".tmp", ".bak"]:
+		if FileAccess.file_exists("user://saves/%s.json%s" % [APP_SLOT, suffix]):
+			residue = true
+	if not _check(not residue, "cleanup: no app slot residue remains in user://saves/"):
 		return
-	if not _check(scene.snapshot == expected_recovery
-			and scene.snapshot["date"]["day_index"] != fixture()["date"]["day_index"],
-			"Recovered state is the client's own last save, not the untouched baseline that was on screen when the worker died"):
-		return
-	print("PASS: one failed respawn then a successful one recovers through a known save")
-
-	fake_bridge._reconnect_attempts = FakeBridge.MAX_RECONNECT_ATTEMPTS
-	fake_bridge.bridge_failed.emit("Fake worker crashed again.")
-	await process_frame
-	if not _check(scene.find_child("BridgeFailure", true, false) != null
-			and scene.find_child("ReconnectButton", true, false) == null,
-			"Exhausted reconnect attempts show a permanent failure with no retry control"):
-		return
-	print("PASS: bounded reconnect attempts stop retrying and surface a permanent failure")
-
-	# --- Recovery falls back to a fresh campaign when there is no save yet
-	# (the load->new_campaign path traced but not exercised by Task 9) ---
-	fake_bridge._reconnect_attempts = 0
-	fake_bridge._saved = {}
-	fake_bridge.bridge_failed.emit("Fake worker crashed a third time.")
-	await process_frame
-	if not _check(scene.find_child("ReconnectButton", true, false) != null,
-			"A reset attempt budget shows Reconnect again after a fresh crash"):
-		return
-	scene.find_child("ReconnectButton", true, false).pressed.emit()
-	await process_frame
-	await process_frame
-	if not _check(fake_bridge.requests[-2]["command"] == "load"
-			and fake_bridge.requests[-1]["command"] == "new_campaign",
-			"A load against no saved state falls back to a fresh campaign"):
-		return
-	if not _check(scene.find_child("BridgeFailure", true, false) == null
-			and not scene.snapshot.is_empty()
-			and scene.snapshot["reform"]["active"] == null,
-			"Recovery via new_campaign applies a genuine fresh snapshot, not stale data"):
-		return
-	print("PASS: recovery with no prior save falls back to a fresh campaign, not stale data")
 	quit(0)

@@ -78,3 +78,58 @@ func phase_label() -> String:
 	if decay_duration > 0 and t < decay_duration:
 		return "fading (%d/%dmo)" % [t + 1, decay_duration]
 	return "expired"
+
+
+func to_dict() -> Dictionary:
+	return {
+		"id": id,
+		"source": source,
+		"target": target,
+		"magnitude": magnitude,
+		"onset_delay": onset_delay,
+		"ramp_duration": ramp_duration,
+		"hold_duration": hold_duration,
+		"decay_duration": decay_duration,
+		"age": age,
+		"source_id": source_id,
+		"portfolio": portfolio,
+		"institutional": institutional,
+	}
+
+
+static func from_dict(data: Dictionary) -> Modifier:
+	if not (data is Dictionary):
+		push_error("Modifier.from_dict: expected a Dictionary, got %s" % [data])
+		return null
+	var m := Modifier.new()
+	m.id = String(data.get("id", ""))
+	m.source = String(data.get("source", ""))
+	m.target = String(data.get("target", ""))
+	m.magnitude = float(data.get("magnitude", 0.0))
+	m.onset_delay = _int_field(data, "onset_delay", 0)
+	m.ramp_duration = _int_field(data, "ramp_duration", 1)
+	m.hold_duration = _int_field(data, "hold_duration", -1)
+	m.decay_duration = _int_field(data, "decay_duration", 0)
+	m.age = _int_field(data, "age", 0)
+	m.source_id = String(data.get("source_id", ""))
+	m.portfolio = String(data.get("portfolio", ""))
+	m.institutional = _bool_field(data, "institutional", true)
+	return m
+
+
+## JSON boundary: Godot parses every JSON number as float, so a whole-number
+## float must read back as an int wherever an int field is expected.
+static func _int_field(data: Dictionary, key: String, fallback: int) -> int:
+	var v: Variant = data.get(key, fallback)
+	if typeof(v) == TYPE_INT:
+		return v
+	if typeof(v) == TYPE_FLOAT and v == floorf(v) and absf(v) <= 9007199254740992.0:
+		return int(v)
+	return fallback
+
+
+static func _bool_field(data: Dictionary, key: String, fallback: bool) -> bool:
+	var v: Variant = data.get(key, fallback)
+	if typeof(v) == TYPE_BOOL:
+		return v
+	return fallback

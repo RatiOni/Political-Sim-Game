@@ -1,23 +1,28 @@
 extends PanelContainer
 
 # This client formats a read model; it never advances or derives simulation state.
+# Native build: the campaign lives in the NativeGame autoload (in-process), so
+# every control below calls it directly and renders the returned snapshot —
+# there is no request/response round trip and no worker process to recover.
 const SAVE_SLOT := "godot_slice"
 const SPEED_DELAYS := [1.5, 1.0, 0.65, 0.4, 0.2]
+
+# Reform objectives have no native backend yet (a later phase), so the
+# objective control is always disabled — visibly, with the reason attached,
+# never silently dead and never erroring.
+const OBJECTIVE_UNAVAILABLE_TEXT := "Objectives arrive in a later phase"
+const OBJECTIVE_UNAVAILABLE_NOTE := "Reform objectives have no native backend yet, so this control stays disabled rather than failing."
 
 var snapshot: Dictionary = {}
 var selected_region_id := "vashtera"
 var _decision_index := -1
-var _bridge: Node
-var _request_id := 0
-var _bridge_dead := false
-var _recovering := false
+var _game: Node
+var _fatal := false
+var _starting := false
 var _paused := true
 var _speed := 1
 var _clock_elapsed := 0.0
 var _selected_objective_id := ""
-
-func set_bridge(value: Node) -> void:
-	_bridge = value
 
 func _ready() -> void:
 	%ArdeniaMap.region_selected.connect(_select_region)
@@ -28,28 +33,34 @@ func _ready() -> void:
 	%RegionBrief.find_child("RegionAction").pressed.connect(_adopt_selected_objective)
 	get_window().size_changed.connect(_resize_layout)
 	_resize_layout()
-	if _bridge == null:
-		_bridge = get_node("/root/SimulationBridge")
-	_bridge.connect("response_received", _on_response_received)
-	_bridge.connect("bridge_failed", _on_bridge_failed)
-	find_child("SaveButton").pressed.connect(func(): _submit("save", {"slot": SAVE_SLOT}))
-	find_child("LoadButton").pressed.connect(func(): _submit("load", {"slot": SAVE_SLOT}))
+	if _game == null:
+		_game = get_node("/root/NativeGame")
+	_game.connect("state_changed", _on_state_changed)
+	_game.connect("fatal_error", _on_fatal_error)
+	find_child("SaveButton").pressed.connect(_do_save)
+	find_child("LoadButton").pressed.connect(_do_load)
 	if GameFlow.start_mode == "continue":
-		# Reuses the bridge-recovery fallback: if this client has no save
-		# under SAVE_SLOT, the load fails and _on_response_received falls
-		# back to new_campaign instead of surfacing an error.
-		_recovering = true
-		_submit("load", {"slot": SAVE_SLOT})
+		# Continue-with-no-save starts a fresh campaign: if this client has
+		# no save under SAVE_SLOT, the load fails and _do_load falls back
+		# to new_campaign instead of surfacing an error.
+		_starting = true
+		_do_load()
 	else:
-		_submit("new_campaign")
+		_do_new_campaign()
 
 func _process(delta: float) -> void:
-	if _paused or _request_id != 0 or _bridge_dead or snapshot.is_empty():
+	if _paused or _fatal or snapshot.is_empty():
 		return
 	_clock_elapsed += delta
 	if _clock_elapsed >= SPEED_DELAYS[_speed - 1]:
 		_clock_elapsed = 0.0
-		_submit("advance_day")
+		var result: Dictionary = _game.advance_day()
+		if not result.get("ok", false):
+			_set_status("ADVANCE FAILED / %s" % result.get("error", "Unknown error"))
+		else:
+			apply_snapshot(result.get("snapshot", _game.snapshot()))
+			_set_status("LIVE SIMULATION / READY")
+		_refresh_controls()
 
 func _resize_layout() -> void:
 	# Native-size UI keeps 44 px targets and readable type at both acceptance sizes.
@@ -95,20 +106,16 @@ func apply_snapshot(value: Dictionary) -> void:
 		items.add_child(label)
 	find_child("NextDecision").disabled = decisions.is_empty()
 	_decision_index = -1
-	%MonthlyReport.find_child("ReportText").text = _lines(snapshot.get("digest", []), "No monthly report yet. Advance to a month boundary once connected.")
+	%MonthlyReport.find_child("ReportText").text = _lines(snapshot.get("digest", []), "No monthly report yet. Advance a day once connected.")
 	%MonthlyReport.find_child("DispatchText").text = _lines(snapshot.get("dispatches", []), "No dispatches this period.")
 	%ArdeniaMap.apply_snapshot(snapshot.get("regions", []), selected_region_id)
-	var reform: Dictionary = snapshot.get("reform", {})
-	var objectives: Array = reform.get("objectives", [])
-	_selected_objective_id = str(objectives[0].get("id", "")) if not objectives.is_empty() else ""
+	# No native backend yet (see OBJECTIVE_UNAVAILABLE_NOTE): the control
+	# stays disabled with the reason attached, whatever the snapshot holds.
+	_selected_objective_id = ""
 	var action = %RegionBrief.find_child("RegionAction")
-	if reform.get("active") != null:
-		action.text = "Objective adopted"
-		_selected_objective_id = ""
-	elif not objectives.is_empty():
-		action.text = "Adopt: %s" % objectives[0].get("name", "objective")
-	else:
-		action.text = "No objective available"
+	action.disabled = true
+	action.text = OBJECTIVE_UNAVAILABLE_TEXT
+	action.tooltip_text = OBJECTIVE_UNAVAILABLE_NOTE
 	_refresh_region()
 	_refresh_controls()
 
@@ -147,90 +154,102 @@ func _next_decision() -> void:
 	var item = find_child("DecisionItems").get_child(_decision_index)
 	%DecisionQueue.ensure_control_visible(item)
 
-func _submit(command: String, args: Dictionary = {}) -> void:
-	if _bridge_dead or _request_id != 0:
-		return
-	_request_id = _bridge.request(command, args)
-	_set_status("WORKING / %s" % command.replace("_", " ").to_upper())
-	_refresh_controls()
+func _campaign_config() -> Dictionary:
+	var seed := GameFlow.pending_seed
+	if seed < 0:
+		seed = randi()
+		GameFlow.pending_seed = seed
+	return {
+		"country_id": "ardenia",
+		"background_id": "none",
+		"difficulty_id": "normal",
+		"opening_role": "contextual",
+		"seed": seed,
+	}
 
-func _on_response_received(request_id: int, response: Dictionary) -> void:
-	if request_id != _request_id:
+func _do_new_campaign() -> void:
+	if _fatal:
 		return
-	_request_id = 0
-	if not response.get("ok", false):
-		if _recovering:
-			# The last known save could not be loaded (most likely: this
-			# client never saved one). Fall back to a fresh campaign — a
-			# second, different known state — rather than retrying the
-			# same failing load or falling through to the stale snapshot.
-			_recovering = false
-			_submit("new_campaign")
-			return
-		var error: Dictionary = response.get("error", {})
-		_set_status("REQUEST FAILED / %s" % error.get("message", "Unknown error"))
+	_set_status("WORKING / NEW CAMPAIGN")
+	var result: Dictionary = _game.new_campaign(_campaign_config())
+	if not result.get("ok", false):
+		_set_status("NEW CAMPAIGN FAILED / %s" % result.get("error", "Unknown error"))
 		_refresh_controls()
 		return
-	_recovering = false
-	var payload: Dictionary = response.get("payload", {})
-	if payload.has("state"):
-		apply_snapshot(payload["state"])
-	var result: Dictionary = payload.get("result", {})
-	_set_status(str(result.get("message", "LIVE SIMULATION / READY")))
+	apply_snapshot(result.get("snapshot", _game.snapshot()))
+	_set_status("LIVE SIMULATION / READY")
 	_refresh_controls()
 
-func _on_bridge_failed(message: String) -> void:
-	_bridge_dead = true
+func _do_save() -> void:
+	if _fatal or snapshot.is_empty():
+		return
+	var result: Dictionary = _game.save(SAVE_SLOT)
+	if not result.get("ok", false):
+		_set_status("SAVE FAILED / %s" % result.get("error", "Unknown error"))
+	else:
+		_set_status("SAVED / READY")
+	_refresh_controls()
+
+func _do_load() -> void:
+	if _fatal:
+		return
+	var was_starting := _starting
+	var result: Dictionary = _game.load(SAVE_SLOT)
+	if not result.get("ok", false):
+		if was_starting:
+			# The last known save could not be loaded (most likely: this
+			# client never saved one). Fall back to a fresh campaign —
+			# a second, different known state — rather than retrying the
+			# same failing load or falling through to a stale snapshot.
+			_starting = false
+			_do_new_campaign()
+			return
+		_set_status("LOAD FAILED / %s" % result.get("error", "Unknown error"))
+		_refresh_controls()
+		return
+	_starting = false
+	apply_snapshot(result.get("snapshot", _game.snapshot()))
+	_set_status("LOADED / READY")
+	_refresh_controls()
+
+func _on_state_changed(value: Dictionary) -> void:
+	apply_snapshot(value)
+	_refresh_controls()
+
+func _on_fatal_error(message: String) -> void:
+	_fatal = true
 	_paused = true
-	_request_id = 0
-	_recovering = false  # explicit: a new failure abandons any recovery in flight
-	_show_blocking_error(message, _bridge.can_reconnect())
+	_starting = false
+	_show_blocking_error(message)
 	_refresh_controls()
-
-## Retry the worker once, bounded by the bridge's own attempt cap. On a
-## fresh worker, the old in-memory campaign is gone — it lived only in the
-## dead process — so recovery resumes from a known state: this client's own
-## last save, or (if none) a brand new campaign. It never keeps showing the
-## stale cached snapshot as if nothing happened.
-func _attempt_recovery() -> void:
-	if not _bridge.reconnect():
-		return  # Reconnect failed; bridge_failed already re-fired above us.
-	_remove_blocking_error()
-	_bridge_dead = false
-	# apply_snapshot({}), not a bare assignment: this must clear every
-	# rendered widget (date, vitals, map, decisions...), not just the data
-	# dict, or the pre-crash dashboard keeps showing on screen — silently
-	# stale — for the length of the load round trip.
-	apply_snapshot({})
-	_recovering = true
-	_submit("load", {"slot": SAVE_SLOT})
 
 func _toggle_pause() -> void:
-	if _request_id != 0 or _bridge_dead:
+	if _fatal:
 		return
 	_paused = not _paused
 	_clock_elapsed = 0.0
 	_refresh_controls()
 
 func _set_speed(value: int) -> void:
-	if _request_id != 0 or _bridge_dead:
+	if _fatal:
 		return
 	_speed = clampi(value, 1, 5)
 	_refresh_controls()
 
 func _adopt_selected_objective() -> void:
-	if not _selected_objective_id.is_empty():
-		_submit("adopt_objective", {"objective_id": _selected_objective_id})
+	# Unreachable while the control is disabled (see apply_snapshot); kept
+	# as a defensive no-op with a visible note rather than a dead handler.
+	_set_status("OBJECTIVES UNAVAILABLE / REFORM SYSTEM LANDS IN A LATER PHASE")
 
 func _refresh_controls() -> void:
-	var ready := not snapshot.is_empty() and not _bridge_dead and _request_id == 0
+	var ready := not snapshot.is_empty() and not _fatal
 	%PlayButton.disabled = not ready
 	%PlayButton.text = "Paused" if _paused else "Playing ×%d" % _speed
 	for index in range(5):
 		var button = find_child("Speed%d" % (index + 1))
 		button.disabled = not ready
 		button.button_pressed = index + 1 == _speed
-	%RegionBrief.find_child("RegionAction").disabled = not ready or _selected_objective_id.is_empty()
+	%RegionBrief.find_child("RegionAction").disabled = true
 	find_child("SaveButton").disabled = not ready
 	find_child("LoadButton").disabled = not ready
 
@@ -238,40 +257,31 @@ func _set_status(message: String) -> void:
 	find_child("PreviewStatus").text = message
 	find_child("Footer").text = "MINISTERIAL WIRE  /  %s" % message
 
-func _show_blocking_error(message: String, recoverable: bool) -> void:
+func _show_blocking_error(message: String) -> void:
 	_remove_blocking_error()
-	_set_status("SIMULATION BRIDGE FAILED")
+	_set_status("NATIVE SIMULATION FAILED")
 	var blocker := ColorRect.new()
-	blocker.name = "BridgeFailure"
+	blocker.name = "FatalError"
 	blocker.color = Color(0.05, 0.06, 0.06, 0.96)
 	blocker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	blocker.mouse_filter = Control.MOUSE_FILTER_STOP
 	var box := VBoxContainer.new()
-	box.name = "BridgeFailureBox"
+	box.name = "FatalErrorBox"
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 48)
 	var label := Label.new()
-	label.name = "BridgeFailureLabel"
-	var closing := "The application can retry the simulation worker." if recoverable \
-		else "No retries remain. Restart the application."
-	label.text = "SIMULATION UNAVAILABLE\n\n%s\n\n%s\n\nLog: user://logs/godot_bridge.log" % [message, closing]
+	label.name = "FatalErrorLabel"
+	label.text = "SIMULATION UNAVAILABLE\n\n%s\n\nThis is a native-state failure with no worker to retry. Restart the application." % message
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(label)
-	if recoverable:
-		var button := Button.new()
-		button.name = "ReconnectButton"
-		button.text = "Reconnect"
-		button.custom_minimum_size = Vector2(160, 44)
-		button.pressed.connect(_attempt_recovery)
-		box.add_child(button)
 	blocker.add_child(box)
 	add_child(blocker)
 
 func _remove_blocking_error() -> void:
-	var existing := find_child("BridgeFailure", true, false)
+	var existing := find_child("FatalError", true, false)
 	if existing == null:
 		return
 	existing.get_parent().remove_child(existing)
@@ -279,10 +289,6 @@ func _remove_blocking_error() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
-		if _bridge != null and _bridge.has_method("shutdown"):
-			_bridge.shutdown()
-		elif _bridge != null:
-			_bridge.request("shutdown", {})
 		get_tree().quit()
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -293,10 +299,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		_next_decision()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("save"):
-		_submit("save", {"slot": SAVE_SLOT})
+		_do_save()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("load"):
-		_submit("load", {"slot": SAVE_SLOT})
+		_do_load()
 		get_viewport().set_input_as_handled()
 	else:
 		for index in range(5):

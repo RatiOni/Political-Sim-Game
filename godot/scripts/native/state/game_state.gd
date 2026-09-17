@@ -41,6 +41,39 @@ class Player extends RefCounted:
 	var elections_won: int = 0
 
 
+	func to_dict() -> Dictionary:
+		return {
+			"name": name,
+			"title": title,
+			"faction_id": faction_id,
+			"ideology_economic": ideology_economic,
+			"ideology_social": ideology_social,
+			"approval": approval,
+			"political_capital": political_capital,
+			"pc_regen_base": pc_regen_base,
+			"in_government": in_government,
+			"elections_won": elections_won,
+		}
+
+
+	static func from_dict(data: Dictionary) -> Player:
+		if not (data is Dictionary):
+			push_error("Player.from_dict: expected a Dictionary, got %s" % [data])
+			return null
+		var p := Player.new()
+		p.name = String(data.get("name", ""))
+		p.title = String(data.get("title", ""))
+		p.faction_id = String(data.get("faction_id", ""))
+		p.ideology_economic = float(data.get("ideology_economic", 0.0))
+		p.ideology_social = float(data.get("ideology_social", 0.0))
+		p.approval = float(data.get("approval", 0.5))
+		p.political_capital = float(data.get("political_capital", 50.0))
+		p.pc_regen_base = float(data.get("pc_regen_base", 10.0))
+		p.in_government = GameState._bool_field(data, "in_government", true)
+		p.elections_won = GameState._int_field(data, "elections_won", 0)
+		return p
+
+
 var year: int
 var month: int   # 1-12
 var day: int = 1
@@ -93,6 +126,10 @@ var stability_value: float = 0.55
 ## traits) as a plain Dictionary, matching Python's campaign_meta.
 var campaign_meta: Dictionary = {}
 
+## The campaign RNG. Never null: a fresh state opens on seed 0 and NativeGame
+## reseeds it from the campaign config in unit B.
+var rng: SimRng = SimRng.from_seed(0)
+
 
 func coalition_faction_ids() -> Array[String]:
 	var out: Array[String] = []
@@ -107,3 +144,208 @@ func world_country(country_id: String) -> Country:
 		if c.id == country_id:
 			return c
 	return null
+
+
+func to_dict() -> Dictionary:
+	var world_dicts: Array = []
+	for c in world:
+		world_dicts.append(c.to_dict())
+	var region_dicts := {}
+	for key in regions:
+		region_dicts[key] = regions[key].to_dict()
+	var program_dicts: Array = []
+	for p in regional_programs:
+		program_dicts.append(p.to_dict())
+	var ministry_dicts := {}
+	for key in ministries:
+		ministry_dicts[key] = ministries[key].to_dict()
+	var household_dicts := {}
+	for key in households:
+		household_dicts[key] = households[key].to_dict()
+	var history_dicts: Array = []
+	for b in budget_history:
+		history_dicts.append(b.to_dict())
+	var minister_dicts: Array = []
+	for m in ministers:
+		minister_dicts.append(m.to_dict())
+	var modifier_dicts: Array = []
+	for m in modifiers:
+		modifier_dicts.append(m.to_dict())
+	# The RNG travels through SimRng's own to_dict, except its two int64s are
+	# stored as decimal strings: Godot parses every JSON number as float64,
+	# which cannot hold 64-bit PCG state exactly past 2^53 — plain ints would
+	# silently fork the stream on load (verified empirically).
+	var rng_snapshot := {"state": "0", "inc": "1"}
+	if rng != null:
+		var raw_rng := rng.to_dict()
+		rng_snapshot = {"state": str(raw_rng["state"]), "inc": str(raw_rng["inc"])}
+	return {
+		"year": year,
+		"month": month,
+		"day": day,
+		"day_index": day_index,
+		"turn": turn,
+		"player": null if player == null else player.to_dict(),
+		"country": null if country == null else country.to_dict(),
+		"world": world_dicts,
+		"regions": region_dicts,
+		"regional_programs": program_dicts,
+		"ministries": ministry_dicts,
+		"households": household_dicts,
+		"active_budget": null if active_budget == null else active_budget.to_dict(),
+		"pending_budget": null if pending_budget == null else pending_budget.to_dict(),
+		"budget_history": history_dicts,
+		"ministers": minister_dicts,
+		"modifiers": modifier_dicts,
+		"ruling_faction_id": ruling_faction_id,
+		"civil_war_risk": civil_war_risk,
+		"civil_war": civil_war,
+		"stability_value": stability_value,
+		"campaign_meta": campaign_meta.duplicate(true),
+		"rng": rng_snapshot,
+	}
+
+
+## Tolerant reader (mirroring engine/persistence.py): missing keys fall back
+## to each field's declared default and unknown keys are ignored, so older
+## saves load under a newer schema. Returns null + push_error only when the
+## input itself is not a Dictionary or a load-bearing nested object
+## (player/country/rng) is present but unparseable.
+static func from_dict(data: Dictionary) -> GameState:
+	if not (data is Dictionary):
+		push_error("GameState.from_dict: expected a Dictionary, got %s" % [data])
+		return null
+	var state := GameState.new()
+	state.year = _int_field(data, "year", 0)
+	state.month = _int_field(data, "month", 0)
+	state.day = _int_field(data, "day", 1)
+	state.day_index = _int_field(data, "day_index", 0)
+	state.turn = _int_field(data, "turn", 0)
+	var player_data: Variant = data.get("player", null)
+	if player_data is Dictionary:
+		state.player = Player.from_dict(player_data)
+		if state.player == null:
+			return null
+	var country_data: Variant = data.get("country", null)
+	if country_data is Dictionary:
+		state.country = Country.from_dict(country_data)
+		if state.country == null:
+			return null
+	var world_data: Variant = data.get("world", [])
+	if world_data is Array:
+		for c_data in world_data:
+			if c_data is Dictionary:
+				var c := Country.from_dict(c_data)
+				if c != null:
+					state.world.append(c)
+	var regions_data: Variant = data.get("regions", {})
+	if regions_data is Dictionary:
+		for key in regions_data:
+			if regions_data[key] is Dictionary:
+				var region := RegionState.from_dict(regions_data[key])
+				if region != null:
+					state.regions[key] = region
+	var programs_data: Variant = data.get("regional_programs", [])
+	if programs_data is Array:
+		for p_data in programs_data:
+			if p_data is Dictionary:
+				var program := RegionState.RegionalProgram.from_dict(p_data)
+				if program != null:
+					state.regional_programs.append(program)
+	var ministries_data: Variant = data.get("ministries", {})
+	if ministries_data is Dictionary:
+		for key in ministries_data:
+			if ministries_data[key] is Dictionary:
+				var ministry := MinistryState.from_dict(ministries_data[key])
+				if ministry != null:
+					state.ministries[key] = ministry
+	var households_data: Variant = data.get("households", {})
+	if households_data is Dictionary:
+		for key in households_data:
+			if households_data[key] is Dictionary:
+				var household := HouseholdGroupState.from_dict(households_data[key])
+				if household != null:
+					state.households[key] = household
+	var active_data: Variant = data.get("active_budget", null)
+	if active_data is Dictionary:
+		state.active_budget = AnnualBudget.from_dict(active_data)
+		if state.active_budget == null:
+			return null
+	var pending_data: Variant = data.get("pending_budget", null)
+	if pending_data is Dictionary:
+		state.pending_budget = AnnualBudget.from_dict(pending_data)
+		if state.pending_budget == null:
+			return null
+	var history_data: Variant = data.get("budget_history", [])
+	if history_data is Array:
+		for b_data in history_data:
+			if b_data is Dictionary:
+				var budget := AnnualBudget.from_dict(b_data)
+				if budget != null:
+					state.budget_history.append(budget)
+	var ministers_data: Variant = data.get("ministers", [])
+	if ministers_data is Array:
+		for m_data in ministers_data:
+			if m_data is Dictionary:
+				var minister := Minister.from_dict(m_data)
+				if minister != null:
+					state.ministers.append(minister)
+	var modifiers_data: Variant = data.get("modifiers", [])
+	if modifiers_data is Array:
+		for m_data in modifiers_data:
+			if m_data is Dictionary:
+				var modifier := Modifier.from_dict(m_data)
+				if modifier != null:
+					state.modifiers.append(modifier)
+	state.ruling_faction_id = String(data.get("ruling_faction_id", ""))
+	state.civil_war_risk = float(data.get("civil_war_risk", 0.0))
+	state.civil_war = _bool_field(data, "civil_war", false)
+	state.stability_value = float(data.get("stability_value", 0.55))
+	var meta_data: Variant = data.get("campaign_meta", {})
+	state.campaign_meta = meta_data.duplicate(true) if meta_data is Dictionary else {}
+	if data.has("rng"):
+		var restored := _rng_from_dict(data.get("rng"))
+		if restored == null:
+			return null
+		state.rng = restored
+	return state
+
+
+## Accepts the string form to_dict writes, plus raw ints and whole-number
+## floats (hand-written or foreign saves) — the int/float tolerance the JSON
+## boundary requires. Null + push_error on anything else.
+static func _rng_from_dict(v: Variant) -> SimRng:
+	if not (v is Dictionary):
+		push_error("GameState.from_dict: malformed 'rng', expected a Dictionary, got %s" % [v])
+		return null
+	var coerced := {}
+	for key in ["state", "inc"]:
+		var raw: Variant = v.get(key)
+		if typeof(raw) == TYPE_INT:
+			coerced[key] = raw
+		elif typeof(raw) == TYPE_STRING and raw.is_valid_int():
+			coerced[key] = int(raw)
+		elif typeof(raw) == TYPE_FLOAT and raw == floorf(raw) and absf(raw) <= 9007199254740992.0:
+			coerced[key] = int(raw)
+		else:
+			push_error("GameState.from_dict: malformed rng field '%s' in %s" % [key, v])
+			return null
+	return SimRng.from_dict(coerced)
+
+
+## JSON boundary: Godot parses every JSON number as float, so a whole-number
+## float must read back as an int wherever an int field is expected.
+static func _int_field(data: Dictionary, key: String, fallback: int) -> int:
+	var v: Variant = data.get(key, fallback)
+	if typeof(v) == TYPE_INT:
+		return v
+	if typeof(v) == TYPE_FLOAT and v == floorf(v) and absf(v) <= 9007199254740992.0:
+		return int(v)
+	return fallback
+
+
+static func _bool_field(data: Dictionary, key: String, fallback: bool) -> bool:
+	var v: Variant = data.get(key, fallback)
+	if typeof(v) == TYPE_BOOL:
+		return v
+	return fallback

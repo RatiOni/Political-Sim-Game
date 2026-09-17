@@ -63,3 +63,32 @@ func threat_level() -> float:
 
 func implementation_quality() -> float:
 	return effective_competence() * (0.5 + 0.5 * loyalty)
+
+
+func to_dict() -> Dictionary:
+	return {
+		"id": id,
+		"name": name,
+		"portfolio": portfolio,
+		"faction_id": faction_id,
+		"competence": competence,
+		"loyalty": loyalty,
+		"ambition": ambition,
+		"trait_id": trait_id,
+	}
+
+
+static func from_dict(data: Dictionary) -> Minister:
+	if not (data is Dictionary):
+		push_error("Minister.from_dict: expected a Dictionary, got %s" % [data])
+		return null
+	var m := Minister.new()
+	m.id = String(data.get("id", ""))
+	m.name = String(data.get("name", ""))
+	m.portfolio = String(data.get("portfolio", ""))
+	m.faction_id = String(data.get("faction_id", ""))
+	m.competence = float(data.get("competence", 0.0))
+	m.loyalty = float(data.get("loyalty", 0.0))
+	m.ambition = float(data.get("ambition", 0.0))
+	m.trait_id = String(data.get("trait_id", ""))
+	return m

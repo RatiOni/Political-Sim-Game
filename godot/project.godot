@@ -16,7 +16,7 @@ config/features=PackedStringArray("4.7")
 
 [autoload]
 
-SimulationBridge="*res://scripts/bridge/simulation_bridge.gd"
+NativeGame="*res://scripts/native/native_game.gd"
 GameFlow="*res://scripts/game_flow.gd"
 
 [display]
