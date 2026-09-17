@@ -7,11 +7,14 @@ extends RefCounted
 ##
 ## Atomic replace protocol: each save serializes to <slot>.json.tmp first;
 ## the previous live revision (if any) then moves aside to <slot>.json.bak,
-## and only then does the .tmp take the .json name. A crash at any point
-## leaves either the old or the new revision intact at the live path — never
-## a half-written file. Loads never consult .tmp; a corrupt or
-## version-mismatched main file falls back to .bak when it parses and its
-## version matches.
+## and only then does the .tmp take the .json name. A crash between the two
+## renames leaves the live path ABSENT (the old revision waits in .bak, the
+## new one stranded in .tmp), so loads consult .bak whenever the live path
+## is missing or unreadable. Guarantee: the store always holds the old or
+## the previous revision — never a half-written file — but the newest
+## revision can still be lost to a crash mid-publish. Loads never consult
+## .tmp; a corrupt or version-mismatched main file falls back to .bak when
+## it parses and its version matches.
 
 const SAVE_FORMAT_VERSION := 1
 const SAVES_DIR := "user://saves"
@@ -59,16 +62,24 @@ static func load_slot(slot: String) -> Dictionary:
 	if not is_valid_slot(slot):
 		return {"ok": false, "error": "invalid slot name '%s' (must match %s)" % [slot, SLOT_PATTERN]}
 	var main_path := _path_for(slot, "")
+	var bak_path := _path_for(slot, ".bak")
 	if not FileAccess.file_exists(main_path):
+		# Crash mid-publish (main->.bak done, .tmp->main not yet) leaves the
+		# live path absent while the previous revision waits in .bak.
+		if FileAccess.file_exists(bak_path):
+			var bak_only := _load_file(bak_path)
+			if bak_only.get("ok", false):
+				return bak_only
 		return {"ok": false, "error": "no save found in slot '%s'" % slot}
 	var main_result := _load_file(main_path)
 	if main_result.get("ok", false):
 		return main_result
-	var bak_path := _path_for(slot, ".bak")
 	if FileAccess.file_exists(bak_path):
 		var bak_result := _load_file(bak_path)
 		if bak_result.get("ok", false):
 			return bak_result
+		return {"ok": false, "error": "save in slot '%s' is unreadable (main: %s; .bak: %s)" %
+			[slot, main_result.get("error", "unknown error"), bak_result.get("error", "unknown error")]}
 	return {"ok": false, "error": "save in slot '%s' is unreadable (main: %s)" %
 		[slot, main_result.get("error", "unknown error")]}
 

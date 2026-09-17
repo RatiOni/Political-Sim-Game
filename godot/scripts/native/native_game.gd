@@ -39,13 +39,22 @@ func _ready() -> void:
 ## country_id, background_id, difficulty_id, opening_role, plus an explicit
 ## int seed). The factory-built RNG is reseeded from the config seed, then
 ## the state is validated; a rejection keeps the OLD state and reports
-## {ok:false} through the return dict plus fatal_error (defensive — a
-## factory-built state must not fail validation).
+## {ok:false} through the return dict. fatal_error is emitted ONLY when there
+## is no valid live campaign to show (_state == null) — a recoverable failure
+## behind a live campaign must never brick the UI behind the blocker.
 func new_campaign(config: Dictionary) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
 	_busy = true
 	var result := _do_new_campaign(config)
+	# Emits happen while _busy is held, deliberately: a subscriber that calls
+	# back into NativeGame mid-notification is refused by the guard instead
+	# of recursing into a half-observed operation (reentrant emission was
+	# observed to recurse ~1000 deep and spew engine stack errors).
+	if result.get("ok", false):
+		state_changed.emit(result.get("snapshot", {}))
+	elif _state == null:
+		fatal_error.emit(str(result.get("error", "Unknown error")))
 	_busy = false
 	return result
 
@@ -83,9 +92,9 @@ func save(slot: String) -> Dictionary:
 	return result
 
 
-## Replaces the live campaign with the contents of `slot`, then validates
-## (same defensive posture as new_campaign: a rejection keeps the OLD
-## state, reports {ok:false}, and surfaces through fatal_error).
+## Replaces the live campaign with the contents of `slot`, then validates.
+## A rejection keeps the OLD state and reports {ok:false} — never through
+## fatal_error (the caller shows LOAD FAILED and keeps playing).
 func load(slot: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -99,7 +108,6 @@ func load(slot: String) -> Dictionary:
 	if not errors.is_empty():
 		_busy = false
 		var message := "Loaded campaign failed validation: %s" % [", ".join(errors)]
-		fatal_error.emit(message)
 		return {"ok": false, "error": message}
 	_state = incoming
 	var snap := snapshot()
@@ -120,25 +128,26 @@ func snapshot() -> Dictionary:
 
 
 func _do_new_campaign(config: Dictionary) -> Dictionary:
+	# Never emits: the caller emits state_changed / fatal_error while still
+	# holding _busy, so a reentrant subscriber calling back in is refused by
+	# the in-flight guard instead of recursing into a half-observed
+	# operation. Emitting here would be equivalent, but a single emit site
+	# per public method keeps the guard coverage obvious.
 	var content := ContentRepository.load_all()
 	if content.has("error"):
 		var content_message := "Could not load campaign content: %s" % [content["error"]]
-		fatal_error.emit(content_message)
 		return {"ok": false, "error": content_message}
 	var fresh: GameState = GameFactory.new_campaign(content, config)
 	if fresh == null:
 		var factory_message := "Could not build a campaign from the given config."
-		fatal_error.emit(factory_message)
 		return {"ok": false, "error": factory_message}
 	fresh.rng = SimRng.from_seed(int(config.get("seed", 0)))
 	var errors := StateValidator.validate(fresh)
 	if not errors.is_empty():
 		var validation_message := "New campaign failed validation: %s" % [", ".join(errors)]
-		fatal_error.emit(validation_message)
 		return {"ok": false, "error": validation_message}
 	_state = fresh
 	var snap := snapshot()
-	state_changed.emit(snap)
 	return {"ok": true, "snapshot": snap}
 
 

@@ -6,6 +6,14 @@ extends RefCounted
 ## This checks the shape of Task 2's own typed state (required fields,
 ## faction seat sums, relation symmetry, numeric ranges) — it is not a
 ## parity/oracle comparison against the Python reference.
+##
+## Every numeric bound enforced here is documented in the Python reference
+## (cited per check); bounds Python does not document are not invented.
+
+## Self-contained Gregorian month table for the day-range check — mirrors
+## sim/calendar.gd deliberately WITHOUT calling it, so the validator stays
+## decoupled from the sim layer.
+const _DAYS_IN_MONTH := [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
 static func validate(state: GameState) -> PackedStringArray:
 	var errors: Array[String] = []
@@ -35,6 +43,9 @@ static func validate(state: GameState) -> PackedStringArray:
 		_validate_country(c, errors, "world country(%s)" % c.id)
 
 	_validate_relation_symmetry(state, errors)
+	_validate_relation_ranges(state, errors)
+	_validate_date(state, errors)
+	_validate_ministers(state, errors)
 
 	if state.player != null:
 		_validate_player(state, errors)
@@ -42,11 +53,19 @@ static func validate(state: GameState) -> PackedStringArray:
 	if state.stability_value < 0.0 or state.stability_value > 1.0:
 		errors.append("stability_value out of range: %s" % state.stability_value)
 
+	# 0..1 pressure gauge per game_state.py ("0..1 pressure gauge + latch",
+	# civil-war section) and engine/crisis.py ("a deterministic 0..1 risk
+	# gauge"); per-country values are checked in _validate_country.
+	if state.civil_war_risk < 0.0 or state.civil_war_risk > 1.0:
+		errors.append("civil_war_risk out of range: %s" % state.civil_war_risk)
+
 	if state.ruling_faction_id == "":
 		errors.append("ruling_faction_id is empty")
 	elif state.country != null:
 		var ruling_exists := false
 		for f in state.country.factions:
+			if f == null:
+				continue
 			if f.id == state.ruling_faction_id:
 				ruling_exists = true
 				break
@@ -72,6 +91,8 @@ static func _validate_player(state: GameState, errors: Array[String]) -> void:
 	if state.country != null:
 		var found := false
 		for f in state.country.factions:
+			if f == null:
+				continue
 			if f.id == player.faction_id:
 				found = true
 				break
@@ -81,7 +102,9 @@ static func _validate_player(state: GameState, errors: Array[String]) -> void:
 
 static func _validate_relation_symmetry(state: GameState, errors: Array[String]) -> void:
 	var all_countries: Array[Country] = [state.country]
-	all_countries.append_array(state.world)
+	for c in state.world:
+		if c != null:
+			all_countries.append(c)
 
 	for i in range(all_countries.size()):
 		for j in range(i + 1, all_countries.size()):
@@ -98,6 +121,83 @@ static func _validate_relation_symmetry(state: GameState, errors: Array[String])
 				errors.append("relation trade_volume asymmetry between '%s' and '%s'" % [a.id, b.id])
 
 
+## models/relations.py documents score as -1.0 (openly hostile) to +1.0
+## (close allies) (BilateralRelation docstring + field comment) and floors
+## trade at zero (cap_trade_volume clamps to max(0.0, ...)); only those two
+## bounds are enforced — no upper trade ceiling is invented.
+static func _validate_relation_ranges(state: GameState, errors: Array[String]) -> void:
+	var all_countries: Array[Country] = [state.country]
+	all_countries.append_array(state.world)
+	for c in all_countries:
+		if c == null:
+			continue
+		for key in c.relations:
+			var rel: Variant = c.relations[key]
+			if not (rel is Country.BilateralRelation):
+				errors.append("country '%s' has a null or malformed relation for '%s'" % [c.id, key])
+				continue
+			if rel.score < -1.0 or rel.score > 1.0:
+				errors.append("relation '%s'->'%s' score out of range: %s" % [c.id, key, rel.score])
+			if rel.trade_volume < 0.0:
+				errors.append("relation '%s'->'%s' trade_volume is negative: %s" % [c.id, key, rel.trade_volume])
+
+
+static func _is_leap_year(year: int) -> bool:
+	return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+
+
+static func _days_in_month(year: int, month: int) -> int:
+	if month == 2 and _is_leap_year(year):
+		return 29
+	return _DAYS_IN_MONTH[month - 1]
+
+
+## game_state.py documents month as 1-12; day_index counts simulated days
+## from 0 and turn counts completed monthly pulses from 0 (both must stay
+## non-negative). Day is checked against the state's own year/month.
+static func _validate_date(state: GameState, errors: Array[String]) -> void:
+	if state.month < 1 or state.month > 12:
+		errors.append("month out of range: %s" % state.month)
+		if state.day < 1:
+			errors.append("day out of range: %s" % state.day)
+	elif state.day < 1 or state.day > _days_in_month(state.year, state.month):
+		errors.append("day %s out of range for month %s year %s" % [state.day, state.month, state.year])
+	if state.day_index < 0:
+		errors.append("day_index is negative: %s" % state.day_index)
+	if state.turn < 0:
+		errors.append("turn is negative: %s" % state.turn)
+
+
+## models/cabinet.py documents Minister competence/loyalty/ambition as
+## 0.0-1.0 each (field comments) and trait as a key into TRAIT_EFFECTS with
+## "" meaning no notable personality — an unknown non-empty trait is corrupt
+## data, not a new personality. (Minister loyalty is 0..1, not the faction
+## -1..1 scale.)
+static func _validate_ministers(state: GameState, errors: Array[String]) -> void:
+	var faction_ids := {}
+	if state.country != null:
+		for f in state.country.factions:
+			if f != null:
+				faction_ids[f.id] = true
+	for m in state.ministers:
+		if m == null:
+			errors.append("ministers contains a null entry")
+			continue
+		if m.id == "":
+			errors.append("minister has an empty id")
+		if not faction_ids.has(m.faction_id):
+			errors.append("minister '%s' faction_id '%s' does not match any player-country faction" %
+				[m.id, m.faction_id])
+		if m.loyalty < 0.0 or m.loyalty > 1.0:
+			errors.append("minister '%s' loyalty out of range: %s" % [m.id, m.loyalty])
+		if m.competence < 0.0 or m.competence > 1.0:
+			errors.append("minister '%s' competence out of range: %s" % [m.id, m.competence])
+		if m.ambition < 0.0 or m.ambition > 1.0:
+			errors.append("minister '%s' ambition out of range: %s" % [m.id, m.ambition])
+		if m.trait_id != "" and not Minister.TRAIT_EFFECTS.has(m.trait_id):
+			errors.append("minister '%s' has an unknown trait '%s'" % [m.id, m.trait_id])
+
+
 static func _validate_country(country: Country, errors: Array[String], label: String) -> void:
 	if country.id == "":
 		errors.append("%s: missing id" % label)
@@ -107,6 +207,9 @@ static func _validate_country(country: Country, errors: Array[String], label: St
 	var seat_total := 0
 	var seen_faction_ids := {}
 	for f in country.factions:
+		if f == null:
+			errors.append("%s: has a null faction entry" % label)
+			continue
 		if seen_faction_ids.has(f.id):
 			errors.append("%s: duplicate faction id '%s'" % [label, f.id])
 		seen_faction_ids[f.id] = true
@@ -121,12 +224,20 @@ static func _validate_country(country: Country, errors: Array[String], label: St
 			errors.append("%s: faction '%s' loyalty out of range" % [label, f.id])
 		if f.support < 0.0 or f.support > 1.0:
 			errors.append("%s: faction '%s' support out of range" % [label, f.id])
-		if f.ideology.economic < -1.0 or f.ideology.economic > 1.0 \
+		if f.ideology == null:
+			errors.append("%s: faction '%s' is missing ideology" % [label, f.id])
+		elif f.ideology.economic < -1.0 or f.ideology.economic > 1.0 \
 				or f.ideology.social < -1.0 or f.ideology.social > 1.0:
 			errors.append("%s: faction '%s' ideology out of range" % [label, f.id])
 
 		for w in f.wings:
-			if w.ideology.economic < -1.0 or w.ideology.economic > 1.0 \
+			if w == null:
+				errors.append("%s: faction '%s' has a null wing entry" % [label, f.id])
+				continue
+			if w.ideology == null:
+				errors.append("%s: faction '%s' wing '%s' is missing ideology" %
+					[label, f.id, w.id])
+			elif w.ideology.economic < -1.0 or w.ideology.economic > 1.0 \
 					or w.ideology.social < -1.0 or w.ideology.social > 1.0:
 				errors.append("%s: faction '%s' wing '%s' ideology out of range" %
 					[label, f.id, w.id])
@@ -151,3 +262,7 @@ static func _validate_country(country: Country, errors: Array[String], label: St
 		errors.append("%s: stability out of range" % label)
 	if country.bureaucratic_capacity < 0.0 or country.bureaucratic_capacity > 1.0:
 		errors.append("%s: bureaucratic_capacity out of range" % label)
+	# 0..1 pressure gauge per engine/crisis.py ("a deterministic 0..1 risk
+	# gauge"); the GameState-level mirror is checked in validate().
+	if country.civil_war_risk < 0.0 or country.civil_war_risk > 1.0:
+		errors.append("%s: civil_war_risk out of range" % label)

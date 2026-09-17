@@ -7,7 +7,11 @@ extends SceneTree
 ## Covers exactly the brief's cases: exact save/load round trip including RNG
 ## continuity, corrupt-JSON rejection, unsupported-version rejection, slot-regex
 ## rejection (traversal + overlong names), and interrupted-write survival via
-## the .tmp-ignore / .bak-recovery protocol. Test states come from
+## the .tmp-ignore / .bak-recovery protocol. Unit A adds: required-subtree
+## rejection (empty state, country:null, wrong-typed containers, missing rng),
+## missing-main .bak recovery, dual-corruption reporting, and validator range
+## checks (dates, ministers, civil-war risk, relation bounds) asserted both
+## directly and through a save→load→validate chain. Test states come from
 ## GameFactory.new_campaign, mirroring test_game_factory.gd's setup.
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
@@ -165,6 +169,170 @@ func _test_unsupported_version_rejected(t, content: Dictionary) -> void:
 	t.truth(result.has("error"), "version: rejection carries an error message")
 
 
+func _test_required_subtrees_rejected(t, content: Dictionary) -> void:
+	DirAccess.make_dir_recursive_absolute(SAVES_DIR)
+
+	# An empty state object: player/country are REQUIRED, so this must fail.
+	var empty_slot := SLOT_PREFIX + "empty-state"
+	_wipe_slot(empty_slot)
+	_write_text(_slot_path(empty_slot, ""), JSON.stringify({"version": 1, "state": {}}))
+	var empty_result: Dictionary = SaveStoreScript.load_slot(empty_slot)
+	t.truth(not empty_result.get("ok", true), "required: {'state':{}} is rejected (player/country required)")
+	t.truth(empty_result.has("error"), "required: rejection carries an error message")
+
+	# country:null on an otherwise valid state.
+	var null_slot := SLOT_PREFIX + "null-country"
+	_wipe_slot(null_slot)
+	var null_state: GameState = _new_test_state(content)
+	var null_dict: Dictionary = null_state.to_dict()
+	null_dict["country"] = null
+	_write_text(_slot_path(null_slot, ""), JSON.stringify({"version": 1, "state": null_dict}))
+	var null_result: Dictionary = SaveStoreScript.load_slot(null_slot)
+	t.truth(not null_result.get("ok", true), "required: country:null is rejected")
+	t.truth(null_result.has("error"), "required: country:null rejection carries an error message")
+
+	# A present-but-wrongly-typed container must reject, not load empty.
+	var type_slot := SLOT_PREFIX + "world-type"
+	_wipe_slot(type_slot)
+	var type_state: GameState = _new_test_state(content)
+	var type_dict: Dictionary = type_state.to_dict()
+	type_dict["world"] = {}
+	_write_text(_slot_path(type_slot, ""), JSON.stringify({"version": 1, "state": type_dict}))
+	var type_result: Dictionary = SaveStoreScript.load_slot(type_slot)
+	t.truth(not type_result.get("ok", true), "required: 'world':{} is rejected (wrong container type)")
+	t.truth(type_result.has("error"), "required: wrong-type rejection carries an error message")
+
+	# A save without the rng key is corruption, not an old schema: every
+	# writer includes it, so loading must fail rather than fork a seed-0
+	# stream.
+	var rng_slot := SLOT_PREFIX + "no-rng"
+	_wipe_slot(rng_slot)
+	var rng_state: GameState = _new_test_state(content)
+	var rng_dict: Dictionary = rng_state.to_dict()
+	rng_dict.erase("rng")
+	_write_text(_slot_path(rng_slot, ""), JSON.stringify({"version": 1, "state": rng_dict}))
+	var rng_result: Dictionary = SaveStoreScript.load_slot(rng_slot)
+	t.truth(not rng_result.get("ok", true), "required: rng-key-stripped save is rejected")
+	t.truth(rng_result.has("error"), "required: missing-rng rejection carries an error message")
+
+
+func _test_missing_main_recovers_bak(t, content: Dictionary) -> void:
+	var slot := SLOT_PREFIX + "missing-main"
+	_wipe_slot(slot)
+
+	var empty: Dictionary = SaveStoreScript.load_slot(slot)
+	t.truth(not empty.get("ok", true), "missing: empty slot is rejected")
+	t.truth(str(empty.get("error", "")).contains("no save found"),
+		"missing: empty slot still reports 'no save found'")
+
+	# Revision A, then revision B (which archives A as .bak).
+	var state_a: GameState = _new_test_state(content)
+	state_a.turn = 2
+	t.truth(SaveStoreScript.save_slot(slot, state_a).get("ok", false),
+		"missing: revision A saves")
+	var state_b: GameState = _new_test_state(content)
+	state_b.turn = 7
+	t.truth(SaveStoreScript.save_slot(slot, state_b).get("ok", false),
+		"missing: revision B saves (A archived as .bak)")
+
+	# Crash between the two publish renames: the live path is absent while
+	# the previous revision waits in .bak.
+	DirAccess.remove_absolute(_slot_path(slot, ""))
+	t.truth(not FileAccess.file_exists(_slot_path(slot, "")),
+		"missing: precondition holds (main deleted)")
+	t.truth(FileAccess.file_exists(_slot_path(slot, ".bak")),
+		"missing: precondition holds (.bak survives)")
+	var recovered: Dictionary = SaveStoreScript.load_slot(slot)
+	t.truth(recovered.get("ok", false), "missing: load recovers the .bak revision when main is absent")
+	if recovered.get("ok", false):
+		var recovered_state: GameState = recovered.get("state")
+		t.equal(recovered_state.turn, 2, "missing: .bak recovery restores revision A (turn 2)")
+
+
+func _test_dual_corruption_rejected(t) -> void:
+	var slot := SLOT_PREFIX + "dual-corrupt"
+	_wipe_slot(slot)
+	DirAccess.make_dir_recursive_absolute(SAVES_DIR)
+	_write_text(_slot_path(slot, ""), "{{{ main is garbage")
+	_write_text(_slot_path(slot, ".bak"), "{{{ bak is garbage")
+	var result: Dictionary = SaveStoreScript.load_slot(slot)
+	t.truth(not result.get("ok", true), "dual: main + .bak both corrupt is rejected")
+	var message := str(result.get("error", ""))
+	t.truth(message.contains("main:"), "dual: rejection cites the main reason")
+	t.truth(message.contains(".bak:"), "dual: rejection cites the .bak reason too")
+
+
+func _test_validator_date_ranges(t, content: Dictionary) -> void:
+	var base: GameState = _new_test_state(content)
+	t.equal(StateValidatorScript.validate(base).size(), 0,
+		"dates: factory state validates (precondition)")
+
+	var bad_month: GameState = _new_test_state(content)
+	bad_month.month = 13
+	t.truth(StateValidatorScript.validate(bad_month).size() > 0,
+		"dates: validator flags month=13")
+
+	var bad_day: GameState = _new_test_state(content)
+	bad_day.day = 0
+	t.truth(StateValidatorScript.validate(bad_day).size() > 0,
+		"dates: validator flags day=0")
+
+	var bad_index: GameState = _new_test_state(content)
+	bad_index.day_index = -1
+	t.truth(StateValidatorScript.validate(bad_index).size() > 0,
+		"dates: validator flags a negative day_index")
+
+	var bad_turn: GameState = _new_test_state(content)
+	bad_turn.turn = -1
+	t.truth(StateValidatorScript.validate(bad_turn).size() > 0,
+		"dates: validator flags a negative turn")
+
+	# Full save→load→validate chain: SaveStore itself does not validate, so
+	# the load succeeds and the chain rejection lands at the validate step
+	# (the same step NativeGame.load enforces).
+	var slot := SLOT_PREFIX + "bad-date"
+	_wipe_slot(slot)
+	var chained: GameState = _new_test_state(content)
+	chained.month = 13
+	t.truth(SaveStoreScript.save_slot(slot, chained).get("ok", false),
+		"dates: out-of-range-date state still saves")
+	var loaded: Dictionary = SaveStoreScript.load_slot(slot)
+	t.truth(loaded.get("ok", false),
+		"dates: out-of-range-date save still loads (SaveStore does not validate)")
+	if loaded.get("ok", false):
+		var errors := StateValidatorScript.validate(loaded.get("state"))
+		t.truth(errors.size() > 0,
+			"dates: save→load→validate chain rejects month=13 (%s)" % [errors])
+
+
+func _test_validator_minister_and_ranges(t, content: Dictionary) -> void:
+	var base: GameState = _new_test_state(content)
+	t.truth(base.ministers.size() > 0, "ranges: factory cabinet is non-empty (precondition)")
+
+	var bad_loyalty: GameState = _new_test_state(content)
+	bad_loyalty.ministers[0].loyalty = 999.0
+	t.truth(StateValidatorScript.validate(bad_loyalty).size() > 0,
+		"ranges: validator flags minister loyalty 999")
+
+	var bad_trait: GameState = _new_test_state(content)
+	bad_trait.ministers[0].trait_id = "archmage"
+	t.truth(StateValidatorScript.validate(bad_trait).size() > 0,
+		"ranges: validator flags an unknown minister trait")
+
+	var bad_risk: GameState = _new_test_state(content)
+	bad_risk.civil_war_risk = 1.5
+	t.truth(StateValidatorScript.validate(bad_risk).size() > 0,
+		"ranges: validator flags civil_war_risk outside 0..1")
+
+	var bad_rel: GameState = _new_test_state(content)
+	var rel_keys: Array = bad_rel.country.relations.keys()
+	t.truth(rel_keys.size() > 0, "ranges: factory state wires relations (precondition)")
+	if rel_keys.size() > 0:
+		bad_rel.country.relations[rel_keys[0]].score = 5.0
+		t.truth(StateValidatorScript.validate(bad_rel).size() > 0,
+			"ranges: validator flags a relation score outside -1..1")
+
+
 func _test_slot_regex_rejected(t, content: Dictionary) -> void:
 	var state: GameState = _new_test_state(content)
 	var evil_49: String = SLOT_PREFIX + "x".repeat(42)
@@ -241,13 +409,26 @@ func _initialize() -> void:
 		_test_unsupported_version_rejected(t, content)
 		_test_slot_regex_rejected(t, content)
 		_test_interrupted_write_survival(t, content)
+		_test_required_subtrees_rejected(t, content)
+		_test_missing_main_recovers_bak(t, content)
+		_test_dual_corruption_rejected(t)
+		_test_validator_date_ranges(t, content)
+		_test_validator_minister_and_ranges(t, content)
 
 	for slot in [SLOT_PREFIX + "roundtrip", SLOT_PREFIX + "corrupt",
-			SLOT_PREFIX + "badversion", SLOT_PREFIX + "interrupted"]:
+			SLOT_PREFIX + "badversion", SLOT_PREFIX + "interrupted",
+			SLOT_PREFIX + "empty-state", SLOT_PREFIX + "null-country",
+			SLOT_PREFIX + "world-type", SLOT_PREFIX + "no-rng",
+			SLOT_PREFIX + "missing-main", SLOT_PREFIX + "dual-corrupt",
+			SLOT_PREFIX + "bad-date"]:
 		_wipe_slot(slot)
 	var residue := false
 	for slot in [SLOT_PREFIX + "roundtrip", SLOT_PREFIX + "corrupt",
-			SLOT_PREFIX + "badversion", SLOT_PREFIX + "interrupted"]:
+			SLOT_PREFIX + "badversion", SLOT_PREFIX + "interrupted",
+			SLOT_PREFIX + "empty-state", SLOT_PREFIX + "null-country",
+			SLOT_PREFIX + "world-type", SLOT_PREFIX + "no-rng",
+			SLOT_PREFIX + "missing-main", SLOT_PREFIX + "dual-corrupt",
+			SLOT_PREFIX + "bad-date"]:
 		for suffix in ["", ".tmp", ".bak"]:
 			if FileAccess.file_exists(_slot_path(slot, suffix)):
 				residue = true

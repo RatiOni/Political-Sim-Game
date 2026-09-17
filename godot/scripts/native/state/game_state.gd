@@ -206,11 +206,14 @@ func to_dict() -> Dictionary:
 	}
 
 
-## Tolerant reader (mirroring engine/persistence.py): missing keys fall back
-## to each field's declared default and unknown keys are ignored, so older
-## saves load under a newer schema. Returns null + push_error only when the
-## input itself is not a Dictionary or a load-bearing nested object
-## (player/country/rng) is present but unparseable.
+## Tolerant reader (mirroring engine/persistence.py): an ABSENT key falls back
+## to its field's declared default and unknown keys are ignored, so older
+## saves load under a newer schema. Strict where tolerance would corrupt:
+## the player/country/rng subtrees are REQUIRED (absent, null, or
+## unparseable rejects the save), and a PRESENT-but-wrongly-typed container
+## (e.g. "world" holding a Dictionary) rejects it too instead of silently
+## loading empty. Scalar coercion and the schemaless campaign_meta stay
+## lenient, as before. Returns null + push_error on any rejection.
 static func from_dict(data: Dictionary) -> GameState:
 	if not (data is Dictionary):
 		push_error("GameState.from_dict: expected a Dictionary, got %s" % [data])
@@ -222,16 +225,23 @@ static func from_dict(data: Dictionary) -> GameState:
 	state.day_index = _int_field(data, "day_index", 0)
 	state.turn = _int_field(data, "turn", 0)
 	var player_data: Variant = data.get("player", null)
-	if player_data is Dictionary:
-		state.player = Player.from_dict(player_data)
-		if state.player == null:
-			return null
+	if not (player_data is Dictionary):
+		push_error("GameState.from_dict: missing or malformed required 'player', got %s" % [player_data])
+		return null
+	state.player = Player.from_dict(player_data)
+	if state.player == null:
+		return null
 	var country_data: Variant = data.get("country", null)
-	if country_data is Dictionary:
-		state.country = Country.from_dict(country_data)
-		if state.country == null:
-			return null
+	if not (country_data is Dictionary):
+		push_error("GameState.from_dict: missing or malformed required 'country', got %s" % [country_data])
+		return null
+	state.country = Country.from_dict(country_data)
+	if state.country == null:
+		return null
 	var world_data: Variant = data.get("world", [])
+	if data.has("world") and not (world_data is Array):
+		push_error("GameState.from_dict: malformed 'world', expected an Array, got %s" % [world_data])
+		return null
 	if world_data is Array:
 		for c_data in world_data:
 			if c_data is Dictionary:
@@ -239,6 +249,9 @@ static func from_dict(data: Dictionary) -> GameState:
 				if c != null:
 					state.world.append(c)
 	var regions_data: Variant = data.get("regions", {})
+	if data.has("regions") and not (regions_data is Dictionary):
+		push_error("GameState.from_dict: malformed 'regions', expected a Dictionary, got %s" % [regions_data])
+		return null
 	if regions_data is Dictionary:
 		for key in regions_data:
 			if regions_data[key] is Dictionary:
@@ -246,6 +259,9 @@ static func from_dict(data: Dictionary) -> GameState:
 				if region != null:
 					state.regions[key] = region
 	var programs_data: Variant = data.get("regional_programs", [])
+	if data.has("regional_programs") and not (programs_data is Array):
+		push_error("GameState.from_dict: malformed 'regional_programs', expected an Array, got %s" % [programs_data])
+		return null
 	if programs_data is Array:
 		for p_data in programs_data:
 			if p_data is Dictionary:
@@ -253,6 +269,9 @@ static func from_dict(data: Dictionary) -> GameState:
 				if program != null:
 					state.regional_programs.append(program)
 	var ministries_data: Variant = data.get("ministries", {})
+	if data.has("ministries") and not (ministries_data is Dictionary):
+		push_error("GameState.from_dict: malformed 'ministries', expected a Dictionary, got %s" % [ministries_data])
+		return null
 	if ministries_data is Dictionary:
 		for key in ministries_data:
 			if ministries_data[key] is Dictionary:
@@ -260,6 +279,9 @@ static func from_dict(data: Dictionary) -> GameState:
 				if ministry != null:
 					state.ministries[key] = ministry
 	var households_data: Variant = data.get("households", {})
+	if data.has("households") and not (households_data is Dictionary):
+		push_error("GameState.from_dict: malformed 'households', expected a Dictionary, got %s" % [households_data])
+		return null
 	if households_data is Dictionary:
 		for key in households_data:
 			if households_data[key] is Dictionary:
@@ -267,16 +289,25 @@ static func from_dict(data: Dictionary) -> GameState:
 				if household != null:
 					state.households[key] = household
 	var active_data: Variant = data.get("active_budget", null)
+	if active_data != null and not (active_data is Dictionary):
+		push_error("GameState.from_dict: malformed 'active_budget', expected a Dictionary or null, got %s" % [active_data])
+		return null
 	if active_data is Dictionary:
 		state.active_budget = AnnualBudget.from_dict(active_data)
 		if state.active_budget == null:
 			return null
 	var pending_data: Variant = data.get("pending_budget", null)
+	if pending_data != null and not (pending_data is Dictionary):
+		push_error("GameState.from_dict: malformed 'pending_budget', expected a Dictionary or null, got %s" % [pending_data])
+		return null
 	if pending_data is Dictionary:
 		state.pending_budget = AnnualBudget.from_dict(pending_data)
 		if state.pending_budget == null:
 			return null
 	var history_data: Variant = data.get("budget_history", [])
+	if data.has("budget_history") and not (history_data is Array):
+		push_error("GameState.from_dict: malformed 'budget_history', expected an Array, got %s" % [history_data])
+		return null
 	if history_data is Array:
 		for b_data in history_data:
 			if b_data is Dictionary:
@@ -284,6 +315,9 @@ static func from_dict(data: Dictionary) -> GameState:
 				if budget != null:
 					state.budget_history.append(budget)
 	var ministers_data: Variant = data.get("ministers", [])
+	if data.has("ministers") and not (ministers_data is Array):
+		push_error("GameState.from_dict: malformed 'ministers', expected an Array, got %s" % [ministers_data])
+		return null
 	if ministers_data is Array:
 		for m_data in ministers_data:
 			if m_data is Dictionary:
@@ -291,6 +325,9 @@ static func from_dict(data: Dictionary) -> GameState:
 				if minister != null:
 					state.ministers.append(minister)
 	var modifiers_data: Variant = data.get("modifiers", [])
+	if data.has("modifiers") and not (modifiers_data is Array):
+		push_error("GameState.from_dict: malformed 'modifiers', expected an Array, got %s" % [modifiers_data])
+		return null
 	if modifiers_data is Array:
 		for m_data in modifiers_data:
 			if m_data is Dictionary:
@@ -303,11 +340,13 @@ static func from_dict(data: Dictionary) -> GameState:
 	state.stability_value = float(data.get("stability_value", 0.55))
 	var meta_data: Variant = data.get("campaign_meta", {})
 	state.campaign_meta = meta_data.duplicate(true) if meta_data is Dictionary else {}
-	if data.has("rng"):
-		var restored := _rng_from_dict(data.get("rng"))
-		if restored == null:
-			return null
-		state.rng = restored
+	if not data.has("rng"):
+		push_error("GameState.from_dict: missing required 'rng' (every writer since format v1 includes it)")
+		return null
+	var restored := _rng_from_dict(data.get("rng"))
+	if restored == null:
+		return null
+	state.rng = restored
 	return state
 
 

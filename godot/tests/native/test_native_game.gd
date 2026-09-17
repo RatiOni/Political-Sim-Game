@@ -14,6 +14,7 @@ extends SceneTree
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const NativeGameScript = preload("res://scripts/native/native_game.gd")
+const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 
 const FIXED_SEED := 424242
 const SLOT_PREFIX := "t4btest-"
@@ -172,8 +173,8 @@ func _test_invalid_campaign_keeps_old_state(t) -> void:
 	var result: Dictionary = game.new_campaign(bad)
 	t.truth(not result.get("ok", true),
 		"invalid: a non-Ardenia config reports ok=false")
-	t.equal(fatal_messages.size(), 1,
-		"invalid: the rejection surfaces through fatal_error")
+	t.equal(fatal_messages.size(), 0,
+		"invalid: a recoverable mid-game rejection emits no fatal_error")
 	t.equal(game.snapshot(), before,
 		"invalid: the old campaign survives a rejected new_campaign")
 	game.free()
@@ -186,18 +187,42 @@ func _test_in_flight_guard(t) -> void:
 	# only in-place mutation (append / key-set) is visible outside.
 	var emissions: Array = []
 	var inner: Dictionary = {}
+	# A pre-set flag (not is_empty-after-assignment): the nested call below
+	# runs DURING the outer emit, so any flag set by the nested result is
+	# still unset when the nested handler runs — checking it there would
+	# recurse without bound.
+	var nested_done := [false]
 	game.state_changed.connect(func(_snap: Dictionary) -> void:
 		emissions.append(1)
-		if inner.is_empty():
+		if not nested_done[0]:
+			nested_done[0] = true
 			inner["result"] = game.advance_day()
 	)
+	var day_before: int = (game.snapshot()["date"] as Dictionary)["day_index"]
 	var outer: Dictionary = game.advance_day()
 	t.truth(outer.get("ok", false), "guard: the outer advance_day succeeds")
-	t.equal(emissions.size(), 1, "guard: one advance emits state_changed exactly once")
+	# The guard covers the emit itself: a subscriber that calls back in is
+	# refused with ok=false (no second emission, no state change) instead of
+	# recursing into the half-observed outer operation.
+	t.equal(emissions.size(), 1, "guard: one emission total; the refused nested call emits nothing")
 	var inner_result: Dictionary = inner.get("result", {})
 	t.truth(not inner_result.get("ok", true),
+		"guard: a reentrant call during the emit is refused with ok=false")
+	t.truth(inner_result.has("error"),
+		"guard: the reentrant refusal carries an error")
+	t.equal((game.snapshot()["date"] as Dictionary)["day_index"], day_before + 1,
+		"guard: exactly one day advanced (outer only; nested call changed nothing)")
+	# The guard itself still rejects true overlap: with _busy held, any op
+	# is refused without touching state.
+	game._busy = true
+	var before: Dictionary = game.snapshot()
+	var refused: Dictionary = game.advance_day()
+	t.truth(not refused.get("ok", true),
 		"guard: a second call while one runs is rejected with ok=false")
-	t.truth(inner_result.has("error"), "guard: the rejection carries an error")
+	t.truth(refused.has("error"), "guard: the rejection carries an error")
+	t.equal(game.snapshot(), before,
+		"guard: the rejected call leaves live state untouched")
+	game._busy = false
 	game.free()
 
 
@@ -221,6 +246,133 @@ func _test_state_changed_on_lifecycle(t) -> void:
 	game.free()
 
 
+func _test_fresh_bad_config_emits_fatal(t) -> void:
+	var game = NativeGameScript.new()
+	var fatal_messages: Array = []
+	game.fatal_error.connect(func(message: String) -> void: fatal_messages.append(message))
+	var bad := _base_config()
+	bad["country_id"] = "krasova"
+	var result: Dictionary = game.new_campaign(bad)
+	t.truth(not result.get("ok", true),
+		"fatal-path: a bad config on an empty game reports ok=false")
+	t.truth(result.has("error"), "fatal-path: the rejection carries an error")
+	t.equal(fatal_messages.size(), 1,
+		"fatal-path: failure with no live campaign emits fatal_error once")
+	t.equal(game.snapshot(), {},
+		"fatal-path: state stays null (empty snapshot) after the fatal rejection")
+	game.free()
+
+
+func _test_failed_validation_load_keeps_state_no_fatal(t) -> void:
+	var slot := SLOT_PREFIX + "badworld"
+	_wipe_slot(slot)
+	var game = NativeGameScript.new()
+	t.truth(game.new_campaign(_base_config()).get("ok", false),
+		"badworld: a valid campaign starts first")
+	game.advance_day()
+	var before: Dictionary = game.snapshot()
+	t.truth(game.save(slot).get("ok", false), "badworld: the valid campaign saves")
+	# Craft a validator-failing save: an otherwise-valid payload whose world
+	# is empty (StateValidator requires a non-empty world).
+	var path := _slot_path(slot, "")
+	var reader := FileAccess.open(path, FileAccess.READ)
+	var payload = JSON.parse_string(reader.get_as_text())
+	reader.close()
+	(payload["state"] as Dictionary)["world"] = []
+	var writer := FileAccess.open(path, FileAccess.WRITE)
+	writer.store_string(JSON.stringify(payload))
+	writer.flush()
+	writer.close()
+	var fatal_messages: Array = []
+	game.fatal_error.connect(func(message: String) -> void: fatal_messages.append(message))
+	var result: Dictionary = game.load(slot)
+	t.truth(not result.get("ok", true),
+		"badworld: loading a validator-failing save reports ok=false")
+	t.truth(result.has("error"), "badworld: the rejection carries an error")
+	t.equal(fatal_messages.size(), 0,
+		"badworld: a failed load never emits fatal_error")
+	t.equal(game.snapshot(), before,
+		"badworld: the live campaign survives byte-identical")
+	game.free()
+	_wipe_slot(slot)
+
+
+func _test_reentrant_advance_from_handler_refused(t) -> void:
+	var game = NativeGameScript.new()
+	game.new_campaign(_base_config())
+	var calls: Array = []
+	var inner: Dictionary = {}
+	var entered := [false]
+	game.state_changed.connect(func(_snap: Dictionary) -> void:
+		calls.append(1)
+		if not entered[0]:
+			entered[0] = true
+			inner["result"] = game.advance_day()
+	)
+	var day_before: int = (game.snapshot()["date"] as Dictionary)["day_index"]
+	var outer: Dictionary = game.advance_day()
+	t.truth(outer.get("ok", false), "reentrant: the outer advance_day succeeds")
+	var inner_result: Dictionary = inner.get("result", {})
+	t.truth(not inner_result.get("ok", true),
+		"reentrant: advance_day from inside a state_changed handler is refused")
+	t.truth(inner_result.has("error"),
+		"reentrant: the refusal carries an error")
+	t.equal(calls.size(), 1,
+		"reentrant: the refused nested call emits nothing further")
+	t.equal((game.snapshot()["date"] as Dictionary)["day_index"], day_before + 1,
+		"reentrant: only the outer advance moved the calendar")
+	game.free()
+
+
+static func _write_repo_file(path: String, content: String) -> void:
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(content)
+	file.close()
+
+
+static func _wipe_repo_tree(root: String) -> void:
+	# Best-effort recursive wipe of a temp user:// tree (self-cleaning).
+	var dir := DirAccess.open(root)
+	if dir == null:
+		return
+	for entry in dir.get_files():
+		DirAccess.remove_absolute(root.path_join(entry))
+	for entry in dir.get_directories():
+		_wipe_repo_tree(root.path_join(entry))
+		DirAccess.remove_absolute(root.path_join(entry))
+	DirAccess.remove_absolute(root)
+
+
+func _test_country_inner_id_consistency(t) -> void:
+	var root := "user://t4btest-country-id/"
+	_wipe_repo_tree(root)
+	_write_repo_file(root.path_join("catalog_manifest.json"),
+		'{"schema_version": 1, "files": ["countries/ardenia.json", "countries/krasova.json"]}')
+	_write_repo_file(root.path_join("countries/ardenia.json"),
+		'{"id": "ardenia", "name": "Ardenia"}')
+	# Inner id does not match the filename stem.
+	_write_repo_file(root.path_join("countries/krasova.json"),
+		'{"id": "not_krasova", "name": "Krasova"}')
+	var mismatched: Dictionary = ContentRepositoryScript.load_all(root)
+	t.truth(mismatched.has("error"),
+		"country-id: a countries/ file whose inner id mismatches its stem is rejected")
+	# The same stem listed twice must error, not silently overwrite.
+	_write_repo_file(root.path_join("countries/krasova.json"),
+		'{"id": "krasova", "name": "Krasova"}')
+	_write_repo_file(root.path_join("catalog_manifest.json"),
+		'{"schema_version": 1, "files": ["countries/ardenia.json", "countries/ardenia.json"]}')
+	var duplicated: Dictionary = ContentRepositoryScript.load_all(root)
+	t.truth(duplicated.has("error"),
+		"country-id: a duplicate country id across files is rejected, not overwritten")
+	_write_repo_file(root.path_join("catalog_manifest.json"),
+		'{"schema_version": 1, "files": ["countries/ardenia.json", "countries/krasova.json"]}')
+	var ok_result: Dictionary = ContentRepositoryScript.load_all(root)
+	t.truth(not ok_result.has("error"),
+		"country-id: matching inner ids load cleanly")
+	_wipe_repo_tree(root)
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 
@@ -232,18 +384,25 @@ func _initialize() -> void:
 	_test_invalid_campaign_keeps_old_state(t)
 	_test_in_flight_guard(t)
 	_test_state_changed_on_lifecycle(t)
+	_test_fresh_bad_config_emits_fatal(t)
+	_test_failed_validation_load_keeps_state_no_fatal(t)
+	_test_reentrant_advance_from_handler_refused(t)
+	_test_country_inner_id_consistency(t)
 
 	for slot in [SLOT_PREFIX + "roundtrip", SLOT_PREFIX + "signals",
 			SLOT_PREFIX + "nosuch", SLOT_PREFIX + "missing-slot",
-			SLOT_PREFIX + "definitely-absent"]:
+			SLOT_PREFIX + "definitely-absent", SLOT_PREFIX + "badworld"]:
 		_wipe_slot(slot)
+	_wipe_repo_tree("user://t4btest-country-id/")
 	var residue := false
 	for slot in [SLOT_PREFIX + "roundtrip", SLOT_PREFIX + "signals",
 			SLOT_PREFIX + "nosuch", SLOT_PREFIX + "missing-slot",
-			SLOT_PREFIX + "definitely-absent"]:
+			SLOT_PREFIX + "definitely-absent", SLOT_PREFIX + "badworld"]:
 		for suffix in ["", ".tmp", ".bak"]:
 			if FileAccess.file_exists(_slot_path(slot, suffix)):
 				residue = true
+	if DirAccess.open("user://t4btest-country-id/") != null:
+		residue = true
 	t.truth(not residue, "cleanup: no test slot residue remains in user://saves/")
 
 	quit(t.finish())

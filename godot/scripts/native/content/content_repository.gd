@@ -98,6 +98,21 @@ static func load_all(root: String = DEFAULT_ROOT) -> Dictionary:
 
 		match group:
 			"countries":
+				if not (data is Dictionary):
+					return _fail("country file '%s' does not contain a JSON object" % rel_path)
+				var country_dict: Dictionary = data
+				var inner_id: Variant = country_dict.get("id", null)
+				if not (inner_id is String):
+					return _fail("country file '%s' has a missing or non-string inner id" % rel_path)
+				var inner_str := String(inner_id)
+				for existing_key in countries.keys():
+					var existing: Dictionary = countries[existing_key]
+					if String(existing.get("id", "")) == inner_str:
+						return _fail("duplicate country id '%s' (from %s)" % [inner_str, rel_path])
+				if inner_str != name:
+					return _fail("country file '%s' inner id '%s' does not match filename stem '%s'" % [rel_path, inner_str, name])
+				if countries.has(name):
+					return _fail("duplicate country id '%s' (from %s)" % [name, rel_path])
 				countries[name] = data
 			"catalogs":
 				catalogs[name] = data

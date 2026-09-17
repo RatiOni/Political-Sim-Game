@@ -57,13 +57,55 @@ static func new_campaign(content: Dictionary, config: Dictionary) -> GameState:
 		push_error("GameFactory: country '%s' is not playable (Ardenia-only build)" % country_id)
 		return null
 
-	var countries_data: Dictionary = content.get("countries", {})
+	var seed_raw: Variant = config.get("seed", null)
+	if typeof(seed_raw) != TYPE_INT:
+		push_error("GameFactory: config 'seed' must be an int, got %s" % [seed_raw])
+		return null
+
+	var catalogs_raw: Variant = content.get("catalogs", {})
+	if catalogs_raw is Dictionary:
+		var catalogs: Dictionary = catalogs_raw
+		if catalogs.has("backgrounds"):
+			var backgrounds_data: Variant = catalogs["backgrounds"]
+			if backgrounds_data is Array:
+				var background_ids := {}
+				for entry in backgrounds_data:
+					if entry is Dictionary and (entry as Dictionary).has("id"):
+						background_ids[String((entry as Dictionary)["id"])] = true
+				var background_id := String(config.get("background_id", "none"))
+				if not background_ids.has(background_id):
+					push_error("GameFactory: unknown background_id '%s'" % background_id)
+					return null
+		if catalogs.has("difficulties"):
+			var difficulties_data: Variant = catalogs["difficulties"]
+			if difficulties_data is Array:
+				var difficulty_ids := {}
+				for entry in difficulties_data:
+					if entry is Dictionary and (entry as Dictionary).has("id"):
+						difficulty_ids[String((entry as Dictionary)["id"])] = true
+				var difficulty_id := String(config.get("difficulty_id", "normal"))
+				if not difficulty_ids.has(difficulty_id):
+					push_error("GameFactory: unknown difficulty_id '%s'" % difficulty_id)
+					return null
+
+	var countries_raw: Variant = content.get("countries", null)
+	if not (countries_raw is Dictionary):
+		push_error("GameFactory: content 'countries' is missing or not a Dictionary")
+		return null
+	var countries_data: Dictionary = countries_raw
 	if not countries_data.has(country_id):
 		push_error("GameFactory: no content data for country '%s'" % country_id)
 		return null
 
-	var player_data: Dictionary = countries_data[country_id]
+	var player_raw: Variant = countries_data[country_id]
+	if not (player_raw is Dictionary):
+		push_error("GameFactory: country data for '%s' is not a Dictionary" % country_id)
+		return null
+	var player_data: Dictionary = player_raw
 	var player_country := Country.from_json(player_data, true)
+	if player_country == null:
+		push_error("GameFactory: could not parse country '%s'" % country_id)
+		return null
 	# Ardenia's factions keep the bloc wings that already arrived from
 	# content (kind == "bloc") — never regenerate those.
 
@@ -75,7 +117,11 @@ static func new_campaign(content: Dictionary, config: Dictionary) -> GameState:
 
 	# Neighbours listed in the player's file come first (matching
 	# content/loader.py's ordering), any other defined country follows.
-	var neighbour_ids: Array = player_data.get("neighbours", [])
+	var neighbour_raw: Variant = player_data.get("neighbours", [])
+	if not (neighbour_raw is Array):
+		push_error("GameFactory: country '%s' neighbours is not an Array" % country_id)
+		return null
+	var neighbour_ids: Array = neighbour_raw
 	var ordered: Array[String] = []
 	for nid in neighbour_ids:
 		if other_ids.has(nid):
@@ -87,9 +133,16 @@ static func new_campaign(content: Dictionary, config: Dictionary) -> GameState:
 	var world: Array[Country] = []
 	var data_by_id: Dictionary = {country_id: player_data}
 	for cid in ordered:
-		var data: Dictionary = countries_data[cid]
+		var data_raw: Variant = countries_data[cid]
+		if not (data_raw is Dictionary):
+			push_error("GameFactory: country data for '%s' is not a Dictionary" % String(cid))
+			return null
+		var data: Dictionary = data_raw
 		data_by_id[cid] = data
 		var c := Country.from_json(data, false)
+		if c == null:
+			push_error("GameFactory: could not parse country '%s'" % String(cid))
+			return null
 		for f in c.factions:
 			if f.wings.is_empty():
 				f.wings = Faction.generate_default_wings(f)
@@ -105,11 +158,20 @@ static func new_campaign(content: Dictionary, config: Dictionary) -> GameState:
 	state.month = DEFAULT_MONTH
 	state.country = player_country
 	state.world = world
-	state.player = _build_player(player_data)
-	state.ministers = _build_cabinet(player_data)
+	var built_player := _build_player(player_data, player_country)
+	if built_player == null:
+		return null
+	state.player = built_player
+	var built_cabinet: Variant = _build_cabinet(player_data)
+	if built_cabinet == null:
+		return null
+	state.ministers = built_cabinet
 	state.ruling_faction_id = state.player.faction_id
 
-	var meta_stability = player_data.get("meta", {}).get("stability_value")
+	var meta_raw: Variant = player_data.get("meta", {})
+	var meta_stability = null
+	if meta_raw is Dictionary:
+		meta_stability = (meta_raw as Dictionary).get("stability_value")
 	if meta_stability != null:
 		state.stability_value = float(meta_stability)
 
@@ -121,34 +183,58 @@ static func new_campaign(content: Dictionary, config: Dictionary) -> GameState:
 		"difficulty": String(config.get("difficulty_id", "normal")),
 		"background": String(config.get("background_id", "none")),
 		"opening_role": ("government" if state.player.in_government else "opposition"),
-		"seed": int(config.get("seed", 0)),
+		"seed": seed_raw,
 		"national_traits": player_country.national_traits.duplicate(),
 	}
 
 	return state
 
 
-static func _build_player(player_data: Dictionary) -> GameState.Player:
-	var dp: Dictionary = player_data.get("default_player", {})
+static func _build_player(player_data: Dictionary, player_country: Country) -> GameState.Player:
+	var dp_raw: Variant = player_data.get("default_player", null)
+	if not (dp_raw is Dictionary):
+		push_error("GameFactory: missing or malformed default_player for country '%s'" % player_country.id)
+		return null
+	var dp: Dictionary = dp_raw
+	var faction_id := String(dp.get("faction_id", ""))
+	if faction_id == "":
+		push_error("GameFactory: default_player.faction_id is missing or empty")
+		return null
+	var found := false
+	for f in player_country.factions:
+		if f.id == faction_id:
+			found = true
+			break
+	if not found:
+		push_error("GameFactory: default_player.faction_id '%s' matches no faction" % faction_id)
+		return null
 	var p := GameState.Player.new()
 	p.name = String(dp.get("name", ""))
 	p.title = String(dp.get("title", ""))
-	p.faction_id = String(dp.get("faction_id", ""))
+	p.faction_id = faction_id
 	p.ideology_economic = float(dp.get("ideology_economic", 0.0))
 	p.ideology_social = float(dp.get("ideology_social", 0.0))
 	p.approval = float(dp.get("approval", 0.5))
-	p.political_capital = float(dp.get("political_capital", 45.0))
+	p.political_capital = float(dp.get("political_capital", 50.0))
 	p.pc_regen_base = float(dp.get("pc_regen_base", 10.0))
 	return p
 
 
 ## Fallback personalities for authored cabinets whose JSON predates traits —
 ## ported from content/loader.py: _build_cabinet / _FALLBACK_TRAITS.
-static func _build_cabinet(player_data: Dictionary) -> Array[Minister]:
+static func _build_cabinet(player_data: Dictionary) -> Variant:
 	var out: Array[Minister] = []
-	var cabinet_data: Array = player_data.get("cabinet", [])
+	var cabinet_raw: Variant = player_data.get("cabinet", [])
+	if not (cabinet_raw is Array):
+		push_error("GameFactory: cabinet is not an Array")
+		return null
+	var cabinet_data: Array = cabinet_raw
 	for i in range(cabinet_data.size()):
-		var m: Dictionary = cabinet_data[i]
+		var m_raw: Variant = cabinet_data[i]
+		if not (m_raw is Dictionary):
+			push_error("GameFactory: cabinet entry %d is not a Dictionary" % i)
+			return null
+		var m: Dictionary = m_raw
 		var minister := Minister.new()
 		minister.id = String(m.get("id", ""))
 		minister.name = String(m.get("name", ""))
@@ -166,10 +252,16 @@ static func _build_cabinet(player_data: Dictionary) -> Array[Minister]:
 ## The (score, trade_volume) for a country pair — ported from
 ## content/loader.py: _pair_relation.
 static func _pair_relation(data_by_id: Dictionary, a_id: String, b_id: String) -> Array:
-	var a_data: Dictionary = data_by_id.get(a_id, {})
-	var a_rel = a_data.get("default_relations", {}).get(b_id)
-	var b_data: Dictionary = data_by_id.get(b_id, {})
-	var b_rel = b_data.get("default_relations", {}).get(a_id)
+	var a_raw: Variant = data_by_id.get(a_id, {})
+	var a_data: Dictionary = a_raw if a_raw is Dictionary else {}
+	var a_rels_raw: Variant = a_data.get("default_relations", {})
+	var a_rels: Dictionary = a_rels_raw if a_rels_raw is Dictionary else {}
+	var a_rel = a_rels.get(b_id)
+	var b_raw: Variant = data_by_id.get(b_id, {})
+	var b_data: Dictionary = b_raw if b_raw is Dictionary else {}
+	var b_rels_raw: Variant = b_data.get("default_relations", {})
+	var b_rels: Dictionary = b_rels_raw if b_rels_raw is Dictionary else {}
+	var b_rel = b_rels.get(a_id)
 	var src: Dictionary = {}
 	if a_rel is Dictionary:
 		src = a_rel

@@ -34,9 +34,14 @@ func _ready() -> void:
 	get_window().size_changed.connect(_resize_layout)
 	_resize_layout()
 	if _game == null:
-		_game = get_node("/root/NativeGame")
-	_game.connect("state_changed", _on_state_changed)
-	_game.connect("fatal_error", _on_fatal_error)
+		_game = get_node_or_null("/root/NativeGame")
+	if _game == null:
+		_on_fatal_error("NativeGame autoload is missing — cannot start a campaign.")
+		return
+	if not _game.is_connected("state_changed", _on_state_changed):
+		_game.connect("state_changed", _on_state_changed)
+	if not _game.is_connected("fatal_error", _on_fatal_error):
+		_game.connect("fatal_error", _on_fatal_error)
 	find_child("SaveButton").pressed.connect(_do_save)
 	find_child("LoadButton").pressed.connect(_do_load)
 	if GameFlow.start_mode == "continue":
@@ -58,7 +63,10 @@ func _process(delta: float) -> void:
 		if not result.get("ok", false):
 			_set_status("ADVANCE FAILED / %s" % result.get("error", "Unknown error"))
 		else:
-			apply_snapshot(result.get("snapshot", _game.snapshot()))
+			var tick_snap: Dictionary = result.get("snapshot", {})
+			if tick_snap.is_empty():
+				tick_snap = _game.snapshot()
+			apply_snapshot(tick_snap)
 			_set_status("LIVE SIMULATION / READY")
 		_refresh_controls()
 
@@ -176,7 +184,10 @@ func _do_new_campaign() -> void:
 		_set_status("NEW CAMPAIGN FAILED / %s" % result.get("error", "Unknown error"))
 		_refresh_controls()
 		return
-	apply_snapshot(result.get("snapshot", _game.snapshot()))
+	var new_snap: Dictionary = result.get("snapshot", {})
+	if new_snap.is_empty():
+		new_snap = _game.snapshot()
+	apply_snapshot(new_snap)
 	_set_status("LIVE SIMULATION / READY")
 	_refresh_controls()
 
@@ -208,7 +219,10 @@ func _do_load() -> void:
 		_refresh_controls()
 		return
 	_starting = false
-	apply_snapshot(result.get("snapshot", _game.snapshot()))
+	var load_snap: Dictionary = result.get("snapshot", {})
+	if load_snap.is_empty():
+		load_snap = _game.snapshot()
+	apply_snapshot(load_snap)
 	_set_status("LOADED / READY")
 	_refresh_controls()
 
