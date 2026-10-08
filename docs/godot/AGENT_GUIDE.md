@@ -43,11 +43,15 @@ checkout.
 
 ## Coordination
 
-- Only one phase of `PLAN.md` is active at a time (currently: **Phase 1**,
-  tasks 1-4, decomposed in `PLAN.md` itself).
+- Only one phase of `PLAN.md` is active at a time (currently: **Phase 2**).
+  Tasks 5-8 are complete; **Task 9 (the household economy) is next**, followed
+  by Task 10 (approval, stability, digest, and full-pulse integration). Read
+  `.superpowers/sdd/PLAN/progress.md` and `git log` before acting; do not mark
+  Task 9 complete or begin Task 10 on the strength of this guide alone.
 - Within a phase, parallel work is fine only when file ownership doesn't
-  overlap and the task breakdown marks the tasks independent. Phase 1's four
-  tasks are sequential (each consumes the last) — do not parallelize them.
+  overlap and the task breakdown marks the tasks independent. Phase 2's tasks
+  are ordered by the monthly pulse and consume the earlier systems — preserve
+  that sequence unless the ledger records an explicit, non-overlapping split.
 - `native_game.gd`, `content_repository.gd`, and any file two tasks would
   both need to edit have one owner at a time. Check the ledger before
   touching a file another task's entry claims.

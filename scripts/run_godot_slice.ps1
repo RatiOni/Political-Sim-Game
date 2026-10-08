@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$godot = "D:\Godot\Godot_v4.7.2-stable_win64_console.exe"
+$godot = "D:\AI Stuff\Godot\Godot_v4.7.2-stable_win64_console.exe"
 $python = Join-Path $repositoryRoot ".venv\Scripts\python.exe"
 
 if (-not (Test-Path -LiteralPath $godot -PathType Leaf)) {

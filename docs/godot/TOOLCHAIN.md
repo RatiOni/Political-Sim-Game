@@ -2,7 +2,7 @@
 
 ## Verified toolchain
 
-- **Godot executable:** `D:\Godot\Godot_v4.7.2-stable_win64_console.exe`
+- **Godot executable:** `D:\AI Stuff\Godot\Godot_v4.7.2-stable_win64_console.exe`
 - **Godot version:** `4.7.2.stable.official.ed1daf0bf`
 - **Renderer:** `gl_compatibility`, selected for the broadest Windows playtest
   compatibility.

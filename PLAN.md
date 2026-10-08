@@ -162,7 +162,7 @@ against these ids.
       in the manifest is non-empty, asserts duplicate-id rejection actually
       rejects.
 - [ ] Run the test via the existing N0 harness:
-      `& "D:\Godot\Godot_v4.7.2-stable_win64_console.exe" --headless --path godot --script res://tests/native/test_content_repository.gd`
+      `& "D:\AI Stuff\Godot\Godot_v4.7.2-stable_win64_console.exe" --headless --path godot --script res://tests/native/test_content_repository.gd`
 - [ ] Run `D:\Political Sim Game\.venv\Scripts\python.exe smoke_test.py` to
       confirm the Python source is untouched and still passes (it is the
       reference; this task must not edit it).
@@ -304,7 +304,7 @@ close to drop-in).
 - [ ] Run all native tests and the full N0 harness; grep the Godot process
       tree during a manual launch to confirm no Python child process starts.
 - [ ] Manually launch
-      `& "D:\Godot\Godot_v4.7.2-stable_win64_console.exe" --path godot` and
+      `& "D:\AI Stuff\Godot\Godot_v4.7.2-stable_win64_console.exe" --path godot` and
       play through: new campaign, region selection, objective adoption, a few
       days of advance, save, quit, relaunch, continue.
 - [ ] Commit `feat(godot): own native campaign lifecycle and cut the bridge`.
@@ -315,7 +315,8 @@ Port the monthly pulse as game systems, in the phase order `engine/turn.py`
 documents (order is load-bearing — later phases read earlier same-turn results):
 economy (growth, inflation, unemployment, debt, revenue/expenditure), annual
 appropriations, ministry capacity/workload/delivery/backlog, regional
-conditions, the 36 household groups, then approval and stability. Plus the
+conditions, the 54 household records (six groups across nine authored Ardenian
+regions), then approval and stability. Plus the
 political-capital economy and governing overhead, and the monthly digest.
 
 *Playable result:* time means something. The map's pressure colours move for real
@@ -500,7 +501,7 @@ population-weighted pressure feeds unrest modestly), `content/regions.py`
 does not yet seed `state.regions` from it, so this task likely owns that
 seeding too — check the factory's header note).
 
-- [ ] Write failing tests: Ardenia's six authored regions seed correctly (or
+- [ ] Write failing tests: Ardenia's nine authored regions seed correctly (or
       confirm they already do, if Task 2's factory work turned out to cover
       it) with their authored unemployment/state-reach/pressure/control/issue
       values; a country with no authored regional data (all eight others)
@@ -509,6 +510,11 @@ seeding too — check the factory's header note).
       separatist-controlled territory stays inaccessible to programmes; an
       active `RegionalProgram` advances one month and completes/removes
       itself on its authored duration.
+- [ ] Carry forward to Task 10: a separatist programme freeze must preserve
+      the programme's intended delivery window. Prefer extending the relevant
+      modifier delivery window during each frozen month; the only alternative is a
+      deliberately accepted, documented delivery slip. Add a focused test for
+      the chosen behaviour.
 - [ ] Run test; expect missing-script failure.
 - [ ] Implement `RegionsSim.simulate()` as a design-reference port.
 - [ ] Run test; all assertions pass.
@@ -528,14 +534,15 @@ seeding too — check the factory's header note).
   monthly order.
 
 **Read first:** `engine/households.py: simulate_households`, `CLAUDE.md`'s
-"The household economy" section (36 records = 6 groups × 6 Ardenian regions;
+"The household economy" section (54 records = 6 groups × 9 authored Ardenian regions;
 national figures are population-weighted aggregates, not a second economy;
 countries without authored data keep an empty ledger), `content/households.py`
 (already exported by Phase 1 Task 1 under
 `godot/data/native/catalogs/household_groups.json`; likely needs seeding into
 `state.households` by this task, same pattern as Task 8's regions).
 
-- [ ] Write failing tests: Ardenia's 36 household groups seed correctly;
+- [ ] Write failing tests: Ardenia's 54 household records (six groups across
+      nine authored Ardenian regions) seed correctly;
       inflation/growth/local unemployment/state reach move
       income/security/hardship/confidence in the documented directions; a
       country with no authored household data keeps an empty
@@ -553,20 +560,35 @@ countries without authored data keep an empty ledger), `content/households.py`
 - Create: `godot/scripts/native/presentation/monthly_digest.gd`
 - Modify: `godot/scripts/native/native_game.gd` (wire the full monthly-pulse
   call order into the rollover path)
+- Modify: `godot/scripts/native/sim/regions_sim.gd` (preserve a frozen
+  programme's finite treasury-modifier delivery window while normal modifier
+  ageing continues)
+- Modify: `godot/scripts/native/state/game_state.gd` (persist the completed
+  `monthly_digest: Array[String]` with an empty default for older saves)
 - Create: `godot/tests/native/test_stability_and_digest.gd`
 - Create: `godot/tests/native/test_monthly_pulse_integration.gd`
+- Modify: `godot/tests/native/test_native_persistence.gd` (round-trip and
+  malformed-input coverage for the persisted monthly digest)
 
 **Interfaces:**
 - Produces: `StabilitySim.update_approval(state: GameState) -> void`,
   `StabilitySim.update_stability(state: GameState) -> void`.
-- Produces: `MonthlyDigest.build(state: GameState, before: Dictionary) -> Dictionary`
-  — a read model for the dashboard's monthly report, replacing the bridge-era
-  stub (`digest: []` in `native_game.gd`'s snapshot).
+- Produces: `MonthlyDigest.build(state: GameState, before: Dictionary) -> Array[String]`
+  — the snapshot digest array for the dashboard's monthly report, replacing
+  the bridge-era stub (`digest: []` in `native_game.gd`'s snapshot). The UI
+  formats these strings only; it does not derive simulation state.
+- Persists: the completed `GameState.monthly_digest: Array[String]`, so the
+  report survives save/load without replaying simulation or digest formulas.
+  Missing data in older saves loads as an empty report; malformed present data
+  is rejected by the normal persistence boundary.
 - Modifies: `NativeGame`'s monthly-rollover handler to call, in order:
   `BudgetSim.process_fiscal_year` → `PoliticalCapital.regenerate` →
   `MinistriesSim.simulate` → `EconomySim.update` → `RegionsSim.simulate` →
   `HouseholdsSim.simulate` → `StabilitySim.update_approval` →
   `StabilitySim.update_stability` → (existing) `Modifiers.age_all`.
+- Modifies: `NativeGame.snapshot()` to expose read-only budget, ministry, and
+  national household-summary data for the UI surfaces already backed by this
+  phase. The UI formats those snapshot fields only; it must not recompute them.
 
 **Read first:** `engine/turn.py: _update_approval`, `_update_stability`,
 `engine/stability.py` (shared signal functions — CLAUDE.md: "Elections,
@@ -579,21 +601,35 @@ extending.
 - [ ] Write failing tests for `StabilitySim`: approval and government
       stability respond to economy/household/regional signals in the
       documented directions; both stay bounded (never leave their valid
-      range regardless of extreme inputs).
+      range regardless of extreme inputs). Implement from existing native
+      state directly — faction seats, coalition membership, loyalty and
+      cohesion, ministers, economy, regions, and households — without
+      inventing a `Legislature` or `Cabinet` class before Phase 3. Keep the
+      outputs deterministic and bounded.
 - [ ] Write a failing end-to-end test in `test_monthly_pulse_integration.gd`:
       construct a real Ardenia campaign via `GameFactory`, advance it through
       a full month via `NativeGame`, and assert that budget, ministries,
       economy, regions, households, approval, and stability all show
       evidence of having actually run (not just that the date advanced) —
-      this is the test that proves Tasks 1-5 are genuinely wired together in
+      this is the test that proves Tasks 5-10 are genuinely wired together in
       the right order, not just individually correct in isolation.
 - [ ] Run tests; expect missing-script/assertion failures.
 - [ ] Implement `StabilitySim` and `MonthlyDigest` as design-reference ports.
 - [ ] Wire the full call order into `native_game.gd`'s rollover path, in the
       exact sequence given above.
+- [ ] Persist completed digest lines through `GameState.to_dict()` / `from_dict()`
+      and prove a saved-and-reloaded campaign retains them without running a
+      second monthly pulse.
 - [ ] Update the dashboard's `digest` snapshot field to use `MonthlyDigest.build()`
       instead of the empty stub, so the monthly report on screen shows real
       content.
+- [ ] Expose the read-only budget, ministry, and national household-summary
+      snapshot fields used by Phase 2 UI surfaces, and test that the UI-facing
+      snapshot is sufficient for formatting without any UI-side derivation.
+- [ ] Resolve the Task 8 separatist-programme-freeze carry-forward: preferably
+      extend the relevant modifier delivery window during every frozen month; if
+      accepting a delivery slip instead, document that ruling explicitly. Test
+      the selected behaviour.
 - [ ] Run all Phase 2 tests plus the full Phase 1 regression suite
       (`test_content_repository.gd`, `test_game_factory.gd`,
       `test_foundation_mechanics.gd`, `test_native_persistence.gd`,
@@ -671,7 +707,8 @@ process tree that no Python is present.
   agent bench has a Godot or art-production skill installed.
 - **Python freezes.** No new features. `dist\Ardenia\Ardenia.exe` remains the
   playable build until Godot surpasses it.
-- **Branch `godot-native/rebuild`** off current `codex/godot-foundation` HEAD.
+- **Continue on `codex/godot-foundation`.** It is the active shared branch for
+  this rebuild; do not create a replacement branch.
 
 ## Toolchain
 
@@ -687,7 +724,7 @@ either**. Nothing domain-specific to load. Proposed generic skills:
 
 Native tests run through the surviving N0 harness:
 `godot/tests/native/run_contract_tests.gd` via
-`& "D:\Godot\Godot_v4.7.2-stable_win64_console.exe" --headless --path godot --script <test>`.
+`& "D:\AI Stuff\Godot\Godot_v4.7.2-stable_win64_console.exe" --headless --path godot --script <test>`.
 
 ## Assumptions
 
@@ -711,7 +748,8 @@ Confirmed with the user in the Phase 0 ledger:
   adversarial review by a different model; Codex has no credits. Parked: the user
   will point Codex at this plan on reset, which serves the same purpose one beat
   later. A Claude subagent review would be an echo chamber and is not a substitute.
-- **GDScript throughput on the monthly pulse** — 36 household groups × regions,
+- **GDScript throughput on the monthly pulse** — 54 household records (six
+  groups across nine authored Ardenian regions),
   9 countries, ministries, budget, and stability every month. Measure during
   Phase 2 with a real profile; mitigate with typed access and hot-path work.
   Fallback is C# for specific systems. Do not pre-optimise.
@@ -737,7 +775,7 @@ Per phase, before it is called done:
 
 1. **Native tests pass** — `run_contract_tests.gd` plus that phase's focused
    tests, headless, exit 0.
-2. **The game launches and plays** — `& "D:\Godot\Godot_v4.7.2-stable_win64_console.exe" --path godot`,
+2. **The game launches and plays** — `& "D:\AI Stuff\Godot\Godot_v4.7.2-stable_win64_console.exe" --path godot`,
    then actually exercise the phase's new surface by hand.
 3. **A campaign survives a round trip** — start, advance, save, quit, relaunch,
    load, and confirm the restored campaign continues coherently.
@@ -745,8 +783,9 @@ Per phase, before it is called done:
    no child process. From Phase 1 onward this is a standing check.
 5. **Independent review** of the phase diff, with Critical and Important findings
    fixed before the next phase starts.
-6. **`STATUS.md` handoff entry appended** in the existing format, so any agent —
-   Claude, Codex, OpenCode, or you — can resume cold.
+6. **`.superpowers/sdd/PLAN/progress.md` handoff entry appended** in the
+   existing format, so any agent — Claude, Codex, OpenCode, or you — can resume
+   cold.
 
 Final acceptance: `Ardenia.exe` runs from an extracted archive on a machine with
 neither Python nor Godot installed; new campaign, continue, save, load,
