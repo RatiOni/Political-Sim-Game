@@ -565,6 +565,12 @@ countries without authored data keep an empty ledger), `content/households.py`
   ageing continues)
 - Modify: `godot/scripts/native/state/game_state.gd` (persist the completed
   `monthly_digest: Array[String]` with an empty default for older saves)
+- Modify: `godot/scripts/native/state/state_validator.gd` (reject malformed or
+  non-finite household data at the load boundary)
+- Modify: `godot/scripts/native/sim/ministries_sim.gd` and
+  `godot/tests/native/test_ministries_sim.gd` (replace the earlier temporary
+  unweighted-pressure and programme-workload approximations now that regional
+  data is available)
 - Create: `godot/tests/native/test_stability_and_digest.gd`
 - Create: `godot/tests/native/test_monthly_pulse_integration.gd`
 - Modify: `godot/tests/native/test_native_persistence.gd` (round-trip and
