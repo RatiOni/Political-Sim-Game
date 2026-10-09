@@ -122,6 +122,9 @@ var civil_war: bool = false
 ## campaign — must match the Python reference, not drift from it.
 var stability_value: float = 0.55
 
+## Completed native monthly report. Older saves intentionally receive an empty report.
+var monthly_digest: Array[String] = []
+
 ## Generation metadata (difficulty, seed, background, opening role, national
 ## traits) as a plain Dictionary, matching Python's campaign_meta.
 var campaign_meta: Dictionary = {}
@@ -201,6 +204,7 @@ func to_dict() -> Dictionary:
 		"civil_war_risk": civil_war_risk,
 		"civil_war": civil_war,
 		"stability_value": stability_value,
+		"monthly_digest": monthly_digest.duplicate(),
 		"campaign_meta": campaign_meta.duplicate(true),
 		"rng": rng_snapshot,
 	}
@@ -284,10 +288,15 @@ static func from_dict(data: Dictionary) -> GameState:
 		return null
 	if households_data is Dictionary:
 		for key in households_data:
-			if households_data[key] is Dictionary:
-				var household := HouseholdGroupState.from_dict(households_data[key])
-				if household != null:
-					state.households[key] = household
+			var household_data: Variant = households_data[key]
+			if not (key is String) or not (household_data is Dictionary):
+				push_error("GameState.from_dict: malformed household entry '%s'" % [key])
+				return null
+			var household := HouseholdGroupState.from_dict(household_data)
+			if household == null or not _valid_household(household):
+				push_error("GameState.from_dict: malformed household record '%s'" % [key])
+				return null
+			state.households[key] = household
 	var active_data: Variant = data.get("active_budget", null)
 	if active_data != null and not (active_data is Dictionary):
 		push_error("GameState.from_dict: malformed 'active_budget', expected a Dictionary or null, got %s" % [active_data])
@@ -338,6 +347,16 @@ static func from_dict(data: Dictionary) -> GameState:
 	state.civil_war_risk = float(data.get("civil_war_risk", 0.0))
 	state.civil_war = _bool_field(data, "civil_war", false)
 	state.stability_value = float(data.get("stability_value", 0.55))
+	var digest_data: Variant = data.get("monthly_digest", [])
+	if data.has("monthly_digest") and not (digest_data is Array):
+		push_error("GameState.from_dict: malformed 'monthly_digest', expected an Array, got %s" % [digest_data])
+		return null
+	if digest_data is Array:
+		for line in digest_data:
+			if not (line is String):
+				push_error("GameState.from_dict: malformed 'monthly_digest' entry, expected String, got %s" % [line])
+				return null
+			state.monthly_digest.append(line)
 	var meta_data: Variant = data.get("campaign_meta", {})
 	state.campaign_meta = meta_data.duplicate(true) if meta_data is Dictionary else {}
 	if not data.has("rng"):
@@ -349,6 +368,16 @@ static func from_dict(data: Dictionary) -> GameState:
 	state.rng = restored
 	return state
 
+
+static func _valid_household(household: HouseholdGroupState) -> bool:
+	if household.id == "" or household.group_id == "" or household.region_id == "":
+		return false
+	for value in [household.population_share, household.nominal_income_index, household.living_cost_index,
+		household.real_income_index, household.employment_security, household.service_access,
+		household.hardship, household.confidence, household.last_real_income_index]:
+		if not is_finite(float(value)):
+			return false
+	return true
 
 ## Accepts the string form to_dict writes, plus raw ints and whole-number
 ## floats (hand-written or foreign saves) — the int/float tolerance the JSON

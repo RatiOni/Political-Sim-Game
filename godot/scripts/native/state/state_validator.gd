@@ -46,6 +46,7 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_relation_ranges(state, errors)
 	_validate_date(state, errors)
 	_validate_ministers(state, errors)
+	_validate_households(state, errors)
 
 	if state.player != null:
 		_validate_player(state, errors)
@@ -197,6 +198,25 @@ static func _validate_ministers(state: GameState, errors: Array[String]) -> void
 		if m.trait_id != "" and not Minister.TRAIT_EFFECTS.has(m.trait_id):
 			errors.append("minister '%s' has an unknown trait '%s'" % [m.id, m.trait_id])
 
+
+static func _validate_households(state: GameState, errors: Array[String]) -> void:
+	for key in state.households:
+		var household: Variant = state.households[key]
+		if not (key is String) or not (household is HouseholdGroupState):
+			errors.append("households contains a malformed entry '%s'" % [key])
+			continue
+		var h: HouseholdGroupState = household
+		if h.id != key or h.id == "" or h.region_id == "" or h.group_id == "":
+			errors.append("household '%s' has inconsistent identity" % [key])
+		for value in [h.population_share, h.nominal_income_index, h.living_cost_index, h.real_income_index,
+			h.employment_security, h.service_access, h.hardship, h.confidence, h.last_real_income_index]:
+			if not is_finite(float(value)):
+				errors.append("household '%s' has a non-finite value" % [key])
+				break
+		if h.population_share < 0.0 or h.employment_security < 0.0 or h.employment_security > 1.0 \
+				or h.service_access < 0.0 or h.service_access > 1.0 or h.hardship < 0.0 or h.hardship > 1.0 \
+				or h.confidence < 0.0 or h.confidence > 1.0:
+			errors.append("household '%s' has an out-of-range value" % [key])
 
 static func _validate_country(country: Country, errors: Array[String], label: String) -> void:
 	if country.id == "":

@@ -26,6 +26,14 @@ const _MONTH_NAMES := ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
 # headless runs may not have it in the editor's global class cache yet —
 # the same reason the persistence suite preloads it.
 const SaveStoreScript = preload("res://scripts/native/state/save_store.gd")
+const BudgetSimScript = preload("res://scripts/native/sim/budget_sim.gd")
+const PoliticalCapitalScript = preload("res://scripts/native/sim/political_capital.gd")
+const MinistriesSimScript = preload("res://scripts/native/sim/ministries_sim.gd")
+const EconomySimScript = preload("res://scripts/native/sim/economy_sim.gd")
+const RegionsSimScript = preload("res://scripts/native/sim/regions_sim.gd")
+const HouseholdsSimScript = preload("res://scripts/native/sim/households_sim.gd")
+const StabilitySimScript = preload("res://scripts/native/sim/stability_sim.gd")
+const MonthlyDigestScript = preload("res://scripts/native/presentation/monthly_digest.gd")
 
 var _state: GameState = null
 var _busy := false
@@ -72,12 +80,22 @@ func advance_day() -> Dictionary:
 	_busy = true
 	var month_rolled := Calendar.advance_day(_state)
 	if month_rolled:
+		var before: Dictionary = MonthlyDigestScript.capture(_state)
+		_state.turn += 1
+		BudgetSimScript.process_fiscal_year(_state)
+		PoliticalCapitalScript.regenerate(_state)
+		MinistriesSimScript.simulate(_state)
+		EconomySimScript.update(_state)
+		RegionsSimScript.simulate(_state)
+		HouseholdsSimScript.simulate(_state)
+		StabilitySimScript.update_approval(_state)
+		StabilitySimScript.update_stability(_state)
 		Modifiers.age_all(_state)
+		_state.monthly_digest = MonthlyDigestScript.build(_state, before)
 	var snap := snapshot()
 	state_changed.emit(snap)
 	_busy = false
 	return {"ok": true, "snapshot": snap, "month_rolled": month_rolled}
-
 
 ## Persists the live campaign under `slot`. SaveStore's {ok} passes
 ## straight through; saves never mutate or emit.
@@ -218,11 +236,54 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 		"regions": regions,
 		"factions": factions,
 		"decisions": [],
-		"digest": [],
+		"budget": _budget_snapshot(state),
+		"ministries": _ministries_snapshot(state),
+		"households": _household_snapshot(state),
+		"digest": state.monthly_digest.duplicate(),
 		"reform": {"active": null, "objectives": []},
 		"dispatches": [],
 	}
 
+
+static func _budget_snapshot(state: GameState) -> Dictionary:
+	if state.active_budget == null:
+		return {}
+	return {
+		"year": state.active_budget.year,
+		"status": state.active_budget.status,
+		"allocations": state.active_budget.allocations.duplicate(true),
+		"expenditure": state.active_budget.expenditure(),
+	}
+
+
+static func _ministries_snapshot(state: GameState) -> Dictionary:
+	var out := {}
+	for portfolio in state.ministries:
+		var ministry: MinistryState = state.ministries[portfolio] as MinistryState
+		if ministry == null:
+			continue
+		out[String(portfolio)] = {
+			"capacity": ministry.capacity,
+			"workload": ministry.workload,
+			"delivery": ministry.delivery,
+			"backlog": ministry.backlog,
+			"funding": ministry.funding,
+			"funding_ratio": ministry.funding_ratio,
+			"months_overloaded": ministry.months_overloaded,
+			"workload_breakdown": ministry.workload_breakdown.duplicate(true),
+		}
+	return out
+
+
+static func _household_snapshot(state: GameState) -> Dictionary:
+	return {
+		"count": state.households.size(),
+		"national_confidence": HouseholdsSimScript.national_confidence(state),
+		"national_hardship": HouseholdsSimScript.national_hardship(state),
+		"national_real_income": HouseholdsSimScript.national_real_income(state),
+		"national_living_cost": HouseholdsSimScript.national_living_cost(state),
+		"national_service_access": HouseholdsSimScript.national_service_access(state),
+	}
 
 ## Same abbreviated form as game_state.py: GameState.date_string
 ## ("1 Mar 1993") — the UI only displays this string.

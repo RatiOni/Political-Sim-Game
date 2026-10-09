@@ -397,6 +397,45 @@ func _test_interrupted_write_survival(t, content: Dictionary) -> void:
 			"interrupted: version fallback restores revision A (turn %d)" % state_a.turn)
 
 
+func _test_task10_digest_and_household_boundary(t, content: Dictionary) -> void:
+	var state: GameState = _new_test_state(content)
+	t.truth(state != null, "task10: factory builds a campaign state")
+	if state == null:
+		return
+	state.monthly_digest = ["A completed monthly report."]
+	var saved: Dictionary = JSON.parse_string(JSON.stringify(state.to_dict()))
+	var restored := GameState.from_dict(saved)
+	t.truth(restored != null, "task10: digest roundtrip parses")
+	if restored != null:
+		t.equal(restored.monthly_digest, state.monthly_digest, "task10: completed digest roundtrips exactly")
+	var legacy: Dictionary = state.to_dict()
+	legacy.erase("monthly_digest")
+	var old_save := GameState.from_dict(legacy)
+	t.truth(old_save != null, "task10: old save without digest still loads")
+	if old_save != null:
+		t.equal(old_save.monthly_digest, [], "task10: missing digest defaults empty")
+	var bad_digest: Dictionary = state.to_dict()
+	bad_digest["monthly_digest"] = [42]
+	t.equal(GameState.from_dict(bad_digest), null, "task10: non-string digest entry is rejected")
+	var bad_digest_container: Dictionary = state.to_dict()
+	bad_digest_container["monthly_digest"] = {}
+	t.equal(GameState.from_dict(bad_digest_container), null, "task10: non-array digest is rejected")
+	var malformed_household: Dictionary = state.to_dict()
+	malformed_household["households"] = {"bad": {}}
+	t.equal(GameState.from_dict(malformed_household), null, "task10: present malformed household record is rejected")
+	var wrong_type_household: Dictionary = state.to_dict()
+	wrong_type_household["households"] = {"bad": null}
+	t.equal(GameState.from_dict(wrong_type_household), null, "task10: present null household entry is rejected")
+	var h := HouseholdGroupState.new()
+	h.id = "test:group"
+	h.group_id = "group"
+	h.region_id = "test"
+	h.population_share = 1.0
+	h.hardship = INF
+	state.households[h.id] = h
+	var errors := StateValidatorScript.validate(state)
+	t.truth(not errors.is_empty(), "task10: validator rejects non-finite in-memory household data")
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 
@@ -414,6 +453,7 @@ func _initialize() -> void:
 		_test_dual_corruption_rejected(t)
 		_test_validator_date_ranges(t, content)
 		_test_validator_minister_and_ranges(t, content)
+		_test_task10_digest_and_household_boundary(t, content)
 
 	for slot in [SLOT_PREFIX + "roundtrip", SLOT_PREFIX + "corrupt",
 			SLOT_PREFIX + "badversion", SLOT_PREFIX + "interrupted",

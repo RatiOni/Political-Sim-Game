@@ -438,7 +438,7 @@ func _test_separatist_freeze(t: TestSupport, content: Dictionary) -> void:
 	var program_g: RegionState.RegionalProgram = _make_program("zavost", "industrial_recovery", 12)
 	frozen.regional_programs.append(program_f)
 	governed.regional_programs.append(program_g)
-	_add_modifier(frozen, program_f.id)
+	var frozen_modifier := _add_modifier(frozen, program_f.id)
 	RegionsSimScript.simulate(frozen)
 	RegionsSimScript.simulate(governed)
 	t.equal(program_f.months_active, 0, "separatist region gets no months_active increment")
@@ -446,7 +446,8 @@ func _test_separatist_freeze(t: TestSupport, content: Dictionary) -> void:
 	t.equal(_active_program_ids(frozen).count(program_f.id), 1,
 		"frozen programme stays active, exactly once")
 	t.truth(_modifier_source_ids(frozen).has(program_f.id),
-		"frozen programme's booked treasury modifier is untouched")
+		"frozen programme's booked treasury modifier remains active")
+	t.equal(frozen_modifier.hold_duration, 13, "a separatist freeze extends the matching finite treasury hold by one month")
 	var frozen_unemp: float = (frozen.regions["zavost"] as RegionState).unemployment
 	var governed_unemp: float = (governed.regions["zavost"] as RegionState).unemployment
 	t.truth(frozen_unemp > governed_unemp, "frozen region receives no delivered reduction")
@@ -459,7 +460,7 @@ func _test_mid_programme_flip_freezes(t: TestSupport, content: Dictionary) -> vo
 		return
 	var program: RegionState.RegionalProgram = _make_program("sela", "industrial_recovery", 12)
 	state.regional_programs.append(program)
-	_add_modifier(state, program.id)
+	var flipped_modifier := _add_modifier(state, program.id)
 	RegionsSimScript.simulate(state)
 	t.equal(program.months_active, 1, "sanity: programme advances while governed")
 	var region: RegionState = state.regions["sela"]
@@ -468,8 +469,37 @@ func _test_mid_programme_flip_freezes(t: TestSupport, content: Dictionary) -> vo
 	t.equal(program.months_active, 1, "mid-programme flip to separatist freezes advancement")
 	t.equal(_active_program_ids(state).count(program.id), 1, "flipped programme stays active")
 	t.truth(_modifier_source_ids(state).has(program.id),
-		"flipped programme's booked treasury modifier is untouched")
+		"flipped programme's booked treasury modifier remains active")
+	t.equal(flipped_modifier.hold_duration, 13, "mid-programme freeze extends the matching finite treasury hold by one month")
 
+
+func _test_frozen_programme_only_extends_its_matching_finite_cost(t: TestSupport, content: Dictionary) -> void:
+	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	t.truth(state != null, "campaign builds")
+	if state == null:
+		return
+	var region: RegionState = state.regions["zavost"]
+	region.control = "separatist"
+	var programme := _make_program("zavost", "industrial_recovery", 12)
+	state.regional_programs.append(programme)
+	var matching := _add_modifier(state, programme.id)
+	matching.hold_duration = 1
+	var unrelated := _add_modifier(state, "another-programme")
+	var wrong_target := _add_modifier(state, programme.id)
+	wrong_target.target = "gdp_growth"
+	var indefinite := _add_modifier(state, programme.id)
+	indefinite.hold_duration = -1
+	RegionsSimScript.simulate(state)
+	t.equal(matching.hold_duration, 2, "first frozen month extends matching finite budget cost once")
+	t.equal(unrelated.hold_duration, 12, "unrelated programme funding is unchanged")
+	t.equal(wrong_target.hold_duration, 12, "non-budget modifier is unchanged")
+	t.equal(indefinite.hold_duration, -1, "indefinite modifier is unchanged")
+	RegionsSimScript.simulate(state)
+	t.equal(matching.hold_duration, 3, "each additional frozen month adds one hold month")
+	t.equal(programme.months_active, 0, "freeze never advances programme delivery")
+	region.control = "state"
+	RegionsSimScript.simulate(state)
+	t.equal(programme.months_active, 1, "recovered territory resumes delivery exactly once")
 
 func _test_duration_boundaries(t: TestSupport, content: Dictionary) -> void:
 	var finishing: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -560,7 +590,7 @@ func _test_save_reload_round_trip(t: TestSupport, content: Dictionary) -> void:
 	vashtera.pressure = 0.37
 	var program: RegionState.RegionalProgram = _make_program("zavost", "industrial_recovery", 12, 3)
 	state.regional_programs.append(program)
-	_add_modifier(state, program.id)
+	var flipped_modifier := _add_modifier(state, program.id)
 	var snapshot: Dictionary = state.to_dict()
 	var restored: GameState = GameState.from_dict(snapshot)
 	t.truth(restored != null, "state survives a to_dict/from_dict round trip")
@@ -644,6 +674,7 @@ func _initialize() -> void:
 		_test_unknown_ids_clean_up_modifiers_and_drop(t, content)
 		_test_separatist_freeze(t, content)
 		_test_mid_programme_flip_freezes(t, content)
+		_test_frozen_programme_only_extends_its_matching_finite_cost(t, content)
 		_test_duration_boundaries(t, content)
 
 		_test_vetrenka_status_overrides(t, content)

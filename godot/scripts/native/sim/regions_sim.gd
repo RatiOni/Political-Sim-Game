@@ -253,6 +253,7 @@ static func _advance_programs(state: GameState, profiles: Dictionary,
 			continue
 		var definition: Dictionary = definition_raw
 		if region.control == "separatist":
+			_extend_frozen_programme_funding(state, program)
 			still_active.append(program)
 			continue
 		var quality: float = _delivery_quality(state, String(definition.get("portfolio", "")))
@@ -287,6 +288,14 @@ static func _advance_programs(state: GameState, profiles: Dictionary,
 			still_active.append(program)
 	state.regional_programs = still_active
 
+
+## A separatist freeze preserves only the programme’s own finite treasury
+## window. This runs before Modifiers.age_all in NativeGame, so the final
+## booked payable month is retained while delivery is inaccessible.
+static func _extend_frozen_programme_funding(state: GameState, program: RegionState.RegionalProgram) -> void:
+	for modifier in state.modifiers:
+		if modifier.source_id == program.id and modifier.target == "budget_expenditure" and modifier.hold_duration >= 0:
+			modifier.hold_duration += 1
 
 ## Cabinet and state capacity determine how much of a budget reaches dirt —
 ## engine/regions.py: program_delivery_quality. Missing minister reads as

@@ -134,13 +134,39 @@ static func ensure_ministries(state: GameState) -> Dictionary:
 static func _national_pressure(state: GameState) -> float:
 	if state.regions.is_empty():
 		return 0.0
+	var content: Dictionary = ContentRepositoryScript.load_all()
+	var catalogs: Dictionary = content.get("catalogs", {})
+	var regional_catalog: Dictionary = catalogs.get("regions_and_programs", {})
+	var profiles: Dictionary = regional_catalog.get("region_profiles", {})
+	var weighted := 0.0
 	var total := 0.0
-	var count := 0
-	for region in state.regions.values():
-		total += (region as RegionState).pressure
-		count += 1
-	return total / count if count > 0 else 0.0
+	for key in state.regions:
+		var region: RegionState = state.regions[key] as RegionState
+		if region == null:
+			continue
+		var profile: Variant = profiles.get(String(key), {})
+		var weight := 1.0
+		if profile is Dictionary:
+			weight = float((profile as Dictionary).get("population_weight", 1.0))
+		weighted += region.pressure * weight
+		total += weight
+	return weighted / total if total > 0.0 else 0.0
 
+
+static func _programme_workload(state: GameState, portfolio: String) -> float:
+	var content: Dictionary = ContentRepositoryScript.load_all()
+	var catalogs: Dictionary = content.get("catalogs", {})
+	var regional_catalog: Dictionary = catalogs.get("regions_and_programs", {})
+	var definitions: Dictionary = regional_catalog.get("regional_programs", {})
+	var matching := 0
+	for program in state.regional_programs:
+		var item: RegionState.RegionalProgram = program as RegionState.RegionalProgram
+		if item == null:
+			continue
+		var definition: Variant = definitions.get(item.program_id, {})
+		if definition is Dictionary and String((definition as Dictionary).get("portfolio", "")) == portfolio:
+			matching += 1
+	return float(matching) * 0.48
 
 ## This portfolio's current workload, broken down by source — mirrors
 ## engine/ministries.py: workload_breakdown exactly, modulo the honestly-zero
@@ -152,6 +178,10 @@ static func workload_breakdown(state: GameState, portfolio: String) -> Dictionar
 	# situations" are always 0 today — see header note. Left out of the
 	# breakdown entirely (matching Python, which only adds a key when its
 	# source total is non-zero).
+
+	var programme_load := _programme_workload(state, portfolio)
+	if programme_load > 0.0:
+		breakdown["regional programmes"] = programme_load
 
 	if portfolio == "Foreign Affairs":
 		var treaties := 0

@@ -69,6 +69,19 @@ static func _assign_minister(state: GameState, portfolio: String, competence: fl
 	state.ministers.append(m)
 
 
+static func _population_pressure(state: GameState, content: Dictionary) -> float:
+	var profiles: Dictionary = content["catalogs"]["regions_and_programs"]["region_profiles"]
+	var weighted := 0.0
+	var total := 0.0
+	for key in state.regions:
+		var weight := 1.0
+		var profile: Variant = profiles.get(String(key), {})
+		if profile is Dictionary:
+			weight = float((profile as Dictionary).get("population_weight", 1.0))
+		weighted += (state.regions[key] as RegionState).pressure * weight
+		total += weight
+	return weighted / total if total > 0.0 else 0.0
+
 # ── Seeding ───────────────────────────────────────────────────────────────
 
 func _test_ensure_ministries_seeds_every_core_portfolio(t, content: Dictionary) -> void:
@@ -264,10 +277,7 @@ func _test_workload_sources_on_a_fresh_campaign(t, content: Dictionary) -> void:
 	# legitimately carries a regional-pressure source on top of ordinary
 	# administration (mean seeded pressure 0.602 > the 0.45 threshold).
 	# Every other portfolio still has exactly one source.
-	var pressure_total := 0.0
-	for region in state.regions.values():
-		pressure_total += (region as RegionState).pressure
-	var expected_rp := (pressure_total / state.regions.size() - 0.45) * 0.90
+	var expected_rp := (_population_pressure(state, content) - 0.45) * 0.90
 	for portfolio in ALL_PORTFOLIOS:
 		var breakdown: Dictionary = MinistriesSimScript.workload_breakdown(state, portfolio)
 		t.near(float(breakdown.get("ordinary administration", -1.0)), MinistriesSimScript.BASE_WORKLOAD, 0.0001,
@@ -351,6 +361,28 @@ func _test_workload_counts_regional_pressure_for_interior_above_threshold(t, con
 	t.truth(not economy_breakdown.has("regional pressure"), "regional pressure workload is Interior-only")
 
 
+func _test_workload_counts_active_regional_programmes(t, content: Dictionary) -> void:
+	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	t.truth(state != null, "campaign builds")
+	if state == null:
+		return
+	var definitions: Dictionary = content["catalogs"]["regions_and_programs"]["regional_programs"]
+	var programme_id: String = String(definitions.keys()[0])
+	var definition: Dictionary = definitions[programme_id]
+	var programme := RegionState.RegionalProgram.new()
+	programme.id = "workload-programme"
+	programme.program_id = programme_id
+	programme.region_id = "anera"
+	state.regional_programs = [programme]
+	var owner: String = String(definition["portfolio"])
+	var breakdown: Dictionary = MinistriesSimScript.workload_breakdown(state, owner)
+	t.near(float(breakdown.get("regional programmes", 0.0)), 0.48, 0.0001,
+		"an active programme adds 0.48 workload to its owning portfolio")
+	for portfolio in ALL_PORTFOLIOS:
+		if portfolio != owner:
+			t.truth(not MinistriesSimScript.workload_breakdown(state, portfolio).has("regional programmes"),
+				"programme workload stays with its owning portfolio: " + portfolio)
+
 func _test_workload_ignores_regional_pressure_below_threshold(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	t.truth(state != null, "campaign builds")
@@ -384,10 +416,7 @@ func _test_simulate_recovers_backlog_gradually_when_capacity_exceeds_workload(t,
 	# administration + the seeded regional-pressure source (Task 8 seeds
 	# regions at factory time; mean seeded pressure 0.602 clears the 0.45
 	# threshold) -> still ample spare capacity.
-	var pressure_total := 0.0
-	for region in state.regions.values():
-		pressure_total += (region as RegionState).pressure
-	var workload := 0.65 + (pressure_total / state.regions.size() - 0.45) * 0.90
+	var workload := 0.65 + (_population_pressure(state, content) - 0.45) * 0.90
 	interior.backlog = 3.0
 	interior.months_overloaded = 2
 
@@ -490,6 +519,7 @@ func _initialize() -> void:
 		_test_workload_counts_debt_administration_for_finance_only(t, content)
 		_test_workload_counts_civil_war_crisis_load_per_portfolio(t, content)
 		_test_workload_counts_regional_pressure_for_interior_above_threshold(t, content)
+		_test_workload_counts_active_regional_programmes(t, content)
 		_test_workload_ignores_regional_pressure_below_threshold(t, content)
 
 		_test_simulate_recovers_backlog_gradually_when_capacity_exceeds_workload(t, content)
