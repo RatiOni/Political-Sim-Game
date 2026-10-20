@@ -656,6 +656,48 @@ turnout, regional programmes and regional campaigning.
 *Playable result:* you can actually govern — pass a law, appoint a minister,
 run a budget, fight an election.
 
+### Task 11: Regional programme player-action slice
+
+This is the first player-directed Phase 3 slice, not Phase 3 completion. Reuse
+the regional catalogue, political capital, modifiers, monthly pulse, map,
+save/load and the existing RegionAction control; do not port legislation,
+cabinet appointments, elections, reforms or regional campaigning here.
+
+**Files:**
+- Create: `godot/scripts/native/actions/regional_program_actions.gd`
+- Modify: `godot/scripts/native/native_game.gd`
+- Modify: `godot/scenes/panels/region_brief.tscn`
+- Modify: `godot/scripts/app.gd`
+- Create: `godot/tests/native/test_regional_program_actions.gd`
+- Modify: `godot/tests/native/test_native_game.gd`
+- Modify: `godot/scripts/tests/vertical_slice_test.gd`
+
+**Acceptance:** From the Ardenia map, a government player can choose and launch
+an authored regional programme, immediately see its political-capital cost and
+active commitment, advance time to observe delivered effects, save, reload and
+continue the same programme. Opposition, unaffordable, duplicate, inaccessible
+and region-incompatible actions are refused atomically by the native engine.
+The UI formats detached engine read models and never derives eligibility or
+effects.
+
+- [ ] Write failing service tests for deterministic option read models,
+      eligibility, atomic rejection, exact-cost success, launch pressure,
+      faction loyalty, stable ids and the finite non-institutional treasury
+      modifier.
+- [ ] Implement one input-free action service; do not duplicate rules in UI.
+- [ ] Add `NativeGame.start_regional_program(...)` under the existing busy
+      guard: success emits one snapshot, failure emits none, re-entry is refused.
+- [ ] Put detached option and active-program read models on each region
+      snapshot; load catalogue data once per snapshot rather than once per
+      region.
+- [ ] Replace the disabled placeholder with an OptionButton, active status and
+      the existing 44px action button. Show backend reasons for disabled states.
+- [ ] Prove launch -> monthly delivery -> save/load -> continued delivery
+      through the public NativeGame API and the real app scene at 1920x1080 and
+      1280x720.
+- [ ] Run the full native battery, vertical slice and Python smoke suite.
+- [ ] Commit `feat(godot): make regional programmes playable`.
+
 ### Phase 4 — The living world
 
 Events and situation chains (including the schemer arc and the bespoke Vasca and
