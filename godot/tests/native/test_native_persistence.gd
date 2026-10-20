@@ -426,6 +426,29 @@ func _test_task10_digest_and_household_boundary(t, content: Dictionary) -> void:
 	var wrong_type_household: Dictionary = state.to_dict()
 	wrong_type_household["households"] = {"bad": null}
 	t.equal(GameState.from_dict(wrong_type_household), null, "task10: present null household entry is rejected")
+	var valid_household := {
+		"id": "test:group", "group_id": "group", "region_id": "test",
+		"population_share": 1.0, "nominal_income_index": 1.0,
+		"living_cost_index": 1.0, "real_income_index": 1.0,
+		"employment_security": 0.7, "service_access": 0.6,
+		"hardship": 0.3, "confidence": 0.5, "last_real_income_index": 1.0,
+	}
+	var missing_numeric: Dictionary = state.to_dict()
+	var missing_record: Dictionary = valid_household.duplicate(true)
+	missing_record.erase("hardship")
+	missing_numeric["households"] = {"test:group": missing_record}
+	var missing_loaded := GameState.from_dict(missing_numeric)
+	t.truth(missing_loaded != null, "task10: absent household numeric field keeps its legacy default")
+	if missing_loaded != null:
+		t.near(missing_loaded.households["test:group"].hardship, 0.3, 0.000001,
+			"task10: absent household hardship defaults to 0.3")
+	for malformed in ["not-a-number", {"nested": 1}, NAN, INF, -INF]:
+		var bad_numeric: Dictionary = state.to_dict()
+		var bad_record: Dictionary = valid_household.duplicate(true)
+		bad_record["hardship"] = malformed
+		bad_numeric["households"] = {"test:group": bad_record}
+		t.equal(GameState.from_dict(bad_numeric), null,
+			"task10: present malformed household numeric field is rejected (%s)" % [malformed])
 	var h := HouseholdGroupState.new()
 	h.id = "test:group"
 	h.group_id = "group"

@@ -4,54 +4,15 @@ extends RefCounted
 ## Typed port of engine/ministries.py: ministry capacity, workload, delivery
 ## and accumulated backlog for each `CORE_PORTFOLIO`.
 ##
-## `state.ministries` is not populated by `GameFactory` (see
-## game_factory.gd's header note and game_state.gd's — "ministries... Not yet
-## populated by GameFactory") and this file does not change that: exactly
-## like Task 5's `BudgetSim.ensure_budget_state`/`process_fiscal_year`
-## (reviewed APPROVE with no finding about `GameFactory` staying
-## budget-unaware), `ensure_ministries` seeds the dict lazily on first use
-## rather than `GameFactory.new_campaign` seeding it eagerly — even though
-## Python's own `content/loader.py: build_state_for` DOES call
-## `ministries.ensure_ministries(state)` at construction time. That single
-## Python call site is not a hard interface requirement: nothing observable
-## differs between "seeded at construction" and "seeded on first
-## `simulate()`/`preview()` call" for a state that has no other reader of
-## `state.ministries` before either point, and keeping the same lazy-seed
-## shape across every Phase 2 subsystem (budget, ministries, and — per
-## `progress.md` — regions/households next) avoids re-touching
-## `game_factory.gd` once per subsystem task.
+## `state.ministries` is seeded lazily by `ensure_ministries`; NativeGame calls
+## `simulate()` once per monthly pulse, while preview callers can seed it on
+## demand without a second construction path.
 ##
-## Workload sources ported honestly against what native `Country`/`GameState`
-## actually has today (mirrors `political_capital.gd`'s same reasoning for
-## PC upkeep):
-##   - "active legislation": always 0 — no `Legislature`/`Law` class exists
-##     natively yet (Phase 3 territory).
-##   - "regional programmes": always 0 — `content/regions.py:
-##     REGIONAL_PROGRAMS` (needed to map a programme id to its portfolio)
-##     hasn't been exported to native content, and `state.regional_programs`
-##     is always empty on a freshly-built campaign regardless (`GameFactory`
-##     doesn't populate it).
-##   - "unresolved situations": always 0 — `GameState` has no `pending_events`
-##     field; the event system isn't ported yet.
-##   - "treaties"/"sanctions" (Foreign Affairs only): real. `country.gd`'s
-##     `BilateralRelation.treaties`/`.sanctioned` already exist natively
-##     (same fields `PoliticalCapital.upkeep` reads) — currently always
-##     zero-valued on a fresh campaign, but the counting logic itself is
-##     real and testable by hand-populating a relation.
-##   - "debt administration" (Finance only): real. `Economy.loans` exists as
-##     a plain untyped Array (economy.gd) — always empty today, same
-##     "real but currently zero" situation as treaties.
-##   - "civil war": real. `GameState.civil_war` is a genuine persisted flag.
-##   - "regional pressure" (Interior only): real region data
-##     (`RegionState.pressure`), but Python's population-weighted average
-##     needs `content/regions.py: ARDENIA_REGION_PROFILES.population_weight`,
-##     which is authored *content*, not simulation state, and hasn't been
-##     exported to native content. Falls back to an unweighted mean of
-##     `state.regions` — honestly equivalent right now, since `GameFactory`
-##     never populates `state.regions` on a fresh campaign either (same
-##     "empty dict" scope note as ministries itself); this only starts to
-##     matter once a later task seeds regions.
-
+## Workload sources reflect the native systems available in Phase 2:
+## active legislation and unresolved situations remain zero until their later
+## systems land; regional programmes use their exported portfolio and add 0.48
+## each; treaties, sanctions, loans, civil war, and population-weighted regional
+## pressure use live persisted state.
 const CORE_PORTFOLIOS: Array[String] = ["Finance", "Interior", "Foreign Affairs", "Defense", "Economy", "Justice"]
 
 const BASE_WORKLOAD := 0.65
@@ -129,8 +90,7 @@ static func ensure_ministries(state: GameState) -> Dictionary:
 	return state.ministries
 
 
-## Population-weighted in Python; see this file's header note on why an
-## unweighted mean is the honest native equivalent today.
+## Uses the exported regional population weights, matching the Python signal.
 static func _national_pressure(state: GameState) -> float:
 	if state.regions.is_empty():
 		return 0.0
@@ -174,10 +134,8 @@ static func _programme_workload(state: GameState, portfolio: String) -> float:
 static func workload_breakdown(state: GameState, portfolio: String) -> Dictionary:
 	var breakdown := {"ordinary administration": BASE_WORKLOAD}
 
-	# "active legislation" and "regional programmes" and "unresolved
-	# situations" are always 0 today — see header note. Left out of the
-	# breakdown entirely (matching Python, which only adds a key when its
-	# source total is non-zero).
+	# Active legislation and unresolved situations are not native yet, so their
+	# zero-value keys remain absent (matching Python's non-zero-only breakdown).
 
 	var programme_load := _programme_workload(state, portfolio)
 	if programme_load > 0.0:

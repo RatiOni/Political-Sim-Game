@@ -91,6 +91,43 @@ func _test_digest_is_pure_and_material(t, content: Dictionary) -> void:
 	t.truth(not lines.is_empty(), "material monthly movement produces a digest")
 
 
+func _test_digest_direction_wording(t, content: Dictionary) -> void:
+	var state := _state(content)
+	var before: Dictionary = MonthlyDigestScript.capture(state)
+	state.player.approval += 0.01
+	state.stability_value += 0.01
+	state.country.economy.inflation += 0.01
+	for region in state.regions.values():
+		region.pressure += 0.10
+	for household in state.households.values():
+		household.hardship += 0.10
+	var rising: Array[String] = MonthlyDigestScript.build(state, before)
+	t.equal(rising, [
+		"Public approval improves (+1.0 points).",
+		"Government stability improves (+1.0 points).",
+		"Inflation deteriorates (+1.0 points).",
+		"Regional pressure deteriorates (+10.0 points).",
+		"Household hardship deteriorates (+10.0 points).",
+	], "digest interprets positive movement according to the metric")
+
+	before = MonthlyDigestScript.capture(state)
+	state.player.approval -= 0.01
+	state.stability_value -= 0.01
+	state.country.economy.inflation -= 0.01
+	for region in state.regions.values():
+		region.pressure -= 0.10
+	for household in state.households.values():
+		household.hardship -= 0.10
+	var falling: Array[String] = MonthlyDigestScript.build(state, before)
+	t.equal(falling, [
+		"Public approval deteriorates (-1.0 points).",
+		"Government stability deteriorates (-1.0 points).",
+		"Inflation improves (-1.0 points).",
+		"Regional pressure improves (-10.0 points).",
+		"Household hardship improves (-10.0 points).",
+	], "digest interprets negative movement according to the metric")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	var content: Dictionary = ContentRepositoryScript.load_all()
@@ -99,4 +136,5 @@ func _initialize() -> void:
 		_test_stability_directions_and_bounds(t, content)
 		_test_opposition_contract(t, content)
 		_test_digest_is_pure_and_material(t, content)
+		_test_digest_direction_wording(t, content)
 	quit(t.finish())

@@ -12,24 +12,18 @@ extends RefCounted
 ## reallocation. Call convention is static, matching `ministries_sim.gd`
 ## (`RegionsSim.ensure_region_states` / `RegionsSim.simulate`).
 ##
-## NOT wired into any turn loop here — Task 10 owns the monthly pulse wiring
-## (same standing note as Task 6's ministries work). Electoral *dynamics*
-## (`update_party_support` / projection / judgment, `campaign_in_region`) are
-## OUT of scope: they need Task 9 households. Only seed values are carried.
-## Programme start verbs (`start_program` / `can_start` / `available`) are OUT
-## too (later phase); tests construct `RegionalProgram` objects directly.
+## NativeGame calls `simulate()` once per monthly pulse. Electoral dynamics
+## (`update_party_support` / projection / judgment, `campaign_in_region`) and
+## programme start verbs remain later-phase work; tests construct active
+## `RegionalProgram` objects directly.
 ##
 ## Documented deviations from the Python reference (deliberate, not drift):
 ##   - Separatist delivery freeze: Python gates only programme *start* on
 ##     control, but a state that cannot reach a territory cannot progress work
 ##     there either — so a separatist-control region gets no delivered effects
 ##     AND no `months_active` increment that month. The programme stays
-##     active, frozen; its booked treasury Modifier is untouched (parliament
-##     committed the money). Known interaction (review finding, Task 8):
-##     frozen months extend wall-clock duration past the Modifier's booked
-##     hold window, so late delivery months run unfunded — accepted for now;
-##     Task 10 (pulse wiring) should extend the hold by frozen months or
-##     explicitly accept the slip. See the ledger's Task 10 carry-forward.
+##     active, frozen. Each frozen month extends the matching finite treasury
+##     Modifier hold once, so the booked funding remains aligned with delivery.
 ##   - Completion notice goes through `print()`, not `state.log()`: no native
 ##     `turn_log` / `event_history` store exists yet, and adding one would be
 ##     a save-schema change (an explicit non-goal). The wording matches

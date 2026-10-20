@@ -51,6 +51,14 @@ static func from_dict(data: Dictionary) -> HouseholdGroupState:
 	if not (data is Dictionary):
 		push_error("HouseholdGroupState.from_dict: expected a Dictionary, got %s" % [data])
 		return null
+	for key in ["population_share", "nominal_income_index", "living_cost_index",
+			"real_income_index", "employment_security", "service_access", "hardship",
+			"confidence", "last_real_income_index"]:
+		if data.has(key):
+			var value: Variant = data[key]
+			if not (typeof(value) == TYPE_INT or typeof(value) == TYPE_FLOAT) or not is_finite(float(value)):
+				push_error("HouseholdGroupState.from_dict: malformed numeric field '%s'" % [key])
+				return null
 	var h := HouseholdGroupState.new()
 	h.id = String(data.get("id", ""))
 	h.group_id = String(data.get("group_id", ""))

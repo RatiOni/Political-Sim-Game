@@ -25,16 +25,17 @@ static func build(state: GameState, before: Dictionary) -> Array[String]:
 		return []
 	var after := capture(state)
 	var lines: Array[String] = []
-	_append_change(lines, "Public approval", float(before.get("approval", 0.0)), float(after["approval"]), 0.002)
-	_append_change(lines, "Government stability", float(before.get("stability", 0.0)), float(after["stability"]), 0.002)
-	_append_change(lines, "Inflation", float(before.get("inflation", 0.0)), float(after["inflation"]), 0.002)
-	_append_change(lines, "Regional pressure", float(before.get("regional_pressure", 0.0)), float(after["regional_pressure"]), 0.003)
-	_append_change(lines, "Household hardship", float(before.get("household_hardship", 0.0)), float(after["household_hardship"]), 0.003)
+	_append_change(lines, "Public approval", float(before.get("approval", 0.0)), float(after["approval"]), 0.002, true)
+	_append_change(lines, "Government stability", float(before.get("stability", 0.0)), float(after["stability"]), 0.002, true)
+	_append_change(lines, "Inflation", float(before.get("inflation", 0.0)), float(after["inflation"]), 0.002, false)
+	_append_change(lines, "Regional pressure", float(before.get("regional_pressure", 0.0)), float(after["regional_pressure"]), 0.003, false)
+	_append_change(lines, "Household hardship", float(before.get("household_hardship", 0.0)), float(after["household_hardship"]), 0.003, false)
 	return lines
 
-static func _append_change(lines: Array[String], label: String, before: float, after: float, threshold: float) -> void:
+static func _append_change(lines: Array[String], label: String, before: float, after: float, threshold: float, higher_is_better: bool) -> void:
 	var delta := after - before
 	if absf(delta) < threshold:
 		return
-	var direction := "improves" if delta > 0.0 else "deteriorates"
+	var improves := delta > 0.0 if higher_is_better else delta < 0.0
+	var direction := "improves" if improves else "deteriorates"
 	lines.append("%s %s (%+.1f points)." % [label, direction, delta * 100.0])

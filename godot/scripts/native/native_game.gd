@@ -67,11 +67,9 @@ func new_campaign(config: Dictionary) -> Dictionary:
 	return result
 
 
-## Advances the calendar by exactly one day. Modifier aging runs here too,
-## but only when the day crosses a month boundary (mirroring
-## TurnEngine._age_modifiers, which is monthly, not daily). The rest of the
-## monthly simulation pulse — economy, approval, stability — is Phase 2
-## work, not here.
+## Advances the calendar by exactly one day. On a month boundary it runs the
+## complete Phase 2 pulse once, then ages modifiers and stores the completed
+## monthly digest. Ordinary days change only the calendar.
 func advance_day() -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -169,12 +167,10 @@ func _do_new_campaign(config: Dictionary) -> Dictionary:
 	return {"ok": true, "snapshot": snap}
 
 
-## The UI read model: only what apply_snapshot renders, nothing it could
-## use to reach back into live objects. Regions come from live state
-## (empty until a later phase seeds the regional layer); decisions, the
-## monthly digest, dispatches, and reform objectives are likewise empty
-## until their systems land — the UI already renders every one of those
-## empty states.
+## The UI read model: only observational data, with every nested container
+## detached by snapshot(). Phase 2 exposes live regions, budget, ministries,
+## households and the completed monthly digest; later systems retain their
+## explicit empty placeholders.
 static func _build_snapshot(state: GameState) -> Dictionary:
 	var regions: Array = []
 	for key in state.regions.keys():
@@ -231,7 +227,7 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 			"turn": state.turn,
 		},
 		"player": player,
-		"headline": {"stability": _stability_label(state.stability_value), "attention_spent": 0},
+		"headline": {"stability": _stability_label(state.stability_value), "value": state.stability_value, "attention_spent": 0},
 		"economy": economy,
 		"regions": regions,
 		"factions": factions,
