@@ -42,6 +42,13 @@ static func _wipe_slot(slot: String) -> void:
 			DirAccess.remove_absolute(path)
 
 
+static func _region_snapshot(game: Node, region_id: String) -> Dictionary:
+	for region in game.snapshot().get("regions", []):
+		if region.get("id") == region_id:
+			return region
+	return {}
+
+
 func _test_ready_side_effect_free(t) -> void:
 	var game = NativeGameScript.new()
 	t.equal(game.snapshot(), {}, "a fresh NativeGame holds no campaign until new_campaign")
@@ -345,6 +352,7 @@ func _test_regional_program_public_journey(t) -> void:
 	t.truth(not duplicate.get("ok", true), "regional action: duplicate is refused")
 	t.equal(emissions.size(), 1, "regional action: failure emits nothing")
 	t.equal(game.snapshot(), before_failure, "regional action: failure is atomic through NativeGame")
+	var before_delivery := _region_snapshot(game, "anera")
 	var rolled := false
 	for day in range(32):
 		var advanced: Dictionary = game.advance_day()
@@ -352,18 +360,23 @@ func _test_regional_program_public_journey(t) -> void:
 			rolled = true
 			break
 	t.truth(rolled, "regional action: advancing reaches the first monthly pulse")
-	t.equal(game._state.regional_programs[0].months_active, 1, "regional action: monthly simulation delivers the first programme month")
+	var delivered := _region_snapshot(game, "anera")
+	t.equal((delivered.get("active_program", {}) as Dictionary).get("months_active"), 1, "regional action: monthly simulation delivers the first programme month")
+	t.truth(not is_equal_approx(float(delivered.get("pressure", 0.0)), float(before_delivery.get("pressure", 0.0)))
+		or not is_equal_approx(float(delivered.get("unemployment", 0.0)), float(before_delivery.get("unemployment", 0.0)))
+		or not is_equal_approx(float(delivered.get("state_reach", 0.0)), float(before_delivery.get("state_reach", 0.0))),
+		"regional action: a delivered month changes a public regional metric")
 	t.truth(game.save(slot).get("ok", false), "regional action: active programme saves")
 	for day in range(32):
 		if game.advance_day().get("month_rolled", false):
 			break
-	t.equal(game._state.regional_programs[0].months_active, 2, "regional action: programme continues after another month")
+	t.equal((_region_snapshot(game, "anera").get("active_program", {}) as Dictionary).get("months_active"), 2, "regional action: programme continues after another month")
 	t.truth(game.load(slot).get("ok", false), "regional action: saved programme reloads")
-	t.equal(game._state.regional_programs[0].months_active, 1, "regional action: load restores the saved delivery month")
+	t.equal((_region_snapshot(game, "anera").get("active_program", {}) as Dictionary).get("months_active"), 1, "regional action: load restores the saved delivery month")
 	for day in range(32):
 		if game.advance_day().get("month_rolled", false):
 			break
-	t.equal(game._state.regional_programs[0].months_active, 2, "regional action: delivery continues after reload")
+	t.equal((_region_snapshot(game, "anera").get("active_program", {}) as Dictionary).get("months_active"), 2, "regional action: delivery continues after reload")
 	_wipe_slot(slot)
 	game.free()
 

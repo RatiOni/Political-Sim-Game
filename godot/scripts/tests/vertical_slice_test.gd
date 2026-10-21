@@ -3,9 +3,8 @@ extends SceneTree
 # Post-bridge journey test: drives the real menu/app scenes through the real
 # NativeGame autoload (fixed seed 424242 — no FakeBridge, no Python worker)
 # and asserts the same journey: startup, region selection, time advance,
-# save, quit-equivalent state drop, reload restoration. The objective action
-# has no native backend yet, so it must read as disabled-with-a-note, never
-# as a working control and never as an error.
+# save, quit-equivalent state drop, reload restoration, and a real regional
+# programme from launch through monthly delivery and continued post-load work.
 
 const APP_SLOT := "godot_slice"
 const FIXED_SEED := 424242
@@ -171,10 +170,19 @@ func _run() -> void:
 	var choice: OptionButton = brief.find_child("ProgramChoice")
 	var action: Button = brief.find_child("RegionAction")
 	var security_index := -1
+	var customs_index := -1
 	for index in range(choice.item_count):
 		if str(choice.get_item_metadata(index)) == "security_stabilisation":
 			security_index = index
-			break
+		if str(choice.get_item_metadata(index)) == "customs_enforcement":
+			customs_index = index
+	if not _check(customs_index >= 0, "Incompatible programmes remain inspectable"):
+		return
+	choice.select(customs_index)
+	choice.item_selected.emit(customs_index)
+	if not _check(action.disabled and "not available" in brief.find_child("ProgrammeStatus").text,
+			"An ineligible choice shows the engine-supplied reason and cannot launch"):
+		return
 	if not _check(security_index >= 0, "Security stabilisation appears in the engine-supplied programme choices"):
 		return
 	choice.select(security_index)
@@ -202,7 +210,28 @@ func _run() -> void:
 			and str(scene.snapshot["date"]["text"]) == "2 Mar 1993",
 			"Running clock advances one native day"):
 		return
+	play.pressed.emit()
 	print("PASS: pause/speed clock calls advance_day directly")
+	var before_delivery := anera.duplicate(true)
+	var first_month_rolled := false
+	for day in range(32):
+		if native_game.advance_day().get("month_rolled", false):
+			first_month_rolled = true
+			break
+	if not _check(first_month_rolled, "The public daily loop reaches the first programme month"):
+		return
+	scene.apply_snapshot(native_game.snapshot())
+	for region in scene.snapshot["regions"]:
+		if region.get("id") == "anera":
+			anera = region
+			break
+	if not _check(anera["active_program"].get("months_active") == 1
+			and (not is_equal_approx(float(anera["pressure"]), float(before_delivery["pressure"]))
+				or not is_equal_approx(float(anera["unemployment"]), float(before_delivery["unemployment"]))
+				or not is_equal_approx(float(anera["state_reach"]), float(before_delivery["state_reach"]))),
+			"The real scene shows one delivered month and a changed regional metric"):
+		return
+	print("PASS: programme delivery is visible through the real scene snapshot")
 	var save_event := InputEventAction.new()
 	save_event.action = "save"
 	save_event.pressed = true
@@ -210,26 +239,58 @@ func _run() -> void:
 	if not _check(FileAccess.file_exists("user://saves/%s.json" % APP_SLOT),
 			"Save shortcut writes the named slot"):
 		return
-	scene._process(2.0)
-	if not _check(scene.snapshot["date"]["day_index"] == 2, "Campaign advances after save"):
+	var saved_date: Dictionary = scene.snapshot["date"].duplicate(true)
+	var second_month_rolled := false
+	for day in range(32):
+		if native_game.advance_day().get("month_rolled", false):
+			second_month_rolled = true
+			break
+	if not _check(second_month_rolled, "Campaign reaches another monthly pulse after save"):
+		return
+	scene.apply_snapshot(native_game.snapshot())
+	for region in scene.snapshot["regions"]:
+		if region.get("id") == "anera":
+			anera = region
+			break
+	if not _check(anera["active_program"].get("months_active") == 2,
+			"Programme reaches month two after save"):
 		return
 	var load_event := InputEventAction.new()
 	load_event.action = "load"
 	load_event.pressed = true
 	scene._unhandled_key_input(load_event)
-	if not _check(scene.snapshot["date"]["day_index"] == 1
-			and str(scene.snapshot["date"]["text"]) == "2 Mar 1993",
-			"Named-slot load restores the saved day"):
+	for region in scene.snapshot["regions"]:
+		if region.get("id") == "anera":
+			anera = region
+			break
+	if not _check(scene.snapshot["date"] == saved_date
+			and anera["active_program"].get("months_active") == 1,
+			"Named-slot load restores the saved programme month"):
 		return
-	print("PASS: save shortcut, clock advance, and load restoration through NativeGame")
+	for day in range(32):
+		if native_game.advance_day().get("month_rolled", false):
+			break
+	scene.apply_snapshot(native_game.snapshot())
+	for region in scene.snapshot["regions"]:
+		if region.get("id") == "anera":
+			anera = region
+			break
+	if not _check(anera["active_program"].get("months_active") == 2,
+			"Programme delivery continues after reload"):
+		return
+	print("PASS: save, load, and continued programme delivery through NativeGame")
 	# Quit-equivalent: drop the displayed state entirely, then reload from
 	# disk — the relaunch restores the saved campaign, not a blank screen.
 	scene.apply_snapshot({})
 	if not _check(brief.find_child("PressureValue").text == "—" and scene.find_child("NextDecision").disabled and map.regions.is_empty(), "Missing data clears stale values and decisions"):
 		return
 	scene._do_load()
-	if not _check(scene.snapshot["date"]["day_index"] == 1
-			and str(scene.snapshot["date"]["text"]) == "2 Mar 1993"
+	for region in scene.snapshot["regions"]:
+		if region.get("id") == "anera":
+			anera = region
+			break
+	if not _check(scene.snapshot["date"] == saved_date
+			and anera["active_program"].get("months_active") == 1
 			and brief.find_child("RegionId").text == map.selected_id,
 			"Reload after a full state drop restores the saved campaign"):
 		return

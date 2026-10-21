@@ -123,6 +123,13 @@ func apply_snapshot(value: Dictionary) -> void:
 func _percent(row: Dictionary, key: String) -> String:
 	return "%.1f%%" % (float(row[key]) * 100.0) if row.has(key) else "—"
 
+func _compact_region_status(region: Dictionary) -> String:
+	return "P %.0f%% · U %.1f%% · Reach %.0f%%" % [
+		float(region.get("pressure", 0.0)) * 100.0,
+		float(region.get("unemployment", 0.0)) * 100.0,
+		float(region.get("state_reach", 0.0)) * 100.0,
+	]
+
 func _lines(rows: Array, empty_text: String) -> String:
 	var lines: Array[String] = []
 	for row in rows:
@@ -151,14 +158,17 @@ func _refresh_region() -> void:
 		%RegionBrief.find_child("RegionMetrics").text = "Unemployment    %s\n\nState reach    %s" % [_percent(region, "unemployment"), _percent(region, "state_reach")]
 		var active: Variant = region.get("active_program")
 		if active is Dictionary:
-			%RegionBrief.find_child("ProgrammeStatus").text = "%s\nMonth %d of %d · %.0f M/month" % [active.get("name", "Active programme"), int(active.get("months_active", 0)) + 1, active.get("duration", 0), active.get("monthly_cost", 0.0)]
+			var active_text := "%s\nMonth %d of %d · %.0f M/month" % [active.get("name", "Active programme"), int(active.get("months_active", 0)) + 1, active.get("duration", 0), active.get("monthly_cost", 0.0)]
+			if get_window().size.x < 1500 or get_window().size.y < 850:
+				active_text = "%s\n%s" % [_compact_region_status(region), active_text]
+			%RegionBrief.find_child("ProgrammeStatus").text = active_text
 			break
 		var first_eligible := -1
 		for option in region.get("program_options", []):
 			var index := choice.item_count
 			choice.add_item("%s — %.0f PC" % [option.get("short_name", option.get("name", "Programme")), option.get("pc_cost", 0.0)])
 			choice.set_item_metadata(index, option.get("id", ""))
-			choice.get_popup().set_item_disabled(index, not option.get("eligible", false))
+			choice.get_popup().set_item_tooltip(index, str(option.get("disabled_reason", option.get("body", ""))))
 			if first_eligible < 0 and option.get("eligible", false):
 				first_eligible = index
 		if first_eligible >= 0:
@@ -187,7 +197,10 @@ func _on_program_selected(index: int) -> void:
 				_selected_program_id = program_id
 				_selected_program_option = option
 				var reason := str(option.get("disabled_reason", ""))
-				%RegionBrief.find_child("ProgrammeStatus").text = reason if not reason.is_empty() else "%s · %d months · %.0f M/month" % [option.get("portfolio", ""), option.get("duration", 0), option.get("monthly_cost", 0.0)]
+				var option_text := reason if not reason.is_empty() else "%s · %d months · %.0f M/month" % [option.get("portfolio", ""), option.get("duration", 0), option.get("monthly_cost", 0.0)]
+				if get_window().size.x < 1500 or get_window().size.y < 850:
+					option_text = "%s\n%s" % [_compact_region_status(region), option_text]
+				%RegionBrief.find_child("ProgrammeStatus").text = option_text
 				break
 	_update_program_controls(not snapshot.is_empty() and not _fatal)
 
