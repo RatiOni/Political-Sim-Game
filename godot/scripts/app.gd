@@ -79,6 +79,8 @@ func _resize_layout() -> void:
 		%RegionBrief.find_child(name).visible = not compact
 	find_child("Layout").add_theme_constant_override("separation", 12 if compact else 16)
 	%MonthlyReport.find_child("DispatchColumn").visible = not compact
+	if not snapshot.is_empty():
+		_refresh_region()
 
 func apply_snapshot(value: Dictionary) -> void:
 	snapshot = value.duplicate(true)

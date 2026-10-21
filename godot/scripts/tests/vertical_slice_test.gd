@@ -107,6 +107,18 @@ func _run() -> void:
 		for frame in range(4):
 			await process_frame
 		print("LAYOUT %s: %s" % [dimensions, scene.get_node("Margin/Layout").get_children().map(func(node): return "%s=%s" % [node.name, node.get_combined_minimum_size()])])
+		if dimensions == Vector2i(1280, 720):
+			var compact_region: Dictionary = {}
+			for region in scene.snapshot["regions"]:
+				if region.get("id") == map.selected_id:
+					compact_region = region
+					break
+			var compact_status := str(brief.find_child("ProgrammeStatus").text)
+			if not _check(compact_status.contains("P %.0f%%" % (float(compact_region["pressure"]) * 100.0))
+					and compact_status.contains("U %.1f%%" % (float(compact_region["unemployment"]) * 100.0))
+					and compact_status.contains("Reach %.0f%%" % (float(compact_region["state_reach"]) * 100.0)),
+					"1920-to-1280 resize preserves live regional metrics in the compact status"):
+				return
 		if not _check(scene.size.is_equal_approx(Vector2(dimensions)), "Native-size layout at %s (window %s, scene %s, minimum %s)" % [dimensions, root.size, scene.size, scene.get_combined_minimum_size()]):
 			return
 		var map_rect: Rect2 = map.get_global_rect()
