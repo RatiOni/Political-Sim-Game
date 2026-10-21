@@ -7,11 +7,6 @@ extends PanelContainer
 const SAVE_SLOT := "godot_slice"
 const SPEED_DELAYS := [1.5, 1.0, 0.65, 0.4, 0.2]
 
-# Reform objectives have no native backend yet (a later phase), so the
-# objective control is always disabled — visibly, with the reason attached,
-# never silently dead and never erroring.
-const OBJECTIVE_UNAVAILABLE_TEXT := "Objectives arrive in a later phase"
-const OBJECTIVE_UNAVAILABLE_NOTE := "Reform objectives have no native backend yet, so this control stays disabled rather than failing."
 
 var snapshot: Dictionary = {}
 var selected_region_id := "vashtera"
@@ -22,7 +17,8 @@ var _starting := false
 var _paused := true
 var _speed := 1
 var _clock_elapsed := 0.0
-var _selected_objective_id := ""
+var _selected_program_id := ""
+var _selected_program_option: Dictionary = {}
 
 func _ready() -> void:
 	%ArdeniaMap.region_selected.connect(_select_region)
@@ -30,7 +26,8 @@ func _ready() -> void:
 	%PlayButton.pressed.connect(_toggle_pause)
 	for index in range(5):
 		find_child("Speed%d" % (index + 1)).pressed.connect(_set_speed.bind(index + 1))
-	%RegionBrief.find_child("RegionAction").pressed.connect(_adopt_selected_objective)
+	%RegionBrief.find_child("RegionAction").pressed.connect(_start_selected_program)
+	%RegionBrief.find_child("ProgramChoice").item_selected.connect(_on_program_selected)
 	get_window().size_changed.connect(_resize_layout)
 	_resize_layout()
 	if _game == null:
@@ -77,7 +74,9 @@ func _resize_layout() -> void:
 	find_child("NationalPanel").visible = not compact
 	find_child("MapHint").visible = not compact
 	%MonthlyReport.custom_minimum_size.y = 88 if compact else 192
-	%RegionBrief.find_child("Details").custom_minimum_size.y = 48 if compact else 100
+	%RegionBrief.find_child("Details").custom_minimum_size.y = 48 if compact else 84
+	for name in ["Rule", "PressureHeading", "PressureValue", "Details"]:
+		%RegionBrief.find_child(name).visible = not compact
 	find_child("Layout").add_theme_constant_override("separation", 12 if compact else 16)
 	%MonthlyReport.find_child("DispatchColumn").visible = not compact
 
@@ -117,13 +116,7 @@ func apply_snapshot(value: Dictionary) -> void:
 	%MonthlyReport.find_child("ReportText").text = _lines(snapshot.get("digest", []), "No monthly report yet. Advance a day once connected.")
 	%MonthlyReport.find_child("DispatchText").text = _lines(snapshot.get("dispatches", []), "No dispatches this period.")
 	%ArdeniaMap.apply_snapshot(snapshot.get("regions", []), selected_region_id)
-	# No native backend yet (see OBJECTIVE_UNAVAILABLE_NOTE): the control
-	# stays disabled with the reason attached, whatever the snapshot holds.
-	_selected_objective_id = ""
-	var action = %RegionBrief.find_child("RegionAction")
-	action.disabled = true
-	action.text = OBJECTIVE_UNAVAILABLE_TEXT
-	action.tooltip_text = OBJECTIVE_UNAVAILABLE_NOTE
+
 	_refresh_region()
 	_refresh_controls()
 
@@ -141,15 +134,72 @@ func _select_region(region_id: String) -> void:
 	_refresh_region()
 
 func _refresh_region() -> void:
+	var choice: OptionButton = %RegionBrief.find_child("ProgramChoice")
+	choice.clear()
+	_selected_program_id = ""
+	_selected_program_option = {}
 	%RegionBrief.find_child("RegionName").text = selected_region_id.capitalize()
 	%RegionBrief.find_child("RegionId").text = selected_region_id
 	%RegionBrief.find_child("PressureValue").text = "—"
 	%RegionBrief.find_child("RegionMetrics").text = "No regional snapshot received."
+	%RegionBrief.find_child("ProgrammeStatus").text = "Select a region to review available programmes."
 	for region in snapshot.get("regions", []):
-		if region.get("id") == selected_region_id:
-			%RegionBrief.find_child("PressureValue").text = "%.0f%%" % (float(region["pressure"]) * 100.0) if region.has("pressure") else "—"
-			%RegionBrief.find_child("RegionMetrics").text = "Unemployment    %s\n\nState reach    %s" % [_percent(region, "unemployment"), _percent(region, "state_reach")]
+		if region.get("id") != selected_region_id:
+			continue
+		%RegionBrief.find_child("RegionName").text = str(region.get("name", selected_region_id.capitalize()))
+		%RegionBrief.find_child("PressureValue").text = "%.0f%%" % (float(region["pressure"]) * 100.0) if region.has("pressure") else "—"
+		%RegionBrief.find_child("RegionMetrics").text = "Unemployment    %s\n\nState reach    %s" % [_percent(region, "unemployment"), _percent(region, "state_reach")]
+		var active: Variant = region.get("active_program")
+		if active is Dictionary:
+			%RegionBrief.find_child("ProgrammeStatus").text = "%s\nMonth %d of %d · %.0f M/month" % [active.get("name", "Active programme"), int(active.get("months_active", 0)) + 1, active.get("duration", 0), active.get("monthly_cost", 0.0)]
 			break
+		var first_eligible := -1
+		for option in region.get("program_options", []):
+			var index := choice.item_count
+			choice.add_item("%s — %.0f PC" % [option.get("short_name", option.get("name", "Programme")), option.get("pc_cost", 0.0)])
+			choice.set_item_metadata(index, option.get("id", ""))
+			choice.get_popup().set_item_disabled(index, not option.get("eligible", false))
+			if first_eligible < 0 and option.get("eligible", false):
+				first_eligible = index
+		if first_eligible >= 0:
+			choice.select(first_eligible)
+			_on_program_selected(first_eligible)
+		elif choice.item_count > 0:
+			choice.select(0)
+			_on_program_selected(0)
+		break
+	_update_program_controls(not snapshot.is_empty() and not _fatal)
+
+
+func _on_program_selected(index: int) -> void:
+	_selected_program_id = ""
+	_selected_program_option = {}
+	var choice: OptionButton = %RegionBrief.find_child("ProgramChoice")
+	if index < 0 or index >= choice.item_count:
+		_update_program_controls(not snapshot.is_empty() and not _fatal)
+		return
+	var program_id := str(choice.get_item_metadata(index))
+	for region in snapshot.get("regions", []):
+		if region.get("id") != selected_region_id:
+			continue
+		for option in region.get("program_options", []):
+			if option.get("id") == program_id:
+				_selected_program_id = program_id
+				_selected_program_option = option
+				var reason := str(option.get("disabled_reason", ""))
+				%RegionBrief.find_child("ProgrammeStatus").text = reason if not reason.is_empty() else "%s · %d months · %.0f M/month" % [option.get("portfolio", ""), option.get("duration", 0), option.get("monthly_cost", 0.0)]
+				break
+	_update_program_controls(not snapshot.is_empty() and not _fatal)
+
+
+func _update_program_controls(ready: bool) -> void:
+	var choice: OptionButton = %RegionBrief.find_child("ProgramChoice")
+	var action: Button = %RegionBrief.find_child("RegionAction")
+	var eligible: bool = ready and not _selected_program_option.is_empty() and bool(_selected_program_option.get("eligible", false))
+	choice.disabled = not ready or choice.item_count == 0
+	action.disabled = not eligible
+	action.text = "Launch — %.0f PC" % _selected_program_option.get("pc_cost", 0.0) if eligible else "Launch programme"
+	action.tooltip_text = str(_selected_program_option.get("disabled_reason", ""))
 
 func _next_decision() -> void:
 	var decisions: Array = snapshot.get("decisions", [])
@@ -250,10 +300,15 @@ func _set_speed(value: int) -> void:
 	_speed = clampi(value, 1, 5)
 	_refresh_controls()
 
-func _adopt_selected_objective() -> void:
-	# Unreachable while the control is disabled (see apply_snapshot); kept
-	# as a defensive no-op with a visible note rather than a dead handler.
-	_set_status("OBJECTIVES UNAVAILABLE / REFORM SYSTEM LANDS IN A LATER PHASE")
+func _start_selected_program() -> void:
+	if _selected_program_id.is_empty():
+		return
+	var result: Dictionary = _game.start_regional_program(selected_region_id, _selected_program_id)
+	if not result.get("ok", false):
+		_set_status("PROGRAMME REFUSED / %s" % result.get("error", "Unknown error"))
+	else:
+		_set_status("PROGRAMME LAUNCHED / READY")
+	_refresh_controls()
 
 func _refresh_controls() -> void:
 	var ready := not snapshot.is_empty() and not _fatal
@@ -263,7 +318,7 @@ func _refresh_controls() -> void:
 		var button = find_child("Speed%d" % (index + 1))
 		button.disabled = not ready
 		button.button_pressed = index + 1 == _speed
-	%RegionBrief.find_child("RegionAction").disabled = true
+	_update_program_controls(ready)
 	find_child("SaveButton").disabled = not ready
 	find_child("LoadButton").disabled = not ready
 

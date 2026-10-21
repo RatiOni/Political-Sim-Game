@@ -56,9 +56,19 @@ theme_type_variation = &"Muted"
 text = "Pressure, jobs and state reach are supplied by the simulation."
 autowrap_mode = 3
 
+[node name="ProgramChoice" type="OptionButton" parent="Content"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+disabled = true
+
+[node name="ProgrammeStatus" type="Label" parent="Content"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Select a region to review available programmes."
+autowrap_mode = 3
+
 [node name="RegionAction" type="Button" parent="Content"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 disabled = true
-text = "Regional intervention"
-tooltip_text = "Static preview. Actions connect to the Python engine in the next slice."
+text = "Launch programme"

@@ -34,6 +34,7 @@ const RegionsSimScript = preload("res://scripts/native/sim/regions_sim.gd")
 const HouseholdsSimScript = preload("res://scripts/native/sim/households_sim.gd")
 const StabilitySimScript = preload("res://scripts/native/sim/stability_sim.gd")
 const MonthlyDigestScript = preload("res://scripts/native/presentation/monthly_digest.gd")
+const RegionalProgramActionsScript = preload("res://scripts/native/actions/regional_program_actions.gd")
 
 var _state: GameState = null
 var _busy := false
@@ -94,6 +95,28 @@ func advance_day() -> Dictionary:
 	state_changed.emit(snap)
 	_busy = false
 	return {"ok": true, "snapshot": snap, "month_rolled": month_rolled}
+
+
+## Launches one authored regional programme. The action service owns every
+## rule and effect; this method owns the operation guard and notification.
+func start_regional_program(region_id: String, program_id: String) -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var content := ContentRepository.load_all()
+	if content.has("error"):
+		_busy = false
+		return {"ok": false, "error": "Could not load regional programme content: %s" % content["error"]}
+	var result: Dictionary = RegionalProgramActionsScript.start(_state, region_id, program_id, content)
+	if result.get("ok", false):
+		var snap := snapshot()
+		result["snapshot"] = snap
+		state_changed.emit(snap)
+	_busy = false
+	return result
+
 
 ## Persists the live campaign under `slot`. SaveStore's {ok} passes
 ## straight through; saves never mutate or emit.
@@ -172,14 +195,41 @@ func _do_new_campaign(config: Dictionary) -> Dictionary:
 ## households and the completed monthly digest; later systems retain their
 ## explicit empty placeholders.
 static func _build_snapshot(state: GameState) -> Dictionary:
+	var content := ContentRepository.load_all()
+	var regional_catalog: Dictionary = content.get("catalogs", {}).get("regions_and_programs", {}) if not content.has("error") else {}
+	var profiles: Dictionary = regional_catalog.get("region_profiles", {})
+	var definitions: Dictionary = regional_catalog.get("regional_programs", {})
+	var active_by_region := {}
+	for active in state.regional_programs:
+		if active is RegionState.RegionalProgram:
+			active_by_region[active.region_id] = active
 	var regions: Array = []
 	for key in state.regions.keys():
 		var region: RegionState = state.regions[key]
+		var profile: Dictionary = profiles.get(region.id, {})
+		var active_model: Variant = null
+		if active_by_region.has(region.id):
+			var active: RegionState.RegionalProgram = active_by_region[region.id]
+			var definition: Dictionary = definitions.get(active.program_id, {})
+			active_model = {
+				"instance_id": active.id,
+				"program_id": active.program_id,
+				"name": String(definition.get("name", active.program_id.capitalize())),
+				"short_name": String(definition.get("short_name", definition.get("name", active.program_id.capitalize()))),
+				"months_active": active.months_active,
+				"duration": active.duration,
+				"monthly_cost": active.monthly_cost,
+			}
 		regions.append({
 			"id": region.id,
+			"name": String(profile.get("name", region.id.capitalize())),
 			"pressure": region.pressure,
 			"unemployment": region.unemployment,
 			"state_reach": region.state_reach,
+			"control": region.control,
+			"issue_id": region.issue_id,
+			"active_program": active_model,
+			"program_options": RegionalProgramActionsScript.options_for(state, region.id, content),
 		})
 	regions.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return str(a["id"]) < str(b["id"]))
 	var factions: Array = []

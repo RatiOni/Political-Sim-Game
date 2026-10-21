@@ -324,6 +324,49 @@ func _test_reentrant_advance_from_handler_refused(t) -> void:
 	game.free()
 
 
+func _test_regional_program_public_journey(t) -> void:
+	var slot := SLOT_PREFIX + "regional-program"
+	_wipe_slot(slot)
+	var game = NativeGameScript.new()
+	t.truth(game.new_campaign(_base_config()).get("ok", false), "regional action: campaign starts")
+	var emissions: Array = []
+	var reentrant: Dictionary = {}
+	game.state_changed.connect(func(_snap: Dictionary) -> void:
+		emissions.append(1)
+		if reentrant.is_empty():
+			reentrant["result"] = game.start_regional_program("sela", "public_works")
+	)
+	var launched: Dictionary = game.start_regional_program("anera", "security_stabilisation")
+	t.truth(launched.get("ok", false), "regional action: public NativeGame launch succeeds")
+	t.equal(emissions.size(), 1, "regional action: success emits exactly once")
+	t.truth(not (reentrant.get("result", {}) as Dictionary).get("ok", true), "regional action: reentrant launch is refused")
+	var before_failure := game.snapshot()
+	var duplicate: Dictionary = game.start_regional_program("anera", "public_works")
+	t.truth(not duplicate.get("ok", true), "regional action: duplicate is refused")
+	t.equal(emissions.size(), 1, "regional action: failure emits nothing")
+	t.equal(game.snapshot(), before_failure, "regional action: failure is atomic through NativeGame")
+	var rolled := false
+	for day in range(32):
+		var advanced: Dictionary = game.advance_day()
+		if advanced.get("month_rolled", false):
+			rolled = true
+			break
+	t.truth(rolled, "regional action: advancing reaches the first monthly pulse")
+	t.equal(game._state.regional_programs[0].months_active, 1, "regional action: monthly simulation delivers the first programme month")
+	t.truth(game.save(slot).get("ok", false), "regional action: active programme saves")
+	for day in range(32):
+		if game.advance_day().get("month_rolled", false):
+			break
+	t.equal(game._state.regional_programs[0].months_active, 2, "regional action: programme continues after another month")
+	t.truth(game.load(slot).get("ok", false), "regional action: saved programme reloads")
+	t.equal(game._state.regional_programs[0].months_active, 1, "regional action: load restores the saved delivery month")
+	for day in range(32):
+		if game.advance_day().get("month_rolled", false):
+			break
+	t.equal(game._state.regional_programs[0].months_active, 2, "regional action: delivery continues after reload")
+	_wipe_slot(slot)
+	game.free()
+
 static func _write_repo_file(path: String, content: String) -> void:
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -387,6 +430,7 @@ func _initialize() -> void:
 	_test_fresh_bad_config_emits_fatal(t)
 	_test_failed_validation_load_keeps_state_no_fatal(t)
 	_test_reentrant_advance_from_handler_refused(t)
+	_test_regional_program_public_journey(t)
 	_test_country_inner_id_consistency(t)
 
 	for slot in [SLOT_PREFIX + "roundtrip", SLOT_PREFIX + "signals",

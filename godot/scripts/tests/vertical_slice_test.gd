@@ -168,15 +168,33 @@ func _run() -> void:
 				if not _check(root.get_texture().get_image().save_png(path) == OK, "Save screenshot " + path):
 					return
 				print("CAPTURE: " + path)
-	# No native backend yet: the objective action must be visibly disabled
-	# with its reason attached — never silently dead, never erroring.
-	var action = brief.find_child("RegionAction")
-	if not _check(action.disabled, "Objective action is disabled with no native backend"):
+	var choice: OptionButton = brief.find_child("ProgramChoice")
+	var action: Button = brief.find_child("RegionAction")
+	var security_index := -1
+	for index in range(choice.item_count):
+		if str(choice.get_item_metadata(index)) == "security_stabilisation":
+			security_index = index
+			break
+	if not _check(security_index >= 0, "Security stabilisation appears in the engine-supplied programme choices"):
 		return
-	if not _check(str(action.tooltip_text).find("native backend") >= 0,
-			"The disabled objective control carries its explanatory note"):
+	choice.select(security_index)
+	choice.item_selected.emit(security_index)
+	if not _check(not action.disabled, "An eligible programme enables the 44 px launch action"):
 		return
-	print("PASS: adopt control is disabled-with-note, not silently dead")
+	var pc_before := float(scene.snapshot["player"]["political_capital"])
+	action.pressed.emit()
+	var anera: Dictionary = {}
+	for region in scene.snapshot["regions"]:
+		if region.get("id") == "anera":
+			anera = region
+			break
+	if not _check(float(scene.snapshot["player"]["political_capital"]) == pc_before - 11.0
+			and anera.get("active_program") is Dictionary
+			and anera["active_program"].get("program_id") == "security_stabilisation"
+			and action.disabled,
+			"Launching through the real panel spends PC once and shows the active commitment"):
+		return
+	print("PASS: regional programme launches through the real NativeGame action")
 	var play = scene.find_child("PlayButton")
 	play.pressed.emit()
 	scene._process(2.0)
