@@ -698,6 +698,72 @@ effects.
 - [ ] Run the full native battery, vertical slice and Python smoke suite.
 - [ ] Commit `feat(godot): make regional programmes playable`.
 
+### Task 12: Annual budget player-action slice
+
+Make the already-simulated annual appropriations system playable without
+building a disposable budget-only vote engine. Add one pure parliamentary
+projection kernel for the faction/wing arithmetic shared by budgets now and
+legislation later; do not add persistent Law or Legislature models in this
+task.
+
+**Files:**
+- Create: `godot/scripts/native/sim/parliamentary_vote.gd`
+- Create: `godot/scripts/native/actions/budget_actions.gd`
+- Create: `godot/scenes/panels/budget_panel.tscn`
+- Create: `godot/tests/native/test_budget_actions.gd`
+- Modify: `godot/scripts/native/sim/budget_sim.gd`
+- Modify: `godot/scripts/native/state/state_validator.gd`
+- Modify: `godot/scripts/native/native_game.gd`
+- Modify: `godot/scenes/main.tscn`
+- Modify: `godot/scripts/app.gd`
+- Modify: `godot/tests/native/test_budget_and_pc.gd`
+- Modify: `godot/tests/native/test_native_game.gd`
+- Modify: `godot/tests/native/test_native_persistence.gd`
+- Modify: `godot/scripts/tests/vertical_slice_test.gd`
+
+**Acceptance:** From a fresh government campaign, the player can open a
+readable budget panel, adjust all eight authored envelopes only by the
+catalogue's allowed values, inspect a non-mutating engine preview of the exact
+allocations, total, forecast balance, political-capital cost and parliamentary
+projection, table the plan, lobby a real faction, withdraw it or call the vote,
+save and reload an approved settlement, then advance to 1 January and see that
+same settlement become the active budget used by the existing monthly
+simulation. Opposition and every malformed, unaffordable, duplicate or
+out-of-sequence request are refused atomically. The UI renders detached read
+models and never computes fiscal or voting outcomes.
+
+- [ ] Write failing tests for proposal validation, exact political-capital
+      cost, preview non-mutation, deterministic faction/wing projection,
+      largest-remainder seat conservation, exact threshold boundaries,
+      lobbying cap, withdrawal, passage, defeat and rebellion consequences.
+- [ ] Implement a pure motion-based parliamentary vote kernel. It may know
+      faction seats, loyalty, ideology, wings, stakes, lobbying and sponsor,
+      but must not import or understand `AnnualBudget` or budget envelopes.
+- [ ] Implement one input-free budget action service that owns preview,
+      proposal, lobbying, vote and withdrawal rules. Reuse `AnnualBudget`,
+      `BudgetSim`, the exported budget catalogue and the existing January
+      rollover; add no save field or balance/content value.
+- [ ] Validate active, pending and historical budgets at the existing state
+      validation/load boundary so malformed or non-finite allocations cannot
+      enter a live campaign.
+- [ ] Add guarded `NativeGame` preview/mutation APIs. Successful mutations emit
+      one snapshot; refusals and previews emit none; re-entry is refused.
+- [ ] Extend the detached budget snapshot with active/pending/history and all
+      authored UI rows, disabled reasons and projection data needed for
+      formatting. Seed the active budget before the first player snapshot.
+- [ ] Add the data-driven budget panel without a new widget class. Keep 44px
+      actions and readable scrolling at 1920x1080 and 1280x720.
+- [ ] Prove preview -> proposal -> lobby/withdraw or vote -> save/load ->
+      1 January activation through the public NativeGame API and the real app
+      scene at both supported resolutions.
+- [ ] Run every native `test_*.gd`, the contract runner, vertical slice and
+      Python smoke suite.
+- [ ] Commit `feat(godot): make annual budgets playable`.
+
+**Deferred:** persistent laws/legislature, general bill UI, repeal and executive
+orders, supplementary appropriations, reforms, cabinet, elections, press copy
+and Phase 5 visual polish. Those are separate player-action slices.
+
 ### Phase 4 — The living world
 
 Events and situation chains (including the schemer arc and the bespoke Vasca and

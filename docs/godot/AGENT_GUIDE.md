@@ -44,8 +44,8 @@ checkout.
 ## Coordination
 
 - Only one phase of `PLAN.md` is active at a time (currently: **Phase 3**).
-  Tasks 5-10 are complete; **Task 11 (the regional-programme player-action
-  slice) is next**. Read `.superpowers/sdd/PLAN/progress.md`
+  Tasks 5-11 are complete; **Task 12 (the annual-budget player-action slice)
+  is next**. Read `.superpowers/sdd/PLAN/progress.md`
   and `git log` before acting; the ledger and committed work always override
   this guide when they disagree.
 - Within a phase, parallel work is fine only when file ownership doesn't
