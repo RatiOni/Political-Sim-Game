@@ -380,6 +380,81 @@ func _test_regional_program_public_journey(t) -> void:
 	_wipe_slot(slot)
 	game.free()
 
+func _test_budget_public_actions(t) -> void:
+	var game = NativeGameScript.new()
+	t.truth(game.new_campaign(_base_config()).get("ok", false),
+		"budget action: government campaign starts")
+	var opening: Dictionary = game.snapshot()
+	var budget: Dictionary = opening.get("budget", {})
+	t.truth(budget.get("ok", false), "budget action: first snapshot has a live budget model")
+	t.equal((budget.get("envelopes", []) as Array).size(), 8,
+		"budget action: all eight authored envelopes are exposed")
+	t.truth(budget.get("active") is Dictionary,
+		"budget action: active inherited settlement is seeded before the first snapshot")
+
+	var emissions: Array = []
+	game.state_changed.connect(func(snap: Dictionary) -> void: emissions.append(snap))
+	var before_preview := game.snapshot()
+	var preview: Dictionary = game.preview_budget({"health_and_welfare": 0.05})
+	t.truth(preview.get("ok", false), "budget action: public preview succeeds")
+	t.equal(emissions.size(), 0, "budget action: preview emits no state change")
+	t.equal(game.snapshot(), before_preview, "budget action: preview is non-mutating")
+
+	var reentrant: Dictionary = {}
+	game.state_changed.connect(func(_snap: Dictionary) -> void:
+		if reentrant.is_empty():
+			reentrant["result"] = game.withdraw_budget()
+	)
+	var proposed: Dictionary = game.propose_budget({"health_and_welfare": 0.05})
+	t.truth(proposed.get("ok", false), "budget action: public proposal succeeds")
+	t.equal(emissions.size(), 1, "budget action: proposal emits exactly once")
+	t.truth(not (reentrant.get("result", {}) as Dictionary).get("ok", true),
+		"budget action: a reentrant budget mutation is refused")
+	var proposed_snapshot := game.snapshot()
+	t.equal((proposed_snapshot["budget"]["pending"] as Dictionary).get("status"), "proposed",
+		"budget action: proposal appears in the detached snapshot")
+	var duplicate: Dictionary = game.propose_budget({})
+	t.truth(not duplicate.get("ok", true), "budget action: duplicate proposal is refused")
+	t.equal(emissions.size(), 1, "budget action: refused proposal emits nothing")
+	t.equal(game.snapshot(), proposed_snapshot, "budget action: refused proposal is atomic")
+
+	var lobby_id := String((proposed_snapshot["budget"]["lobby_factions"] as Array)[0]["id"])
+	var lobbied: Dictionary = game.lobby_budget(lobby_id)
+	t.truth(lobbied.get("ok", false), "budget action: public lobbying succeeds")
+	t.equal(emissions.size(), 2, "budget action: lobbying emits exactly once")
+	var voted: Dictionary = game.call_budget_vote()
+	t.truth(voted.get("ok", false), "budget action: calling the vote executes")
+	t.equal(emissions.size(), 3, "budget action: vote emits exactly once")
+	var resolved: Dictionary = game.snapshot()["budget"]
+	t.truth(resolved.get("pending") == null
+		or (resolved.get("pending") as Dictionary).get("status") == "approved",
+		"budget action: vote leaves either an approved settlement or recorded defeat")
+
+	t.truth(game.new_campaign(_base_config(424243)).get("ok", false),
+		"budget action: fresh campaign starts for withdrawal path")
+	emissions.clear()
+	t.truth(game.propose_budget({}).get("ok", false),
+		"budget action: second campaign can table a plan")
+	var withdrawn: Dictionary = game.withdraw_budget()
+	t.truth(withdrawn.get("ok", false), "budget action: public withdrawal succeeds")
+	t.equal(emissions.size(), 2, "budget action: proposal and withdrawal each emit once")
+	t.truth(game.snapshot()["budget"].get("pending") == null,
+		"budget action: withdrawal clears the pending settlement")
+
+	var opposition := NativeGameScript.new()
+	var opposition_config := _base_config(999)
+	opposition_config["opening_role"] = "opposition"
+	t.truth(opposition.new_campaign(opposition_config).get("ok", false),
+		"budget action: opposition campaign starts")
+	var opposition_before := opposition.snapshot()
+	var refused: Dictionary = opposition.propose_budget({})
+	t.truth(not refused.get("ok", true), "budget action: opposition proposal is refused")
+	t.equal(opposition.snapshot(), opposition_before,
+		"budget action: opposition refusal leaves state unchanged")
+	opposition.free()
+	game.free()
+
+
 static func _write_repo_file(path: String, content: String) -> void:
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -444,6 +519,7 @@ func _initialize() -> void:
 	_test_failed_validation_load_keeps_state_no_fatal(t)
 	_test_reentrant_advance_from_handler_refused(t)
 	_test_regional_program_public_journey(t)
+	_test_budget_public_actions(t)
 	_test_country_inner_id_consistency(t)
 
 	for slot in [SLOT_PREFIX + "roundtrip", SLOT_PREFIX + "signals",

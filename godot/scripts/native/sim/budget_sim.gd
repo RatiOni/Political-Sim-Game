@@ -7,13 +7,11 @@ extends RefCounted
 ## game_factory.gd's header note) and the January-rollover decision tree
 ## (`process_fiscal_year`).
 ##
-## NOT ported (out of this task's/this phase's scope, matching the brief):
-##   - Player-authored proposals/voting (`build_proposal`, `validate_proposal`,
-##     `as_vote_bill`, `projected_votes`, `vote_rebellions`) — those need the
-##     legislative engine (Phase 3 territory: no `Legislature`/`Law` class
-##     exists natively yet). `process_fiscal_year` still activates an
-##     already-`"approved"` `pending_budget` if the caller (a later phase's
-##     player-ops port) puts one there — this file just doesn't build one.
+## Player-authored preview/proposal/lobby/vote/withdraw behavior lives in
+## actions/budget_actions.gd; its pure parliamentary projection lives in
+## sim/parliamentary_vote.gd. This file remains the fiscal-year lifecycle owner.
+##
+## NOT ported (out of this task's scope, matching the brief):
 ##   - `_normalise_plan_envelopes` (legacy 7-envelope save migration) — no
 ##     native save has ever used the old shape, so there is nothing to
 ##     migrate from.
@@ -164,11 +162,8 @@ static func _government_ai_budget(state: GameState) -> AnnualBudget:
 	return b
 
 
-## Activates a voted plan, or an in-lieu one, at 1 January — mirrors
-## engine/budget.py: process_fiscal_year exactly, minus the player-proposal
-## machinery this task doesn't port (see header note): an approved
-## `pending_budget` still activates if one already exists on `state`; this
-## file just never builds one itself.
+## Activates a voted plan, or an in-lieu one, at 1 January. Player-authored
+## approved plans are created by BudgetActions and remain pending until here.
 static func process_fiscal_year(state: GameState) -> void:
 	var active := ensure_budget_state(state)
 	if state.month != 1 or active.year >= state.year:

@@ -14,6 +14,7 @@ extends RefCounted
 ## sim/calendar.gd deliberately WITHOUT calling it, so the validator stays
 ## decoupled from the sim layer.
 const _DAYS_IN_MONTH := [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 
 static func validate(state: GameState) -> PackedStringArray:
 	var errors: Array[String] = []
@@ -47,6 +48,7 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_date(state, errors)
 	_validate_ministers(state, errors)
 	_validate_households(state, errors)
+	_validate_budgets(state, errors)
 
 	if state.player != null:
 		_validate_player(state, errors)
@@ -217,6 +219,52 @@ static func _validate_households(state: GameState, errors: Array[String]) -> voi
 				or h.service_access < 0.0 or h.service_access > 1.0 or h.hardship < 0.0 or h.hardship > 1.0 \
 				or h.confidence < 0.0 or h.confidence > 1.0:
 			errors.append("household '%s' has an out-of-range value" % [key])
+
+static func _validate_budgets(state: GameState, errors: Array[String]) -> void:
+	var content: Dictionary = ContentRepositoryScript.load_all()
+	if content.has("error"):
+		errors.append("budget catalogue could not be loaded")
+		return
+	var envelopes: Variant = content.get("catalogs", {}).get("budget", {}).get("envelopes", null)
+	if not (envelopes is Array):
+		errors.append("budget catalogue has no envelopes")
+		return
+	var expected := {}
+	for item in envelopes:
+		expected[String(item.get("id", ""))] = true
+	if state.active_budget != null:
+		_validate_budget(state.active_budget, "active_budget", expected, errors)
+	if state.pending_budget != null:
+		_validate_budget(state.pending_budget, "pending_budget", expected, errors)
+	for i in range(state.budget_history.size()):
+		_validate_budget(state.budget_history[i], "budget_history[%s]" % i, expected, errors)
+
+
+static func _validate_budget(budget: AnnualBudget, label: String, expected: Dictionary,
+		errors: Array[String]) -> void:
+	if budget == null:
+		errors.append("%s is null" % label)
+		return
+	if budget.allocations.size() != expected.size():
+		errors.append("%s does not fund every spending envelope" % label)
+		return
+	for key in budget.allocations:
+		if not expected.has(key):
+			errors.append("%s has unknown spending envelope '%s'" % [label, key])
+			continue
+		var value: Variant = budget.allocations[key]
+		if not (typeof(value) in [TYPE_INT, TYPE_FLOAT]) or not is_finite(float(value)) \
+				or float(value) < 0.0:
+			errors.append("%s envelope '%s' is not a finite non-negative number" % [label, key])
+	if not is_finite(budget.forecast_revenue):
+		errors.append("%s forecast_revenue is non-finite" % label)
+	if budget.votes_for < 0 or budget.votes_against < 0:
+		errors.append("%s has negative vote totals" % label)
+	for faction_id in budget.lobbying_bonus:
+		var bonus: Variant = budget.lobbying_bonus[faction_id]
+		if not (typeof(bonus) in [TYPE_INT, TYPE_FLOAT]) or not is_finite(float(bonus)) \
+				or float(bonus) < 0.0 or float(bonus) > 0.50:
+			errors.append("%s lobbying bonus for '%s' is malformed" % [label, faction_id])
 
 static func _validate_country(country: Country, errors: Array[String], label: String) -> void:
 	if country.id == "":

@@ -35,6 +35,7 @@ const HouseholdsSimScript = preload("res://scripts/native/sim/households_sim.gd"
 const StabilitySimScript = preload("res://scripts/native/sim/stability_sim.gd")
 const MonthlyDigestScript = preload("res://scripts/native/presentation/monthly_digest.gd")
 const RegionalProgramActionsScript = preload("res://scripts/native/actions/regional_program_actions.gd")
+const BudgetActionsScript = preload("res://scripts/native/actions/budget_actions.gd")
 
 var _state: GameState = null
 var _busy := false
@@ -118,6 +119,76 @@ func start_regional_program(region_id: String, program_id: String) -> Dictionary
 	return result
 
 
+## Returns a detached fiscal/parliamentary preview without mutating or
+## notifying observers. The action service owns validation and arithmetic.
+func preview_budget(adjustments: Dictionary) -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	return BudgetActionsScript.preview(_state, adjustments.duplicate(true)).duplicate(true)
+
+
+func propose_budget(adjustments: Dictionary) -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = BudgetActionsScript.propose(_state, adjustments.duplicate(true))
+	if result.get("ok", false):
+		var snap := snapshot()
+		result["snapshot"] = snap
+		state_changed.emit(snap)
+	_busy = false
+	return result
+
+
+func lobby_budget(faction_id: String) -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = BudgetActionsScript.lobby(_state, faction_id)
+	if result.get("ok", false):
+		var snap := snapshot()
+		result["snapshot"] = snap
+		state_changed.emit(snap)
+	_busy = false
+	return result
+
+
+func call_budget_vote() -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = BudgetActionsScript.vote(_state)
+	if result.get("ok", false):
+		var snap := snapshot()
+		result["snapshot"] = snap
+		state_changed.emit(snap)
+	_busy = false
+	return result
+
+
+func withdraw_budget() -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = BudgetActionsScript.withdraw(_state)
+	if result.get("ok", false):
+		var snap := snapshot()
+		result["snapshot"] = snap
+		state_changed.emit(snap)
+	_busy = false
+	return result
+
+
 ## Persists the live campaign under `slot`. SaveStore's {ok} passes
 ## straight through; saves never mutate or emit.
 func save(slot: String) -> Dictionary:
@@ -143,6 +214,7 @@ func load(slot: String) -> Dictionary:
 		_busy = false
 		return stored
 	var incoming: GameState = stored.get("state")
+	BudgetSimScript.ensure_budget_state(incoming)
 	var errors := StateValidator.validate(incoming)
 	if not errors.is_empty():
 		_busy = false
@@ -181,6 +253,7 @@ func _do_new_campaign(config: Dictionary) -> Dictionary:
 		var factory_message := "Could not build a campaign from the given config."
 		return {"ok": false, "error": factory_message}
 	fresh.rng = SimRng.from_seed(int(config.get("seed", 0)))
+	BudgetSimScript.ensure_budget_state(fresh)
 	var errors := StateValidator.validate(fresh)
 	if not errors.is_empty():
 		var validation_message := "New campaign failed validation: %s" % [", ".join(errors)]
@@ -292,14 +365,7 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 
 
 static func _budget_snapshot(state: GameState) -> Dictionary:
-	if state.active_budget == null:
-		return {}
-	return {
-		"year": state.active_budget.year,
-		"status": state.active_budget.status,
-		"allocations": state.active_budget.allocations.duplicate(true),
-		"expenditure": state.active_budget.expenditure(),
-	}
+	return BudgetActionsScript.read_model(state).duplicate(true)
 
 
 static func _ministries_snapshot(state: GameState) -> Dictionary:

@@ -170,7 +170,11 @@ static func _sync_active_total(state: GameState, expenditure: float) -> void:
 		active.allocations = BudgetSim.default_allocations(_envelopes(), expenditure)
 		return
 	var ratio := maxf(0.0, expenditure) / old_total
-	var keys := active.allocations.keys()
+	var keys: Array = []
+	for envelope in _envelopes():
+		var envelope_id := String(envelope.get("id", ""))
+		if active.allocations.has(envelope_id):
+			keys.append(envelope_id)
 	var used := 0.0
 	for i in range(keys.size() - 1):
 		var key = keys[i]

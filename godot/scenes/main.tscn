@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/app.gd" id="1"]
 [ext_resource type="Theme" path="res://theme/ardenia_theme.tres" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/map/ardenia_map.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/panels/region_brief.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/panels/monthly_report.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/panels/budget_panel.tscn" id="6"]
 
 [node name="App" type="PanelContainer"]
 layout_mode = 3
@@ -52,6 +53,15 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(192, 0)
 layout_mode = 2
 text = "Awaiting snapshot"
+
+[node name="BudgetButton" type="Button" parent="Margin/Layout/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(92, 44)
+layout_mode = 2
+size_flags_vertical = 4
+disabled = true
+text = "Budget"
+tooltip_text = "Open annual appropriations"
 
 [node name="PlayButton" type="Button" parent="Margin/Layout/Header"]
 unique_name_in_owner = true
@@ -229,6 +239,10 @@ autowrap_mode = 3
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
+
+[node name="BudgetPanel" parent="Margin/Layout/Body" instance=ExtResource("6")]
+unique_name_in_owner = true
+layout_mode = 2
 
 [node name="MonthlyReport" parent="Margin/Layout" instance=ExtResource("5")]
 unique_name_in_owner = true

@@ -19,6 +19,9 @@ var _speed := 1
 var _clock_elapsed := 0.0
 var _selected_program_id := ""
 var _selected_program_option: Dictionary = {}
+var _budget_open := false
+var _budget_adjustments := {}
+var _budget_preview: Dictionary = {}
 
 func _ready() -> void:
 	%ArdeniaMap.region_selected.connect(_select_region)
@@ -28,6 +31,13 @@ func _ready() -> void:
 		find_child("Speed%d" % (index + 1)).pressed.connect(_set_speed.bind(index + 1))
 	%RegionBrief.find_child("RegionAction").pressed.connect(_start_selected_program)
 	%RegionBrief.find_child("ProgramChoice").item_selected.connect(_on_program_selected)
+	%BudgetButton.pressed.connect(_open_budget)
+	%BudgetPanel.find_child("CloseBudgetButton").pressed.connect(_close_budget)
+	%BudgetPanel.find_child("ProposeBudgetButton").pressed.connect(_propose_budget)
+	%BudgetPanel.find_child("VoteBudgetButton").pressed.connect(_call_budget_vote)
+	%BudgetPanel.find_child("WithdrawBudgetButton").pressed.connect(_withdraw_budget)
+	%BudgetPanel.find_child("LobbyButton").pressed.connect(_lobby_budget)
+	%BudgetPanel.find_child("LobbyChoice").item_selected.connect(_update_budget_lobby_control)
 	get_window().size_changed.connect(_resize_layout)
 	_resize_layout()
 	if _game == null:
@@ -71,8 +81,11 @@ func _resize_layout() -> void:
 	# Native-size UI keeps 44 px targets and readable type at both acceptance sizes.
 	get_window().content_scale_size = get_window().size
 	var compact := get_window().size.x < 1500 or get_window().size.y < 850
-	find_child("NationalPanel").visible = not compact
-	find_child("MapHint").visible = not compact
+	find_child("NationalPanel").visible = not compact and not _budget_open
+	find_child("MapPanel").visible = not _budget_open
+	%RegionBrief.visible = not _budget_open
+	%BudgetPanel.visible = _budget_open
+	find_child("MapHint").visible = not compact and not _budget_open
 	%MonthlyReport.custom_minimum_size.y = 88 if compact else 192
 	%RegionBrief.find_child("Details").custom_minimum_size.y = 48 if compact else 84
 	for name in ["Rule", "PressureHeading", "PressureValue", "Details"]:
@@ -80,7 +93,10 @@ func _resize_layout() -> void:
 	find_child("Layout").add_theme_constant_override("separation", 12 if compact else 16)
 	%MonthlyReport.find_child("DispatchColumn").visible = not compact
 	if not snapshot.is_empty():
-		_refresh_region()
+		if _budget_open:
+			_refresh_budget()
+		else:
+			_refresh_region()
 
 func apply_snapshot(value: Dictionary) -> void:
 	snapshot = value.duplicate(true)
@@ -120,6 +136,8 @@ func apply_snapshot(value: Dictionary) -> void:
 	%ArdeniaMap.apply_snapshot(snapshot.get("regions", []), selected_region_id)
 
 	_refresh_region()
+	if _budget_open:
+		_refresh_budget()
 	_refresh_controls()
 
 func _percent(row: Dictionary, key: String) -> String:
@@ -137,6 +155,197 @@ func _lines(rows: Array, empty_text: String) -> String:
 	for row in rows:
 		lines.append(str(row))
 	return "\n\n".join(lines) if not lines.is_empty() else empty_text
+
+func _open_budget() -> void:
+	if snapshot.is_empty() or _fatal:
+		return
+	_budget_open = true
+	_budget_adjustments.clear()
+	_budget_preview.clear()
+	_resize_layout()
+
+
+func _close_budget() -> void:
+	_budget_open = false
+	_resize_layout()
+
+
+func _refresh_budget() -> void:
+	var model: Dictionary = snapshot.get("budget", {})
+	var rows: VBoxContainer = %BudgetPanel.find_child("BudgetRows")
+	for child in rows.get_children():
+		rows.remove_child(child)
+		child.queue_free()
+	if not model.get("ok", false):
+		var unavailable := Label.new()
+		unavailable.text = str(model.get("error", "Budget data is unavailable."))
+		unavailable.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		rows.add_child(unavailable)
+		_set_budget_status(unavailable.text)
+		_apply_budget_actions({})
+		return
+
+	for envelope in model.get("envelopes", []):
+		var envelope_id := str(envelope.get("id", ""))
+		var row := VBoxContainer.new()
+		row.name = "BudgetRow_%s" % envelope_id
+		var top := HBoxContainer.new()
+		var label := Label.new()
+		label.text = "%s  ·  %.0f M" % [envelope.get("name", envelope_id.capitalize()), envelope.get("current", 0.0)]
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var choice := OptionButton.new()
+		choice.name = "Adjustment_%s" % envelope_id
+		choice.custom_minimum_size = Vector2(168, 44)
+		var selected_index := 0
+		var selected_step := float(_budget_adjustments.get(envelope_id, 0.0))
+		for step_value in envelope.get("allowed_adjustments", []):
+			var step := float(step_value)
+			var index := choice.item_count
+			choice.add_item(_signed_adjustment(step))
+			choice.set_item_metadata(index, step)
+			if is_equal_approx(step, selected_step):
+				selected_index = index
+		choice.select(selected_index)
+		choice.item_selected.connect(_on_budget_adjustment.bind(envelope_id, choice))
+		top.add_child(label)
+		top.add_child(choice)
+		row.add_child(top)
+		var body := Label.new()
+		body.text = str(envelope.get("body", ""))
+		body.theme_type_variation = &"Muted"
+		body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		row.add_child(body)
+		rows.add_child(row)
+
+	var lobby_choice: OptionButton = %BudgetPanel.find_child("LobbyChoice")
+	lobby_choice.clear()
+	var first_eligible := -1
+	for faction in model.get("lobby_factions", []):
+		var index := lobby_choice.item_count
+		lobby_choice.add_item("%s — %.0f PC" % [faction.get("name", "Faction"), faction.get("cost", 0.0)])
+		lobby_choice.set_item_metadata(index, faction)
+		var eligible := bool(faction.get("eligible", false))
+		lobby_choice.set_item_disabled(index, not eligible)
+		lobby_choice.get_popup().set_item_tooltip(index, str(faction.get("disabled_reason", "")))
+		if first_eligible < 0 and eligible:
+			first_eligible = index
+	if lobby_choice.item_count > 0:
+		lobby_choice.select(first_eligible if first_eligible >= 0 else 0)
+
+	var preview: Variant = model.get("pending_preview")
+	if not (preview is Dictionary):
+		preview = _budget_preview if not _budget_preview.is_empty() else model.get("default_preview", {})
+	_display_budget_preview(preview as Dictionary)
+	_apply_budget_actions(model.get("actions", {}))
+	_update_budget_lobby_control()
+	var pending: Variant = model.get("pending")
+	if pending is Dictionary and pending.get("status") == "approved":
+		_set_budget_status("Approved for %s; takes effect on 1 January." % pending.get("year", "the next fiscal year"))
+	elif pending is Dictionary:
+		_set_budget_status("The %s budget is before parliament." % pending.get("year", "next"))
+	else:
+		_set_budget_status("Adjust the authorised envelopes, then table the plan.")
+
+
+func _on_budget_adjustment(index: int, envelope_id: String, choice: OptionButton) -> void:
+	if index < 0 or index >= choice.item_count:
+		return
+	var step := float(choice.get_item_metadata(index))
+	if is_zero_approx(step):
+		_budget_adjustments.erase(envelope_id)
+	else:
+		_budget_adjustments[envelope_id] = step
+	var result: Dictionary = _game.preview_budget(_budget_adjustments)
+	if not result.get("ok", false):
+		_set_budget_status(str(result.get("error", "The draft could not be previewed.")))
+		return
+	_budget_preview = result.get("preview", {}).duplicate(true)
+	_display_budget_preview(_budget_preview)
+
+
+func _display_budget_preview(preview: Dictionary) -> void:
+	if preview.is_empty():
+		%BudgetPanel.find_child("BudgetSummary").text = "No fiscal preview available."
+		%BudgetPanel.find_child("BudgetProjection").text = "No parliamentary projection available."
+		return
+	var plan: Dictionary = preview.get("plan", {})
+	%BudgetPanel.find_child("BudgetSummary").text = "FY %s  ·  active %.0f M  ·  proposed %.0f M  ·  revenue %.0f M  ·  balance %+.0f M  ·  %.0f PC" % [
+		plan.get("year", "—"), preview.get("active_total", 0.0), preview.get("total", 0.0),
+		preview.get("forecast_revenue", 0.0), preview.get("forecast_balance", 0.0),
+		preview.get("political_capital_cost", 0.0),
+	]
+	var faction_lines: Array[String] = []
+	for faction in preview.get("breakdown", []):
+		faction_lines.append("%s %s/%s" % [faction.get("name", "Faction"), faction.get("votes_for", 0), faction.get("seats", 0)])
+	var verdict := "LIKELY PASS" if preview.get("passed", false) else "LIKELY DEFEAT"
+	%BudgetPanel.find_child("BudgetProjection").text = "%s  ·  %s for / %s against  ·  %s needed\n%s" % [
+		verdict, preview.get("votes_for", 0), preview.get("votes_against", 0),
+		preview.get("threshold", 0), "  ·  ".join(faction_lines),
+	]
+	%BudgetPanel.find_child("ProposeBudgetButton").text = "Table — %.0f PC" % preview.get("political_capital_cost", 0.0)
+
+
+func _apply_budget_actions(actions: Dictionary) -> void:
+	for pair in [["ProposeBudgetButton", "propose"], ["VoteBudgetButton", "vote"], ["WithdrawBudgetButton", "withdraw"]]:
+		var button: Button = %BudgetPanel.find_child(pair[0])
+		var action: Dictionary = actions.get(pair[1], {})
+		button.disabled = not bool(action.get("eligible", false))
+		button.tooltip_text = str(action.get("disabled_reason", ""))
+
+
+func _update_budget_lobby_control(_index: int = -1) -> void:
+	var choice: OptionButton = %BudgetPanel.find_child("LobbyChoice")
+	var button: Button = %BudgetPanel.find_child("LobbyButton")
+	if choice.item_count == 0 or choice.selected < 0:
+		choice.disabled = true
+		button.disabled = true
+		button.tooltip_text = "No parliamentary faction is available to lobby."
+		return
+	var faction: Variant = choice.get_item_metadata(choice.selected)
+	var eligible := faction is Dictionary and bool(faction.get("eligible", false))
+	choice.disabled = false
+	button.disabled = not eligible
+	button.tooltip_text = "" if eligible else str(faction.get("disabled_reason", ""))
+
+
+func _propose_budget() -> void:
+	var result: Dictionary = _game.propose_budget(_budget_adjustments)
+	_set_budget_status(str(result.get("message", "Budget refused: %s" % result.get("error", "Unknown error"))))
+
+
+func _lobby_budget() -> void:
+	var choice: OptionButton = %BudgetPanel.find_child("LobbyChoice")
+	if choice.selected < 0:
+		return
+	var faction: Variant = choice.get_item_metadata(choice.selected)
+	if not (faction is Dictionary):
+		return
+	var result: Dictionary = _game.lobby_budget(str(faction.get("id", "")))
+	_set_budget_status(str(result.get("message", "Lobbying refused: %s" % result.get("error", "Unknown error"))))
+
+
+func _call_budget_vote() -> void:
+	var result: Dictionary = _game.call_budget_vote()
+	if result.get("ok", false):
+		_set_budget_status("Budget approved." if result.get("passed", false) else "Budget defeated.")
+	else:
+		_set_budget_status("Vote refused: %s" % result.get("error", "Unknown error"))
+
+
+func _withdraw_budget() -> void:
+	var result: Dictionary = _game.withdraw_budget()
+	_set_budget_status(str(result.get("message", "Withdrawal refused: %s" % result.get("error", "Unknown error"))))
+
+
+func _set_budget_status(message: String) -> void:
+	%BudgetPanel.find_child("BudgetActionStatus").text = message
+
+
+func _signed_adjustment(value: float) -> String:
+	if is_zero_approx(value):
+		return "No change"
+	return "%s%.0f%%" % ["+" if value > 0.0 else "", value * 100.0]
 
 func _select_region(region_id: String) -> void:
 	selected_region_id = region_id
@@ -327,6 +536,7 @@ func _start_selected_program() -> void:
 
 func _refresh_controls() -> void:
 	var ready := not snapshot.is_empty() and not _fatal
+	%BudgetButton.disabled = not ready or _budget_open
 	%PlayButton.disabled = not ready
 	%PlayButton.text = "Paused" if _paused else "Playing ×%d" % _speed
 	for index in range(5):

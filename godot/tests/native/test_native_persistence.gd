@@ -18,6 +18,8 @@ const TestSupportScript = preload("res://scripts/native/testing/test_support.gd"
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 const GameFactoryScript = preload("res://scripts/native/state/game_factory.gd")
 const StateValidatorScript = preload("res://scripts/native/state/state_validator.gd")
+const BudgetSimScript = preload("res://scripts/native/sim/budget_sim.gd")
+const BudgetActionsScript = preload("res://scripts/native/actions/budget_actions.gd")
 const SaveStoreScript = preload("res://scripts/native/state/save_store.gd")
 
 const FIXED_SEED := 424242
@@ -459,6 +461,72 @@ func _test_task10_digest_and_household_boundary(t, content: Dictionary) -> void:
 	var errors := StateValidatorScript.validate(state)
 	t.truth(not errors.is_empty(), "task10: validator rejects non-finite in-memory household data")
 
+func _test_task12_approved_budget_round_trip(t, content: Dictionary) -> void:
+	var slot := SLOT_PREFIX + "budget-roundtrip"
+	_wipe_slot(slot)
+	var state: GameState = _new_test_state(content)
+	state.player.political_capital = 100.0
+	var adjustments := {}
+	for item in content["catalogs"]["budget"]["envelopes"]:
+		adjustments[String(item["id"])] = 0.0
+	t.truth(BudgetActionsScript.propose(state, adjustments).get("ok", false),
+		"task12: budget roundtrip proposal succeeds")
+	var target: Faction = state.country.factions[0]
+	t.truth(BudgetActionsScript.lobby(state, target.id).get("ok", false),
+		"task12: budget roundtrip lobbying succeeds")
+	for faction in state.country.factions:
+		faction.loyalty = 1.0
+	var voted: Dictionary = BudgetActionsScript.vote(state)
+	t.truth(voted.get("ok", false) and voted.get("passed", false),
+		"task12: budget roundtrip fixture is approved")
+	var before: Dictionary = state.pending_budget.to_dict()
+	t.truth(SaveStoreScript.save_slot(slot, state).get("ok", false),
+		"task12: approved budget state saves")
+	var loaded_result: Dictionary = SaveStoreScript.load_slot(slot)
+	t.truth(loaded_result.get("ok", false), "task12: approved budget state loads")
+	if loaded_result.get("ok", false):
+		var loaded: GameState = loaded_result["state"]
+		t.equal(loaded.pending_budget.to_dict(), before,
+			"task12: approved status, allocations, lobbying and vote totals roundtrip")
+		t.equal(StateValidatorScript.validate(loaded).size(), 0,
+			"task12: restored approved budget passes the live-state validator")
+
+func _test_task12_budget_validation_boundary(t, content: Dictionary) -> void:
+	var containers := ["active", "pending", "history"]
+	for container in containers:
+		var state: GameState = _new_test_state(content)
+		var valid := BudgetSimScript.ensure_budget_state(state)
+		var malformed := AnnualBudget.from_dict(valid.to_dict())
+		var key: String = malformed.allocations.keys()[0]
+		malformed.allocations[key] = INF
+		if container == "active":
+			state.active_budget = malformed
+		elif container == "pending":
+			state.pending_budget = malformed
+		else:
+			state.budget_history.append(malformed)
+		var errors := StateValidatorScript.validate(state)
+		t.truth(not errors.is_empty(), "task12: validator rejects non-finite %s budget allocation" % container)
+
+	var bad_shape: GameState = _new_test_state(content)
+	var active := BudgetSimScript.ensure_budget_state(bad_shape)
+	active.allocations.erase(active.allocations.keys()[0])
+	t.truth(not StateValidatorScript.validate(bad_shape).is_empty(),
+		"task12: validator rejects a budget missing an authored envelope")
+
+	# Allocation Dictionary values remain untyped at the save boundary; the
+	# validator must reject them before NativeGame can adopt the loaded state.
+	var malformed_dict: Dictionary = _new_test_state(content).to_dict()
+	var source_state: GameState = _new_test_state(content)
+	var budget := BudgetSimScript.ensure_budget_state(source_state).to_dict()
+	budget["allocations"][budget["allocations"].keys()[0]] = "not-a-number"
+	malformed_dict["active_budget"] = budget
+	var loaded := GameState.from_dict(malformed_dict)
+	t.truth(loaded != null, "task12: malformed allocation reaches the validator boundary")
+	if loaded != null:
+		t.truth(not StateValidatorScript.validate(loaded).is_empty(),
+			"task12: live-state boundary rejects malformed loaded budget allocation")
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 
@@ -477,13 +545,15 @@ func _initialize() -> void:
 		_test_validator_date_ranges(t, content)
 		_test_validator_minister_and_ranges(t, content)
 		_test_task10_digest_and_household_boundary(t, content)
+		_test_task12_approved_budget_round_trip(t, content)
+		_test_task12_budget_validation_boundary(t, content)
 
 	for slot in [SLOT_PREFIX + "roundtrip", SLOT_PREFIX + "corrupt",
 			SLOT_PREFIX + "badversion", SLOT_PREFIX + "interrupted",
 			SLOT_PREFIX + "empty-state", SLOT_PREFIX + "null-country",
 			SLOT_PREFIX + "world-type", SLOT_PREFIX + "no-rng",
 			SLOT_PREFIX + "missing-main", SLOT_PREFIX + "dual-corrupt",
-			SLOT_PREFIX + "bad-date"]:
+			SLOT_PREFIX + "bad-date", SLOT_PREFIX + "budget-roundtrip"]:
 		_wipe_slot(slot)
 	var residue := false
 	for slot in [SLOT_PREFIX + "roundtrip", SLOT_PREFIX + "corrupt",
@@ -491,7 +561,7 @@ func _initialize() -> void:
 			SLOT_PREFIX + "empty-state", SLOT_PREFIX + "null-country",
 			SLOT_PREFIX + "world-type", SLOT_PREFIX + "no-rng",
 			SLOT_PREFIX + "missing-main", SLOT_PREFIX + "dual-corrupt",
-			SLOT_PREFIX + "bad-date"]:
+			SLOT_PREFIX + "bad-date", SLOT_PREFIX + "budget-roundtrip"]:
 		for suffix in ["", ".tmp", ".bak"]:
 			if FileAccess.file_exists(_slot_path(slot, suffix)):
 				residue = true

@@ -123,6 +123,9 @@ func _test_approved_pending_becomes_active(t, content: Dictionary) -> void:
 		"justice_and_policing": 40.0, "national_defense": 90.0, "infrastructure": 70.0,
 		"industry_and_jobs": 55.0, "education": 95.0, "health_and_welfare": 170.0}
 	pending.forecast_revenue = 700.0
+	pending.votes_for = 58
+	pending.votes_against = 43
+	pending.lobbying_bonus = {"national_conservatives": 0.22}
 	state.pending_budget = pending
 
 	var history_before := state.budget_history.size()
@@ -140,6 +143,14 @@ func _test_approved_pending_becomes_active(t, content: Dictionary) -> void:
 	t.equal(state.pending_budget, null, "pending_budget is cleared after activation")
 	t.equal(state.budget_history.size(), history_before + 1,
 		"activation appends exactly one history entry")
+	if state.active_budget != null:
+		t.equal(state.active_budget.votes_for, 58, "activated budget preserves its recorded votes")
+		t.near(float(state.active_budget.lobbying_bonus["national_conservatives"]), 0.22, 0.000001,
+			"activated budget preserves its lobbying record")
+	var history_after := state.budget_history.size()
+	BudgetSimScript.process_fiscal_year(state)
+	t.equal(state.budget_history.size(), history_after,
+		"a second January call does not activate the approved settlement twice")
 
 
 func _test_no_plan_gets_continuing_budget_cut(t, content: Dictionary) -> void:

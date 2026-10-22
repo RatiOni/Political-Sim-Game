@@ -1,0 +1,108 @@
+[gd_scene format=3]
+
+[node name="BudgetPanel" type="PanelContainer"]
+visible = false
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Content" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+
+[node name="Heading" type="Label" parent="Content/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Title"
+text = "ANNUAL APPROPRIATIONS"
+autowrap_mode = 3
+
+[node name="CloseBudgetButton" type="Button" parent="Content/Header"]
+custom_minimum_size = Vector2(96, 44)
+layout_mode = 2
+text = "Close"
+
+[node name="BudgetIntro" type="Label" parent="Content"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Set each envelope from the authorised steps, then inspect the simulation's fiscal and parliamentary projection."
+autowrap_mode = 3
+
+[node name="Rule" type="HSeparator" parent="Content"]
+layout_mode = 2
+
+[node name="EnvelopeScroll" type="ScrollContainer" parent="Content"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="BudgetRows" type="VBoxContainer" parent="Content/EnvelopeScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="EmptyRows" type="Label" parent="Content/EnvelopeScroll/BudgetRows"]
+layout_mode = 2
+text = "Awaiting the budget catalogue."
+autowrap_mode = 3
+
+[node name="BudgetSummary" type="Label" parent="Content"]
+layout_mode = 2
+text = "No fiscal preview available."
+autowrap_mode = 3
+
+[node name="BudgetProjection" type="Label" parent="Content"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "No parliamentary projection available."
+autowrap_mode = 3
+
+[node name="LobbyBar" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+
+[node name="LobbyLabel" type="Label" parent="Content/LobbyBar"]
+layout_mode = 2
+text = "Lobby"
+
+[node name="LobbyChoice" type="OptionButton" parent="Content/LobbyBar"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+
+[node name="LobbyButton" type="Button" parent="Content/LobbyBar"]
+custom_minimum_size = Vector2(128, 44)
+layout_mode = 2
+disabled = true
+text = "Lobby faction"
+
+[node name="ActionBar" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+
+[node name="BudgetActionStatus" type="Label" parent="Content/ActionBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Muted"
+text = "Open the panel to prepare a draft."
+autowrap_mode = 3
+
+[node name="ProposeBudgetButton" type="Button" parent="Content/ActionBar"]
+custom_minimum_size = Vector2(132, 44)
+layout_mode = 2
+disabled = true
+text = "Table budget"
+
+[node name="VoteBudgetButton" type="Button" parent="Content/ActionBar"]
+custom_minimum_size = Vector2(112, 44)
+layout_mode = 2
+disabled = true
+text = "Call vote"
+
+[node name="WithdrawBudgetButton" type="Button" parent="Content/ActionBar"]
+custom_minimum_size = Vector2(112, 44)
+layout_mode = 2
+disabled = true
+text = "Withdraw"

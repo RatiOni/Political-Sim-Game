@@ -65,7 +65,7 @@ func _run() -> void:
 			"The displayed snapshot is the NativeGame snapshot"):
 		return
 	print("PASS: startup starts a native campaign through NativeGame directly")
-	for required in ["DateLabel", "PlayButton", "SpeedControls", "DecisionQueue", "ArdeniaMap", "RegionBrief", "MonthlyReport"]:
+	for required in ["DateLabel", "PlayButton", "SpeedControls", "DecisionQueue", "ArdeniaMap", "RegionBrief", "MonthlyReport", "BudgetButton", "BudgetPanel", "BudgetRows", "BudgetSummary", "BudgetProjection", "LobbyChoice", "LobbyButton", "ProposeBudgetButton", "VoteBudgetButton", "WithdrawBudgetButton", "CloseBudgetButton"]:
 		if not _check(scene.find_child(required, true, false) != null, "Required node: " + required):
 			return
 	# Continue-with-no-save starts fresh (the bridge-era recovery path,
@@ -107,6 +107,72 @@ func _run() -> void:
 		for frame in range(4):
 			await process_frame
 		print("LAYOUT %s: %s" % [dimensions, scene.get_node("Margin/Layout").get_children().map(func(node): return "%s=%s" % [node.name, node.get_combined_minimum_size()])])
+		var budget_panel: Control = scene.find_child("BudgetPanel", true, false)
+		scene.find_child("BudgetButton", true, false).pressed.emit()
+		await process_frame
+		if not _check(budget_panel.is_visible_in_tree()
+				and not scene.find_child("NationalPanel", true, false).visible
+				and not scene.find_child("MapPanel", true, false).visible
+				and not brief.visible,
+				"Budget view replaces the national/map/region body at " + str(dimensions)):
+			return
+		if not _check(Rect2(Vector2.ZERO, Vector2(dimensions)).encloses(budget_panel.get_global_rect()),
+				"Budget panel stays in viewport at " + str(dimensions)):
+			return
+		var budget_rows: VBoxContainer = scene.find_child("BudgetRows", true, false)
+		var envelope_choices := budget_rows.find_children("*", "OptionButton", true, false)
+		if not _check(budget_rows.get_child_count() == 8 and envelope_choices.size() == 8,
+				"Budget panel renders all eight backend envelope controls at " + str(dimensions)):
+			return
+		for budget_control_name in ["CloseBudgetButton", "LobbyChoice", "LobbyButton",
+				"ProposeBudgetButton", "VoteBudgetButton", "WithdrawBudgetButton"]:
+			var budget_control: Control = scene.find_child(budget_control_name, true, false)
+			if not _check(budget_control.size.y >= 44.0
+					and Rect2(Vector2.ZERO, Vector2(dimensions)).encloses(budget_control.get_global_rect()),
+					"Budget control is a bounded 44 px target: " + budget_control_name + " at " + str(dimensions)):
+				return
+		for envelope_choice in envelope_choices:
+			if not _check((envelope_choice as OptionButton).size.y >= 44.0,
+					"Envelope adjustment is a 44 px target at " + str(dimensions)):
+				return
+		if dimensions == Vector2i(1920, 1080):
+			var first_choice := envelope_choices[0] as OptionButton
+			if not _check(first_choice.item_count > 1, "Budget envelope exposes backend adjustment steps"):
+				return
+			var original_index := first_choice.selected
+			var preview_index := (original_index + 1) % first_choice.item_count
+			var native_before_preview: Dictionary = native_game.snapshot()
+			var summary_before_preview := str(scene.find_child("BudgetSummary", true, false).text)
+			var preview_signals := [0]
+			var on_preview_signal := func(_value: Dictionary) -> void: preview_signals[0] += 1
+			native_game.state_changed.connect(on_preview_signal)
+			first_choice.select(preview_index)
+			first_choice.item_selected.emit(preview_index)
+			await process_frame
+			if not _check(native_game.snapshot() == native_before_preview
+					and scene.snapshot == native_before_preview
+					and preview_signals[0] == 0,
+					"UI adjustment requests a non-mutating, non-signalling engine preview"):
+				native_game.state_changed.disconnect(on_preview_signal)
+				return
+			if not _check(str(scene.find_child("BudgetSummary", true, false).text) != summary_before_preview,
+					"Engine preview refreshes the displayed fiscal summary"):
+				native_game.state_changed.disconnect(on_preview_signal)
+				return
+			first_choice.select(original_index)
+			first_choice.item_selected.emit(original_index)
+			await process_frame
+			native_game.state_changed.disconnect(on_preview_signal)
+			if not _check(native_game.snapshot() == native_before_preview and preview_signals[0] == 0,
+					"Restoring the adjustment is also preview-only"):
+				return
+		scene.find_child("CloseBudgetButton", true, false).pressed.emit()
+		await process_frame
+		if not _check(not budget_panel.visible
+				and scene.find_child("MapPanel", true, false).is_visible_in_tree()
+				and brief.is_visible_in_tree(),
+				"Closing the budget restores the regional body at " + str(dimensions)):
+			return
 		if dimensions == Vector2i(1280, 720):
 			var compact_region: Dictionary = {}
 			for region in scene.snapshot["regions"]:
@@ -307,6 +373,104 @@ func _run() -> void:
 			"Reload after a full state drop restores the saved campaign"):
 		return
 	print("PASS: empty snapshot clears stale state; reload restores the save")
+	# Annual appropriations: drive the real panel through a proposal, one
+	# faction lobby and the vote, then prove the approved settlement survives
+	# save/load and becomes the active budget at the public January rollover.
+	scene.find_child("BudgetButton", true, false).pressed.emit()
+	await process_frame
+	var proposal_model: Dictionary = scene.snapshot.get("budget", {})
+	if not _check(proposal_model.get("default_preview", {}).get("passed", false),
+			"The backend projects passage for the unchanged real-scene draft"):
+		return
+	var propose_button: Button = scene.find_child("ProposeBudgetButton", true, false)
+	if not _check(not propose_button.disabled, "Fresh government campaign can table its budget"):
+		return
+	var proposal_pc_before := float(scene.snapshot["player"]["political_capital"])
+	propose_button.pressed.emit()
+	await process_frame
+	var proposed_budget: Variant = scene.snapshot.get("budget", {}).get("pending")
+	if not _check(proposed_budget is Dictionary
+			and proposed_budget.get("status") == "proposed"
+			and float(scene.snapshot["player"]["political_capital"]) < proposal_pc_before,
+			"Real budget panel tables one proposal and spends engine-owned political capital"):
+		return
+	var lobby_choice: OptionButton = scene.find_child("LobbyChoice", true, false)
+	var lobby_button: Button = scene.find_child("LobbyButton", true, false)
+	if not _check(lobby_choice.item_count > 0 and not lobby_button.disabled,
+			"Pending budget exposes an eligible real faction to lobby"):
+		return
+	var lobbied_faction_id := str((lobby_choice.get_item_metadata(lobby_choice.selected) as Dictionary).get("id", ""))
+	var lobby_pc_before := float(scene.snapshot["player"]["political_capital"])
+	lobby_button.pressed.emit()
+	await process_frame
+	proposed_budget = scene.snapshot.get("budget", {}).get("pending")
+	if not _check(proposed_budget is Dictionary
+			and float(proposed_budget.get("lobbying_bonus", {}).get(lobbied_faction_id, 0.0)) > 0.0
+			and float(scene.snapshot["player"]["political_capital"]) < lobby_pc_before,
+			"Lobby action mutates the pending plan through NativeGame once"):
+		return
+	var vote_button: Button = scene.find_child("VoteBudgetButton", true, false)
+	if not _check(not vote_button.disabled, "Lobbied proposal can be put to a vote"):
+		return
+	vote_button.pressed.emit()
+	await process_frame
+	var approved_budget: Variant = scene.snapshot.get("budget", {}).get("pending")
+	if not _check(approved_budget is Dictionary and approved_budget.get("status") == "approved",
+			"Real panel vote approves the deterministic settlement"):
+		return
+	var approved_allocations: Dictionary = approved_budget.get("allocations", {}).duplicate(true)
+	var approved_year := int(approved_budget.get("year", 0))
+	scene.find_child("SaveButton", true, false).pressed.emit()
+	if not _check(FileAccess.file_exists("user://saves/%s.json" % APP_SLOT),
+			"Approved pending budget is written through the real save control"):
+		return
+	native_game.advance_day()
+	scene.find_child("LoadButton", true, false).pressed.emit()
+	var loaded_pending: Variant = scene.snapshot.get("budget", {}).get("pending")
+	if not _check(loaded_pending is Dictionary
+			and loaded_pending.get("status") == "approved"
+			and loaded_pending.get("allocations", {}) == approved_allocations,
+			"Load restores the exact approved pending settlement"):
+		return
+	scene.find_child("CloseBudgetButton", true, false).pressed.emit()
+	var reached_budget_january := false
+	for day in range(370):
+		var advance_result: Dictionary = native_game.advance_day()
+		if not _check(advance_result.get("ok", false),
+				"Public daily loop remains valid while advancing approved budget to January"):
+			return
+		var live_date: Dictionary = advance_result.get("snapshot", {}).get("date", {})
+		if int(live_date.get("year", 0)) == approved_year and int(live_date.get("month", 0)) == 1:
+			reached_budget_january = true
+			break
+		if day % 30 == 29:
+			await process_frame
+	if not _check(reached_budget_january, "Approved settlement reaches its target January"):
+		return
+	await process_frame
+	var january_budget: Dictionary = native_game.snapshot().get("budget", {})
+	var active_allocations: Dictionary = january_budget.get("active", {}).get("allocations", {})
+	var approved_total := 0.0
+	var active_total := 0.0
+	for amount in approved_allocations.values():
+		approved_total += float(amount)
+	for amount in active_allocations.values():
+		active_total += float(amount)
+	var shares_preserved := active_allocations.keys().size() == approved_allocations.keys().size()
+	for key in approved_allocations:
+		shares_preserved = shares_preserved and active_allocations.has(key) \
+			and is_equal_approx(float(active_allocations[key]) / active_total,
+				float(approved_allocations[key]) / approved_total)
+	var history: Array = january_budget.get("history", [])
+	if not _check(january_budget.get("pending") == null
+			and int(january_budget.get("active", {}).get("year", 0)) == approved_year
+			and january_budget.get("active", {}).get("source") == "player"
+			and shares_preserved
+			and not history.is_empty()
+			and history[-1].get("allocations", {}) == approved_allocations,
+			"January archives the exact settlement and activates its shares before ordinary monthly rescaling"):
+		return
+	print("PASS: budget preview, proposal, lobby, vote, approved save/load, and January activation")
 	# Fatal native errors surface through the existing blocking-error path.
 	native_game.fatal_error.emit("Journey-test fatal.")
 	if not _check(scene.find_child("FatalError", true, false) != null
