@@ -14,6 +14,8 @@ const LOBBY_INCREMENT := 0.22
 const LOBBY_CAP := 0.50
 const DEFEAT_APPROVAL_PENALTY := 0.015
 
+static var _catalog_cache: Dictionary = {}
+
 
 static func preview(state: GameState, adjustments: Dictionary) -> Dictionary:
 	if state == null:
@@ -370,6 +372,8 @@ static func _apply_rebellion_penalties(state: GameState, rebellions: Array) -> v
 
 
 static func _catalog() -> Dictionary:
+	if not _catalog_cache.is_empty():
+		return _catalog_cache
 	var content: Dictionary = ContentRepositoryScript.load_all()
 	if content.has("error"):
 		return _error(String(content["error"]))
@@ -377,7 +381,8 @@ static func _catalog() -> Dictionary:
 	if not (catalog is Dictionary) or not (catalog.get("envelopes", null) is Array) \
 			or not (catalog.get("adjustments", null) is Array):
 		return _error("Budget catalogue is unavailable.")
-	return catalog
+	_catalog_cache = catalog.duplicate(true)
+	return _catalog_cache
 
 
 static func _round1(value: float) -> float:
