@@ -345,6 +345,18 @@ func _test_exact_movement_cost_and_unaffordable_lobby(t, content: Dictionary) ->
 		"unaffordable lobby request is refused")
 	t.equal(state.to_dict(), before, "unaffordable lobby refusal is atomic")
 
+func _test_catalog_cache_is_detached(t) -> void:
+	BudgetActionsScript._catalog_cache = {}
+	var first: Dictionary = BudgetActionsScript._catalog()
+	var original_adjustments: Array = first.get("adjustments", []).duplicate(true)
+	first["adjustments"].clear()
+	first["envelopes"][0]["name"] = "poisoned"
+	var second: Dictionary = BudgetActionsScript._catalog()
+	t.equal(second.get("adjustments", []), original_adjustments,
+		"budget catalogue callers cannot mutate cached adjustment steps")
+	t.truth(second.get("envelopes", [])[0].get("name") != "poisoned",
+		"budget catalogue callers cannot mutate cached envelope data")
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	var content: Dictionary = ContentRepositoryScript.load_all()
@@ -360,4 +372,5 @@ func _initialize() -> void:
 		_test_rebellion_penalty_targets_only_reported_wings(t, content)
 		_test_read_model_is_pure_detached_and_rule_complete(t, content)
 		_test_exact_movement_cost_and_unaffordable_lobby(t, content)
+		_test_catalog_cache_is_detached(t)
 	quit(t.finish())

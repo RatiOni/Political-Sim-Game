@@ -373,7 +373,7 @@ static func _apply_rebellion_penalties(state: GameState, rebellions: Array) -> v
 
 static func _catalog() -> Dictionary:
 	if not _catalog_cache.is_empty():
-		return _catalog_cache
+		return _catalog_cache.duplicate(true)
 	var content: Dictionary = ContentRepositoryScript.load_all()
 	if content.has("error"):
 		return _error(String(content["error"]))
@@ -382,7 +382,7 @@ static func _catalog() -> Dictionary:
 			or not (catalog.get("adjustments", null) is Array):
 		return _error("Budget catalogue is unavailable.")
 	_catalog_cache = catalog.duplicate(true)
-	return _catalog_cache
+	return _catalog_cache.duplicate(true)
 
 
 static func _round1(value: float) -> float:

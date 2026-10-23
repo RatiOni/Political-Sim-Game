@@ -527,6 +527,11 @@ func _test_task12_budget_validation_boundary(t, content: Dictionary) -> void:
 		t.truth(not StateValidatorScript.validate(loaded).is_empty(),
 			"task12: live-state boundary rejects malformed loaded budget allocation")
 
+	var malformed_history: Dictionary = _new_test_state(content).to_dict()
+	malformed_history["budget_history"] = [42]
+	t.equal(GameState.from_dict(malformed_history), null,
+		"task12: malformed historical budget entries reject the save instead of disappearing")
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 

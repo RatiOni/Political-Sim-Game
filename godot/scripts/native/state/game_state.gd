@@ -319,10 +319,13 @@ static func from_dict(data: Dictionary) -> GameState:
 		return null
 	if history_data is Array:
 		for b_data in history_data:
-			if b_data is Dictionary:
-				var budget := AnnualBudget.from_dict(b_data)
-				if budget != null:
-					state.budget_history.append(budget)
+			if not (b_data is Dictionary):
+				push_error("GameState.from_dict: malformed 'budget_history' entry, expected Dictionary, got %s" % [b_data])
+				return null
+			var budget := AnnualBudget.from_dict(b_data)
+			if budget == null:
+				return null
+			state.budget_history.append(budget)
 	var ministers_data: Variant = data.get("ministers", [])
 	if data.has("ministers") and not (ministers_data is Array):
 		push_error("GameState.from_dict: malformed 'ministers', expected an Array, got %s" % [ministers_data])
