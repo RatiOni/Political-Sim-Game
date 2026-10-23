@@ -99,6 +99,13 @@ func _resize_layout() -> void:
 			_refresh_region()
 
 func apply_snapshot(value: Dictionary) -> void:
+	var incoming_budget: Dictionary = value.get("budget", {})
+	var incoming_pending: Variant = incoming_budget.get("pending")
+	var incoming_proposal_year := int(incoming_budget.get("proposal_year", 0))
+	var cached_plan: Dictionary = _budget_preview.get("plan", {})
+	if incoming_pending is Dictionary or (not cached_plan.is_empty() \
+			and int(cached_plan.get("year", 0)) != incoming_proposal_year):
+		_reset_budget_draft()
 	snapshot = value.duplicate(true)
 	%DateLabel.text = str(snapshot.get("date", {}).get("text", "Awaiting snapshot"))
 	var player: Dictionary = snapshot.get("player", {})
@@ -170,8 +177,15 @@ func _close_budget() -> void:
 	_resize_layout()
 
 
+func _reset_budget_draft() -> void:
+	_budget_adjustments.clear()
+	_budget_preview.clear()
+
+
 func _refresh_budget() -> void:
 	var model: Dictionary = snapshot.get("budget", {})
+	var actions: Dictionary = model.get("actions", {})
+	var preview_action: Dictionary = actions.get("preview", {})
 	var rows: VBoxContainer = %BudgetPanel.find_child("BudgetRows")
 	for child in rows.get_children():
 		rows.remove_child(child)
@@ -207,6 +221,8 @@ func _refresh_budget() -> void:
 			if is_equal_approx(step, selected_step):
 				selected_index = index
 		choice.select(selected_index)
+		choice.disabled = not bool(preview_action.get("eligible", false))
+		choice.tooltip_text = str(preview_action.get("disabled_reason", ""))
 		choice.item_selected.connect(_on_budget_adjustment.bind(envelope_id, choice))
 		top.add_child(label)
 		top.add_child(choice)
@@ -237,7 +253,7 @@ func _refresh_budget() -> void:
 	if not (preview is Dictionary):
 		preview = _budget_preview if not _budget_preview.is_empty() else model.get("default_preview", {})
 	_display_budget_preview(preview as Dictionary)
-	_apply_budget_actions(model.get("actions", {}))
+	_apply_budget_actions(actions)
 	_update_budget_lobby_control()
 	var pending: Variant = model.get("pending")
 	if pending is Dictionary and pending.get("status") == "approved":
@@ -461,6 +477,7 @@ func _do_new_campaign() -> void:
 	var new_snap: Dictionary = result.get("snapshot", {})
 	if new_snap.is_empty():
 		new_snap = _game.snapshot()
+	_reset_budget_draft()
 	apply_snapshot(new_snap)
 	_set_status("LIVE SIMULATION / READY")
 	_refresh_controls()
@@ -496,6 +513,7 @@ func _do_load() -> void:
 	var load_snap: Dictionary = result.get("snapshot", {})
 	if load_snap.is_empty():
 		load_snap = _game.snapshot()
+	_reset_budget_draft()
 	apply_snapshot(load_snap)
 	_set_status("LOADED / READY")
 	_refresh_controls()

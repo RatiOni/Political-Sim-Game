@@ -532,6 +532,44 @@ func _test_task12_budget_validation_boundary(t, content: Dictionary) -> void:
 	t.equal(GameState.from_dict(malformed_history), null,
 		"task12: malformed historical budget entries reject the save instead of disappearing")
 
+	var impossible_active: GameState = _new_test_state(content)
+	var impossible_active_budget := BudgetSimScript.ensure_budget_state(impossible_active)
+	impossible_active_budget.year = impossible_active.year + 6
+	impossible_active_budget.status = "proposed"
+	impossible_active_budget.source = "player"
+	t.truth(not StateValidatorScript.validate(impossible_active).is_empty(),
+		"task12: active budget rejects impossible year and lifecycle")
+
+	var impossible_pending: GameState = _new_test_state(content)
+	var pending_template := AnnualBudget.from_dict(BudgetSimScript.ensure_budget_state(impossible_pending).to_dict())
+	pending_template.year = impossible_pending.year
+	pending_template.status = "active"
+	pending_template.source = "government_ai"
+	impossible_pending.pending_budget = pending_template
+	t.truth(not StateValidatorScript.validate(impossible_pending).is_empty(),
+		"task12: pending budget rejects impossible year, status and source")
+
+	var impossible_history: GameState = _new_test_state(content)
+	var history_template := AnnualBudget.from_dict(BudgetSimScript.ensure_budget_state(impossible_history).to_dict())
+	history_template.year = impossible_history.year + 2
+	history_template.status = "draft"
+	history_template.source = "player"
+	impossible_history.budget_history.append(history_template)
+	t.truth(not StateValidatorScript.validate(impossible_history).is_empty(),
+		"task12: budget history rejects future drafts")
+
+	for bad_supplement in [{"Unknown Office": 10.0}, {"Finance": INF}, {"Finance": -1.0}]:
+		var poisoned: GameState = _new_test_state(content)
+		BudgetSimScript.ensure_budget_state(poisoned).supplements = bad_supplement
+		t.truth(not StateValidatorScript.validate(poisoned).is_empty(),
+			"task12: live budget rejects malformed supplement %s" % [bad_supplement])
+	var malformed_supplements: Dictionary = _new_test_state(content).to_dict()
+	var malformed_supplement_budget := BudgetSimScript.ensure_budget_state(_new_test_state(content)).to_dict()
+	malformed_supplement_budget["supplements"] = []
+	malformed_supplements["active_budget"] = malformed_supplement_budget
+	t.equal(GameState.from_dict(malformed_supplements), null,
+		"task12: present wrong-typed supplements reject instead of disappearing")
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 

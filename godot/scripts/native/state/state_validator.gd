@@ -230,21 +230,42 @@ static func _validate_budgets(state: GameState, errors: Array[String]) -> void:
 		errors.append("budget catalogue has no envelopes")
 		return
 	var expected := {}
+	var portfolios := {}
 	for item in envelopes:
 		expected[String(item.get("id", ""))] = true
+		portfolios[String(item.get("portfolio", ""))] = true
 	if state.active_budget != null:
-		_validate_budget(state.active_budget, "active_budget", expected, errors)
+		_validate_budget(state.active_budget, "active_budget", "active", state.year, expected, portfolios, errors)
 	if state.pending_budget != null:
-		_validate_budget(state.pending_budget, "pending_budget", expected, errors)
+		_validate_budget(state.pending_budget, "pending_budget", "pending", state.year, expected, portfolios, errors)
 	for i in range(state.budget_history.size()):
-		_validate_budget(state.budget_history[i], "budget_history[%s]" % i, expected, errors)
+		_validate_budget(state.budget_history[i], "budget_history[%s]" % i, "history", state.year, expected, portfolios, errors)
 
 
-static func _validate_budget(budget: AnnualBudget, label: String, expected: Dictionary,
+static func _validate_budget(budget: AnnualBudget, label: String, container: String,
+		current_year: int, expected: Dictionary, portfolios: Dictionary,
 		errors: Array[String]) -> void:
 	if budget == null:
 		errors.append("%s is null" % label)
 		return
+	if budget.year <= 0:
+		errors.append("%s has an invalid fiscal year" % label)
+	if container == "active":
+		if budget.year != current_year or budget.status != "active" \
+				or not budget.source in ["inherited", "player", "government_ai", "continuing"]:
+			errors.append("%s has an impossible active-budget lifecycle" % label)
+	elif container == "pending":
+		if budget.year != current_year + 1 or not budget.status in ["proposed", "approved"] \
+				or budget.source != "player":
+			errors.append("%s has an impossible pending-budget lifecycle" % label)
+	elif container == "history":
+		var enacted_ok := budget.status == "active" \
+			and budget.source in ["player", "government_ai", "continuing"] \
+			and budget.year <= current_year
+		var rejected_ok := budget.status == "rejected" and budget.source == "player" \
+			and budget.year <= current_year + 1
+		if not enacted_ok and not rejected_ok:
+			errors.append("%s has an impossible historical lifecycle" % label)
 	if budget.allocations.size() != expected.size():
 		errors.append("%s does not fund every spending envelope" % label)
 		return
@@ -265,6 +286,13 @@ static func _validate_budget(budget: AnnualBudget, label: String, expected: Dict
 		if not (typeof(bonus) in [TYPE_INT, TYPE_FLOAT]) or not is_finite(float(bonus)) \
 				or float(bonus) < 0.0 or float(bonus) > 0.50:
 			errors.append("%s lobbying bonus for '%s' is malformed" % [label, faction_id])
+	if container != "active" and not budget.supplements.is_empty():
+		errors.append("%s cannot carry mid-year supplements" % label)
+	for portfolio in budget.supplements:
+		var supplement: Variant = budget.supplements[portfolio]
+		if not portfolios.has(portfolio) or not (typeof(supplement) in [TYPE_INT, TYPE_FLOAT]) \
+				or not is_finite(float(supplement)) or float(supplement) < 0.0:
+			errors.append("%s supplement for '%s' is malformed" % [label, portfolio])
 
 static func _validate_country(country: Country, errors: Array[String], label: String) -> void:
 	if country.id == "":

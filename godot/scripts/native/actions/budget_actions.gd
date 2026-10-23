@@ -20,6 +20,8 @@ static var _catalog_cache: Dictionary = {}
 static func preview(state: GameState, adjustments: Dictionary) -> Dictionary:
 	if state == null:
 		return _error("No campaign is active.")
+	if state.pending_budget != null and state.pending_budget.status in ["proposed", "approved"]:
+		return _error("The tabled budget is locked until parliament votes or it is withdrawn.")
 	var built := _build_plan(state, adjustments)
 	if not built.get("ok", false):
 		return built
@@ -67,6 +69,9 @@ static func lobby(state: GameState, faction_id: String) -> Dictionary:
 			break
 	if faction == null or faction.seats <= 0:
 		return _error("That faction has no parliamentary delegation to lobby.")
+	var current_bonus := float(plan.lobbying_bonus.get(faction.id, 0.0))
+	if current_bonus >= LOBBY_CAP:
+		return _error("That faction's lobbying bonus is already at the cap.")
 	var cost := LOBBY_BASE_COST + faction.power * LOBBY_POWER_COST
 	if not is_finite(state.player.political_capital) or state.player.political_capital < cost:
 		return _error("Not enough political capital (need %.0f)." % cost)
@@ -162,6 +167,9 @@ static func read_model(state: GameState) -> Dictionary:
 		var reason := pending_action_reason
 		if reason == "" and faction.seats <= 0:
 			reason = "That faction has no parliamentary delegation to lobby."
+		elif reason == "" and state.pending_budget != null \
+				and float(state.pending_budget.lobbying_bonus.get(faction.id, 0.0)) >= LOBBY_CAP:
+			reason = "That faction's lobbying bonus is already at the cap."
 		elif reason == "" and (not is_finite(state.player.political_capital) \
 				or state.player.political_capital < cost):
 			reason = "Not enough political capital (need %.0f)." % cost
@@ -188,6 +196,7 @@ static func read_model(state: GameState) -> Dictionary:
 		"default_preview": default_preview,
 		"pending_preview": pending_preview,
 		"actions": {
+			"preview": {"eligible": state.pending_budget == null, "disabled_reason": "" if state.pending_budget == null else "The tabled budget is locked until parliament votes or it is withdrawn."},
 			"propose": {"eligible": propose_reason == "", "disabled_reason": propose_reason},
 			"lobby": {"eligible": pending_action_reason == "", "disabled_reason": pending_action_reason},
 			"vote": {"eligible": pending_action_reason == "", "disabled_reason": pending_action_reason},

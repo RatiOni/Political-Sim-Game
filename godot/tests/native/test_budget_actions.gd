@@ -177,6 +177,15 @@ func _test_proposal_guards_and_single_spend(t, content: Dictionary) -> void:
 	var duplicate: Dictionary = BudgetActionsScript.propose(state, adjustments)
 	t.truth(not duplicate.get("ok", true), "duplicate pending proposal is refused")
 	t.equal(state.to_dict(), after_success, "duplicate refusal neither spends nor replaces the plan")
+	var alternate := adjustments.duplicate(true)
+	alternate[alternate.keys()[0]] = 0.05
+	var locked_preview: Dictionary = BudgetActionsScript.preview(state, alternate)
+	t.truth(not locked_preview.get("ok", true), "alternate preview is refused while a settlement is tabled")
+	t.equal(state.to_dict(), after_success, "locked preview refusal is atomic")
+	var locked_model: Dictionary = BudgetActionsScript.read_model(state)
+	t.truth(not locked_model["actions"]["preview"]["eligible"] \
+		and String(locked_model["actions"]["preview"]["disabled_reason"]) != "",
+		"read model locks draft controls with an engine reason")
 
 
 func _test_lobby_cap_and_zero_seat_guard(t, content: Dictionary) -> void:
@@ -198,6 +207,15 @@ func _test_lobby_cap_and_zero_seat_guard(t, content: Dictionary) -> void:
 			"valid lobby attempt %s succeeds" % [i + 1])
 	t.near(float(state.pending_budget.lobbying_bonus[target.id]), 0.50, 0.000001,
 		"lobbying bonus is capped at the design-reference 0.50")
+	var capped_before := state.to_dict()
+	var capped_result: Dictionary = BudgetActionsScript.lobby(state, target.id)
+	t.truth(not capped_result.get("ok", true), "lobbying at the cap is refused")
+	t.equal(state.to_dict(), capped_before, "cap-saturated lobbying refusal is atomic")
+	var capped_model: Dictionary = BudgetActionsScript.read_model(state)
+	for row in capped_model.get("lobby_factions", []):
+		if row.get("id") == target.id:
+			t.truth(not row.get("eligible", true) and String(row.get("disabled_reason", "")) != "",
+				"read model disables lobbying at the cap with an engine reason")
 
 
 func _test_withdraw_and_vote_lifecycle(t, content: Dictionary) -> void:

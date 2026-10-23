@@ -70,7 +70,10 @@ static func from_dict(data: Dictionary) -> AnnualBudget:
 	var lobbying_data: Variant = data.get("lobbying_bonus", {})
 	b.lobbying_bonus = lobbying_data.duplicate(true) if lobbying_data is Dictionary else {}
 	var supplements_data: Variant = data.get("supplements", {})
-	b.supplements = supplements_data.duplicate(true) if supplements_data is Dictionary else {}
+	if data.has("supplements") and not (supplements_data is Dictionary):
+		push_error("AnnualBudget.from_dict: malformed 'supplements', expected a Dictionary, got %s" % [supplements_data])
+		return null
+	b.supplements = supplements_data.duplicate(true)
 	return b
 
 

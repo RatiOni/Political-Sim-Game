@@ -159,6 +159,14 @@ func _run() -> void:
 					"Engine preview refreshes the displayed fiscal summary"):
 				native_game.state_changed.disconnect(on_preview_signal)
 				return
+			scene._budget_preview["plan"]["year"] = 9999
+			scene.apply_snapshot(native_game.snapshot())
+			await process_frame
+			if not _check(not str(scene.find_child("BudgetSummary", true, false).text).contains("FY 9999"),
+					"Snapshot replacement invalidates a stale cached budget preview"):
+				native_game.state_changed.disconnect(on_preview_signal)
+				return
+			first_choice = scene.find_child("BudgetRows", true, false).find_children("*", "OptionButton", true, false)[0] as OptionButton
 			first_choice.select(original_index)
 			first_choice.item_selected.emit(original_index)
 			await process_frame
@@ -393,6 +401,10 @@ func _run() -> void:
 			and proposed_budget.get("status") == "proposed"
 			and float(scene.snapshot["player"]["political_capital"]) < proposal_pc_before,
 			"Real budget panel tables one proposal and spends engine-owned political capital"):
+		return
+	var tabled_choices: Array = scene.find_child("BudgetRows", true, false).find_children("*", "OptionButton", true, false)
+	if not _check(tabled_choices.all(func(control): return (control as OptionButton).disabled),
+			"Tabled settlement locks every draft control before the vote"):
 		return
 	var lobby_choice: OptionButton = scene.find_child("LobbyChoice", true, false)
 	var lobby_button: Button = scene.find_child("LobbyButton", true, false)
