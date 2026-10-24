@@ -44,8 +44,8 @@ checkout.
 ## Coordination
 
 - Only one phase of `PLAN.md` is active at a time (currently: **Phase 3**).
-  Tasks 5-12 are complete; the next task must define and claim the smallest
-  **Task 13 legislation player-action slice** before implementation. Read
+  Tasks 5-13 are complete; the next task must define and claim the smallest
+  remaining **Phase 3 government-play slice** before implementation. Read
   `.superpowers/sdd/PLAN/progress.md`
   and `git log` before acting; the ledger and committed work always override
   this guide when they disagree.

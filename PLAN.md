@@ -764,6 +764,48 @@ models and never computes fiscal or voting outcomes.
 orders, supplementary appropriations, reforms, cabinet, elections, press copy
 and Phase 5 visual polish. Those are separate player-action slices.
 
+### Task 13: Native legislation player-action slice
+
+Turn the authored bill catalogue and shared parliamentary projection into a
+complete Godot governing loop. This is a native design: Python is not a runtime,
+oracle, or parity target. Reuse the typed campaign state, political capital,
+factions and wings, modifiers, save/load, and Task 12 vote kernel.
+
+**Files:**
+- Create: `godot/scripts/native/state/law.gd`
+- Create: `godot/scripts/native/actions/law_actions.gd`
+- Create: `godot/scenes/panels/legislation_panel.tscn`
+- Create: `godot/tests/native/test_legislative_actions.gd`
+- Modify: `godot/scripts/native/state/game_state.gd`
+- Modify: `godot/scripts/native/state/state_validator.gd`
+- Modify: `godot/scripts/native/sim/parliamentary_vote.gd`
+- Modify: `godot/scripts/native/native_game.gd`
+- Modify: `godot/scenes/main.tscn`
+- Modify: `godot/scripts/app.gd`
+- Modify: native persistence/game/journey tests as required
+
+**Acceptance:** A government player can open Legislation, choose any authored
+statutory or constitutional bill, inspect its effects and deterministic vote
+projection, table it, lobby a real faction, withdraw it or call a vote, and see
+an enacted or defeated terminal record. Statutory bills require a simple
+majority; constitutional bills require two thirds. Passage applies the authored
+direct effects and modifiers exactly once. The pending motion, enacted laws,
+history, votes and lobbying survive save/load. Opposition, executive orders,
+duplicates, malformed content and out-of-sequence requests are refused
+atomically with engine-provided reasons. The real scene remains usable at
+1920x1080 and 1280x720. Repeal, amendments and executive-order gameplay remain
+later slices.
+
+- [x] Claim the task and write the failing action, persistence, public API and
+      real-scene journey checks.
+- [x] Add typed Law state and tolerant-but-validating persistence.
+- [x] Implement one input-free law action service; reuse ParliamentaryVote.
+- [x] Add guarded NativeGame APIs and a detached legislation read model.
+- [x] Add a data-driven legislation panel with 44px actions and backend reasons.
+- [x] Prove choose -> preview -> propose -> lobby/withdraw or vote -> save/load
+      through NativeGame and the real scene at both supported resolutions.
+- [x] Run the full native battery, vertical slice and Python smoke suite.
+- [x] Commit `feat(godot): make legislation playable`.
 ### Phase 4 — The living world
 
 Events and situation chains (including the schemer arc and the bespoke Vasca and

@@ -455,6 +455,62 @@ func _test_budget_public_actions(t) -> void:
 	game.free()
 
 
+func _test_legislation_public_actions(t) -> void:
+	var game = NativeGameScript.new()
+	t.truth(game.new_campaign(_base_config(131313)).get("ok", false),
+		"law action: government campaign starts")
+	var opening := game.snapshot()
+	t.truth(opening.get("legislation", {}).get("ok", false),
+		"law action: snapshot exposes the live legislation model")
+	var before_preview := game.snapshot()
+	var preview := game.preview_bill("infrastructure_investment_act")
+	t.truth(preview.get("ok", false), "law action: public preview succeeds")
+	t.equal(game.snapshot(), before_preview, "law action: preview is non-mutating")
+
+	var emissions: Array = []
+	game.state_changed.connect(func(snapshot: Dictionary) -> void: emissions.append(snapshot))
+	var proposed := game.propose_law("infrastructure_investment_act")
+	t.truth(proposed.get("ok", false), "law action: public proposal succeeds")
+	t.equal(emissions.size(), 1, "law action: proposal emits once")
+	t.equal(game.snapshot()["legislation"]["pending"]["status"], "proposed",
+		"law action: pending bill appears in snapshot")
+	var lobby_id := String(game.snapshot()["legislation"]["lobby_factions"][0]["id"])
+	t.truth(game.lobby_law(lobby_id).get("ok", false),
+		"law action: public lobbying succeeds")
+	t.equal(emissions.size(), 2, "law action: lobbying emits once")
+	for faction in game._state.country.factions:
+		faction.loyalty = 1.0
+		faction.ideology.economic = 0.0
+		faction.ideology.social = -0.1
+		for wing in faction.wings:
+			wing.loyalty = 1.0
+			wing.ideology.economic = 0.0
+			wing.ideology.social = -0.1
+			wing.policy_biases["infrastructure_investment_act"] = 0.0
+	var voted := game.call_law_vote()
+	t.truth(voted.get("ok", false) and voted.get("passed", false),
+		"law action: public vote enacts supported bill")
+	t.equal(emissions.size(), 3, "law action: vote emits once")
+	var resolved: Dictionary = game.snapshot()["legislation"]
+	t.truth(resolved.get("pending") == null, "law action: vote clears pending bill")
+	t.equal(resolved.get("enacted", []).size(), 1,
+		"law action: enacted law appears in snapshot")
+	t.equal(resolved.get("history", []).size(), 1,
+		"law action: resolution appears in history")
+
+	var opposition = NativeGameScript.new()
+	var opposition_config := _base_config(131314)
+	opposition_config["opening_role"] = "opposition"
+	t.truth(opposition.new_campaign(opposition_config).get("ok", false),
+		"law action: opposition campaign starts")
+	var opposition_before := opposition.snapshot()
+	t.truth(not opposition.propose_law("minimum_wage_act").get("ok", true),
+		"law action: opposition proposal is refused")
+	t.equal(opposition.snapshot(), opposition_before,
+		"law action: opposition refusal is atomic")
+	opposition.free()
+	game.free()
+
 static func _write_repo_file(path: String, content: String) -> void:
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	var file := FileAccess.open(path, FileAccess.WRITE)
@@ -520,6 +576,7 @@ func _initialize() -> void:
 	_test_reentrant_advance_from_handler_refused(t)
 	_test_regional_program_public_journey(t)
 	_test_budget_public_actions(t)
+	_test_legislation_public_actions(t)
 	_test_country_inner_id_consistency(t)
 
 	for slot in [SLOT_PREFIX + "roundtrip", SLOT_PREFIX + "signals",

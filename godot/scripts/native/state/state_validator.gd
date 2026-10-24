@@ -49,6 +49,7 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_ministers(state, errors)
 	_validate_households(state, errors)
 	_validate_budgets(state, errors)
+	_validate_laws(state, errors)
 
 	if state.player != null:
 		_validate_player(state, errors)
@@ -219,6 +220,137 @@ static func _validate_households(state: GameState, errors: Array[String]) -> voi
 				or h.service_access < 0.0 or h.service_access > 1.0 or h.hardship < 0.0 or h.hardship > 1.0 \
 				or h.confidence < 0.0 or h.confidence > 1.0:
 			errors.append("household '%s' has an out-of-range value" % [key])
+
+static func _validate_laws(state: GameState, errors: Array[String]) -> void:
+	var content: Dictionary = ContentRepositoryScript.load_all()
+	var catalog: Variant = content.get("catalogs", {}).get("bills", [])
+	var known := {}
+	if catalog is Array:
+		for row in catalog:
+			if row is Dictionary:
+				known[String(row.get("id", ""))] = row
+	var faction_ids := {}
+	var total_seats := 0
+	for faction in state.country.factions:
+		faction_ids[faction.id] = true
+		total_seats += faction.seats
+	if state.pending_law != null:
+		_validate_law(state.pending_law, "pending_law", ["proposed"],
+			known, faction_ids, errors)
+		if not state.player.in_government:
+			errors.append("pending_law exists for an opposition player")
+		if state.pending_law.proposed_by != state.player.faction_id:
+			errors.append("pending_law sponsor is not the governing player faction")
+		_validate_law_lifecycle(state.pending_law, "pending_law", state.turn,
+			total_seats, errors)
+	var enacted_ids := {}
+	for i in range(state.enacted_laws.size()):
+		var law: Law = state.enacted_laws[i]
+		_validate_law(law, "enacted_laws[%s]" % i, ["enacted"],
+			known, faction_ids, errors)
+		_validate_law_lifecycle(law, "enacted_laws[%s]" % i, state.turn,
+			total_seats, errors)
+		if law != null:
+			if enacted_ids.has(law.id):
+				errors.append("duplicate enacted law id '%s'" % law.id)
+			enacted_ids[law.id] = true
+	if state.pending_law != null and enacted_ids.has(state.pending_law.id):
+		errors.append("pending_law duplicates an enacted law '%s'" % state.pending_law.id)
+
+	var historical_enacted := {}
+	for i in range(state.law_history.size()):
+		var historical: Law = state.law_history[i]
+		_validate_law(historical, "law_history[%s]" % i,
+			["enacted", "rejected", "withdrawn"], known, faction_ids, errors)
+		_validate_law_lifecycle(historical, "law_history[%s]" % i, state.turn,
+			total_seats, errors)
+		if historical != null and historical.status == "enacted":
+			historical_enacted[historical.id] = true
+			if not enacted_ids.has(historical.id):
+				errors.append("enacted history has no matching active law '%s'" % historical.id)
+	for law_id in enacted_ids:
+		if not historical_enacted.has(law_id):
+			errors.append("enacted law has no matching history '%s'" % law_id)
+
+
+static func _validate_law(law: Law, label: String, statuses: Array,
+		known: Dictionary, faction_ids: Dictionary, errors: Array[String]) -> void:
+	if law == null:
+		errors.append("%s is null" % label)
+		return
+	if law.id == "" or not known.has(law.id):
+		errors.append("%s has unknown bill id '%s'" % [label, law.id])
+	elif String(known[law.id].get("tier", "")) != law.tier:
+		errors.append("%s tier does not match the authored bill definition" % label)
+	if not law.status in statuses:
+		errors.append("%s has impossible status '%s'" % [label, law.status])
+	if not law.tier in ["statutory", "constitutional"]:
+		errors.append("%s has unsupported tier '%s'" % [label, law.tier])
+	if law.votes_for < 0 or law.votes_against < 0:
+		errors.append("%s has negative vote totals" % label)
+	var invalid_ideology := (
+		not is_finite(law.ideology_economic)
+		or not is_finite(law.ideology_social)
+		or absf(law.ideology_economic) > 1.0
+		or absf(law.ideology_social) > 1.0
+	)
+	if invalid_ideology:
+		errors.append("%s has invalid ideology" % label)
+	for faction_id in law.lobbying_bonus:
+		var value: Variant = law.lobbying_bonus[faction_id]
+		var malformed := (
+			not faction_ids.has(faction_id)
+			or not (typeof(value) in [TYPE_INT, TYPE_FLOAT])
+			or not is_finite(float(value))
+			or float(value) < 0.0
+			or float(value) > 0.50
+		)
+		if malformed:
+			errors.append("%s has malformed lobbying for '%s'" % [label, faction_id])
+
+
+static func _validate_law_lifecycle(law: Law, label: String, current_turn: int,
+		total_seats: int, errors: Array[String]) -> void:
+	if law == null:
+		return
+	if law.proposed_by == "" or law.proposed_turn < 0 or law.proposed_turn > current_turn:
+		errors.append("%s has an invalid proposal lifecycle" % label)
+	var threshold := ceili(float(total_seats) * 2.0 / 3.0) if law.tier == "constitutional" else floori(float(total_seats) / 2.0) + 1
+	if law.status == "proposed":
+		if law.enacted_turn != -1 or law.votes_for != 0 or law.votes_against != 0:
+			errors.append("%s has resolved fields before a vote" % label)
+	elif law.status in ["enacted", "rejected"]:
+		if law.votes_for + law.votes_against != total_seats:
+			errors.append("%s vote totals do not match the chamber" % label)
+		if law.status == "enacted":
+			if law.enacted_turn < law.proposed_turn or law.enacted_turn > current_turn or law.votes_for < threshold:
+				errors.append("%s has an impossible enactment outcome" % label)
+		elif law.enacted_turn != -1 or law.votes_for >= threshold:
+			errors.append("%s has an impossible rejected outcome" % label)
+	elif law.status == "withdrawn" and (law.enacted_turn != -1 or law.votes_for != 0 or law.votes_against != 0):
+		errors.append("%s has impossible withdrawn fields" % label)
+
+
+static func _same_variant(left: Variant, right: Variant) -> bool:
+	if typeof(left) in [TYPE_INT, TYPE_FLOAT] and typeof(right) in [TYPE_INT, TYPE_FLOAT]:
+		return is_equal_approx(float(left), float(right))
+	if typeof(left) != typeof(right):
+		return false
+	if left is Dictionary:
+		if left.size() != right.size():
+			return false
+		for key in left:
+			if not right.has(key) or not _same_variant(left[key], right[key]):
+				return false
+		return true
+	if left is Array:
+		if left.size() != right.size():
+			return false
+		for i in range(left.size()):
+			if not _same_variant(left[i], right[i]):
+				return false
+		return true
+	return left == right
 
 static func _validate_budgets(state: GameState, errors: Array[String]) -> void:
 	var content: Dictionary = ContentRepositoryScript.load_all()

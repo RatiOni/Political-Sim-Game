@@ -1,0 +1,125 @@
+[gd_scene format=3]
+
+[node name="LegislationPanel" type="PanelContainer"]
+visible = false
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Content" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+
+[node name="Heading" type="Label" parent="Content/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Title"
+text = "LEGISLATION"
+
+[node name="CloseLegislationButton" type="Button" parent="Content/Header"]
+custom_minimum_size = Vector2(96, 44)
+layout_mode = 2
+text = "Close"
+
+[node name="Intro" type="Label" parent="Content"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Choose an authored bill, inspect its consequences and parliamentary support, then decide whether to spend political capital bringing it to the floor."
+autowrap_mode = 3
+
+[node name="Rule" type="HSeparator" parent="Content"]
+layout_mode = 2
+
+[node name="BillChoice" type="OptionButton" parent="Content"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+
+[node name="BillScroll" type="ScrollContainer" parent="Content"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="BillBody" type="VBoxContainer" parent="Content/BillScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="BillTitle" type="Label" parent="Content/BillScroll/BillBody"]
+layout_mode = 2
+theme_type_variation = &"Section"
+text = "No bill selected"
+autowrap_mode = 3
+
+[node name="BillDescription" type="Label" parent="Content/BillScroll/BillBody"]
+layout_mode = 2
+text = "The bill catalogue is loading."
+autowrap_mode = 3
+
+[node name="BillEffects" type="Label" parent="Content/BillScroll/BillBody"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "No effects available."
+autowrap_mode = 3
+
+[node name="BillProjection" type="Label" parent="Content/BillScroll/BillBody"]
+layout_mode = 2
+text = "No parliamentary projection available."
+autowrap_mode = 3
+
+[node name="ActiveLaws" type="Label" parent="Content/BillScroll/BillBody"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "No laws enacted during this campaign."
+autowrap_mode = 3
+
+[node name="LobbyBar" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+
+[node name="LobbyLabel" type="Label" parent="Content/LobbyBar"]
+layout_mode = 2
+text = "Lobby"
+
+[node name="LobbyChoice" type="OptionButton" parent="Content/LobbyBar"]
+custom_minimum_size = Vector2(280, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+
+[node name="LobbyButton" type="Button" parent="Content/LobbyBar"]
+custom_minimum_size = Vector2(128, 44)
+layout_mode = 2
+disabled = true
+text = "Lobby faction"
+
+[node name="ActionBar" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+
+[node name="LegislationStatus" type="Label" parent="Content/ActionBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Muted"
+text = "Select a bill to prepare a motion."
+autowrap_mode = 3
+
+[node name="ProposeBillButton" type="Button" parent="Content/ActionBar"]
+custom_minimum_size = Vector2(132, 44)
+layout_mode = 2
+disabled = true
+text = "Table bill"
+
+[node name="VoteBillButton" type="Button" parent="Content/ActionBar"]
+custom_minimum_size = Vector2(112, 44)
+layout_mode = 2
+disabled = true
+text = "Call vote"
+
+[node name="WithdrawBillButton" type="Button" parent="Content/ActionBar"]
+custom_minimum_size = Vector2(112, 44)
+layout_mode = 2
+disabled = true
+text = "Withdraw"

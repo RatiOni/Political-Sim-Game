@@ -36,6 +36,7 @@ const StabilitySimScript = preload("res://scripts/native/sim/stability_sim.gd")
 const MonthlyDigestScript = preload("res://scripts/native/presentation/monthly_digest.gd")
 const RegionalProgramActionsScript = preload("res://scripts/native/actions/regional_program_actions.gd")
 const BudgetActionsScript = preload("res://scripts/native/actions/budget_actions.gd")
+const LawActionsScript = preload("res://scripts/native/actions/law_actions.gd")
 
 var _state: GameState = null
 var _busy := false
@@ -189,8 +190,77 @@ func withdraw_budget() -> Dictionary:
 	return result
 
 
-## Persists the live campaign under `slot`. SaveStore's {ok} passes
-## straight through; saves never mutate or emit.
+## Native lawmaking boundary. Preview is pure; every successful mutation
+## emits one detached snapshot while the re-entrancy guard is held.
+func preview_bill(bill_id: String) -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	return LawActionsScript.preview_bill(_state, bill_id).duplicate(true)
+
+
+func propose_law(bill_id: String) -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = LawActionsScript.propose(_state, bill_id)
+	if result.get("ok", false):
+		var snap := snapshot()
+		result["snapshot"] = snap
+		state_changed.emit(snap)
+	_busy = false
+	return result
+
+
+func lobby_law(faction_id: String) -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = LawActionsScript.lobby(_state, faction_id)
+	if result.get("ok", false):
+		var snap := snapshot()
+		result["snapshot"] = snap
+		state_changed.emit(snap)
+	_busy = false
+	return result
+
+
+func call_law_vote() -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = LawActionsScript.vote(_state)
+	if result.get("ok", false):
+		var snap := snapshot()
+		result["snapshot"] = snap
+		state_changed.emit(snap)
+	_busy = false
+	return result
+
+
+func withdraw_law() -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = LawActionsScript.withdraw(_state)
+	if result.get("ok", false):
+		var snap := snapshot()
+		result["snapshot"] = snap
+		state_changed.emit(snap)
+	_busy = false
+	return result
+
+## Persists the live campaign under the requested save slot. SaveStore's result
+## passes straight through; saves never mutate or emit.
 func save(slot: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -356,6 +426,7 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 		"factions": factions,
 		"decisions": [],
 		"budget": _budget_snapshot(state),
+		"legislation": LawActionsScript.read_model(state).duplicate(true),
 		"ministries": _ministries_snapshot(state),
 		"households": _household_snapshot(state),
 		"digest": state.monthly_digest.duplicate(),

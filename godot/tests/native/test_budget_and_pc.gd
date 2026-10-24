@@ -224,10 +224,24 @@ func _test_upkeep_zero_on_a_fresh_campaign(t, content: Dictionary) -> void:
 		return
 	var breakdown: Dictionary = PoliticalCapitalScript.upkeep(state)
 	t.equal(float(breakdown.get("laws", -1.0)), 0.0,
-		"no Legislature exists natively yet, so law upkeep is always zero (task-5-brief.md)")
+		"a fresh campaign has no enacted native laws")
 	t.equal(float(breakdown.get("treaties", -1.0)), 0.0, "a fresh campaign starts with no treaties")
 	t.equal(float(breakdown.get("sanctions", -1.0)), 0.0, "a fresh campaign starts with no sanctions")
 
+
+func _test_upkeep_counts_enacted_laws(t, content: Dictionary) -> void:
+	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	t.truth(state != null, "campaign builds for law upkeep")
+	if state == null:
+		return
+	for id in ["minimum_wage_act", "press_freedom_act"]:
+		var law := Law.new()
+		law.id = id
+		law.status = "enacted"
+		state.enacted_laws.append(law)
+	var breakdown: Dictionary = PoliticalCapitalScript.upkeep(state)
+	t.near(float(breakdown.get("laws", -1.0)), 2.0 * PoliticalCapitalScript.PC_UPKEEP_LAW, 0.0001,
+		"each enacted native law consumes monthly governing capacity")
 
 func _test_upkeep_counts_sanctions_and_treaties(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -249,7 +263,7 @@ func _test_upkeep_counts_sanctions_and_treaties(t, content: Dictionary) -> void:
 	rel_c.treaties = [{"type": "trade"}, {"type": "defense"}]
 
 	var breakdown: Dictionary = PoliticalCapitalScript.upkeep(state)
-	t.equal(float(breakdown.get("laws", -1.0)), 0.0, "law upkeep is still zero")
+	t.equal(float(breakdown.get("laws", -1.0)), 0.0, "law upkeep remains zero until a law is enacted")
 	t.near(float(breakdown.get("sanctions", -1.0)), 2.0 * 1.0, 0.0001,
 		"two sanctioned relations cost PC_UPKEEP_SANCTIONS each")
 	t.near(float(breakdown.get("treaties", -1.0)), 2.0 * 0.6, 0.0001,
@@ -348,6 +362,7 @@ func _initialize() -> void:
 		_test_opposition_player_gets_government_ai_budget(t, content)
 
 		_test_upkeep_zero_on_a_fresh_campaign(t, content)
+		_test_upkeep_counts_enacted_laws(t, content)
 		_test_upkeep_counts_sanctions_and_treaties(t, content)
 
 		_test_regen_formula_above_floor(t, content)

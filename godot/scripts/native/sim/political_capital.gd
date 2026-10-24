@@ -1,24 +1,10 @@
 class_name PoliticalCapital
 extends RefCounted
 
-## Typed port of engine/turn.py's political-capital economy: the "governing
-## overhead" upkeep every standing commitment costs, and the monthly regen
-## formula that subtracts it (mirrors `political_upkeep` and
-## `TurnEngine._regenerate_political_capital`).
-##
-## Law upkeep is always zero today: native `Country`/`GameState` has no
-## `Legislature`/`Law` class yet (Phase 3 territory — see task-5-brief.md and
-## country.gd's own header note, "Treaty isn't ported as a typed class... the
-## treaty mechanics... are out of Task 2's scope"). That's a correct
-## reflection of what exists, not a gap this task should paper over by
-## inventing a Legislature class. Treaty upkeep DOES count for something
-## real: `Country.BilateralRelation.treaties` is a plain untyped Array that
-## already exists on every relation (country.gd), so `len(treaties)` per
-## relation is ported exactly as Python computes it — it is simply always
-## empty on a freshly-built campaign, since no country starts one with a
-## treaty. Sanctions upkeep counts `BilateralRelation.sanctioned`, which is
-## real, persisted, native state today.
-
+## Native political-capital economy. Standing commitments consume governing
+## capacity each month; approval, coalition loyalty and stability replenish it.
+## Laws are campaign-owned native Law records, while treaties and sanctions
+## remain on bilateral relations.
 const PC_UPKEEP_LAW := 0.8
 const PC_UPKEEP_TREATY := 0.6
 const PC_UPKEEP_SANCTIONS := 1.0
@@ -31,7 +17,7 @@ const PC_REGEN_FLOOR := 3.0
 ## "breakdown by source" is exactly what the brief asks this Dictionary to
 ## be, and GDScript has no tuple return to mirror Python's (total, breakdown).
 static func upkeep(state: GameState) -> Dictionary:
-	var laws := 0   # no Legislature ported yet — see header note; always 0
+	var laws := state.enacted_laws.size()
 	var treaties := 0
 	var sanctions := 0
 	for rel in state.country.relations.values():

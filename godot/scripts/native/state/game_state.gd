@@ -100,6 +100,12 @@ var active_budget: AnnualBudget = null
 var pending_budget: AnnualBudget = null
 var budget_history: Array[AnnualBudget] = []
 
+## Native parliamentary legislation: one tabled bill, enacted laws, and the
+## complete outcome ledger (enacted, defeated, or withdrawn).
+var pending_law: Law = null
+var enacted_laws: Array[Law] = []
+var law_history: Array[Law] = []
+
 ## The government's ministers — Python's `Cabinet` is just `list[Minister]`
 ## plus aggregate helpers, so no wrapper type is ported (see header note).
 var ministers: Array[Minister] = []
@@ -168,6 +174,12 @@ func to_dict() -> Dictionary:
 	var history_dicts: Array = []
 	for b in budget_history:
 		history_dicts.append(b.to_dict())
+	var enacted_law_dicts: Array = []
+	for law in enacted_laws:
+		enacted_law_dicts.append(law.to_dict())
+	var law_history_dicts: Array = []
+	for law in law_history:
+		law_history_dicts.append(law.to_dict())
 	var minister_dicts: Array = []
 	for m in ministers:
 		minister_dicts.append(m.to_dict())
@@ -198,6 +210,9 @@ func to_dict() -> Dictionary:
 		"active_budget": null if active_budget == null else active_budget.to_dict(),
 		"pending_budget": null if pending_budget == null else pending_budget.to_dict(),
 		"budget_history": history_dicts,
+		"pending_law": null if pending_law == null else pending_law.to_dict(),
+		"enacted_laws": enacted_law_dicts,
+		"law_history": law_history_dicts,
 		"ministers": minister_dicts,
 		"modifiers": modifier_dicts,
 		"ruling_faction_id": ruling_faction_id,
@@ -326,6 +341,30 @@ static func from_dict(data: Dictionary) -> GameState:
 			if budget == null:
 				return null
 			state.budget_history.append(budget)
+	var pending_law_data: Variant = data.get("pending_law", null)
+	if pending_law_data != null and not (pending_law_data is Dictionary):
+		push_error("GameState.from_dict: malformed 'pending_law'")
+		return null
+	if pending_law_data is Dictionary:
+		state.pending_law = Law.from_dict(pending_law_data)
+		if state.pending_law == null:
+			return null
+	for field in ["enacted_laws", "law_history"]:
+		var rows: Variant = data.get(field, [])
+		if data.has(field) and not (rows is Array):
+			push_error("GameState.from_dict: malformed '%s'" % field)
+			return null
+		for row in rows:
+			if not (row is Dictionary):
+				push_error("GameState.from_dict: malformed '%s' entry" % field)
+				return null
+			var law := Law.from_dict(row)
+			if law == null:
+				return null
+			if field == "enacted_laws":
+				state.enacted_laws.append(law)
+			else:
+				state.law_history.append(law)
 	var ministers_data: Variant = data.get("ministers", [])
 	if data.has("ministers") and not (ministers_data is Array):
 		push_error("GameState.from_dict: malformed 'ministers', expected an Array, got %s" % [ministers_data])

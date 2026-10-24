@@ -20,6 +20,7 @@ const GameFactoryScript = preload("res://scripts/native/state/game_factory.gd")
 const StateValidatorScript = preload("res://scripts/native/state/state_validator.gd")
 const BudgetSimScript = preload("res://scripts/native/sim/budget_sim.gd")
 const BudgetActionsScript = preload("res://scripts/native/actions/budget_actions.gd")
+const LawActionsScript = preload("res://scripts/native/actions/law_actions.gd")
 const SaveStoreScript = preload("res://scripts/native/state/save_store.gd")
 
 const FIXED_SEED := 424242
@@ -570,6 +571,48 @@ func _test_task12_budget_validation_boundary(t, content: Dictionary) -> void:
 	t.equal(GameState.from_dict(malformed_supplements), null,
 		"task12: present wrong-typed supplements reject instead of disappearing")
 
+func _test_task13_legislation_persistence_boundary(t, content: Dictionary) -> void:
+	var state := _new_test_state(content)
+	t.truth(LawActionsScript.propose(state, "infrastructure_investment_act").get("ok", false),
+		"task13: canonical pending-law fixture builds")
+	var valid := GameState.from_dict(state.to_dict())
+	t.truth(valid != null, "task13: pending law round-trips")
+	if valid != null:
+		t.equal(StateValidatorScript.validate(valid).size(), 0,
+			"task13: canonical pending law validates")
+
+	var poisoned_dict := state.to_dict()
+	poisoned_dict["pending_law"]["effects"]["one_time_debt_pct_delta"] = 42.0
+	var poisoned := GameState.from_dict(poisoned_dict)
+	t.truth(poisoned != null, "task13: poisoned effect reaches validation boundary")
+	if poisoned != null:
+		t.equal(StateValidatorScript.validate(poisoned).size(), 0,
+			"task13: old authored effect snapshots remain loadable")
+		var hydrated := LawActionsScript.read_model(poisoned)
+		t.truth(hydrated.get("ok", false)
+			and float(hydrated["pending"]["effects"]["one_time_debt_pct_delta"]) == 0.025,
+			"task13: current canonical content rehydrates by stable bill id")
+
+	for field in ["enacted_laws", "law_history"]:
+		var wrong_type := state.to_dict()
+		wrong_type[field] = {}
+		t.equal(GameState.from_dict(wrong_type), null,
+			"task13: wrong-typed %s rejects the save" % field)
+
+	var conflict := state.to_dict()
+	var enacted := Law.from_catalog(content["catalogs"]["bills"][8])
+	enacted.status = "enacted"
+	enacted.enacted_turn = state.turn
+	conflict["enacted_laws"] = [enacted.to_dict()]
+	conflict["law_history"] = [enacted.to_dict()]
+	conflict["pending_law"] = Law.from_catalog(content["catalogs"]["bills"][8]).to_dict()
+	conflict["pending_law"]["status"] = "proposed"
+	var conflicted := GameState.from_dict(conflict)
+	t.truth(conflicted != null, "task13: duplicate lifecycle reaches validation boundary")
+	if conflicted != null:
+		t.truth(not StateValidatorScript.validate(conflicted).is_empty(),
+			"task13: same bill cannot be pending and enacted")
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 
@@ -590,6 +633,7 @@ func _initialize() -> void:
 		_test_task10_digest_and_household_boundary(t, content)
 		_test_task12_approved_budget_round_trip(t, content)
 		_test_task12_budget_validation_boundary(t, content)
+		_test_task13_legislation_persistence_boundary(t, content)
 
 	for slot in [SLOT_PREFIX + "roundtrip", SLOT_PREFIX + "corrupt",
 			SLOT_PREFIX + "badversion", SLOT_PREFIX + "interrupted",

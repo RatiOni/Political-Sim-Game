@@ -22,6 +22,9 @@ var _selected_program_option: Dictionary = {}
 var _budget_open := false
 var _budget_adjustments := {}
 var _budget_preview: Dictionary = {}
+var _legislation_open := false
+var _selected_bill_id := ""
+var _bill_preview: Dictionary = {}
 
 func _ready() -> void:
 	%ArdeniaMap.region_selected.connect(_select_region)
@@ -38,6 +41,14 @@ func _ready() -> void:
 	%BudgetPanel.find_child("WithdrawBudgetButton").pressed.connect(_withdraw_budget)
 	%BudgetPanel.find_child("LobbyButton").pressed.connect(_lobby_budget)
 	%BudgetPanel.find_child("LobbyChoice").item_selected.connect(_update_budget_lobby_control)
+	%LegislationButton.pressed.connect(_open_legislation)
+	%LegislationPanel.find_child("CloseLegislationButton").pressed.connect(_close_legislation)
+	%LegislationPanel.find_child("BillChoice").item_selected.connect(_on_bill_selected)
+	%LegislationPanel.find_child("ProposeBillButton").pressed.connect(_propose_bill)
+	%LegislationPanel.find_child("VoteBillButton").pressed.connect(_call_bill_vote)
+	%LegislationPanel.find_child("WithdrawBillButton").pressed.connect(_withdraw_bill)
+	%LegislationPanel.find_child("LobbyButton").pressed.connect(_lobby_bill)
+	%LegislationPanel.find_child("LobbyChoice").item_selected.connect(_update_bill_lobby_control)
 	get_window().size_changed.connect(_resize_layout)
 	_resize_layout()
 	if _game == null:
@@ -81,11 +92,14 @@ func _resize_layout() -> void:
 	# Native-size UI keeps 44 px targets and readable type at both acceptance sizes.
 	get_window().content_scale_size = get_window().size
 	var compact := get_window().size.x < 1500 or get_window().size.y < 850
-	find_child("NationalPanel").visible = not compact and not _budget_open
-	find_child("MapPanel").visible = not _budget_open
-	%RegionBrief.visible = not _budget_open
+	find_child("OfficeLabel").visible = not compact
+	find_child("PreviewStatus").visible = not compact
+	find_child("NationalPanel").visible = not compact and not _budget_open and not _legislation_open
+	find_child("MapPanel").visible = not _budget_open and not _legislation_open
+	%RegionBrief.visible = not _budget_open and not _legislation_open
 	%BudgetPanel.visible = _budget_open
-	find_child("MapHint").visible = not compact and not _budget_open
+	%LegislationPanel.visible = _legislation_open
+	find_child("MapHint").visible = not compact and not _budget_open and not _legislation_open
 	%MonthlyReport.custom_minimum_size.y = 88 if compact else 192
 	%RegionBrief.find_child("Details").custom_minimum_size.y = 48 if compact else 84
 	for name in ["Rule", "PressureHeading", "PressureValue", "Details"]:
@@ -95,6 +109,8 @@ func _resize_layout() -> void:
 	if not snapshot.is_empty():
 		if _budget_open:
 			_refresh_budget()
+		elif _legislation_open:
+			_refresh_legislation()
 		else:
 			_refresh_region()
 
@@ -145,6 +161,8 @@ func apply_snapshot(value: Dictionary) -> void:
 	_refresh_region()
 	if _budget_open:
 		_refresh_budget()
+	elif _legislation_open:
+		_refresh_legislation()
 	_refresh_controls()
 
 func _percent(row: Dictionary, key: String) -> String:
@@ -166,6 +184,7 @@ func _lines(rows: Array, empty_text: String) -> String:
 func _open_budget() -> void:
 	if snapshot.is_empty() or _fatal:
 		return
+	_legislation_open = false
 	_budget_open = true
 	_budget_adjustments.clear()
 	_budget_preview.clear()
@@ -363,6 +382,178 @@ func _signed_adjustment(value: float) -> String:
 		return "No change"
 	return "%s%.0f%%" % ["+" if value > 0.0 else "", value * 100.0]
 
+func _open_legislation() -> void:
+	if snapshot.is_empty() or _fatal:
+		return
+	_budget_open = false
+	_legislation_open = true
+	_bill_preview.clear()
+	_resize_layout()
+
+
+func _close_legislation() -> void:
+	_legislation_open = false
+	_resize_layout()
+
+
+func _refresh_legislation() -> void:
+	var model: Dictionary = snapshot.get("legislation", {})
+	var choice: OptionButton = %LegislationPanel.find_child("BillChoice")
+	choice.clear()
+	if not model.get("ok", false):
+		choice.disabled = true
+		_set_legislation_status(str(model.get("error", "Legislation is unavailable.")))
+		_apply_legislation_actions({})
+		return
+	var pending: Variant = model.get("pending")
+	if pending is Dictionary:
+		_selected_bill_id = str(pending.get("id", ""))
+	var selected_index := 0
+	for bill in model.get("bills", []):
+		var index := choice.item_count
+		choice.add_item(str(bill.get("name", bill.get("id", "Bill"))))
+		choice.set_item_metadata(index, bill)
+		var eligible := bool(bill.get("eligible", false))
+		choice.set_item_disabled(index, not eligible)
+		choice.get_popup().set_item_tooltip(index, str(bill.get("disabled_reason", bill.get("description", ""))))
+		if str(bill.get("id", "")) == _selected_bill_id:
+			selected_index = index
+	choice.disabled = choice.item_count == 0 or model.get("pending") is Dictionary
+	if choice.item_count > 0:
+		choice.select(selected_index)
+		if pending is Dictionary and model.get("pending_preview") is Dictionary:
+			var selected_bill: Dictionary = choice.get_item_metadata(selected_index)
+			%LegislationPanel.find_child("BillTitle").text = "%s / %s" % [str(selected_bill.get("tier", "bill")).to_upper(), selected_bill.get("name", "Bill")]
+			%LegislationPanel.find_child("BillDescription").text = str(selected_bill.get("description", ""))
+			_bill_preview = model["pending_preview"].duplicate(true)
+			_display_bill_preview(_bill_preview)
+		else:
+			_on_bill_selected(selected_index)
+	var lobby_choice: OptionButton = %LegislationPanel.find_child("LobbyChoice")
+	lobby_choice.clear()
+	var first_eligible := -1
+	for faction in model.get("lobby_factions", []):
+		var index := lobby_choice.item_count
+		lobby_choice.add_item("%s — %.0f PC" % [faction.get("name", "Faction"), faction.get("cost", 0.0)])
+		lobby_choice.set_item_metadata(index, faction)
+		var eligible := bool(faction.get("eligible", false))
+		lobby_choice.set_item_disabled(index, not eligible)
+		lobby_choice.get_popup().set_item_tooltip(index, str(faction.get("disabled_reason", "")))
+		if first_eligible < 0 and eligible:
+			first_eligible = index
+	if lobby_choice.item_count > 0:
+		lobby_choice.select(first_eligible if first_eligible >= 0 else 0)
+	var enacted_names: Array[String] = []
+	for law in model.get("enacted", []):
+		enacted_names.append(str(law.get("name", law.get("id", "Law"))))
+	%LegislationPanel.find_child("ActiveLaws").text = "ENACTED / %s" % ", ".join(enacted_names) if not enacted_names.is_empty() else "No laws enacted during this campaign."
+	_apply_legislation_actions(model.get("actions", {}))
+	_update_bill_lobby_control()
+	if pending is Dictionary:
+		_set_legislation_status("%s is before parliament." % pending.get("name", "The bill"))
+
+
+func _on_bill_selected(index: int) -> void:
+	var choice: OptionButton = %LegislationPanel.find_child("BillChoice")
+	if index < 0 or index >= choice.item_count:
+		return
+	var bill: Variant = choice.get_item_metadata(index)
+	if not (bill is Dictionary):
+		return
+	_selected_bill_id = str(bill.get("id", ""))
+	%LegislationPanel.find_child("BillTitle").text = "%s / %s" % [str(bill.get("tier", "bill")).to_upper(), bill.get("name", "Bill")]
+	%LegislationPanel.find_child("BillDescription").text = str(bill.get("description", ""))
+	var result: Dictionary = _game.preview_bill(_selected_bill_id)
+	if not result.get("ok", false):
+		_bill_preview.clear()
+		_set_legislation_status(str(result.get("error", "This bill cannot be previewed.")))
+		return
+	_bill_preview = result.get("preview", {}).duplicate(true)
+	_display_bill_preview(_bill_preview)
+
+
+func _display_bill_preview(preview: Dictionary) -> void:
+	var effect_lines: Array[String] = []
+	var effects: Variant = preview.get("effects", [])
+	if effects is Array:
+		for effect in effects:
+			effect_lines.append(_bill_effect_line(effect) if effect is Dictionary else str(effect))
+	elif effects is Dictionary:
+		for key in effects:
+			effect_lines.append("%s: %s" % [str(key).capitalize(), effects[key]])
+	%LegislationPanel.find_child("BillEffects").text = "CONSEQUENCES / %s" % " · ".join(effect_lines) if not effect_lines.is_empty() else "CONSEQUENCES / No immediate quantified effect."
+	var verdict := "LIKELY PASS" if preview.get("passed", false) else "LIKELY DEFEAT"
+	%LegislationPanel.find_child("BillProjection").text = "%s · %s for / %s against · %s needed" % [verdict, preview.get("votes_for", 0), preview.get("votes_against", 0), preview.get("threshold", 0)]
+	%LegislationPanel.find_child("ProposeBillButton").text = "Table — %.0f PC" % preview.get("political_capital_cost", 0.0)
+
+
+func _bill_effect_line(effect: Dictionary) -> String:
+	var key := str(effect.get("key", "effect")).replace("_", " ").capitalize()
+	var subject := str(effect.get("subject", ""))
+	if subject != "":
+		key = "%s: %s" % [subject, key.trim_prefix("Faction ")]
+	var value := float(effect.get("value", 0.0))
+	var magnitude := "%+.1f%%" % (value * 100.0) if absf(value) < 1.0 else "%+.1f" % value
+	var timing := ""
+	var delay := int(effect.get("delay", 0))
+	if delay > 0:
+		timing = " after %d month%s" % [delay, "" if delay == 1 else "s"]
+	return "%s %s%s" % [key, magnitude, timing]
+
+
+func _apply_legislation_actions(actions: Dictionary) -> void:
+	for pair in [["ProposeBillButton", "propose"], ["VoteBillButton", "vote"], ["WithdrawBillButton", "withdraw"]]:
+		var button: Button = %LegislationPanel.find_child(pair[0])
+		var action: Dictionary = actions.get(pair[1], {})
+		button.disabled = not bool(action.get("eligible", false))
+		button.tooltip_text = str(action.get("disabled_reason", ""))
+
+
+func _update_bill_lobby_control(_index: int = -1) -> void:
+	var choice: OptionButton = %LegislationPanel.find_child("LobbyChoice")
+	var button: Button = %LegislationPanel.find_child("LobbyButton")
+	if choice.item_count == 0 or choice.selected < 0:
+		choice.disabled = true
+		button.disabled = true
+		return
+	var faction: Variant = choice.get_item_metadata(choice.selected)
+	var eligible := faction is Dictionary and bool(faction.get("eligible", false))
+	choice.disabled = false
+	button.disabled = not eligible
+	button.tooltip_text = "" if eligible else str(faction.get("disabled_reason", ""))
+
+
+func _propose_bill() -> void:
+	var result: Dictionary = _game.propose_law(_selected_bill_id)
+	_set_legislation_status(str(result.get("message", "Proposal refused: %s" % result.get("error", "Unknown error"))))
+
+
+func _lobby_bill() -> void:
+	var choice: OptionButton = %LegislationPanel.find_child("LobbyChoice")
+	if choice.selected < 0:
+		return
+	var faction: Variant = choice.get_item_metadata(choice.selected)
+	if faction is Dictionary:
+		var result: Dictionary = _game.lobby_law(str(faction.get("id", "")))
+		_set_legislation_status(str(result.get("message", "Lobbying refused: %s" % result.get("error", "Unknown error"))))
+
+
+func _call_bill_vote() -> void:
+	var result: Dictionary = _game.call_law_vote()
+	if result.get("ok", false):
+		_set_legislation_status("LAW ENACTED" if result.get("passed", false) else "BILL DEFEATED")
+	else:
+		_set_legislation_status("Vote refused: %s" % result.get("error", "Unknown error"))
+
+
+func _withdraw_bill() -> void:
+	var result: Dictionary = _game.withdraw_law()
+	_set_legislation_status(str(result.get("message", "Withdrawal refused: %s" % result.get("error", "Unknown error"))))
+
+
+func _set_legislation_status(message: String) -> void:
+	%LegislationPanel.find_child("LegislationStatus").text = message
+
 func _select_region(region_id: String) -> void:
 	selected_region_id = region_id
 	_refresh_region()
@@ -554,7 +745,8 @@ func _start_selected_program() -> void:
 
 func _refresh_controls() -> void:
 	var ready := not snapshot.is_empty() and not _fatal
-	%BudgetButton.disabled = not ready or _budget_open
+	%BudgetButton.disabled = not ready or _budget_open or _legislation_open
+	%LegislationButton.disabled = not ready or _budget_open or _legislation_open
 	%PlayButton.disabled = not ready
 	%PlayButton.text = "Paused" if _paused else "Playing ×%d" % _speed
 	for index in range(5):

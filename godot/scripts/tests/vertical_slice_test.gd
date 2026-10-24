@@ -65,7 +65,7 @@ func _run() -> void:
 			"The displayed snapshot is the NativeGame snapshot"):
 		return
 	print("PASS: startup starts a native campaign through NativeGame directly")
-	for required in ["DateLabel", "PlayButton", "SpeedControls", "DecisionQueue", "ArdeniaMap", "RegionBrief", "MonthlyReport", "BudgetButton", "BudgetPanel", "BudgetRows", "BudgetSummary", "BudgetProjection", "LobbyChoice", "LobbyButton", "ProposeBudgetButton", "VoteBudgetButton", "WithdrawBudgetButton", "CloseBudgetButton"]:
+	for required in ["DateLabel", "PlayButton", "SpeedControls", "DecisionQueue", "ArdeniaMap", "RegionBrief", "MonthlyReport", "BudgetButton", "BudgetPanel", "BudgetRows", "BudgetSummary", "BudgetProjection", "LobbyChoice", "LobbyButton", "ProposeBudgetButton", "VoteBudgetButton", "WithdrawBudgetButton", "CloseBudgetButton", "LegislationButton", "LegislationPanel", "BillChoice", "BillTitle", "BillDescription", "BillEffects", "BillProjection", "ProposeBillButton", "VoteBillButton", "WithdrawBillButton", "CloseLegislationButton"]:
 		if not _check(scene.find_child(required, true, false) != null, "Required node: " + required):
 			return
 	# Continue-with-no-save starts fresh (the bridge-era recovery path,
@@ -181,6 +181,29 @@ func _run() -> void:
 				and brief.is_visible_in_tree(),
 				"Closing the budget restores the regional body at " + str(dimensions)):
 			return
+		scene.find_child("LegislationButton", true, false).pressed.emit()
+		await process_frame
+		var legislation_panel: Control = scene.find_child("LegislationPanel", true, false)
+		if not _check(legislation_panel.is_visible_in_tree()
+				and Rect2(Vector2.ZERO, Vector2(dimensions)).encloses(legislation_panel.get_global_rect()),
+				"Legislation panel replaces the body and stays in viewport at " + str(dimensions)):
+			return
+		var bill_choice: OptionButton = scene.find_child("BillChoice", true, false)
+		if not _check(bill_choice.item_count == 10 and bill_choice.size.y >= 44.0,
+				"Legislation panel renders all ten authored bills at " + str(dimensions)):
+			return
+		for control_name in ["CloseLegislationButton", "BillChoice", "LobbyButton",
+				"ProposeBillButton", "VoteBillButton", "WithdrawBillButton"]:
+			var law_control: Control = scene.find_child(control_name, true, false)
+			if not _check(law_control.size.y >= 44.0
+					and Rect2(Vector2.ZERO, Vector2(dimensions)).encloses(law_control.get_global_rect()),
+					"Legislation control is a bounded 44 px target: " + control_name + " at " + str(dimensions)):
+				return
+		scene.find_child("CloseLegislationButton", true, false).pressed.emit()
+		await process_frame
+		if not _check(not legislation_panel.visible and scene.find_child("MapPanel", true, false).is_visible_in_tree(),
+				"Closing legislation restores the regional body at " + str(dimensions)):
+			return
 		if dimensions == Vector2i(1280, 720):
 			var compact_region: Dictionary = {}
 			for region in scene.snapshot["regions"]:
@@ -253,6 +276,81 @@ func _run() -> void:
 				if not _check(root.get_texture().get_image().save_png(path) == OK, "Save screenshot " + path):
 					return
 				print("CAPTURE: " + path)
+	# Native lawmaking journey through the real scene. Preview is read-only;
+	# proposal and vote mutate through NativeGame and survive the save boundary.
+	scene.find_child("LegislationButton", true, false).pressed.emit()
+	await process_frame
+	var real_bill_choice: OptionButton = scene.find_child("BillChoice", true, false)
+	var telecom_bill_index := -1
+	for index in range(real_bill_choice.item_count):
+		var bill_meta: Variant = real_bill_choice.get_item_metadata(index)
+		if bill_meta is Dictionary and bill_meta.get("id") == "telecom_privatization_act":
+			telecom_bill_index = index
+			break
+	if not _check(telecom_bill_index >= 0, "A non-first telecom bill appears in the real legislation catalogue"):
+		return
+	var before_law_preview: Dictionary = native_game.snapshot()
+	real_bill_choice.select(telecom_bill_index)
+	real_bill_choice.item_selected.emit(telecom_bill_index)
+	await process_frame
+	if not _check(native_game.snapshot() == before_law_preview
+			and not str(scene.find_child("BillProjection", true, false).text).contains("No parliamentary"),
+			"Selecting a bill displays an engine preview without mutating campaign state"):
+		return
+	var law_pc_before := float(scene.snapshot["player"]["political_capital"])
+	var propose_law_button: Button = scene.find_child("ProposeBillButton", true, false)
+	if not _check(not propose_law_button.disabled, "Fresh government campaign can table legislation"):
+		return
+	propose_law_button.pressed.emit()
+	await process_frame
+	var pending_law: Variant = scene.snapshot.get("legislation", {}).get("pending")
+	if not _check(pending_law is Dictionary and pending_law.get("id") == "telecom_privatization_act"
+			and float(scene.snapshot["player"]["political_capital"]) < law_pc_before,
+			"Real legislation panel tables a bill and spends engine-owned political capital"):
+		return
+	# Save and reload while a non-first catalogue bill is pending. The disabled
+	# selector, title, projection and vote target must all refer to that motion.
+	scene.find_child("SaveButton", true, false).pressed.emit()
+	await process_frame
+	var pending_replacement: Dictionary = native_game.new_campaign({"country_id": "ardenia", "background_id": "none", "difficulty_id": "normal", "opening_role": "contextual", "seed": FIXED_SEED + 7})
+	if not _check(pending_replacement.get("ok", false), "A replacement campaign clears memory before pending-law reload"):
+		return
+	scene.find_child("LoadButton", true, false).pressed.emit()
+	await process_frame
+	var loaded_choice: OptionButton = scene.find_child("BillChoice", true, false)
+	var loaded_meta: Variant = loaded_choice.get_item_metadata(loaded_choice.selected)
+	if not _check(loaded_meta is Dictionary
+			and loaded_meta.get("id") == "telecom_privatization_act"
+			and "Telecom" in str(scene.find_child("BillTitle", true, false).text)
+			and not str(scene.find_child("BillProjection", true, false).text).is_empty(),
+			"Reloaded pending motion selects and displays the exact non-first bill"):
+		return
+	var vote_law_button: Button = scene.find_child("VoteBillButton", true, false)
+	if not _check(not vote_law_button.disabled, "Tabled legislation can be called to a vote"):
+		return
+	vote_law_button.pressed.emit()
+	await process_frame
+	var law_model: Dictionary = scene.snapshot.get("legislation", {})
+	if not _check(law_model.get("pending") == null and law_model.get("history", []).size() == 1,
+			"Real vote reaches one terminal legislation outcome"):
+		return
+	var terminal_status := str(law_model.get("history", [])[0].get("status", ""))
+	if not _check(terminal_status in ["enacted", "rejected"], "Vote visibly records enacted or rejected"):
+		return
+	scene.find_child("SaveButton", true, false).pressed.emit()
+	await process_frame
+	var saved_law_history: Array = law_model.get("history", []).duplicate(true)
+	var replacement_result: Dictionary = native_game.new_campaign({"country_id": "ardenia", "background_id": "none", "difficulty_id": "normal", "opening_role": "contextual", "seed": FIXED_SEED + 9})
+	if not _check(replacement_result.get("ok", false), "A different native campaign replaces memory before law save reload"):
+		return
+	scene.find_child("LoadButton", true, false).pressed.emit()
+	await process_frame
+	if not _check(scene.snapshot.get("legislation", {}).get("history", []) == saved_law_history,
+			"Terminal law outcome survives real Save and Load controls"):
+		return
+	scene.find_child("CloseLegislationButton", true, false).pressed.emit()
+	await process_frame
+	print("PASS: legislation preview, proposal, vote and save/load run through the real scene")
 	var choice: OptionButton = brief.find_child("ProgramChoice")
 	var action: Button = brief.find_child("RegionAction")
 	var security_index := -1
@@ -371,6 +469,8 @@ func _run() -> void:
 	if not _check(brief.find_child("PressureValue").text == "—" and scene.find_child("NextDecision").disabled and map.regions.is_empty(), "Missing data clears stale values and decisions"):
 		return
 	scene._do_load()
+	if not _check(not scene.snapshot.is_empty(), "Reload after state drop succeeds: %s" % scene.find_child("PreviewStatus", true, false).text):
+		return
 	for region in scene.snapshot["regions"]:
 		if region.get("id") == "anera":
 			anera = region

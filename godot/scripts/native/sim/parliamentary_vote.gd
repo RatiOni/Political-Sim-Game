@@ -69,7 +69,12 @@ static func project(factions: Array, motion: Dictionary) -> Dictionary:
 		})
 
 	var seats := votes_for + votes_against
+	var required_fraction := clampf(float(motion.get("required_fraction", 0.5)), 0.5, 1.0)
+	# Preserve strict-majority behaviour for existing motions. A constitutional
+	# motion may explicitly require a fraction of the whole voting chamber.
 	var threshold := floori(float(seats) / 2.0) + 1
+	if required_fraction > 0.5:
+		threshold = ceili(float(seats) * required_fraction)
 	return {
 		"votes_for": votes_for,
 		"votes_against": votes_against,
