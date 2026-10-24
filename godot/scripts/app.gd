@@ -12,6 +12,7 @@ var snapshot: Dictionary = {}
 var selected_region_id := "vashtera"
 var _decision_index := -1
 var _game: Node
+var _sfx: Node
 var _fatal := false
 var _starting := false
 var _paused := true
@@ -33,24 +34,25 @@ func _ready() -> void:
 	for index in range(5):
 		find_child("Speed%d" % (index + 1)).pressed.connect(_set_speed.bind(index + 1))
 	%RegionBrief.find_child("RegionAction").pressed.connect(_start_selected_program)
-	%RegionBrief.find_child("ProgramChoice").item_selected.connect(_on_program_selected)
+	%RegionBrief.find_child("ProgramChoice").item_selected.connect(_on_program_choice_selected)
 	%BudgetButton.pressed.connect(_open_budget)
 	%BudgetPanel.find_child("CloseBudgetButton").pressed.connect(_close_budget)
 	%BudgetPanel.find_child("ProposeBudgetButton").pressed.connect(_propose_budget)
 	%BudgetPanel.find_child("VoteBudgetButton").pressed.connect(_call_budget_vote)
 	%BudgetPanel.find_child("WithdrawBudgetButton").pressed.connect(_withdraw_budget)
 	%BudgetPanel.find_child("LobbyButton").pressed.connect(_lobby_budget)
-	%BudgetPanel.find_child("LobbyChoice").item_selected.connect(_update_budget_lobby_control)
+	%BudgetPanel.find_child("LobbyChoice").item_selected.connect(_on_budget_lobby_selected)
 	%LegislationButton.pressed.connect(_open_legislation)
 	%LegislationPanel.find_child("CloseLegislationButton").pressed.connect(_close_legislation)
-	%LegislationPanel.find_child("BillChoice").item_selected.connect(_on_bill_selected)
+	%LegislationPanel.find_child("BillChoice").item_selected.connect(_on_bill_choice_selected)
 	%LegislationPanel.find_child("ProposeBillButton").pressed.connect(_propose_bill)
 	%LegislationPanel.find_child("VoteBillButton").pressed.connect(_call_bill_vote)
 	%LegislationPanel.find_child("WithdrawBillButton").pressed.connect(_withdraw_bill)
 	%LegislationPanel.find_child("LobbyButton").pressed.connect(_lobby_bill)
-	%LegislationPanel.find_child("LobbyChoice").item_selected.connect(_update_bill_lobby_control)
+	%LegislationPanel.find_child("LobbyChoice").item_selected.connect(_on_bill_lobby_selected)
 	get_window().size_changed.connect(_resize_layout)
 	_resize_layout()
+	_sfx = get_node_or_null("/root/UiSfx")
 	if _game == null:
 		_game = get_node_or_null("/root/NativeGame")
 	if _game == null:
@@ -86,6 +88,8 @@ func _process(delta: float) -> void:
 				tick_snap = _game.snapshot()
 			apply_snapshot(tick_snap)
 			_set_status("LIVE SIMULATION / READY")
+			if bool(result.get("month_rolled", false)):
+				_sfx_cue("month_rollover")
 		_refresh_controls()
 
 func _resize_layout() -> void:
@@ -165,6 +169,20 @@ func apply_snapshot(value: Dictionary) -> void:
 		_refresh_legislation()
 	_refresh_controls()
 
+func _sfx_cue(cue: String) -> void:
+	if _sfx != null and _sfx.has_method(cue):
+		_sfx.call(cue)
+
+
+func _sfx_result(result: Dictionary, resolve_vote: bool = false) -> void:
+	if not bool(result.get("ok", false)):
+		_sfx_cue("deny")
+		return
+	if resolve_vote and not bool(result.get("passed", false)):
+		_sfx_cue("deny")
+	else:
+		_sfx_cue("confirm")
+
 func _percent(row: Dictionary, key: String) -> String:
 	return "%.1f%%" % (float(row[key]) * 100.0) if row.has(key) else "—"
 
@@ -184,6 +202,7 @@ func _lines(rows: Array, empty_text: String) -> String:
 func _open_budget() -> void:
 	if snapshot.is_empty() or _fatal:
 		return
+	_sfx_cue("navigation")
 	_legislation_open = false
 	_budget_open = true
 	_budget_adjustments.clear()
@@ -192,6 +211,7 @@ func _open_budget() -> void:
 
 
 func _close_budget() -> void:
+	_sfx_cue("navigation")
 	_budget_open = false
 	_resize_layout()
 
@@ -283,6 +303,10 @@ func _refresh_budget() -> void:
 		_set_budget_status("Adjust the authorised envelopes, then table the plan.")
 
 
+func _on_budget_adjustment_selected(index: int, envelope_id: String, choice: OptionButton) -> void:
+	_sfx_cue("selection")
+	_on_budget_adjustment(index, envelope_id, choice)
+
 func _on_budget_adjustment(index: int, envelope_id: String, choice: OptionButton) -> void:
 	if index < 0 or index >= choice.item_count:
 		return
@@ -329,6 +353,10 @@ func _apply_budget_actions(actions: Dictionary) -> void:
 		button.tooltip_text = str(action.get("disabled_reason", ""))
 
 
+func _on_budget_lobby_selected(index: int) -> void:
+	_sfx_cue("selection")
+	_update_budget_lobby_control(index)
+
 func _update_budget_lobby_control(_index: int = -1) -> void:
 	var choice: OptionButton = %BudgetPanel.find_child("LobbyChoice")
 	var button: Button = %BudgetPanel.find_child("LobbyButton")
@@ -347,6 +375,7 @@ func _update_budget_lobby_control(_index: int = -1) -> void:
 func _propose_budget() -> void:
 	var result: Dictionary = _game.propose_budget(_budget_adjustments)
 	_set_budget_status(str(result.get("message", "Budget refused: %s" % result.get("error", "Unknown error"))))
+	_sfx_result(result)
 
 
 func _lobby_budget() -> void:
@@ -358,6 +387,7 @@ func _lobby_budget() -> void:
 		return
 	var result: Dictionary = _game.lobby_budget(str(faction.get("id", "")))
 	_set_budget_status(str(result.get("message", "Lobbying refused: %s" % result.get("error", "Unknown error"))))
+	_sfx_result(result)
 
 
 func _call_budget_vote() -> void:
@@ -366,11 +396,13 @@ func _call_budget_vote() -> void:
 		_set_budget_status("Budget approved." if result.get("passed", false) else "Budget defeated.")
 	else:
 		_set_budget_status("Vote refused: %s" % result.get("error", "Unknown error"))
+	_sfx_result(result, true)
 
 
 func _withdraw_budget() -> void:
 	var result: Dictionary = _game.withdraw_budget()
 	_set_budget_status(str(result.get("message", "Withdrawal refused: %s" % result.get("error", "Unknown error"))))
+	_sfx_result(result)
 
 
 func _set_budget_status(message: String) -> void:
@@ -385,6 +417,7 @@ func _signed_adjustment(value: float) -> String:
 func _open_legislation() -> void:
 	if snapshot.is_empty() or _fatal:
 		return
+	_sfx_cue("navigation")
 	_budget_open = false
 	_legislation_open = true
 	_bill_preview.clear()
@@ -392,6 +425,7 @@ func _open_legislation() -> void:
 
 
 func _close_legislation() -> void:
+	_sfx_cue("navigation")
 	_legislation_open = false
 	_resize_layout()
 
@@ -453,6 +487,10 @@ func _refresh_legislation() -> void:
 		_set_legislation_status("%s is before parliament." % pending.get("name", "The bill"))
 
 
+func _on_bill_choice_selected(index: int) -> void:
+	_sfx_cue("selection")
+	_on_bill_selected(index)
+
 func _on_bill_selected(index: int) -> void:
 	var choice: OptionButton = %LegislationPanel.find_child("BillChoice")
 	if index < 0 or index >= choice.item_count:
@@ -509,6 +547,10 @@ func _apply_legislation_actions(actions: Dictionary) -> void:
 		button.tooltip_text = str(action.get("disabled_reason", ""))
 
 
+func _on_bill_lobby_selected(index: int) -> void:
+	_sfx_cue("selection")
+	_update_bill_lobby_control(index)
+
 func _update_bill_lobby_control(_index: int = -1) -> void:
 	var choice: OptionButton = %LegislationPanel.find_child("LobbyChoice")
 	var button: Button = %LegislationPanel.find_child("LobbyButton")
@@ -526,6 +568,7 @@ func _update_bill_lobby_control(_index: int = -1) -> void:
 func _propose_bill() -> void:
 	var result: Dictionary = _game.propose_law(_selected_bill_id)
 	_set_legislation_status(str(result.get("message", "Proposal refused: %s" % result.get("error", "Unknown error"))))
+	_sfx_result(result)
 
 
 func _lobby_bill() -> void:
@@ -536,6 +579,7 @@ func _lobby_bill() -> void:
 	if faction is Dictionary:
 		var result: Dictionary = _game.lobby_law(str(faction.get("id", "")))
 		_set_legislation_status(str(result.get("message", "Lobbying refused: %s" % result.get("error", "Unknown error"))))
+		_sfx_result(result)
 
 
 func _call_bill_vote() -> void:
@@ -544,17 +588,20 @@ func _call_bill_vote() -> void:
 		_set_legislation_status("LAW ENACTED" if result.get("passed", false) else "BILL DEFEATED")
 	else:
 		_set_legislation_status("Vote refused: %s" % result.get("error", "Unknown error"))
+	_sfx_result(result, true)
 
 
 func _withdraw_bill() -> void:
 	var result: Dictionary = _game.withdraw_law()
 	_set_legislation_status(str(result.get("message", "Withdrawal refused: %s" % result.get("error", "Unknown error"))))
+	_sfx_result(result)
 
 
 func _set_legislation_status(message: String) -> void:
 	%LegislationPanel.find_child("LegislationStatus").text = message
 
 func _select_region(region_id: String) -> void:
+	_sfx_cue("selection")
 	selected_region_id = region_id
 	_refresh_region()
 
@@ -598,6 +645,10 @@ func _refresh_region() -> void:
 		break
 	_update_program_controls(not snapshot.is_empty() and not _fatal)
 
+
+func _on_program_choice_selected(index: int) -> void:
+	_sfx_cue("selection")
+	_on_program_selected(index)
 
 func _on_program_selected(index: int) -> void:
 	_selected_program_id = ""
@@ -681,6 +732,7 @@ func _do_save() -> void:
 		_set_status("SAVE FAILED / %s" % result.get("error", "Unknown error"))
 	else:
 		_set_status("SAVED / READY")
+	_sfx_result(result)
 	_refresh_controls()
 
 func _do_load() -> void:
@@ -698,9 +750,11 @@ func _do_load() -> void:
 			_do_new_campaign()
 			return
 		_set_status("LOAD FAILED / %s" % result.get("error", "Unknown error"))
+		_sfx_result(result)
 		_refresh_controls()
 		return
 	_starting = false
+	_sfx_result(result)
 	var load_snap: Dictionary = result.get("snapshot", {})
 	if load_snap.is_empty():
 		load_snap = _game.snapshot()
@@ -725,12 +779,14 @@ func _toggle_pause() -> void:
 		return
 	_paused = not _paused
 	_clock_elapsed = 0.0
+	_sfx_cue("clock_tick")
 	_refresh_controls()
 
 func _set_speed(value: int) -> void:
 	if _fatal:
 		return
 	_speed = clampi(value, 1, 5)
+	_sfx_cue("clock_tick")
 	_refresh_controls()
 
 func _start_selected_program() -> void:
@@ -741,6 +797,7 @@ func _start_selected_program() -> void:
 		_set_status("PROGRAMME REFUSED / %s" % result.get("error", "Unknown error"))
 	else:
 		_set_status("PROGRAMME LAUNCHED / READY")
+	_sfx_result(result)
 	_refresh_controls()
 
 func _refresh_controls() -> void:
