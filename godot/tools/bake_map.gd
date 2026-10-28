@@ -20,7 +20,9 @@ func _initialize() -> void:
 	for id in rings:
 		outlines[id] = _points(rings[id])
 	doc["outlines"] = outlines
-	TileBaker.save(TileBaker.bake(height, regions, geo), OUT_DIR + "/tiles.json")
+	if not TileBaker.save(TileBaker.bake(height, regions, geo), OUT_DIR + "/tiles.json"):
+		quit(1)
+		return
 	var file := FileAccess.open(OUT_DIR + "/borders.json", FileAccess.WRITE)
 	file.store_string(JSON.stringify(doc))
 	file.close()

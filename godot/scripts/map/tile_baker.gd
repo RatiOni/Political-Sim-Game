@@ -49,7 +49,11 @@ static func bake(height: Image, regions: Image, geo: MapGeometry) -> Dictionary:
 
 
 static func region_at_tile(data: Dictionary, cell: Vector2i) -> int:
-	return data["regions"][cell.y * GRID.x + cell.x]
+	var regions: PackedByteArray = data.get("regions", PackedByteArray())
+	var index := cell.y * GRID.x + cell.x
+	if not _in_grid(cell) or index >= regions.size():
+		return MapBaker.SEA_REGION
+	return regions[index]
 
 
 static func line_tiles(points: PackedVector2Array) -> Array[Vector2i]:
@@ -65,13 +69,17 @@ static func line_tiles(points: PackedVector2Array) -> Array[Vector2i]:
 	return out
 
 
-static func save(data: Dictionary, path: String = TILES_PATH) -> void:
+static func save(data: Dictionary, path: String = TILES_PATH) -> bool:
 	var doc := {"grid": data["grid"]}
 	for key in ["kinds", "regions", "variants"]:
 		doc[key] = Marshalls.raw_to_base64(data[key])
 	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		push_error("cannot write tile file: %s" % path)
+		return false
 	file.store_string(JSON.stringify(doc))
 	file.close()
+	return true
 
 
 static func load_tiles(path: String = TILES_PATH) -> Dictionary:
@@ -86,7 +94,22 @@ static func load_tiles(path: String = TILES_PATH) -> Dictionary:
 	var out := {"grid": [int(doc["grid"][0]), int(doc["grid"][1])]}
 	for key in ["kinds", "regions", "variants"]:
 		out[key] = Marshalls.base64_to_raw(doc[key])
+	if not _is_consistent(out):
+		push_error("tile file inconsistent: %s" % path)
+		return {}
 	return out
+
+
+static func _is_consistent(data: Dictionary) -> bool:
+	if data["grid"] != [GRID.x, GRID.y]:
+		return false
+	for key in ["kinds", "regions", "variants"]:
+		if data[key].size() != GRID.x * GRID.y:
+			return false
+	for k in data["kinds"]:
+		if k >= TileArt.KINDS.size():
+			return false
+	return true
 
 
 static func _is_well_formed(doc: Dictionary) -> bool:
