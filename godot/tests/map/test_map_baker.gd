@@ -114,7 +114,7 @@ static func _max_turn(line: PackedVector2Array) -> float:
 	for i in range(1, line.size() - 1):
 		var a := (line[i] - line[i - 1]).normalized()
 		var b := (line[i + 1] - line[i]).normalized()
-		worst = maxf(worst, a.angle_to(b) if a != Vector2.ZERO and b != Vector2.ZERO else 0.0)
+		worst = maxf(worst, absf(a.angle_to(b)) if a != Vector2.ZERO and b != Vector2.ZERO else 0.0)
 	return absf(worst)
 
 
