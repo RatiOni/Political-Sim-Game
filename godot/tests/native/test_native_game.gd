@@ -530,11 +530,39 @@ func _test_country_inner_id_consistency(t) -> void:
 	_wipe_repo_tree(root)
 
 
+func _test_trouble_snapshot_fields(t) -> void:
+	var game = NativeGameScript.new()
+	t.truth(game.new_campaign(_base_config()).get("ok", false), "trouble fields: campaign starts")
+	game._state.insurgency_pressure = 0.4
+	game._state.civil_war = true
+	game._state.campaign_meta["vetrenka_status"] = "routed"
+	var rows: Array = game.snapshot().get("regions", [])
+	t.truth(rows.size() > 1, "trouble fields: several regions are listed")
+	var vetrenka_rows := 0
+	for row in rows:
+		var is_vetrenka: bool = row["id"] == "vetrenka"
+		vetrenka_rows += 1 if is_vetrenka else 0
+		t.equal(typeof(row.get("civil_war")), TYPE_BOOL, "trouble fields: %s carries civil_war as a bool" % row["id"])
+		t.equal(row.get("civil_war"), true, "trouble fields: %s reflects the civil war" % row["id"])
+		t.equal(typeof(row.get("insurgency")), TYPE_FLOAT, "trouble fields: %s carries insurgency as a float" % row["id"])
+		t.near(float(row.get("insurgency")), 0.4 if is_vetrenka else 0.0, 1e-9, "trouble fields: %s insurgency is only on Vetrenka" % row["id"])
+		t.equal(typeof(row.get("vetrenka_status")), TYPE_STRING, "trouble fields: %s carries vetrenka_status as a string" % row["id"])
+		t.equal(row.get("vetrenka_status"), "routed" if is_vetrenka else "", "trouble fields: %s vetrenka_status is only on Vetrenka" % row["id"])
+	t.equal(vetrenka_rows, 1, "trouble fields: exactly one Vetrenka row")
+	game._state.civil_war = false
+	game._state.campaign_meta.erase("vetrenka_status")
+	for row in game.snapshot().get("regions", []):
+		t.equal(row.get("civil_war"), false, "trouble fields: %s is calm without a civil war" % row["id"])
+		t.equal(row.get("vetrenka_status"), "", "trouble fields: %s has no status before the arc resolves" % row["id"])
+	game.free()
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 
 	_test_ready_side_effect_free(t)
 	_test_new_campaign_snapshot_shape(t)
+	_test_trouble_snapshot_fields(t)
 	_test_snapshot_is_deep_duplicated(t)
 	_test_round_trip_with_rng_continuity(t)
 	_test_failed_load_keeps_current_state(t)

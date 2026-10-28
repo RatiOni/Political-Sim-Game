@@ -75,12 +75,15 @@ static func cell_names() -> Array[String]:
 	return names
 
 
+static var _index: Dictionary = {}
+
+
 static func index() -> Dictionary:
-	var out := {}
-	var names := cell_names()
-	for i in names.size():
-		out[names[i]] = [i % COLUMNS, i / COLUMNS]
-	return out
+	if _index.is_empty():
+		var names := cell_names()
+		for i in names.size():
+			_index[names[i]] = [i % COLUMNS, i / COLUMNS]
+	return _index
 
 
 static func atlas_png(tile_px: int = CELL) -> String:

@@ -15,6 +15,7 @@ func _initialize() -> void:
 	for c in MapPalette.FOREIGN:
 		t.truth(c.s < 0.2, "foreign colour %s is greyed" % c.to_html(false))
 	t.equal(TileArt.halve(TileArt.ground("river", 0)).size(), 16, "halving an 8 px cell gives 4 x 4")
+	t.truth(is_same(TileArt.index(), TileArt.index()), "the tile index is built once and reused")
 	for tile_px in TileArt.SIZES:
 		_check_atlas(t, tile_px)
 	quit(t.finish())
