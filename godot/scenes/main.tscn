@@ -252,7 +252,7 @@ layout_mode = 2
 [node name="MapLegend" type="Label" parent="Margin/Layout/Body/MapPanel"]
 layout_mode = 2
 theme_type_variation = &"Muted"
-text = "Fill: lower → higher pressure   •   Gold: selection   •   Dashed: ceasefire"
+text = "Gold: region borders   •   White: selection   •   Red dashes: ceasefire"
 autowrap_mode = 3
 
 [node name="RegionBrief" parent="Margin/Layout/Body" instance=ExtResource("4")]

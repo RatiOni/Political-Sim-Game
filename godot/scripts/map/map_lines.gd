@@ -1,43 +1,50 @@
 class_name MapLines
 extends RefCounted
 
-const TILE := TileBaker.TILE
-const SIZE := Vector2i(TileBaker.GRID.x * TILE, TileBaker.GRID.y * TILE)
 const SIDES: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 const AROUND: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]
 const DASH_PERIOD := 4
 const DASH_ON := 3
+const DOT_PERIOD := 3
+const DOT_ON := 2
+const TIE_SPACING := 3
 const CEASEFIRE_PERIOD := 6
 const CEASEFIRE_ON := 3
-const CEASEFIRE_ROWS: Array[int] = [3, 4]
 
 
-static func build(tiles: Dictionary, geo: MapGeometry, palette: PackedColorArray, weight: int = 1) -> Image:
-	var img := Image.create_empty(SIZE.x, SIZE.y, false, Image.FORMAT_RGBA8)
+static func canvas_size(tile_px: int) -> Vector2i:
+	return TileBaker.GRID * tile_px
+
+
+static func build(tiles: Dictionary, geo: MapGeometry, palette: PackedColorArray, tile_px: int = TileBaker.TILE) -> Image:
+	var size := canvas_size(tile_px)
+	var img := Image.create_empty(size.x, size.y, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	var count := geo.region_ids.size()
 	var inside := func(r: int) -> bool: return r < count
 	var foreign := func(r: int) -> bool: return r == MapBaker.FOREIGN_REGION
-	_internal_borders(img, tiles, count, palette[MapPalette.GOLD], weight)
-	_ring(img, tiles, foreign, inside, palette[MapPalette.GOLD], weight)
-	_ring(img, tiles, inside, foreign, palette[MapPalette.GOLD_DARK], weight)
+	_internal_borders(img, tiles, count, palette[MapPalette.GOLD], tile_px)
+	_ring(img, tiles, foreign, inside, palette[MapPalette.GOLD], tile_px)
+	_ring(img, tiles, inside, foreign, palette[MapPalette.GOLD_DARK], tile_px)
 	for route in geo.routes:
-		if route["kind"] in ["road", "rail"]:
-			_stamp(img, route["points"], TileArt.drawn(TileArt.DRAWN[route["kind"]]), palette, weight)
-	_ceasefire(img, geo.ceasefire, palette[MapPalette.CEASEFIRE], weight)
+		if route["kind"] == "road":
+			_road(img, route["points"], palette[MapPalette.ROAD], tile_px)
+		elif route["kind"] == "rail":
+			_rail(img, route["points"], palette[MapPalette.RAIL], tile_px)
+	_ceasefire(img, geo.ceasefire, palette[MapPalette.CEASEFIRE], tile_px)
 	return img
 
 
-static func _region(tiles: Dictionary, pixel: Vector2i) -> int:
-	return TileBaker.region_at_tile(tiles, Vector2i(floori(pixel.x / float(TILE)), floori(pixel.y / float(TILE))))
+static func _region(tiles: Dictionary, pixel: Vector2i, tile_px: int) -> int:
+	return TileBaker.region_at_tile(tiles, Vector2i(floori(pixel.x / float(tile_px)), floori(pixel.y / float(tile_px))))
 
 
-static func _perimeter(cell: Vector2i) -> Array[Vector2i]:
+static func _perimeter(cell: Vector2i, tile_px: int) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
-	var origin := cell * TILE
-	for y in TILE:
-		for x in TILE:
-			if x == 0 or y == 0 or x == TILE - 1 or y == TILE - 1:
+	var origin := cell * tile_px
+	for y in tile_px:
+		for x in tile_px:
+			if x == 0 or y == 0 or x == tile_px - 1 or y == tile_px - 1:
 				out.append(origin + Vector2i(x, y))
 	return out
 
@@ -49,20 +56,20 @@ static func _touches(tiles: Dictionary, cell: Vector2i, wanted: Callable) -> boo
 	return false
 
 
-static func _ring(img: Image, tiles: Dictionary, own: Callable, other: Callable, colour: Color, weight: int) -> void:
+static func _ring(img: Image, tiles: Dictionary, own: Callable, other: Callable, colour: Color, tile_px: int) -> void:
 	for cy in TileBaker.GRID.y:
 		for cx in TileBaker.GRID.x:
 			var cell := Vector2i(cx, cy)
 			if not own.call(TileBaker.region_at_tile(tiles, cell)) or not _touches(tiles, cell, other):
 				continue
-			for p in _perimeter(cell):
+			for p in _perimeter(cell, tile_px):
 				for d in AROUND:
-					if other.call(_region(tiles, p + d)):
-						_put(img, p, colour, weight)
+					if other.call(_region(tiles, p + d, tile_px)):
+						img.set_pixelv(p, colour)
 						break
 
 
-static func _internal_borders(img: Image, tiles: Dictionary, count: int, colour: Color, weight: int) -> void:
+static func _internal_borders(img: Image, tiles: Dictionary, count: int, colour: Color, tile_px: int) -> void:
 	for cy in TileBaker.GRID.y:
 		for cx in TileBaker.GRID.x:
 			var cell := Vector2i(cx, cy)
@@ -72,40 +79,46 @@ static func _internal_borders(img: Image, tiles: Dictionary, count: int, colour:
 			for side in SIDES:
 				var other := TileBaker.region_at_tile(tiles, cell + side)
 				if other < count and other > own:
-					_dashed_edge(img, cell, side, colour, weight)
+					_dashed_edge(img, cell, side, colour, tile_px)
 
 
-static func _dashed_edge(img: Image, cell: Vector2i, side: Vector2i, colour: Color, weight: int) -> void:
-	var origin := cell * TILE
-	for k in TILE:
-		var p: Vector2i
-		if side.x != 0:
-			p = origin + Vector2i(TILE - 1 if side.x > 0 else 0, k)
-		else:
-			p = origin + Vector2i(k, TILE - 1 if side.y > 0 else 0)
-		if ((p.x + p.y) / weight) % DASH_PERIOD < DASH_ON:
-			_put(img, p, colour, weight)
+static func _dashed_edge(img: Image, cell: Vector2i, side: Vector2i, colour: Color, tile_px: int) -> void:
+	var origin := cell * tile_px
+	var far := tile_px - 1
+	for k in tile_px:
+		var p := origin + (Vector2i(far if side.x > 0 else 0, k) if side.x != 0 else Vector2i(k, far if side.y > 0 else 0))
+		if (p.x + p.y) % DASH_PERIOD < DASH_ON:
+			img.set_pixelv(p, colour)
 
 
-static func _stamp(img: Image, points: PackedVector2Array, pattern: PackedInt32Array, palette: PackedColorArray, weight: int) -> void:
-	for cell in TileBaker.line_tiles(points):
-		if not Rect2i(Vector2i.ZERO, TileBaker.GRID).has_point(cell):
-			continue
-		for p in TILE * TILE:
-			if pattern[p] >= 0:
-				_put(img, cell * TILE + Vector2i(p % TILE, p / TILE), palette[pattern[p]], weight)
+static func _route_cells(points: PackedVector2Array) -> Array[Vector2i]:
+	return TileBaker.line_tiles(points).filter(func(c: Vector2i) -> bool: return Rect2i(Vector2i.ZERO, TileBaker.GRID).has_point(c))
 
 
-static func _ceasefire(img: Image, points: PackedVector2Array, colour: Color, weight: int) -> void:
-	for cell in TileBaker.line_tiles(points):
-		if not Rect2i(Vector2i.ZERO, TileBaker.GRID).has_point(cell):
-			continue
-		for row in CEASEFIRE_ROWS:
-			for x in TILE:
-				var p := cell * TILE + Vector2i(x, row)
-				if (p.x / weight) % CEASEFIRE_PERIOD < CEASEFIRE_ON:
-					_put(img, p, colour, weight)
+static func _road(img: Image, points: PackedVector2Array, colour: Color, tile_px: int) -> void:
+	var row := tile_px * 5 / 8
+	for cell in _route_cells(points):
+		for x in tile_px:
+			if x % DOT_PERIOD < DOT_ON:
+				img.set_pixelv(cell * tile_px + Vector2i(x, row), colour)
 
 
-static func _put(img: Image, p: Vector2i, colour: Color, weight: int) -> void:
-	img.fill_rect(Rect2i(p, Vector2i(weight, weight)).intersection(Rect2i(Vector2i.ZERO, SIZE)), colour)
+static func _rail(img: Image, points: PackedVector2Array, colour: Color, tile_px: int) -> void:
+	var row := tile_px * 2 / 8
+	for cell in _route_cells(points):
+		for x in tile_px:
+			var origin := cell * tile_px
+			img.set_pixelv(origin + Vector2i(x, row), colour)
+			if x % TIE_SPACING == 0:
+				img.set_pixelv(origin + Vector2i(x, row - 1), colour)
+				img.set_pixelv(origin + Vector2i(x, row + 1), colour)
+
+
+static func _ceasefire(img: Image, points: PackedVector2Array, colour: Color, tile_px: int) -> void:
+	var rows := [tile_px * 3 / 8, tile_px * 4 / 8] if tile_px >= 8 else [tile_px / 2]
+	for cell in _route_cells(points):
+		for row in rows:
+			for x in tile_px:
+				var p := cell * tile_px + Vector2i(x, row)
+				if p.x % CEASEFIRE_PERIOD < CEASEFIRE_ON:
+					img.set_pixelv(p, colour)

@@ -6,8 +6,17 @@ const VARIANTS := 4
 const COLUMNS := 16
 const KINDS: Array[String] = ["deep_sea", "sea", "shallows", "sand", "grass", "farm", "fallow", "forest", "hills", "mountain", "snow", "river"]
 const SPRITES: Array[String] = ["house", "house_lit", "tower", "capital", "tree", "crops", "road", "paved", "rail", "barricade", "smoke_0", "smoke_1", "smoke_2"]
+const HALF := 4
+const SIZES: Array[int] = [CELL, HALF]
 const ATLAS_PNG := "res://data/map/tile_atlas.png"
 const ATLAS_JSON := "res://data/map/tile_atlas.json"
+const HALF_ATLAS_PNG := "res://data/map/tile_atlas_4.png"
+const HALF_ATLAS_JSON := "res://data/map/tile_atlas_4.json"
+const REDRAWN := ["farm", "fallow", "mountain", "snow"]
+const FIELD_TONES := {
+	"farm": [[MapPalette.FARM, MapPalette.FARM_GREEN], MapPalette.FARM_DARK],
+	"fallow": [[MapPalette.FARM_DARK, MapPalette.SAND_DARK], MapPalette.TRUNK],
+}
 const MICRO_SHEET := "res://assets/pixel/kenney_micro_roguelike.png"
 const MICRO_BACKGROUND := Color8(34, 35, 35)
 const FOREIGN_DIM := 0.2
@@ -65,53 +74,86 @@ static func index() -> Dictionary:
 	return out
 
 
-static func build_atlas() -> Image:
+static func atlas_png(tile_px: int = CELL) -> String:
+	return ATLAS_PNG if tile_px == CELL else HALF_ATLAS_PNG
+
+
+static func atlas_json(tile_px: int = CELL) -> String:
+	return ATLAS_JSON if tile_px == CELL else HALF_ATLAS_JSON
+
+
+static func build_atlas(tile_px: int = CELL) -> Image:
+	assert(tile_px in SIZES, "unsupported tile size %d" % tile_px)
 	var names := cell_names()
 	var rows := ceili(float(names.size()) / COLUMNS)
-	var atlas := Image.create_empty(COLUMNS * CELL, rows * CELL, false, Image.FORMAT_RGBA8)
+	var atlas := Image.create_empty(COLUMNS * tile_px, rows * tile_px, false, Image.FORMAT_RGBA8)
 	atlas.fill(Color(0, 0, 0, 0))
 	var sheet: Image = load(MICRO_SHEET).get_image()
 	sheet.convert(Image.FORMAT_RGBA8)
 	var kind_count := KINDS.size() * VARIANTS
 	var foreign_start := kind_count + SPRITES.size()
 	for i in names.size():
-		var origin := Vector2i(i % COLUMNS, i / COLUMNS) * CELL
+		var origin := Vector2i(i % COLUMNS, i / COLUMNS) * tile_px
 		if i < kind_count:
-			_blit(atlas, ground(KINDS[i / VARIANTS], i % VARIANTS), origin)
+			_blit(atlas, ground(KINDS[i / VARIANTS], i % VARIANTS, tile_px), origin, tile_px)
 		elif i >= foreign_start:
 			var k := i - foreign_start
-			_blit_foreign(atlas, ground(KINDS[k / VARIANTS], k % VARIANTS), origin)
+			_blit_foreign(atlas, ground(KINDS[k / VARIANTS], k % VARIANTS, tile_px), origin, tile_px)
 		elif KENNEY.has(names[i]):
-			_blit(atlas, recolour(sheet, KENNEY[names[i]][0], KENNEY[names[i]][1]), origin)
+			_blit(atlas, _sized(recolour(sheet, KENNEY[names[i]][0], KENNEY[names[i]][1]), tile_px), origin, tile_px)
 		else:
-			_blit(atlas, drawn(DRAWN[names[i]]), origin)
+			_blit(atlas, _sized(drawn(DRAWN[names[i]]), tile_px), origin, tile_px)
 	return atlas
 
 
-static func load_tileset() -> TileSet:
-	var texture: Texture2D = load(ATLAS_PNG)
+static func load_tileset(tile_px: int = CELL) -> TileSet:
+	var texture: Texture2D = load(atlas_png(tile_px)) if ResourceLoader.exists(atlas_png(tile_px)) else null
 	if texture == null:
 		return null
 	var source := TileSetAtlasSource.new()
 	source.texture = texture
-	source.texture_region_size = Vector2i(CELL, CELL)
+	source.texture_region_size = Vector2i(tile_px, tile_px)
 	for coords in index().values():
 		source.create_tile(Vector2i(coords[0], coords[1]))
 	var tileset := TileSet.new()
-	tileset.tile_size = Vector2i(CELL, CELL)
+	tileset.tile_size = Vector2i(tile_px, tile_px)
 	tileset.add_source(source)
 	return tileset
 
 
-static func _blit(atlas: Image, cell: PackedInt32Array, origin: Vector2i) -> void:
-	for p in CELL * CELL:
+static func _blit(atlas: Image, cell: PackedInt32Array, origin: Vector2i, tile_px: int) -> void:
+	for p in tile_px * tile_px:
 		if cell[p] >= 0:
-			atlas.set_pixelv(origin + Vector2i(p % CELL, p / CELL), MapPalette.DAY[cell[p]])
+			atlas.set_pixelv(origin + Vector2i(p % tile_px, p / tile_px), MapPalette.DAY[cell[p]])
 
-static func _blit_foreign(atlas: Image, cell: PackedInt32Array, origin: Vector2i) -> void:
-	for p in CELL * CELL:
+
+static func _blit_foreign(atlas: Image, cell: PackedInt32Array, origin: Vector2i, tile_px: int) -> void:
+	for p in tile_px * tile_px:
 		var day := MapPalette.DAY[cell[p]]
-		atlas.set_pixelv(origin + Vector2i(p % CELL, p / CELL), MapPalette.FOREIGN[MapPalette.nearest_foreign(day.darkened(FOREIGN_DIM))])
+		atlas.set_pixelv(origin + Vector2i(p % tile_px, p / tile_px), MapPalette.FOREIGN[MapPalette.nearest_foreign(day.darkened(FOREIGN_DIM))])
+
+
+static func _sized(cell: PackedInt32Array, tile_px: int) -> PackedInt32Array:
+	return cell if tile_px == CELL else halve(cell)
+
+
+static func halve(cell: PackedInt32Array) -> PackedInt32Array:
+	var totals := {}
+	for value in cell:
+		totals[value] = totals.get(value, 0) + 1
+	var out := PackedInt32Array()
+	for y in HALF:
+		for x in HALF:
+			var counts := {}
+			for d in [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]:
+				var value := cell[(y * 2 + d.y) * CELL + x * 2 + d.x]
+				counts[value] = counts.get(value, 0) + 1
+			var best: int = counts.keys()[0]
+			for value in counts:
+				if counts[value] > counts[best] or (counts[value] == counts[best] and (totals[value] < totals[best] or (totals[value] == totals[best] and value < best))):
+					best = value
+			out.append(best)
+	return out
 
 
 static func dusk_atlas(day: Image) -> Image:
@@ -161,13 +203,15 @@ static func _hash(x: int, y: int, s: int = 0) -> float:
 	return float((n >> 8) & 0xFFFF) / 65535.0
 
 
-static func ground(kind: String, variant: int) -> PackedInt32Array:
+static func ground(kind: String, variant: int, tile_px: int = CELL) -> PackedInt32Array:
+	if tile_px != CELL and kind not in REDRAWN:
+		return halve(ground(kind, variant))
 	var salt := KINDS.find(kind) * 16 + variant
 	var v := variant * 0.25 + 0.125
 	var out := PackedInt32Array()
-	for y in CELL:
-		for x in CELL:
-			out.append(_ground_pixel(kind, variant, v, x, y, _hash(x + salt * CELL, y, 3)))
+	for y in tile_px:
+		for x in tile_px:
+			out.append(_ground_pixel(kind, variant, v, x, y, _hash(x + salt * CELL, y, 3), tile_px))
 	return out
 
 
@@ -175,7 +219,7 @@ static func _wave(x: int, v: float, threshold: float) -> bool:
 	return (x + int(v * 8)) % 8 < 3 and v > threshold
 
 
-static func _ground_pixel(kind: String, variant: int, v: float, x: int, y: int, h: float) -> int:
+static func _ground_pixel(kind: String, variant: int, v: float, x: int, y: int, h: float, size: int = CELL) -> int:
 	match kind:
 		"deep_sea":
 			if y == 3 and _wave(x, v, 0.8):
@@ -192,9 +236,9 @@ static func _ground_pixel(kind: String, variant: int, v: float, x: int, y: int, 
 		"sand":
 			return MapPalette.SAND if h > 0.2 else MapPalette.SAND_DARK
 		"farm":
-			return _field(variant, x, y, [MapPalette.FARM, MapPalette.FARM_GREEN], MapPalette.FARM_DARK)
+			return _field(variant, x, y, FIELD_TONES["farm"][0], FIELD_TONES["farm"][1], size)
 		"fallow":
-			return _field(variant, x, y, [MapPalette.FARM_DARK, MapPalette.SAND_DARK], MapPalette.TRUNK)
+			return _field(variant, x, y, FIELD_TONES["fallow"][0], FIELD_TONES["fallow"][1], size)
 		"forest":
 			return _forest(variant, x, y)
 		"hills":
@@ -202,17 +246,17 @@ static func _ground_pixel(kind: String, variant: int, v: float, x: int, y: int, 
 				return MapPalette.HILL_DARK
 			return MapPalette.HILL if h > 0.25 else MapPalette.GRASS_DARK
 		"mountain":
-			return _peak(x, y, false, h)
+			return _peak(x, y, false, h, size)
 		"snow":
-			return _peak(x, y, true, h)
+			return _peak(x, y, true, h, size)
 		"river":
 			if absi(x - 3) <= 1 or (absi(y - 3) <= 1 and x > 1 and x < 6):
 				return MapPalette.RIVER
 	return MapPalette.GRASS if h > 0.18 else (MapPalette.GRASS_DARK if h > 0.06 else MapPalette.GRASS_LIGHT)
 
 
-static func _field(variant: int, x: int, y: int, crops: Array, furrow: int) -> int:
-	if x == 7 or y == 7:
+static func _field(variant: int, x: int, y: int, crops: Array, furrow: int, size: int = CELL) -> int:
+	if x == size - 1 or y == size - 1:
 		return MapPalette.GRASS_DARK
 	var checkered := variant % 2 == 1
 	var stripe := (y + (x if checkered else 0)) % 2 == 0
@@ -231,9 +275,10 @@ static func _forest(variant: int, x: int, y: int) -> int:
 	return MapPalette.FOREST if t == 1 else (MapPalette.TRUNK if t == 2 else MapPalette.FOREST_DARK)
 
 
-static func _peak(x: int, y: int, snowcap: bool, h: float) -> int:
-	if y < 1 or absi(x - 4) > y / 2 or (y == 7 and not snowcap):
+static func _peak(x: int, y: int, snowcap: bool, h: float, size: int = CELL) -> int:
+	var apex := size / 2
+	if y < 1 or absi(x - apex) > y / 2 or (y == size - 1 and not snowcap):
 		return MapPalette.ROCK if h < 0.1 else MapPalette.ROCK_DARK
-	if snowcap and y < 5:
-		return MapPalette.SNOW if x <= 4 else MapPalette.SNOW_SHADE
-	return MapPalette.ROCK if x >= 4 else MapPalette.ROCK_LIGHT
+	if snowcap and y < size * 5 / 8:
+		return MapPalette.SNOW if x <= apex else MapPalette.SNOW_SHADE
+	return MapPalette.ROCK if x >= apex else MapPalette.ROCK_LIGHT

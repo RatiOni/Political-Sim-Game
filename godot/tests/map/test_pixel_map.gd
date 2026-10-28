@@ -33,7 +33,60 @@ func _click(map: Control, local: Vector2) -> void:
 	root.push_input(release)
 
 
+func _check_levels() -> void:
+	t.equal(ArdeniaMap.choose_level(Vector2(2688, 1600)), Vector2i(8, 2), "a huge panel takes 8 px tiles at 2x")
+	t.equal(ArdeniaMap.choose_level(Vector2(1344, 800)), Vector2i(8, 1), "an exact native panel takes 8 px tiles at 1x")
+	t.equal(ArdeniaMap.choose_level(Vector2(1344, 799)), Vector2i(4, 1), "a panel just short of native drops to 4 px tiles")
+	t.equal(ArdeniaMap.choose_level(Vector2(1251, 535)), Vector2i(4, 1), "the 1920 x 1080 panel takes 4 px tiles at 1x")
+	t.equal(ArdeniaMap.choose_level(Vector2(1400, 799)), Vector2i(4, 1), "a wide but short panel takes 4 px tiles at 1x")
+	t.equal(ArdeniaMap.choose_level(Vector2(883, 311)), Vector2i(4, 1), "a panel smaller than every level falls back to 4 px at 1x")
+
+
+func _drag(map: Control, from: Vector2, to: Vector2) -> void:
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = map.global_position + from
+	root.push_input(press)
+	var motion := InputEventMouseMotion.new()
+	motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+	motion.position = map.global_position + to
+	motion.relative = to - from
+	root.push_input(motion)
+	var release := press.duplicate() as InputEventMouseButton
+	release.pressed = false
+	release.position = map.global_position + to
+	root.push_input(release)
+
+
+func _check_pan(map: Control, capital: Vector2) -> void:
+	var selected: String = map.selected_id
+	var before: Vector2 = map.map_to_local(capital)
+	var centre := map.size / 2.0
+	_drag(map, centre, centre + Vector2(0, 60))
+	await _frames(2)
+	_drag(map, centre, centre + Vector2(0, -40))
+	await _frames(2)
+	var after: Vector2 = map.map_to_local(capital)
+	t.truth(after.y != before.y and after.x == before.x, "dragging pans the tall map vertically only")
+	t.equal(map.region_at(after), "vashtera", "the capital hit-tests after a pan")
+	t.equal(map.selected_id, selected, "a drag does not select a region")
+	t.truth(map.local_to_map(map.map_to_local(Vector2(0.4, 0.6))).distance_to(Vector2(0.4, 0.6)) < 1e-4, "map and local coordinates invert after a pan")
+	_drag(map, centre, centre + Vector2(0, 5000))
+	await _frames(2)
+	t.equal(map.map_to_local(Vector2.ZERO).y, 0.0, "panning is clamped at the top edge")
+	var ring: PackedVector2Array = map.polygons["vashtera"]
+	t.truth(Geometry2D.is_point_in_polygon(map.map_to_local(capital), ring), "polygons follow the pan")
+	map.select_region("karsen")
+	var north: float = map.map_to_local(Vector2.ZERO).y
+	map.select_region("kelvet")
+	var south: float = map.map_to_local(Vector2.ZERO).y
+	t.truth(south < north, "selecting a southern region pans the map up")
+	t.truth(Rect2(Vector2.ZERO, map.size).has_point(map.map_to_local(Vector2(0.23, 0.82))), "the selected region is in view")
+
+
 func _run() -> void:
+	_check_levels()
 	_wipe_slot()
 	root.size = Vector2i(1920, 1080)
 	root.get_node("GameFlow").start_mode = "new"
@@ -73,6 +126,9 @@ func _run() -> void:
 	await _frames()
 	var capital: Vector2 = geo.cities.filter(func(c: Dictionary) -> bool: return c["capital"])[0]["point"]
 	t.equal(map.region_at(map.map_to_local(capital)), "vashtera", "the capital still hit-tests after a resize to 1280 x 720")
+	t.equal(Vector2i(map.tile_px, map.zoom), Vector2i(4, 1), "the compact panel uses 4 px tiles at 1x")
+	t.truth(map.canvas_extent().y > map.size.y, "the compact map is taller than its panel and pans")
+	await _check_pan(map, capital)
 	app.queue_free()
 	await _frames()
 
