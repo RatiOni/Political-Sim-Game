@@ -62,11 +62,13 @@ func _check_zoom(map: Control) -> void:
 	_wheel(map, centre, true)
 	await _frames(2)
 	t.equal(map.tile_px, 8, "the wheel zooms in to 8 px detail")
+	_check_render(map, "detail at scale 1")
 	t.truth(map.local_to_map(centre).distance_to(held) < 1.0 / 168.0, "zooming keeps the point under the cursor in place")
 	t.truth(map.canvas_extent().x > map.size.x, "the detail map overflows the panel and pans")
 	_wheel(map, centre, false)
 	await _frames(2)
 	t.equal(map.tile_px, 4, "the wheel zooms back out to the overview")
+	_check_render(map, "overview at scale 1")
 	map.grab_focus()
 	_key(KEY_EQUAL)
 	await _frames(2)
@@ -74,11 +76,9 @@ func _check_zoom(map: Control) -> void:
 	t.truth(map.zoom_in_button.disabled and not map.zoom_out_button.disabled, "only zoom out is offered at detail")
 	map.select_region("zavost")
 	var zavost: Vector2 = map._centres["zavost"]
-	var before: Vector2 = map.map_to_local(zavost)
 	_key(KEY_MINUS)
 	await _frames(2)
 	t.equal(map.tile_px, 4, "- zooms out")
-	t.truth(map.map_to_local(zavost).distance_to(before) < 8.0 or map.canvas_extent().x <= map.size.x, "zooming out keeps the selected region in place where the map can pan")
 	map.zoom_in_button.pressed.emit()
 	t.equal(map.tile_px, 8, "the zoom-in button zooms in")
 	t.equal(map.region_at(map.map_to_local(zavost)), "zavost", "hit testing follows the zoom level")
@@ -86,6 +86,28 @@ func _check_zoom(map: Control) -> void:
 	t.equal(map.tile_px, 4, "the zoom-out button zooms out")
 	for button in [map.zoom_in_button, map.zoom_out_button]:
 		t.truth(button.size.y >= 44.0 and Rect2(Vector2.ZERO, map.size).encloses(Rect2(button.position, button.size)), "%s is a 44 px target inside the map" % button.name)
+
+
+func _check_render(map: Control, tag: String) -> void:
+	var rendered: Transform2D = map.get_viewport().get_final_transform() * map.terrain_layer.get_global_transform_with_canvas()
+	var expected_origin: Vector2 = map.screen_transform() * map.map_to_local(Vector2.ZERO)
+	t.truth(rendered.get_scale().distance_to(Vector2(map.zoom, map.zoom)) < 1e-4, "%s: terrain renders at %dx physical (got %s)" % [tag, map.zoom, rendered.get_scale()])
+	t.truth(_is_whole(rendered.origin), "%s: terrain origin is a whole physical pixel (got %s)" % [tag, rendered.origin])
+	t.truth(rendered.origin.distance_to(expected_origin) < 1e-3, "%s: terrain origin matches map_to_local (rendered %s, mapped %s)" % [tag, rendered.origin, expected_origin])
+
+
+func _check_anchor(map: Control) -> void:
+	var vashtera: Vector2 = map._centres["vashtera"]
+	map.zoom_in()
+	map.select_region("vashtera")
+	map.pan_by(Vector2(0, -40))
+	await _frames(2)
+	var before: Vector2 = map.map_to_local(vashtera)
+	_key(KEY_MINUS)
+	await _frames(2)
+	t.equal(map.tile_px, 4, "- zooms out on the compact panel")
+	t.truth(map.canvas_extent().y > map.size.y, "the compact overview overflows vertically")
+	t.truth(absf(map.map_to_local(vashtera).y - before.y) < 1.0, "zooming out holds the selected region in place (before %s, after %s)" % [before, map.map_to_local(vashtera)])
 
 
 func _physical_tile(map: Control) -> Vector2:
@@ -107,15 +129,22 @@ func _check_physical(map: Control, capital: Vector2) -> void:
 	var tile := _physical_tile(map)
 	t.truth(_is_whole(tile) and tile.x == tile.y and tile.x >= 4.0, "a tile covers a whole number of physical pixels (%s)" % tile)
 	t.truth(_is_whole(map.screen_transform() * map.map_to_local(Vector2.ZERO)), "the map origin lands on a physical pixel")
+	_check_render(map, "overview at scale 2/3")
 	t.equal(map.region_at(map.map_to_local(capital)), "vashtera", "the capital hit-tests under a 2/3 content scale")
 	t.truth(map.local_to_map(map.map_to_local(Vector2(0.4, 0.6))).distance_to(Vector2(0.4, 0.6)) < 1e-4, "coordinates invert under a 2/3 content scale")
 	map.zoom_in()
 	await _frames()
 	t.truth(_is_whole(_physical_tile(map)) and _physical_tile(map).x == 8.0 * map.zoom, "detail tiles are 8k physical pixels under a 2/3 content scale")
 	t.equal(map.region_at(map.map_to_local(capital)), "vashtera", "the capital hit-tests at detail under a 2/3 content scale")
+	_check_render(map, "detail at scale 2/3")
 	map.zoom_out()
 	root.content_scale_factor = 1.0
 	await _frames()
+	root.size = Vector2i(2880, 1620)
+	await _frames()
+	t.truth(map.zoom >= 2, "a 2880 x 1620 window draws the overview at 2x or more (zoom %d)" % map.zoom)
+	_check_render(map, "overview at %dx" % map.zoom)
+	t.equal(map.region_at(map.map_to_local(capital)), "vashtera", "the capital hit-tests at an integer zoom above 1")
 
 
 func _drag(map: Control, from: Vector2, to: Vector2) -> void:
@@ -206,6 +235,7 @@ func _run() -> void:
 	t.equal(Vector2i(map.tile_px, map.zoom), Vector2i(4, 1), "the compact panel keeps the overview at 1x")
 	t.truth(map.canvas_extent().y > map.size.y, "the compact map is taller than its panel and pans")
 	await _check_pan(map, capital)
+	await _check_anchor(map)
 	await _check_physical(map, capital)
 	app.queue_free()
 	await _frames()

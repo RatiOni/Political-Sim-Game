@@ -15,17 +15,21 @@ var cities: Array[Dictionary] = []
 var to_physical: Callable
 var region_size := 8
 var city_scale := 1
-var _region_font := _crisp(REGION_FONT)
-var _city_font := _crisp(CITY_FONT)
+static var _fonts: Dictionary = {}
+var _region_font := crisp(REGION_FONT)
+var _city_font := crisp(CITY_FONT)
 
 
-static func _crisp(path: String) -> FontFile:
+static func crisp(path: String) -> FontFile:
+	if _fonts.has(path):
+		return _fonts[path]
 	var font := (load(path) as FontFile).duplicate() as FontFile
 	font.antialiasing = TextServer.FONT_ANTIALIASING_NONE
 	font.hinting = TextServer.HINTING_NONE
 	font.subpixel_positioning = TextServer.SUBPIXEL_POSITIONING_DISABLED
 	font.generate_mipmaps = false
 	font.oversampling = 1.0
+	_fonts[path] = font
 	return font
 
 

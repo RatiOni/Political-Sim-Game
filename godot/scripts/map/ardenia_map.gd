@@ -128,7 +128,7 @@ func _build_zoom_button(button: Button, id: String, label: String, tip: String, 
 	button.focus_mode = Control.FOCUS_NONE
 	button.custom_minimum_size = BUTTON_SIZE
 	button.size = BUTTON_SIZE
-	button.add_theme_font_override("font", MapLabels._crisp(MapLabels.REGION_FONT))
+	button.add_theme_font_override("font", MapLabels.crisp(MapLabels.REGION_FONT))
 	button.add_theme_font_size_override("font_size", 32)
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var box := StyleBoxFlat.new()
@@ -159,7 +159,9 @@ func _load() -> bool:
 		push_error("ArdeniaMap: map data unavailable")
 		return false
 	_outlines = borders["outlines"]
-	_fill_terrain()
+	if not _fill_terrain():
+		push_error("ArdeniaMap: the tile file holds no Ardenian cells")
+		return false
 	_centres = _region_centres()
 	_labels.cities = _geo.cities
 	_labels.region_points = _centres
@@ -171,7 +173,7 @@ static func _source(tileset: TileSet) -> TileSetAtlasSource:
 	return tileset.get_source(tileset.get_source_id(0)) as TileSetAtlasSource
 
 
-func _fill_terrain() -> void:
+func _fill_terrain() -> bool:
 	var cells := TileArt.index()
 	var kinds: PackedByteArray = _tiles["kinds"]
 	var variants: PackedByteArray = _tiles["variants"]
@@ -188,10 +190,13 @@ func _fill_terrain() -> void:
 			if region < _geo.region_ids.size():
 				_cells[_geo.region_ids[region]][Vector2i(x, y)] = true
 				country.append(Vector2(x, y))
+	if country.is_empty():
+		return false
 	var bounds := Rect2(country[0], Vector2.ONE)
 	for p in country:
 		bounds = bounds.expand(p).expand(p + Vector2.ONE)
 	_country = Rect2(bounds.position / Vector2(TileBaker.GRID), bounds.size / Vector2(TileBaker.GRID))
+	return true
 
 
 func _region_centres() -> Dictionary:
