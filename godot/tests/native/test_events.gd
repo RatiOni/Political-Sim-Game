@@ -76,7 +76,7 @@ func _test_catalog_integrity(t) -> void:
 	t.equal(gated_default, "", "no default option is gated (a lapse must always be possible)")
 	var playable := events.size() - EventsSim.unplayable_events().size()
 	t.truth(playable >= 20, "at least 20 events are fully playable now (%d)" % playable)
-	t.truth("vetrenka_friction" in EventsSim.unplayable_events(), "arcs without consequence handlers are held back")
+	t.truth("opposition_by_election" in EventsSim.unplayable_events(), "events without consequence handlers are held back")
 	t.truth(not ("labour_unrest_spreads" in EventsSim.unplayable_events()), "ordinary situations are playable")
 
 
@@ -236,10 +236,14 @@ func _test_follow_up_arrives_on_schedule_even_into_a_full_queue(t) -> void:
 	var due := int(state.scheduled_events[0]["due_turn"])
 	for id in ["bank_run", "bumper_harvest", "media_empire"]:
 		_force(state, id)
+	var reported := false
 	while state.turn < due:
-		_month(state)
+		for line in _month(state):
+			if line.begins_with("Following on from an earlier decision"):
+				reported = true
 	var arrived := state.pending_situations.any(func(s): return s.event_id == String(option["follow_up"]["event_id"]))
 	t.truth(arrived, "and arrives when due, even though the queue was full")
+	t.truth(reported, "reported as the consequence of an earlier decision, not a fresh surprise")
 
 
 # ── Roles and targets ────────────────────────────────────────────────────

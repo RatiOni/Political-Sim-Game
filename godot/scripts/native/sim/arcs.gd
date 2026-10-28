@@ -20,9 +20,29 @@ const HANDLERS := [
 	"vasca_crackdown", "vasca_lead_personally", "vasca_amnesty", "vasca_downplay",
 	"vasca_taken", "vasca_backlash", "vasca_pull_back", "vasca_amnesty_worked",
 	"vasca_grows", "vasca_storm", "vasca_exile", "vasca_unresolved",
+	# Vetrenka, the frozen conflict.
+	"vetrenka_absorb", "vetrenka_protest", "vetrenka_respond", "vetrenka_open_talks",
+	"vetrenka_launch_offensive", "vetrenka_formalise", "vetrenka_settle",
+	"vetrenka_talks_failed", "vetrenka_won", "vetrenka_lost", "vetrenka_partitioned",
+	"vetrenka_normal", "vetrenka_backlash_lands",
 ]
 
-const CONDITIONS := ["schemer_plotting", "vasca_stirring"]
+const CONDITIONS := ["schemer_plotting", "vasca_stirring", "vetrenka_friction_due",
+	"vetrenka_crossroads_ready"]
+
+## Incidents on the line of contact before anything can shift.
+const FRICTION_BEFORE_CROSSROADS := 3
+## What each Vetrenka ending does to the region itself:
+## [control, defining issue, state reach, pressure]. These are the immediate
+## post-crisis conditions; the ordinary regional pulse moves them from there.
+const VETRENKA_REGION_OUTCOMES := {
+	"settled": ["autonomous", "postwar_framework", 0.28, 0.48],
+	"talks_failed": ["separatist", "unsettled_ceasefire", 0.03, 0.94],
+	"retaken": ["state", "occupation_and_return", 0.32, 0.76],
+	"routed": ["separatist", "worsened_ceasefire", 0.02, 0.98],
+	"partitioned": ["separatist", "hardened_partition", 0.03, 0.58],
+	"partitioned_contested": ["separatist", "contested_partition", 0.03, 0.82],
+}
 
 ## Vasca never tests a government in its first months.
 const VASCA_MIN_TURN := 8
@@ -125,7 +145,98 @@ static func run(state: GameState, handler_id: String) -> String:
 		"vasca_grows":
 			_insurgency(state, 0.20)
 			return "Vasca's following grows."
+		"vetrenka_absorb", "vetrenka_protest":
+			return _vetrenka_incident(state)
+		"vetrenka_respond":
+			_insurgency(state, 0.06)
+			return _vetrenka_incident(state)
+		"vetrenka_open_talks":
+			# Mediation works when the government can sell a compromise at home.
+			# Governments reach this point in a narrow band (approval ~0.49,
+			# stability ~0.48), so the odds read deviation from that ordinary
+			# case: a typical government gets a shade better than a coin flip;
+			# only one that has built real standing gets good odds.
+			var odds := clampf(0.55 + (state.player.approval - 0.49) * 1.4
+				+ (state.stability_value - 0.48) * 0.7, 0.12, 0.90)
+			if state.rng.next_float() < odds:
+				_schedule(state, "vetrenka_settled", 4)
+			else:
+				_schedule(state, "vetrenka_talks_fail", 3)
+			return "Talks over Vetrenka open under international mediation."
+		"vetrenka_launch_offensive":
+			# A war the army has already lost once, against a separatist force with
+			# a foreign patron: centred on the ~0.25 a typical government reaches,
+			# steep enough that a well-run Interior and Defense is felt.
+			var odds := clampf(0.25 + (security_effectiveness(state) - 0.25) * 1.8, 0.08, 0.70)
+			if state.rng.next_float() < odds:
+				_schedule(state, "vetrenka_retaken", 3)
+			else:
+				_schedule(state, "vetrenka_rout", 2)
+			return "The army crosses the ceasefire line."
+		"vetrenka_formalise":
+			_schedule(state, "vetrenka_partition", 2)
+			return "The government stops pretending the line is temporary."
+		"vetrenka_partitioned":
+			# Whether the country wears a hardened line quietly is not about the
+			# nationalists' anger — they will be angry — but about whether this
+			# government has the standing to make an unpopular thing boring,
+			# against a nationalist bench big enough to keep it in the news.
+			_insurgency(state, -0.10)
+			var total := 0
+			var nationalist_seats := 0
+			for f in state.country.factions:
+				total += f.seats
+				if f.id == "national_conservatives":
+					nationalist_seats = f.seats
+			var standing := state.player.approval + state.stability_value * 0.5 \
+				- float(nationalist_seats) / float(maxi(1, total))
+			if standing > 0.70:
+				_schedule(state, "vetrenka_normalised", 5)
+			else:
+				_schedule(state, "vetrenka_backlash", 4)
+			return "The line of contact hardens into something like a border."
+		"vetrenka_settle":
+			_insurgency(state, -0.20)
+			return _vetrenka_end(state, "settled", "Vetrenka returns as an autonomous region under a postwar framework.")
+		"vetrenka_talks_failed":
+			_insurgency(state, 0.10)
+			state.stability_value = maxf(0.05, state.stability_value - 0.03)
+			return _vetrenka_end(state, "talks_failed", "The talks collapse. The ceasefire holds, barely.")
+		"vetrenka_won":
+			_insurgency(state, 0.25)   # holding it is its own problem
+			return _vetrenka_end(state, "retaken", "Vetrenka is back under the state's control — and under occupation.")
+		"vetrenka_lost":
+			_insurgency(state, 0.35)
+			state.stability_value = maxf(0.05, state.stability_value - 0.08)
+			return _vetrenka_end(state, "routed", "The offensive is routed. The line moves the wrong way.")
+		"vetrenka_normal":
+			return _vetrenka_end(state, "partitioned", "Partition becomes the ordinary state of things.")
+		"vetrenka_backlash_lands":
+			state.stability_value = maxf(0.05, state.stability_value - 0.05)
+			return _vetrenka_end(state, "partitioned_contested", "Partition stands, and nobody accepts it.")
 	return ""
+
+
+static func vetrenka_open(state: GameState) -> bool:
+	return state.country.id == "ardenia" and state.player.in_government \
+		and not state.campaign_meta.has("vetrenka_status")
+
+
+static func _vetrenka_incident(state: GameState) -> String:
+	state.campaign_meta["vetrenka_incidents"] = int(state.campaign_meta.get("vetrenka_incidents", 0)) + 1
+	return "Another incident on the Vetrenka line."
+
+
+static func _vetrenka_end(state: GameState, status: String, line: String) -> String:
+	state.campaign_meta["vetrenka_status"] = status
+	var region: RegionState = state.regions.get("vetrenka")
+	var outcome: Array = VETRENKA_REGION_OUTCOMES.get(status, [])
+	if region != null and outcome.size() == 4:
+		region.control = String(outcome[0])
+		region.issue_id = String(outcome[1])
+		region.state_reach = float(outcome[2])
+		region.pressure = float(outcome[3])
+	return line
 
 
 ## How well the state can actually reach into the west: the Interior and
@@ -168,6 +279,11 @@ static func _schedule(state: GameState, event_id: String, delay: int) -> void:
 
 static func condition_met(state: GameState, rule_id: String) -> bool:
 	match rule_id:
+		"vetrenka_friction_due":
+			return vetrenka_open(state)
+		"vetrenka_crossroads_ready":
+			return vetrenka_open(state) \
+				and int(state.campaign_meta.get("vetrenka_incidents", 0)) >= FRICTION_BEFORE_CROSSROADS
 		"vasca_stirring":
 			# The west tests a government that looks weak enough to be worth it.
 			if state.country.id != "ardenia" or not state.player.in_government:

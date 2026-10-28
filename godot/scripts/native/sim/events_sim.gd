@@ -229,7 +229,7 @@ static func _deliver_follow_ups(state: GameState, notes: Array[String]) -> void:
 		var event := event_by_id(String(row.get("event_id", "")))
 		if not is_playable(event) or not audience_ok(state, event) or _is_pending(state, event["id"]):
 			continue
-		_arrive(state, event, String(row.get("target_country_id", "")), notes)
+		_arrive(state, event, String(row.get("target_country_id", "")), notes, true)
 
 
 static func _maybe_arrive(state: GameState, notes: Array[String]) -> void:
@@ -286,7 +286,10 @@ static func _is_pending(state: GameState, event_id: String) -> bool:
 	return false
 
 
-static func _arrive(state: GameState, event: Dictionary, target: String, notes: Array[String]) -> void:
+## `follows_on` marks a situation an earlier decision set in motion, so the
+## report shows the player cause and effect rather than another surprise.
+static func _arrive(state: GameState, event: Dictionary, target: String, notes: Array[String],
+		follows_on := false) -> void:
 	var situation := Situation.new()
 	situation.event_id = String(event["id"])
 	situation.arrived_turn = state.turn
@@ -294,7 +297,11 @@ static func _arrive(state: GameState, event: Dictionary, target: String, notes: 
 	situation.target_country_id = target if target != "" else _diplomatic_target(state, event)
 	state.pending_situations.append(situation)
 	state.event_fire_history[situation.event_id] = state.turn
-	notes.append("A new situation needs a decision: %s." % String(event.get("title", situation.event_id)))
+	var title := String(event.get("title", situation.event_id))
+	if follows_on:
+		notes.append("Following on from an earlier decision: %s needs a decision." % title)
+	else:
+		notes.append("A new situation needs a decision: %s." % title)
 
 
 ## For an event addressed to "the coolest neighbour", the country that is.

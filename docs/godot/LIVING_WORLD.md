@@ -1,7 +1,7 @@
 # Ardenia Godot — the living world (Phase 4)
 
 **Status:** situations engine, the schemer arc, the party leadership
-challenge and the Vasca question are playable (2026-10-28). Arcs, the civil-war gauge, diplomacy verbs, the AI countries,
+challenge, the Vasca question and Vetrenka are playable — 44 of 46 events (2026-10-28). Arcs, the civil-war gauge, diplomacy verbs, the AI countries,
 opposition play and the press remain. Same native-design rules as
 `SIM_REDESIGN.md`: Python is a reference for what Ardenia contains, never a
 formula to match.
@@ -11,9 +11,10 @@ formula to match.
 1. **Situations engine** — done. Arrival, pacing, decisions, default lapse,
    follow-up chains, the shared effect pipeline, role resolution, persistence,
    the "needs you" queue and the situation panel.
-2. **The arcs** — the schemer, the leadership challenge and Vasca are done
-   (`sim/arcs.gd`, `sim/cabinet_sim.gd`); Vetrenka and opposition
-   by-elections remain. Each needs its bespoke
+2. **The arcs** — done: the schemer, the leadership challenge, Vasca and
+   Vetrenka (`sim/arcs.gd`, `sim/cabinet_sim.gd`). The two opposition events
+   (`government_policy_retreat`, `opposition_by_election`) wait for slice 6,
+   because their consequences act on the opposition layer. Each needs its bespoke
    consequence handlers (`on_apply` ids) written into
    `Arcs.HANDLERS`; until a handler exists, its events cannot
    fire (`EventsSim.unplayable_events()` lists them). Their trigger
@@ -98,3 +99,23 @@ now feeds national unrest (×0.40). Five recorded endings live in
 `campaign_meta["vasca_status"]`: captured, dead, exiled, isolated, and
 unresolved — "no ending" is recorded too, and any ending closes the arc.
 Rolls use the campaign RNG, so reloads replay the same story.
+
+## Vetrenka
+
+A different rhythm from Vasca: recurring friction on the line of contact
+(cooldown 6) resolves nothing but is counted in
+`campaign_meta["vetrenka_incidents"]`. After `FRICTION_BEFORE_CROSSROADS`
+(3) incidents the once-only crossroads opens: peace talks (odds read the
+government's deviation from the ordinary approval 0.49 / stability 0.48 —
+measured 0.45 for a typical government, 0.87 for a strong one), an
+offensive (odds from security effectiveness, 0.08–0.70: 0.12 for a broken
+army, 0.63 for a capable one), or formalising the line, the default. A
+hardened line is worn quietly only if approval + stability/2 minus the
+nationalist seat share exceeds 0.70. Six endings — settled, talks_failed,
+retaken, routed, partitioned, partitioned_contested — each recorded in
+`campaign_meta["vetrenka_status"]` and each redrawing the region's control,
+issue, reach and pressure. A government that never engages lets the line
+harden in about 15 months.
+
+Follow-up situations are now reported as "Following on from an earlier
+decision", so the monthly report shows cause and effect.
