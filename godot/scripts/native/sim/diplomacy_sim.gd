@@ -21,6 +21,7 @@ extends RefCounted
 const TRADE_CEILING := 4000.0
 ## Share of the gap to the ceiling closed each month.
 const TRADE_APPROACH := 0.04
+const NO_PACT_CEILING_SHARE := 0.5
 const SAME_CAMP_DRIFT := 0.0015
 const OTHER_CAMP_DRIFT := -0.0008
 ## What a month under sanctions costs the target.
@@ -92,13 +93,15 @@ static func monthly(state: GameState) -> void:
 			for tr in rel.treaties:
 				if tr is Dictionary:
 					tr["turns_active"] = int(tr.get("turns_active", 0)) + 1
+		var ceiling := maxf(0.0, mine.score) * TRADE_CEILING
 		if mine.sanctioned:
+			ceiling = 0.0
 			other.stability = maxf(0.03, other.stability - SANCTION_STABILITY_COST)
 			if other.economy != null:
 				other.economy.gdp *= (1.0 - SANCTION_OUTPUT_LOSS)
-		elif has_treaty(state, other.id, "trade"):
-			var ceiling := maxf(0.0, mine.score) * TRADE_CEILING
-			set_trade(state, other.id, mine.trade_volume + (ceiling - mine.trade_volume) * TRADE_APPROACH)
+		elif not has_treaty(state, other.id, "trade"):
+			ceiling *= NO_PACT_CEILING_SHARE
+		set_trade(state, other.id, mine.trade_volume + (ceiling - mine.trade_volume) * TRADE_APPROACH)
 	var loans := state.country.economy.loans
 	for loan in loans.duplicate():
 		loan["months_left"] = int(loan.get("months_left", 0)) - 1

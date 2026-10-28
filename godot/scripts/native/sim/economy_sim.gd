@@ -95,6 +95,7 @@ static func update(state: GameState) -> void:
 	_update_fiscal_baseline(state)
 	_update_fiscal_stance(state)
 	_update_labour_market(state)
+	_update_budget_lines(state)
 	_update_prices(state)
 	_apply_headline_stats(state)
 	_compound_gdp(state)
@@ -125,7 +126,7 @@ static func _update_sectors(state: GameState) -> void:
 	for s in econ.sectors:
 		weighted_growth += s.gdp_share * s.growth_rate
 	var workforce_bonus := (econ.workforce_quality - 0.5) * WORKFORCE_GROWTH_FACTOR
-	var target_growth := weighted_growth + workforce_bonus
+	var target_growth := weighted_growth + workforce_bonus + econ.structural_growth_offset
 	econ.structural_growth_rate += (target_growth - econ.structural_growth_rate) * 0.25
 
 	for sector in econ.sectors:
@@ -188,25 +189,25 @@ static func _update_fiscal_baseline(state: GameState) -> void:
 ## the budget the player reads is the budget being spent.
 static func _sync_active_total(state: GameState, expenditure: float) -> void:
 	var active := BudgetSim.ensure_budget_state(state)
+	var keys: Array = []
+	for envelope in _envelopes():
+		keys.append(String(envelope.get("id", "")))
+	for key in active.allocations.keys():
+		if not key in keys:
+			active.allocations.erase(key)
 	var old_total := active.expenditure()
 	if old_total <= 0.0:
 		active.allocations = BudgetSim.default_allocations(_envelopes(), expenditure)
 		return
 	var ratio := maxf(0.0, expenditure) / old_total
-	var keys: Array = []
-	for envelope in _envelopes():
-		var envelope_id := String(envelope.get("id", ""))
-		if active.allocations.has(envelope_id):
-			keys.append(envelope_id)
+	var present: Array = keys.filter(func(k): return active.allocations.has(k))
 	var used := 0.0
-	for i in range(keys.size() - 1):
-		var key = keys[i]
-		var value := _round1(float(active.allocations[key]) * ratio)
-		active.allocations[key] = value
+	for i in range(present.size() - 1):
+		var value := _round1(float(active.allocations[present[i]]) * ratio)
+		active.allocations[present[i]] = value
 		used += value
-	if not keys.is_empty():
-		var last_key = keys[keys.size() - 1]
-		active.allocations[last_key] = _round1(maxf(0.0, expenditure - used))
+	if not present.is_empty():
+		active.allocations[present[-1]] = _round1(maxf(0.0, expenditure - used))
 
 
 static func _envelopes() -> Array:
@@ -291,6 +292,11 @@ static func _apply_headline_stats(state: GameState) -> void:
 	econ.inflation = clampf(
 		econ.structural_inflation + _modifiers_sum(state, "inflation"), 0.0, 1.0)
 
+	_update_budget_lines(state)
+
+
+static func _update_budget_lines(state: GameState) -> void:
+	var econ := state.country.economy
 	econ.debt_service = econ.interest_bill()
 	econ.budget.revenue = (econ.structural_revenue + econ.trade_revenue_contribution
 		+ _modifiers_sum(state, "budget_revenue"))
@@ -309,9 +315,8 @@ static func _update_balance_sheet(state: GameState) -> void:
 	var econ := state.country.economy
 	if econ.gdp <= 0.0:
 		return
-	var debt_stock := econ.public_debt_pct * econ.gdp
-	debt_stock += (econ.budget.expenditure - econ.budget.revenue) / 12.0
-	econ.public_debt_pct = clampf(debt_stock / econ.gdp, 0.0, MAX_DEBT_PCT)
+	econ.public_debt = clampf(econ.public_debt + (econ.budget.expenditure - econ.budget.revenue) / 12.0,
+		0.0, MAX_DEBT_PCT * econ.gdp)
 	econ.effective_interest_rate += (econ.market_interest_rate() - econ.effective_interest_rate) * INTEREST_REPRICING
 
 

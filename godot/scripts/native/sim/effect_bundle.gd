@@ -64,13 +64,15 @@ static func _axis_score(f: Faction, axis: Array) -> float:
 ## Applies `effects` once. `source` names it in modifiers ("Telecom
 ## Privatization Act", "Labour Unrest Spreads"); `source_id` lets a later
 ## system find and end those modifiers.
-static func apply(state: GameState, effects: Dictionary, source: String, source_id: String) -> void:
+static func apply(state: GameState, effects: Dictionary, source: String, source_id: String, lasting := true) -> void:
 	var economy := state.country.economy
 	var growth := float(effects.get("gdp_growth_delta", 0.0))
 	var unemployment := float(effects.get("unemployment_delta", 0.0))
 	var inflation := float(effects.get("inflation_delta", 0.0))
 	var revenue := float(effects.get("budget_revenue_delta", 0.0))
 	var expenditure := float(effects.get("budget_expenditure_delta", 0.0))
+	if lasting:
+		economy.structural_growth_offset += growth
 	economy.structural_growth_rate += growth
 	economy.growth_rate += growth
 	economy.structural_unemployment = clampf(economy.structural_unemployment + unemployment, 0.0, 1.0)

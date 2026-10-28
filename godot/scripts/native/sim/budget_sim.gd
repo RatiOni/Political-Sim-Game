@@ -29,6 +29,7 @@ const EMERGENCY_START_STABILITY_COST := 0.02
 const EMERGENCY_MONTHLY_APPROVAL_COST := 0.003
 const EMERGENCY_MONTHLY_STABILITY_COST := 0.004
 const EMERGENCY_ESCALATION_MONTHS := 6.0
+const EMERGENCY_MAX_ESCALATION := 3.0
 ## Extra workload every ministry carries while running on emergency rules,
 ## and the most it can grow to.
 const EMERGENCY_BASE_WORKLOAD := 0.06
@@ -203,6 +204,11 @@ static func _open_fiscal_year(state: GameState) -> void:
 		state.pending_budget = null
 		return
 
+	state.pending_budget = null
+	if is_emergency(state):
+		state.active_budget.year = state.year
+		_emergency_month(state)
+		return
 	activate(state, _emergency_resolution(state))
 	state.pending_budget = null
 	state.player.approval = maxf(0.0, state.player.approval - EMERGENCY_START_APPROVAL_COST)
@@ -212,7 +218,7 @@ static func _open_fiscal_year(state: GameState) -> void:
 static func _emergency_month(state: GameState) -> void:
 	var active := state.active_budget
 	active.emergency_months += 1
-	var escalation := 1.0 + float(active.emergency_months) / EMERGENCY_ESCALATION_MONTHS
+	var escalation := minf(EMERGENCY_MAX_ESCALATION, 1.0 + float(active.emergency_months) / EMERGENCY_ESCALATION_MONTHS)
 	# Only a government is blamed for having no budget.
 	if state.player.in_government:
 		state.player.approval = maxf(0.0, state.player.approval - EMERGENCY_MONTHLY_APPROVAL_COST * escalation)

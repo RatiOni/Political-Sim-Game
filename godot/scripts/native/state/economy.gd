@@ -89,7 +89,13 @@ var gdp: float
 var growth_rate: float
 var inflation: float
 var unemployment: float
-var public_debt_pct: float
+var public_debt: float = 0.0
+var public_debt_pct: float:
+	get:
+		return 0.0 if gdp <= 0.0 else public_debt / gdp
+	set(value):
+		public_debt = maxf(0.0, value) * gdp
+var structural_growth_offset: float = 0.0
 var budget: Budget
 var sectors: Array[Sector] = []
 
@@ -209,6 +215,8 @@ func to_dict() -> Dictionary:
 		"inflation": inflation,
 		"unemployment": unemployment,
 		"public_debt_pct": public_debt_pct,
+		"public_debt": public_debt,
+		"structural_growth_offset": structural_growth_offset,
 		"budget": null if budget == null else budget.to_dict(),
 		"sectors": sector_dicts,
 		"structural_growth_rate": structural_growth_rate,
@@ -238,6 +246,9 @@ static func from_dict(data: Dictionary) -> Economy:
 	e.inflation = float(data.get("inflation", 0.0))
 	e.unemployment = float(data.get("unemployment", 0.0))
 	e.public_debt_pct = float(data.get("public_debt_pct", 0.0))
+	if data.has("public_debt"):
+		e.public_debt = maxf(0.0, float(data["public_debt"]))
+	e.structural_growth_offset = float(data.get("structural_growth_offset", 0.0))
 	var budget_data: Variant = data.get("budget", null)
 	if budget_data is Dictionary:
 		e.budget = Budget.from_dict(budget_data)

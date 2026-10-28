@@ -343,7 +343,7 @@ static func _diplomatic_target(state: GameState, event: Dictionary) -> String:
 static func apply_option(state: GameState, event: Dictionary, option: Dictionary,
 		situation: Situation, lapsed: bool) -> String:
 	var event_id := String(event.get("id", ""))
-	EffectBundle.apply(state, option.get("effects", {}), String(event.get("title", event_id)), "event:" + event_id)
+	EffectBundle.apply(state, option.get("effects", {}), String(event.get("title", event_id)), "event:" + event_id, false)
 	var deltas: Dictionary = option.get("relation_deltas", {})
 	for key in deltas:
 		var country_id := situation.target_country_id if String(key) in TARGET_KEYS else String(key)

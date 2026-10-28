@@ -257,6 +257,8 @@ static func simulate(state: GameState) -> void:
 	var monthly_growth := state.country.economy.structural_growth_rate / 12.0
 	for portfolio in ministries.keys():
 		var ministry: MinistryState = ministries[portfolio]
+		if ministry.baseline_funding <= 0.0:
+			ministry.baseline_funding = portfolio_funding(state, portfolio)
 		ministry.baseline_funding *= (1.0 + monthly_growth)
 		var snapshot := preview(state, portfolio)
 		var workload: float = snapshot["workload"]

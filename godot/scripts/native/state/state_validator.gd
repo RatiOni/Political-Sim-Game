@@ -182,33 +182,44 @@ static func _validate_date(state: GameState, errors: Array[String]) -> void:
 ## data, not a new personality. (Minister loyalty is 0..1, not the faction
 ## -1..1 scale.)
 static func _validate_ministers(state: GameState, errors: Array[String]) -> void:
-	var faction_ids := {}
+	var factions := _faction_ids(state)
+	for m in state.ministers:
+		_minister_errors(m, factions, "minister", errors)
+
+
+static func _faction_ids(state: GameState) -> Dictionary:
+	var ids := {}
 	if state.country != null:
 		for f in state.country.factions:
 			if f != null:
-				faction_ids[f.id] = true
-	for m in state.ministers:
-		if m == null:
-			errors.append("ministers contains a null entry")
-			continue
-		if m.id == "":
-			errors.append("minister has an empty id")
-		if not faction_ids.has(m.faction_id):
-			errors.append("minister '%s' faction_id '%s' does not match any player-country faction" %
-				[m.id, m.faction_id])
-		if m.loyalty < 0.0 or m.loyalty > 1.0:
-			errors.append("minister '%s' loyalty out of range: %s" % [m.id, m.loyalty])
-		if m.competence < 0.0 or m.competence > 1.0:
-			errors.append("minister '%s' competence out of range: %s" % [m.id, m.competence])
-		if m.ambition < 0.0 or m.ambition > 1.0:
-			errors.append("minister '%s' ambition out of range: %s" % [m.id, m.ambition])
-		if m.trait_id != "" and not Minister.TRAIT_EFFECTS.has(m.trait_id):
-			errors.append("minister '%s' has an unknown trait '%s'" % [m.id, m.trait_id])
+				ids[f.id] = true
+	return ids
+
+
+static func _minister_errors(m: Minister, factions: Dictionary, label: String, errors: Array[String]) -> void:
+	if m == null:
+		errors.append("%s is null" % label)
+		return
+	if m.id == "":
+		errors.append("%s has an empty id" % label)
+	if not factions.has(m.faction_id):
+		errors.append("%s '%s' belongs to unknown faction '%s'" % [label, m.id, m.faction_id])
+	for field in ["loyalty", "competence", "ambition"]:
+		var value: float = m.get(field)
+		if not is_finite(value) or value < 0.0 or value > 1.0:
+			errors.append("%s '%s' %s out of range: %s" % [label, m.id, field, value])
+	if m.trait_id != "" and not Minister.TRAIT_EFFECTS.has(m.trait_id):
+		errors.append("%s '%s' has an unknown trait '%s'" % [label, m.id, m.trait_id])
+
 
 static func _validate_cabinet_shortlists(state: GameState, errors: Array[String]) -> void:
-	var seen_candidate_ids := {}
+	var factions := _faction_ids(state)
+	var taken := {}
+	for m in state.ministers:
+		if m != null:
+			taken[m.id] = true
 	for portfolio in state.cabinet_shortlists:
-		if not portfolio in ["Finance", "Interior", "Foreign Affairs", "Defense", "Economy", "Justice"]:
+		if not portfolio in CabinetActions.CORE_PORTFOLIOS:
 			errors.append("cabinet shortlist has unknown portfolio '%s'" % portfolio)
 			continue
 		var rows: Variant = state.cabinet_shortlists[portfolio]
@@ -217,12 +228,16 @@ static func _validate_cabinet_shortlists(state: GameState, errors: Array[String]
 			continue
 		for candidate in rows:
 			if not (candidate is Minister):
-				errors.append("cabinet shortlist '%s' contains malformed candidate" % portfolio)
+				errors.append("cabinet shortlist '%s' contains a malformed candidate" % portfolio)
 				continue
-			var minister: Minister = candidate
-			if minister.portfolio != portfolio or minister.id == "" or seen_candidate_ids.has(minister.id):
-				errors.append("cabinet shortlist '%s' has inconsistent candidate identity" % portfolio)
-			seen_candidate_ids[minister.id] = true
+			var m: Minister = candidate
+			_minister_errors(m, factions, "%s candidate" % portfolio, errors)
+			if m.portfolio != portfolio:
+				errors.append("%s candidate '%s' is for another portfolio" % [portfolio, m.id])
+			if taken.has(m.id):
+				errors.append("%s candidate '%s' reuses an id already in use" % [portfolio, m.id])
+			taken[m.id] = true
+
 
 static func _validate_households(state: GameState, errors: Array[String]) -> void:
 	for key in state.households:

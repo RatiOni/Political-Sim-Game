@@ -5,6 +5,8 @@ extends RefCounted
 ## GameState so no UI refresh or save/load can quietly redraw the choice.
 
 const CORE_PORTFOLIOS: Array[String] = ["Finance", "Interior", "Foreign Affairs", "Defense", "Economy", "Justice"]
+const SHORTLIST_COST := 15.0
+const RESHUFFLE_COOLDOWN_MONTHS := 6
 const FIRST_NAMES: Array[String] = ["Elena", "Viktor", "Dmitri", "Ana", "Leon", "Sonja", "Mira", "Tomas", "Ingrid", "Pavel", "Katarina", "Stefan"]
 const LAST_NAMES: Array[String] = ["Voss", "Haan", "Koval", "Petrov", "Marsh", "Bauer", "Dragu", "Kessler", "Orlov", "Renz", "Sava", "Lindqvist"]
 
@@ -14,6 +16,12 @@ static func issue_shortlist(state: GameState, portfolio: String) -> Dictionary:
 		return _error(reason)
 	if state.cabinet_shortlists.has(portfolio):
 		return {"ok": true, "message": "The existing shortlist remains open."}
+	var waiting := _cooldown_left(state, portfolio)
+	if waiting > 0:
+		return _error("The %s post was filled recently; another reshuffle is possible in %d month%s." % [
+			portfolio, waiting, "" if waiting == 1 else "s"])
+	if state.player.political_capital < SHORTLIST_COST:
+		return _error("Requires %.0f political capital." % SHORTLIST_COST)
 	var factions := _candidate_factions(state)
 	if factions.size() < 1:
 		return _error("No eligible political factions can supply a minister.")
@@ -26,6 +34,7 @@ static func issue_shortlist(state: GameState, portfolio: String) -> Dictionary:
 		var faction: Faction = picks[index] if index < picks.size() and picks[index] != null else factions[index % factions.size()]
 		candidates.append(_generate_candidate(state, portfolio, faction, index == 2))
 	state.cabinet_shortlists[portfolio] = candidates
+	state.player.political_capital -= SHORTLIST_COST
 	return {"ok": true, "message": "Three candidates are ready for %s." % portfolio}
 
 static func appoint(state: GameState, portfolio: String, candidate_id: String) -> Dictionary:
@@ -58,6 +67,7 @@ static func appoint(state: GameState, portfolio: String, candidate_id: String) -
 			reward = 0.04 if incoming.in_coalition else 0.06
 		reward += Minister.trait_effect(selected.trait_id, "appoint_faction_bonus", 0.0)
 		_adjust_loyalty(state, incoming.id, reward)
+	state.campaign_meta["reshuffled_%s" % portfolio] = state.turn
 	return {"ok": true, "message": "%s appointed as %s." % [selected.name, portfolio],
 		"appointed_id": selected.id}
 
@@ -89,6 +99,13 @@ static func _action_reason(state: GameState, portfolio: String) -> String:
 	if not CORE_PORTFOLIOS.has(portfolio):
 		return "Unknown cabinet portfolio."
 	return ""
+
+static func _cooldown_left(state: GameState, portfolio: String) -> int:
+	var key := "reshuffled_%s" % portfolio
+	if not state.campaign_meta.has(key):
+		return 0
+	return maxi(0, int(state.campaign_meta[key]) + RESHUFFLE_COOLDOWN_MONTHS - state.turn)
+
 
 static func _candidate_factions(state: GameState) -> Array[Faction]:
 	var out: Array[Faction] = []
