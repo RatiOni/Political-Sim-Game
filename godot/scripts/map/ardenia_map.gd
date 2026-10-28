@@ -29,6 +29,8 @@ var terrain_layer := TileMapLayer.new()
 var growth_layer := TileMapLayer.new()
 var growth_desired: Dictionary = {}
 var growth_tween: Tween
+var smoke_timer := Timer.new()
+var smoke_frame := 0
 var lines_rect := TextureRect.new()
 var zoom_in_button := Button.new()
 var zoom_out_button := Button.new()
@@ -48,6 +50,7 @@ var _tilesets: Dictionary = {}
 var _day_textures: Dictionary = {}
 var _dusk_textures: Dictionary = {}
 var _lines: Dictionary = {}
+var _covered: Dictionary = {}
 var _dusk := false
 var _growth_started := false
 var _user_zoomed := false
@@ -112,6 +115,10 @@ func _build_nodes() -> void:
 	_canvas.add_child(lines_rect)
 	_highlight.draw.connect(_draw_highlight)
 	_canvas.add_child(_highlight)
+	smoke_timer.name = "SmokeTimer"
+	smoke_timer.wait_time = GrowthPainter.SMOKE_SECONDS
+	smoke_timer.timeout.connect(func() -> void: GrowthPainter.step_smoke(self))
+	add_child(smoke_timer)
 	_labels.name = "Labels"
 	_physical.add_child(_labels)
 	_notice.name = "Unavailable"
@@ -236,7 +243,7 @@ func set_dusk(on: bool) -> void:
 func _apply_lines() -> void:
 	var key := Vector2i(tile_px, int(_dusk))
 	if not _lines.has(key):
-		_lines[key] = ImageTexture.create_from_image(MapLines.build(_tiles, _geo, MapPalette.DUSK if _dusk else MapPalette.DAY, tile_px))
+		_lines[key] = ImageTexture.create_from_image(MapLines.build(_tiles, _geo, MapPalette.DUSK if _dusk else MapPalette.DAY, tile_px, _covered))
 	lines_rect.texture = _lines[key]
 	lines_rect.size = Vector2(MapLines.canvas_size(tile_px))
 
@@ -378,7 +385,10 @@ func apply_snapshot(values: Array, selection: String) -> void:
 func _paint_growth() -> void:
 	if unavailable or _geo == null or terrain_layer.tile_set == null or regions.is_empty():
 		return
-	GrowthPainter.apply(self, GrowthLayers.all_targets(regions.values(), _geo, _tiles), _growth_started)
+	var targets := GrowthLayers.all_targets(regions.values(), _geo, _tiles)
+	var overlay := GrowthLayers.overlay(regions.values(), _geo, _tiles, targets)
+	_cover_routes(overlay["covered"])
+	GrowthPainter.apply(self, targets, overlay, _growth_started)
 	_growth_started = true
 
 
@@ -476,3 +486,11 @@ func _outline(cells: Dictionary, width: float, colour: Color) -> void:
 			if cells.has(cell + Vector2i(corner.x, 0)) and cells.has(cell + Vector2i(0, corner.y)) and not cells.has(cell + corner):
 				var at := origin + Vector2(tile - width if corner.x > 0 else 0.0, tile - width if corner.y > 0 else 0.0)
 				_highlight.draw_rect(Rect2(at, Vector2(width, width)), colour)
+
+
+func _cover_routes(covered: Dictionary) -> void:
+	if covered.hash() == _covered.hash():
+		return
+	_covered = covered
+	_lines.clear()
+	_apply_lines()

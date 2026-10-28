@@ -5,7 +5,7 @@ const CELL := 8
 const VARIANTS := 4
 const COLUMNS := 16
 const KINDS: Array[String] = ["deep_sea", "sea", "shallows", "sand", "grass", "farm", "fallow", "forest", "hills", "mountain", "snow", "river"]
-const SPRITES: Array[String] = ["house", "house_lit", "tower", "capital", "tree", "crops", "road", "paved", "rail", "barricade", "smoke_0", "smoke_1", "smoke_2"]
+const SPRITES: Array[String] = ["house", "house_lit", "tower", "capital", "tree", "crops", "road", "paved", "rail", "barricade", "smoke_0", "smoke_1", "smoke_2", "road_v", "road_d1", "road_d2", "paved_v", "paved_d1", "paved_d2", "rail_v", "rail_d1", "rail_d2"]
 const HALF := 4
 const SIZES: Array[int] = [CELL, HALF]
 const ATLAS_PNG := "res://data/map/tile_atlas.png"
@@ -43,6 +43,9 @@ const DRAWN := {
 	"smoke_0": ["........", "........", "........", "........", "...ll...", "..llll..", "..lmll..", "...ll..."],
 	"smoke_1": ["........", "........", "....ll..", "...llll.", "...lmll.", "....ll..", "........", "........"],
 	"smoke_2": ["...mm...", "..mllm..", "...mm...", "........", "........", "........", "........", "........"],
+	"road_d1": ["r.......", ".r......", "........", "...r....", "....r...", "........", "......r.", ".......r"],
+	"paved_d1": ["lk......", "kkk.....", ".klk....", "..kkk...", "...klk..", "....kkk.", ".....klk", "......kl"],
+	"rail_d1": ["#.#.....", ".#......", "#.#.....", "...#.#..", "....#...", "...#.#..", "......#.", ".......#"],
 }
 
 
@@ -102,7 +105,7 @@ static func build_atlas(tile_px: int = CELL) -> Image:
 		elif KENNEY.has(names[i]):
 			_blit(atlas, _sized(recolour(sheet, KENNEY[names[i]][0], KENNEY[names[i]][1]), tile_px), origin, tile_px)
 		else:
-			_blit(atlas, _sized(drawn(DRAWN[names[i]]), tile_px), origin, tile_px)
+			_blit(atlas, _sized(drawn(sprite_rows(names[i])), tile_px), origin, tile_px)
 	return atlas
 
 
@@ -282,3 +285,21 @@ static func _peak(x: int, y: int, snowcap: bool, h: float, size: int = CELL) -> 
 	if snowcap and y < size * 5 / 8:
 		return MapPalette.SNOW if x <= apex else MapPalette.SNOW_SHADE
 	return MapPalette.ROCK if x >= apex else MapPalette.ROCK_LIGHT
+
+
+static func sprite_rows(name: String) -> Array:
+	if DRAWN.has(name):
+		return DRAWN[name]
+	if name.ends_with("_d2"):
+		return sprite_rows(name.trim_suffix("_d2") + "_d1").map(func(row: String) -> String: return row.reverse())
+	return _transposed(sprite_rows(name.trim_suffix("_v")))
+
+
+static func _transposed(rows: Array) -> Array:
+	var out := []
+	for x in rows.size():
+		var column := ""
+		for y in rows.size():
+			column += rows[y][x]
+		out.append(column)
+	return out

@@ -16,7 +16,7 @@ static func canvas_size(tile_px: int) -> Vector2i:
 	return TileBaker.GRID * tile_px
 
 
-static func build(tiles: Dictionary, geo: MapGeometry, palette: PackedColorArray, tile_px: int = TileBaker.TILE) -> Image:
+static func build(tiles: Dictionary, geo: MapGeometry, palette: PackedColorArray, tile_px: int = TileBaker.TILE, covered: Dictionary = {}) -> Image:
 	var size := canvas_size(tile_px)
 	var img := Image.create_empty(size.x, size.y, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
@@ -28,9 +28,9 @@ static func build(tiles: Dictionary, geo: MapGeometry, palette: PackedColorArray
 	_ring(img, tiles, inside, foreign, palette[MapPalette.GOLD_DARK], tile_px)
 	for route in geo.routes:
 		if route["kind"] == "road":
-			_road(img, route["points"], palette[MapPalette.ROAD], tile_px)
+			_road(img, route["points"], palette[MapPalette.ROAD], tile_px, covered)
 		elif route["kind"] == "rail":
-			_rail(img, route["points"], palette[MapPalette.RAIL], tile_px)
+			_rail(img, route["points"], palette[MapPalette.RAIL], tile_px, covered)
 	_ceasefire(img, geo.ceasefire, palette[MapPalette.CEASEFIRE], tile_px)
 	return img
 
@@ -95,17 +95,21 @@ static func _route_cells(points: PackedVector2Array) -> Array[Vector2i]:
 	return TileBaker.line_tiles(points).filter(func(c: Vector2i) -> bool: return Rect2i(Vector2i.ZERO, TileBaker.GRID).has_point(c))
 
 
-static func _road(img: Image, points: PackedVector2Array, colour: Color, tile_px: int) -> void:
+static func _road(img: Image, points: PackedVector2Array, colour: Color, tile_px: int, covered: Dictionary) -> void:
 	var row := tile_px * 5 / 8
 	for cell in _route_cells(points):
+		if covered.has(cell):
+			continue
 		for x in tile_px:
 			if x % DOT_PERIOD < DOT_ON:
 				img.set_pixelv(cell * tile_px + Vector2i(x, row), colour)
 
 
-static func _rail(img: Image, points: PackedVector2Array, colour: Color, tile_px: int) -> void:
+static func _rail(img: Image, points: PackedVector2Array, colour: Color, tile_px: int, covered: Dictionary) -> void:
 	var row := tile_px * 2 / 8
 	for cell in _route_cells(points):
+		if covered.has(cell):
+			continue
 		for x in tile_px:
 			var origin := cell * tile_px
 			img.set_pixelv(origin + Vector2i(x, row), colour)

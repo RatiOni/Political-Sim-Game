@@ -21,6 +21,17 @@ const LIGHT_POPULATION_SCALE := 2000.0
 const FALLOW_WEIGHT := 0.9
 const BUILDABLE: Array[String] = ["sand", "grass", "farm", "fallow", "forest", "hills"]
 const ARABLE: Array[String] = ["grass", "farm", "fallow"]
+const ROAD_TIER_STEPS: Array[float] = [0.35, 0.65]
+const PROGRAMME_ROAD_BONUS := 0.1
+const TROUBLE_FLOOR := 0.5
+const BARRICADE_TROUBLE := 0.7
+const SECOND_BARRICADE_TROUBLE := 0.85
+const INSURGENCY_WEIGHT := 0.3
+const CIVIL_WAR_WEIGHT := 0.3
+const VETRENKA_TROUBLE := {"routed": 0.1, "talks_failed": 0.1, "partitioned_contested": 0.1}
+const SMOKE_SHARE := 0.4
+const MAX_SMOKE := 14
+const ROUTE_KINDS: Array[String] = ["road", "rail"]
 
 
 static func town_tiles(population_k: float, is_capital: bool) -> int:
@@ -180,4 +191,117 @@ static func _farm_cells(region: int, occupied: Dictionary, centres: Array, devel
 		return reach[a] < reach[b] or (reach[a] == reach[b] and (a.y < b.y or (a.y == b.y and a.x < b.x))))
 	var out: Array[Vector2i] = []
 	out.assign(ordered.slice(0, roundi(ordered.size() * farm_share(development))))
+	return out
+
+
+static func road_tier(development: float, programme_active: bool) -> int:
+	var effective := development + (PROGRAMME_ROAD_BONUS if programme_active else 0.0)
+	var tier := 0
+	for step in ROAD_TIER_STEPS:
+		tier += 1 if effective >= step else 0
+	return tier
+
+
+static func route_suffix(step: Vector2i) -> String:
+	var sx := signi(step.x)
+	var sy := signi(step.y)
+	if sy == 0:
+		return ""
+	if sx == 0:
+		return "_v"
+	return "_d1" if sx == sy else "_d2"
+
+
+static func trouble(row: Dictionary) -> float:
+	var pressure := float(row.get("pressure", 0.0))
+	if pressure < TROUBLE_FLOOR:
+		return 0.0
+	var extra := float(row.get("insurgency", 0.0)) * INSURGENCY_WEIGHT
+	extra += CIVIL_WAR_WEIGHT if bool(row.get("civil_war", false)) else 0.0
+	extra += float(VETRENKA_TROUBLE.get(String(row.get("vetrenka_status", "")), 0.0))
+	return clampf(pressure + extra, 0.0, 1.0)
+
+
+static func trouble_cells(row: Dictionary, town_cells: Array, route_cells: Array = []) -> Dictionary:
+	var out := {"smoke": [] as Array[Vector2i], "barricade": [] as Array[Vector2i], "dim": false}
+	var level := trouble(row)
+	if level <= TROUBLE_FLOOR or town_cells.is_empty():
+		return out
+	out["dim"] = true
+	var smoke_count := clampi(roundi(town_cells.size() * SMOKE_SHARE * (level - TROUBLE_FLOOR) / TROUBLE_FLOOR), 1, MAX_SMOKE)
+	out["smoke"].assign(hash_order(town_cells, 4).slice(0, smoke_count))
+	if level > BARRICADE_TROUBLE and String(row.get("control", "")) != "separatist":
+		var barricades := 2 if level > SECOND_BARRICADE_TROUBLE else 1
+		out["barricade"].assign(_nearest_to(route_cells, town_cells).slice(0, barricades))
+	return out
+
+
+static func _nearest_to(candidates: Array, towns: Array) -> Array[Vector2i]:
+	var gap := {}
+	for cell in candidates:
+		var best := 1 << 30
+		for town in towns:
+			best = mini(best, (cell - town).length_squared())
+		gap[cell] = best
+	var ordered: Array[Vector2i] = []
+	ordered.assign(candidates)
+	ordered.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		return gap[a] < gap[b] or (gap[a] == gap[b] and (a.y < b.y or (a.y == b.y and a.x < b.x))))
+	return ordered
+
+
+static func overlay(rows: Array, geo: MapGeometry, tiles: Dictionary, targets: Dictionary) -> Dictionary:
+	var by_id := {}
+	for row in rows:
+		by_id[String(row["id"])] = row
+	var routes := {}
+	var open := {}
+	var occupied := {}
+	for region_id in targets:
+		for key in ["town_cells", "farm_cells"]:
+			for cell in targets[region_id][key]:
+				occupied[cell] = true
+	for step in _route_walk(geo, tiles, by_id):
+		var row: Dictionary = by_id[step["region"]]
+		var sprite := _route_sprite(step, row)
+		if sprite != "":
+			routes[step["cell"]] = sprite
+		if not occupied.has(step["cell"]):
+			if not open.has(step["region"]):
+				open[step["region"]] = {}
+			open[step["region"]][step["cell"]] = true
+	var out_trouble := {}
+	var covered := routes.duplicate()
+	for region_id in targets:
+		var plan: Dictionary = targets[region_id]
+		var houses: Array = plan["town_cells"].filter(func(c: Vector2i) -> bool: return c not in plan["tower_cells"] and c not in plan["capital_cells"])
+		out_trouble[region_id] = trouble_cells(by_id[region_id], houses, open.get(region_id, {}).keys())
+		for cell in out_trouble[region_id]["barricade"]:
+			covered[cell] = "barricade"
+	return {"routes": routes, "trouble": out_trouble, "covered": covered}
+
+
+static func _route_sprite(step: Dictionary, row: Dictionary) -> String:
+	if step["kind"] == "rail":
+		return "rail" + step["suffix"]
+	var tier := road_tier(float(row.get("development", 0.0)), row.get("active_program") != null)
+	return "" if tier == 0 else ("road" if tier == 1 else "paved") + step["suffix"]
+
+
+static func _route_walk(geo: MapGeometry, tiles: Dictionary, by_id: Dictionary) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for kind in ROUTE_KINDS:
+		for route in geo.routes:
+			if route["kind"] != kind:
+				continue
+			var cells := TileBaker.line_tiles(route["points"])
+			for i in cells.size():
+				var region := TileBaker.region_at_tile(tiles, cells[i])
+				if region >= geo.region_ids.size():
+					continue
+				var region_id := geo.region_ids[region]
+				if not by_id.has(region_id) or String(by_id[region_id].get("control", "")) == "separatist":
+					continue
+				var step := cells[mini(i + 1, cells.size() - 1)] - cells[maxi(i - 1, 0)]
+				out.append({"cell": cells[i], "region": region_id, "kind": kind, "suffix": route_suffix(step)})
 	return out

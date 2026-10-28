@@ -4,11 +4,15 @@ const TestSupportScript = preload("res://scripts/native/testing/test_support.gd"
 const WATER := ["deep_sea", "sea", "shallows"]
 const BASE_POPULATION := 200.0
 const BASE_DEVELOPMENT := 0.3
+const WATCHDOG_SECONDS := 100.0
 
 var t = TestSupportScript.new()
 
 
 func _initialize() -> void:
+	create_timer(WATCHDOG_SECONDS).timeout.connect(func() -> void:
+		push_error("growth layer test exceeded %d seconds" % int(WATCHDOG_SECONDS))
+		quit(1))
 	_run.call_deferred()
 
 
@@ -187,11 +191,182 @@ func _check_fence(geo: MapGeometry, tiles: Dictionary) -> void:
 	t.truth(crossings > 0, "some town spirals cross a region line")
 
 
+func _troubled(geo: MapGeometry, pressure: float, development: float) -> Array:
+	var rows := _rows(geo, BASE_POPULATION, development, pressure)
+	for row in rows:
+		row["insurgency"] = 0.5
+	return rows
+
+
+func _count_prefix(map: ArdeniaMap, prefix: String) -> int:
+	var total := 0
+	for name in TileArt.index():
+		if String(name).begins_with(prefix):
+			total += _count_sprite(map, name)
+	return total
+
+
+func _smoke_signature(map: ArdeniaMap) -> Array:
+	return [_count_sprite(map, "smoke_0"), _count_sprite(map, "smoke_1"), _count_sprite(map, "smoke_2")]
+
+
+func _smoke_total(map: ArdeniaMap) -> int:
+	var signature := _smoke_signature(map)
+	return signature[0] + signature[1] + signature[2]
+
+
+func _nearest_distance(towns: Array, routes: Array) -> int:
+	var best := 1 << 30
+	for r in routes:
+		for c in towns:
+			best = mini(best, (r - c).length_squared())
+	return best
+
+
+func _pixels(img: Image, colour: Color) -> int:
+	var total := 0
+	for y in img.get_height():
+		for x in img.get_width():
+			total += 1 if img.get_pixel(x, y) == colour else 0
+	return total
+
+
+func _check_tiers_and_trouble() -> void:
+	var previous := 0
+	for step in 101:
+		var tier := GrowthLayers.road_tier(step / 100.0, false)
+		t.truth(tier >= previous, "road_tier is monotonic at %d%%" % step)
+		previous = tier
+	t.equal(GrowthLayers.road_tier(0.34, false), 0, "below 0.35 is a track")
+	t.equal(GrowthLayers.road_tier(0.35, false), 1, "0.35 is a road")
+	t.equal(GrowthLayers.road_tier(0.64, false), 1, "below 0.65 is still a road")
+	t.equal(GrowthLayers.road_tier(0.65, false), 2, "0.65 is paved")
+	t.equal(GrowthLayers.road_tier(0.3, true), 1, "an active programme lifts a track to a road")
+	t.equal(GrowthLayers.road_tier(0.6, true), 2, "an active programme lifts a road to paved")
+	t.equal(GrowthLayers.road_tier(0.3, false), 0, "without a programme 0.3 stays a track")
+	t.equal(GrowthLayers.route_suffix(Vector2i(2, 0)), "", "a horizontal step uses the base sprite")
+	t.equal(GrowthLayers.route_suffix(Vector2i(0, -3)), "_v", "a vertical step uses the vertical sprite")
+	t.equal(GrowthLayers.route_suffix(Vector2i(1, 1)), "_d1", "a down-right step uses the first diagonal")
+	t.equal(GrowthLayers.route_suffix(Vector2i(-1, -1)), "_d1", "an up-left step uses the first diagonal")
+	t.equal(GrowthLayers.route_suffix(Vector2i(1, -1)), "_d2", "an up-right step uses the second diagonal")
+	t.equal(GrowthLayers.trouble({"pressure": 0.49, "insurgency": 1.0, "civil_war": true}), 0.0, "no trouble below pressure 0.5")
+	t.truth(GrowthLayers.trouble({"pressure": 0.6}) < GrowthLayers.trouble({"pressure": 0.8}), "trouble grows with pressure")
+	t.truth(GrowthLayers.trouble({"pressure": 0.6, "insurgency": 0.5}) > GrowthLayers.trouble({"pressure": 0.6}), "insurgency adds trouble")
+	t.truth(GrowthLayers.trouble({"pressure": 0.6, "civil_war": true}) > GrowthLayers.trouble({"pressure": 0.6}), "civil war adds trouble")
+	t.truth(GrowthLayers.trouble({"pressure": 0.6, "vetrenka_status": "routed"}) > GrowthLayers.trouble({"pressure": 0.6}), "a hardened Vetrenka status adds trouble")
+	t.truth(GrowthLayers.trouble({"pressure": 5.0, "insurgency": 5.0, "civil_war": true}) <= 1.0, "trouble stays within 0..1")
+
+
+func _check_trouble_cells(geo: MapGeometry, tiles: Dictionary) -> void:
+	var rows := _rows(geo, 1500.0, 0.8, 0.1)
+	var targets := GrowthLayers.all_targets(rows, geo, tiles)
+	var overlay := GrowthLayers.overlay(rows, geo, tiles, targets)
+	var calm: Dictionary = overlay["trouble"]["vashtera"]
+	t.equal(calm["smoke"].size() + calm["barricade"].size(), 0, "a calm region shows no smoke or barricade")
+	t.equal(calm["dim"], false, "a calm region keeps its lights")
+	var towns: Array = targets["vashtera"]["town_cells"]
+	var routes: Array[Vector2i] = []
+	for cell in overlay["routes"]:
+		if TileBaker.region_at_tile(tiles, cell) == geo.region_ids.find("vashtera") and cell not in towns:
+			routes.append(cell)
+	t.truth(routes.size() > 0, "vashtera has open route cells")
+	var smoky := GrowthLayers.trouble_cells({"pressure": 0.6, "control": "full"}, towns, routes)
+	t.truth(smoky["smoke"].size() >= 1, "trouble above 0.5 raises smoke")
+	t.truth(smoky["smoke"].all(func(c: Vector2i) -> bool: return c in towns), "smoke stands on town cells")
+	t.equal(smoky["barricade"].size(), 0, "no barricade at 0.6 trouble")
+	t.equal(smoky["dim"], true, "trouble dims the town")
+	var hot := GrowthLayers.trouble_cells({"pressure": 0.8, "control": "full"}, towns, routes)
+	t.equal(hot["barricade"].size(), 1, "trouble above 0.7 raises one barricade")
+	t.truth(hot["barricade"][0] in routes, "the barricade sits on a route cell")
+	t.equal(_nearest_distance(towns, [hot["barricade"][0]]), _nearest_distance(towns, routes), "the barricade sits on the route cell nearest the town")
+	t.equal(GrowthLayers.trouble_cells({"pressure": 0.9, "control": "full"}, towns, routes)["barricade"].size(), 2, "severe trouble raises a second barricade")
+	var held := GrowthLayers.trouble_cells({"pressure": 0.95, "control": "separatist"}, towns, routes)
+	t.equal(held["barricade"].size(), 0, "a separatist region gets no state barricades")
+	t.equal(GrowthLayers.trouble_cells({"pressure": 0.9, "control": "full"}, [] as Array[Vector2i], routes)["smoke"].size(), 0, "no town, no smoke")
+
+
+func _check_routes(geo: MapGeometry, tiles: Dictionary) -> void:
+	var vetrenka := geo.region_ids.find("vetrenka")
+	var rows := _rows(geo, 1500.0, 0.8, 0.1)
+	rows[vetrenka]["control"] = "separatist"
+	var overlay := GrowthLayers.overlay(rows, geo, tiles, GrowthLayers.all_targets(rows, geo, tiles))
+	var index := TileArt.index()
+	var kinds := {}
+	for cell in overlay["routes"]:
+		var sprite: String = overlay["routes"][cell]
+		kinds[sprite.get_slice("_", 0)] = true
+		t.truth(index.has(sprite), "route sprite %s is in the atlas" % sprite)
+		t.truth(TileBaker.region_at_tile(tiles, cell) != vetrenka, "no route is upgraded inside separatist territory")
+	t.truth(kinds.has("paved") and kinds.has("rail"), "a developed country shows paved roads and rail")
+	var low := _rows(geo, 1500.0, 0.1, 0.1)
+	var rough := GrowthLayers.overlay(low, geo, tiles, GrowthLayers.all_targets(low, geo, tiles))
+	t.truth(rough["routes"].values().all(func(s: String) -> bool: return s.begins_with("rail")), "undeveloped roads stay tracks and only rail is drawn")
+	var mid := _rows(geo, 1500.0, 0.5, 0.1)
+	var middling := GrowthLayers.overlay(mid, geo, tiles, GrowthLayers.all_targets(mid, geo, tiles))
+	t.truth(middling["routes"].values().any(func(s: String) -> bool: return s.begins_with("road")), "middling development draws roads")
+	var oriented := {}
+	for sprite in overlay["routes"].values():
+		oriented[String(sprite).trim_prefix("road").trim_prefix("paved").trim_prefix("rail")] = true
+	t.truth(oriented.has("") and oriented.has("_v") and (oriented.has("_d1") or oriented.has("_d2")), "routes run horizontal, vertical and diagonal")
+	for base in ["road", "paved", "rail"]:
+		var flat: Array = TileArt.sprite_rows(base)
+		var upright: Array = TileArt.sprite_rows(base + "_v")
+		var transposed_ok := true
+		for y in flat.size():
+			for x in flat.size():
+				transposed_ok = transposed_ok and flat[y][x] == upright[x][y]
+		t.truth(transposed_ok, "%s_v is %s turned on its side" % [base, base])
+		var mirrored: Array = TileArt.sprite_rows(base + "_d1").map(func(r: String) -> String: return r.reverse())
+		t.equal(TileArt.sprite_rows(base + "_d2"), mirrored, "%s_d2 mirrors %s_d1" % [base, base])
+	var plain := MapLines.build(tiles, geo, MapPalette.DAY)
+	var covered := MapLines.build(tiles, geo, MapPalette.DAY, TileBaker.TILE, overlay["covered"])
+	t.truth(_pixels(covered, MapPalette.DAY[MapPalette.ROAD]) < _pixels(plain, MapPalette.DAY[MapPalette.ROAD]), "covered route cells lose their dotted road")
+	t.truth(_pixels(covered, MapPalette.DAY[MapPalette.RAIL]) < _pixels(plain, MapPalette.DAY[MapPalette.RAIL]), "covered rail cells lose their drawn rail")
+	var line := _pixels(plain, MapPalette.DAY[MapPalette.CEASEFIRE])
+	t.truth(line > 0, "the ceasefire line is drawn")
+	t.equal(_pixels(covered, MapPalette.DAY[MapPalette.CEASEFIRE]), line, "covering routes leaves the ceasefire line alone")
+
+
+func _check_map_trouble(map: ArdeniaMap, geo: MapGeometry) -> void:
+	map.apply_snapshot(_rows(geo, BASE_POPULATION * 3.0, 0.9, 0.1), "")
+	await create_timer(1.6).timeout
+	t.equal(_smoke_total(map), 0, "a calm map has no smoke")
+	t.equal(_count_sprite(map, "barricade"), 0, "a calm map has no barricades")
+	t.truth(_count_prefix(map, "paved") > 0 and _count_prefix(map, "rail") > 0, "a calm developed map shows paved roads and rail")
+	map.set_dusk(true)
+	var calm_lights := _count_sprite(map, "house_lit")
+	t.truth(calm_lights > 0, "a calm dusk lights the houses")
+	map.set_dusk(false)
+
+	map.apply_snapshot(_troubled(geo, 0.8, 0.9), "")
+	await create_timer(1.6).timeout
+	var smoke := _smoke_signature(map)
+	t.truth(_smoke_total(map) > 0, "a crisis raises smoke")
+	t.truth(_count_sprite(map, "barricade") > 0, "a crisis raises barricades")
+	map.set_dusk(true)
+	t.equal(_count_sprite(map, "house_lit"), 0, "a crisis leaves the towns dark at dusk")
+	map.set_dusk(false)
+	await create_timer(0.5).timeout
+	t.truth(_smoke_signature(map) != smoke, "smoke cycles through its frames")
+
+	map.apply_snapshot(_rows(geo, BASE_POPULATION * 3.0, 0.9, 0.1), "")
+	await create_timer(1.6).timeout
+	t.equal(_smoke_total(map), 0, "recovery clears the smoke")
+	t.equal(_count_sprite(map, "barricade"), 0, "recovery clears the barricades")
+	t.truth(map.smoke_timer.is_stopped(), "the smoke timer stops once nothing smoulders")
+	map.set_dusk(true)
+	t.equal(_count_sprite(map, "house_lit"), calm_lights, "recovery relights the towns")
+	map.set_dusk(false)
+
+
 func _run() -> void:
 	var geo := MapGeometry.load_world()
 	var tiles := TileBaker.load_tiles()
 	_check_curves()
 	_check_cells(geo, tiles)
+	_check_tiers_and_trouble()
+	_check_trouble_cells(geo, tiles)
+	_check_routes(geo, tiles)
 
 	root.size = Vector2i(1920, 1080)
 	var map: ArdeniaMap = (load("res://scenes/map/ardenia_map.tscn") as PackedScene).instantiate()
@@ -230,6 +405,7 @@ func _run() -> void:
 	await create_timer(1.6).timeout
 	t.equal(map.growth_layer.get_used_cells().size(), before, "shrinking regions clear their cells again")
 
+	await _check_map_trouble(map, geo)
 	map.queue_free()
 	await _frames()
 	quit(t.finish())

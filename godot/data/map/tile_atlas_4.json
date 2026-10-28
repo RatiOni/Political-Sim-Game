@@ -243,196 +243,232 @@
 		12,
 		3
 	],
-	"foreign_deep_sea_0": [
+	"road_v": [
 		13,
 		3
 	],
-	"foreign_deep_sea_1": [
+	"road_d1": [
 		14,
 		3
 	],
-	"foreign_deep_sea_2": [
+	"road_d2": [
 		15,
 		3
 	],
-	"foreign_deep_sea_3": [
+	"paved_v": [
 		0,
+		4
+	],
+	"paved_d1": [
+		1,
+		4
+	],
+	"paved_d2": [
+		2,
+		4
+	],
+	"rail_v": [
+		3,
+		4
+	],
+	"rail_d1": [
+		4,
+		4
+	],
+	"rail_d2": [
+		5,
+		4
+	],
+	"foreign_deep_sea_0": [
+		6,
+		4
+	],
+	"foreign_deep_sea_1": [
+		7,
+		4
+	],
+	"foreign_deep_sea_2": [
+		8,
+		4
+	],
+	"foreign_deep_sea_3": [
+		9,
 		4
 	],
 	"foreign_sea_0": [
-		1,
+		10,
 		4
 	],
 	"foreign_sea_1": [
-		2,
+		11,
 		4
 	],
 	"foreign_sea_2": [
-		3,
+		12,
 		4
 	],
 	"foreign_sea_3": [
-		4,
+		13,
 		4
 	],
 	"foreign_shallows_0": [
-		5,
+		14,
 		4
 	],
 	"foreign_shallows_1": [
-		6,
+		15,
 		4
 	],
 	"foreign_shallows_2": [
-		7,
-		4
+		0,
+		5
 	],
 	"foreign_shallows_3": [
-		8,
-		4
+		1,
+		5
 	],
 	"foreign_sand_0": [
-		9,
-		4
+		2,
+		5
 	],
 	"foreign_sand_1": [
-		10,
-		4
+		3,
+		5
 	],
 	"foreign_sand_2": [
-		11,
-		4
+		4,
+		5
 	],
 	"foreign_sand_3": [
-		12,
-		4
+		5,
+		5
 	],
 	"foreign_grass_0": [
-		13,
-		4
+		6,
+		5
 	],
 	"foreign_grass_1": [
-		14,
-		4
+		7,
+		5
 	],
 	"foreign_grass_2": [
-		15,
-		4
+		8,
+		5
 	],
 	"foreign_grass_3": [
-		0,
+		9,
 		5
 	],
 	"foreign_farm_0": [
-		1,
+		10,
 		5
 	],
 	"foreign_farm_1": [
-		2,
+		11,
 		5
 	],
 	"foreign_farm_2": [
-		3,
+		12,
 		5
 	],
 	"foreign_farm_3": [
-		4,
-		5
-	],
-	"foreign_fallow_0": [
-		5,
-		5
-	],
-	"foreign_fallow_1": [
-		6,
-		5
-	],
-	"foreign_fallow_2": [
-		7,
-		5
-	],
-	"foreign_fallow_3": [
-		8,
-		5
-	],
-	"foreign_forest_0": [
-		9,
-		5
-	],
-	"foreign_forest_1": [
-		10,
-		5
-	],
-	"foreign_forest_2": [
-		11,
-		5
-	],
-	"foreign_forest_3": [
-		12,
-		5
-	],
-	"foreign_hills_0": [
 		13,
 		5
 	],
-	"foreign_hills_1": [
+	"foreign_fallow_0": [
 		14,
 		5
 	],
-	"foreign_hills_2": [
+	"foreign_fallow_1": [
 		15,
 		5
 	],
-	"foreign_hills_3": [
+	"foreign_fallow_2": [
 		0,
 		6
 	],
-	"foreign_mountain_0": [
+	"foreign_fallow_3": [
 		1,
 		6
 	],
-	"foreign_mountain_1": [
+	"foreign_forest_0": [
 		2,
 		6
 	],
-	"foreign_mountain_2": [
+	"foreign_forest_1": [
 		3,
 		6
 	],
-	"foreign_mountain_3": [
+	"foreign_forest_2": [
 		4,
 		6
 	],
-	"foreign_snow_0": [
+	"foreign_forest_3": [
 		5,
 		6
 	],
-	"foreign_snow_1": [
+	"foreign_hills_0": [
 		6,
 		6
 	],
-	"foreign_snow_2": [
+	"foreign_hills_1": [
 		7,
 		6
 	],
-	"foreign_snow_3": [
+	"foreign_hills_2": [
 		8,
 		6
 	],
-	"foreign_river_0": [
+	"foreign_hills_3": [
 		9,
 		6
 	],
-	"foreign_river_1": [
+	"foreign_mountain_0": [
 		10,
 		6
 	],
-	"foreign_river_2": [
+	"foreign_mountain_1": [
 		11,
 		6
 	],
-	"foreign_river_3": [
+	"foreign_mountain_2": [
 		12,
 		6
+	],
+	"foreign_mountain_3": [
+		13,
+		6
+	],
+	"foreign_snow_0": [
+		14,
+		6
+	],
+	"foreign_snow_1": [
+		15,
+		6
+	],
+	"foreign_snow_2": [
+		0,
+		7
+	],
+	"foreign_snow_3": [
+		1,
+		7
+	],
+	"foreign_river_0": [
+		2,
+		7
+	],
+	"foreign_river_1": [
+		3,
+		7
+	],
+	"foreign_river_2": [
+		4,
+		7
+	],
+	"foreign_river_3": [
+		5,
+		7
 	]
 }
