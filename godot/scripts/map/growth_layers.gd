@@ -29,8 +29,9 @@ const SECOND_BARRICADE_TROUBLE := 0.85
 const INSURGENCY_WEIGHT := 0.3
 const CIVIL_WAR_WEIGHT := 0.3
 const VETRENKA_TROUBLE := {"routed": 0.1, "talks_failed": 0.1, "partitioned_contested": 0.1}
-const SMOKE_SHARE := 0.4
-const MAX_SMOKE := 14
+const SMOKE_SHARE := 0.8
+const PLUME_RISE: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, -2)]
+const MAX_SMOKE := 20
 const ROUTE_KINDS: Array[String] = ["road", "rail"]
 
 
@@ -304,4 +305,12 @@ static func _route_walk(geo: MapGeometry, tiles: Dictionary, by_id: Dictionary) 
 					continue
 				var step := cells[mini(i + 1, cells.size() - 1)] - cells[maxi(i - 1, 0)]
 				out.append({"cell": cells[i], "region": region_id, "kind": kind, "suffix": route_suffix(step)})
+	return out
+
+
+static func plume(base: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = [base]
+	for rise in PLUME_RISE:
+		if Rect2i(Vector2i.ZERO, TileBaker.GRID).has_point(base + rise):
+			out.append(base + rise)
 	return out

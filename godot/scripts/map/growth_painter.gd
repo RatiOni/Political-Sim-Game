@@ -2,8 +2,10 @@ class_name GrowthPainter
 extends RefCounted
 
 const FLIP_SECONDS := 1.0
-const SMOKE_SECONDS := 0.4
+const SMOKE_CYCLE_SECONDS := 0.4
 const SMOKE_FRAMES := 3
+const SMOKE_SECONDS := SMOKE_CYCLE_SECONDS / SMOKE_FRAMES
+const PLUME_ROLES: Array[String] = ["fire", "smoke_mid", "smoke_top"]
 const NONE := Vector2i(-1, -1)
 
 
@@ -61,15 +63,19 @@ static func _paint_smoke(map: ArdeniaMap) -> void:
 		if not map.smoke_desired.has(cell):
 			map.smoke_layer.erase_cell(cell)
 	for cell in map.smoke_desired:
-		var at: Array = TileArt.index()["smoke_%d" % ((map.smoke_frame + GrowthLayers.stable_hash(cell)) % SMOKE_FRAMES)]
+		var entry: Dictionary = map.smoke_desired[cell]
+		var at: Array = TileArt.index()["%s_%d" % [entry["role"], (map.smoke_frame + entry["phase"]) % SMOKE_FRAMES]]
 		map.smoke_layer.set_cell(cell, 0, Vector2i(at[0], at[1]))
 
 
 static func _smoke_cells(overlay: Dictionary) -> Dictionary:
 	var out := {}
-	for signs in overlay["trouble"].values():
-		for cell in signs["smoke"]:
-			out[cell] = true
+	for role in range(PLUME_ROLES.size() - 1, -1, -1):
+		for signs in overlay["trouble"].values():
+			for base in signs["smoke"]:
+				var column := GrowthLayers.plume(base)
+				if role < column.size():
+					out[column[role]] = {"role": PLUME_ROLES[role], "phase": GrowthLayers.stable_hash(base) % SMOKE_FRAMES}
 	return out
 
 

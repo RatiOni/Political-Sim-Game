@@ -5,7 +5,7 @@ const CELL := 8
 const VARIANTS := 4
 const COLUMNS := 16
 const KINDS: Array[String] = ["deep_sea", "sea", "shallows", "sand", "grass", "farm", "fallow", "forest", "hills", "mountain", "snow", "river"]
-const SPRITES: Array[String] = ["house", "house_lit", "tower", "capital", "tree", "crops", "road", "paved", "rail", "barricade", "smoke_0", "smoke_1", "smoke_2", "road_v", "road_d1", "road_d2", "paved_v", "paved_d1", "paved_d2", "rail_v", "rail_d1", "rail_d2"]
+const SPRITES: Array[String] = ["house", "house_lit", "tower", "capital", "tree", "crops", "road", "paved", "rail", "barricade", "fire_0", "fire_1", "fire_2", "smoke_mid_0", "smoke_mid_1", "smoke_mid_2", "smoke_top_0", "smoke_top_1", "smoke_top_2", "road_v", "road_d1", "road_d2", "paved_v", "paved_d1", "paved_d2", "rail_v", "rail_d1", "rail_d2"]
 const HALF := 4
 const SIZES: Array[int] = [CELL, HALF]
 const ATLAS_PNG := "res://data/map/tile_atlas.png"
@@ -32,7 +32,7 @@ const KENNEY := {
 
 const DRAWN_LEGEND := {
 	"g": MapPalette.GOLD, "d": MapPalette.GOLD_DARK, "r": MapPalette.ROAD, "k": MapPalette.ROCK_DARK,
-	"l": MapPalette.ROCK_LIGHT, "m": MapPalette.ROCK, "#": MapPalette.RAIL, "i": MapPalette.INK,
+	"l": MapPalette.ROCK_LIGHT, "m": MapPalette.ROCK, "#": MapPalette.RAIL, "i": MapPalette.INK, "f": MapPalette.CEASEFIRE, "y": MapPalette.LIT,
 }
 
 const DRAWN := {
@@ -40,9 +40,15 @@ const DRAWN := {
 	"road": ["........", "........", "........", "........", "........", "rr.rr.rr", "........", "........"],
 	"paved": ["........", "........", "........", "kkkkkkkk", "kllkkllk", "kkkkkkkk", "........", "........"],
 	"rail": ["........", "#..#..#.", "########", "#..#..#.", "........", "........", "........", "........"],
-	"smoke_0": ["...ii...", "..iklk..", "..ikki..", ".iklkki.", "..ikki..", "..ikli..", ".ikkki..", "..iiii.."],
-	"smoke_1": ["..ii....", ".iklki..", ".ikkki..", "..iklki.", ".ikkki..", "..iklki.", "..ikki..", "...ii..."],
-	"smoke_2": ["....ii..", "...iklk.", "..ikkki.", "..iklki.", "...ikki.", "..iklki.", "...ikki.", "....ii.."],
+	"fire_0": ["..ik....", "..ikk...", "..y.y.y.", ".yfyfyf.", ".fyfffyf", "yfyfyfyf", ".fffyff.", ".fyfyfy."],
+	"fire_1": ["...ik...", "..ikk...", ".y.y.y..", ".fyfyfy.", "yfffyfyf", "fyfyfyfy", ".ffyfff.", "yfyfyfy."],
+	"fire_2": ["....ik..", "...ikk..", "..y.y.y.", "..fyfyf.", ".yfyfffy", "yfyfyfyf", "fffyfyf.", ".yfyfyfy"],
+	"smoke_mid_0": ["...iki..", "..ikkmi.", ".ikkkmi.", ".ikkmmli", "..ikmmi.", ".ikkmmi.", "..ikmi..", "...iki.."],
+	"smoke_mid_1": ["..iki...", ".ikkmi..", ".ikkkmi.", "..ikmmli", ".ikkmmi.", "..ikkmi.", "..ikmi..", "..iki..."],
+	"smoke_mid_2": ["...iki..", "..ikmki.", "..ikkmi.", ".ikkmmi.", ".ikmmlli", "..ikkmi.", ".ikkmmi.", "..iki..."],
+	"smoke_top_0": ["..illi..", ".imllmi.", ".imllmi.", "..immi..", ".illmli.", ".imllmi.", "..iimi..", "........"],
+	"smoke_top_1": ["........", "..illi..", ".imllli.", ".imllmi.", "..ilmi..", ".imllmi.", ".illlmi.", "..iimi.."],
+	"smoke_top_2": ["...ii...", "..illmi.", ".imlllmi", ".imllmi.", "..ilmi..", "..imlli.", ".imllmi.", "..iimi.."],
 	"road_d1": ["r.......", ".r......", "........", "...r....", "....r...", "........", "......r.", ".......r"],
 	"paved_d1": ["lk......", "kkk.....", ".klk....", "..kkk...", "...klk..", "....kkk.", ".....klk", "......kl"],
 	"rail_d1": ["#.#.....", ".#......", "#.#.....", "...#.#..", "....#...", "...#.#..", "......#.", ".......#"],

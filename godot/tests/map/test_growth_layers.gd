@@ -207,13 +207,15 @@ func _count_prefix(map: ArdeniaMap, prefix: String) -> int:
 	return total
 
 
-func _smoke_signature(map: ArdeniaMap) -> Array:
-	return [_count_sprite(map, "smoke_0", map.smoke_layer), _count_sprite(map, "smoke_1", map.smoke_layer), _count_sprite(map, "smoke_2", map.smoke_layer)]
+func _smoke_signature(map: ArdeniaMap) -> Dictionary:
+	var out := {}
+	for cell in map.smoke_layer.get_used_cells():
+		out[cell] = map.smoke_layer.get_cell_atlas_coords(cell)
+	return out
 
 
 func _smoke_total(map: ArdeniaMap) -> int:
-	var signature := _smoke_signature(map)
-	return signature[0] + signature[1] + signature[2]
+	return _count_sprite(map, "fire_0", map.smoke_layer) + _count_sprite(map, "fire_1", map.smoke_layer) + _count_sprite(map, "fire_2", map.smoke_layer)
 
 
 func _nearest_distance(towns: Array, routes: Array) -> int:
@@ -329,6 +331,27 @@ func _check_routes(geo: MapGeometry, tiles: Dictionary) -> void:
 
 
 
+func _role_at(map: ArdeniaMap, cell: Vector2i) -> String:
+	var coords := map.smoke_layer.get_cell_atlas_coords(cell)
+	for name in TileArt.index():
+		var at: Array = TileArt.index()[name]
+		if Vector2i(at[0], at[1]) == coords and (name.begins_with("fire_") or name.begins_with("smoke_mid_") or name.begins_with("smoke_top_")):
+			return name.rstrip("0123456789").trim_suffix("_")
+	return ""
+
+
+func _check_plume_cells() -> void:
+	var plume := GrowthLayers.plume(Vector2i(10, 10))
+	t.equal(plume.size(), 3, "a plume is three cells tall")
+	t.equal(plume[0], Vector2i(10, 10), "the plume's fire base is the town cell")
+	t.equal(plume[1], Vector2i(10, 9), "the second cell rises straight above the base")
+	t.equal(plume[2], Vector2i(11, 8), "the third cell drifts one step with the wind")
+	t.equal(GrowthLayers.plume(Vector2i(5, 1)).size(), 2, "a plume is clipped at the top of the grid")
+	t.equal(GrowthLayers.plume(Vector2i(5, 0)), [Vector2i(5, 0)] as Array[Vector2i], "a plume on the top row keeps only its base")
+	t.equal(GrowthLayers.plume(Vector2i(TileBaker.GRID.x - 1, 10)).size(), 2, "a plume is clipped at the east edge")
+	t.equal(GrowthLayers.plume(Vector2i(10, 10)), GrowthLayers.plume(Vector2i(10, 10)), "plumes are deterministic")
+
+
 func _check_smoke_layer(map: ArdeniaMap) -> void:
 	var canvas := map.terrain_layer.get_parent()
 	t.truth(map.smoke_layer.get_parent() == canvas, "smoke has its own layer in the same canvas as the terrain")
@@ -336,16 +359,28 @@ func _check_smoke_layer(map: ArdeniaMap) -> void:
 	t.truth(map.smoke_layer.tile_set == map.terrain_layer.tile_set, "smoke uses the terrain's atlas")
 	t.equal(map.smoke_layer.texture_filter, map.terrain_layer.texture_filter, "smoke is filtered like the terrain")
 	t.equal(map.smoke_layer.get_global_transform(), map.terrain_layer.get_global_transform(), "smoke follows the terrain transform")
-	var smoking: Array[Vector2i] = map.smoke_layer.get_used_cells()
-	t.truth(smoking.size() > 0, "smoke is drawn on its own layer")
+	var drawn: Array[Vector2i] = map.smoke_layer.get_used_cells()
+	t.truth(drawn.size() > 0, "smoke is drawn on its own layer")
 	var house := Vector2i(TileArt.index()["house"][0], TileArt.index()["house"][1])
-	t.truth(smoking.all(func(c: Vector2i) -> bool: return map.growth_layer.get_cell_atlas_coords(c) == house), "every smoking cell keeps its house underneath")
+	var bases := drawn.filter(func(c: Vector2i) -> bool: return _role_at(map, c) == "fire")
+	t.truth(bases.size() > 0, "every plume has a fire base")
+	t.truth(bases.all(func(c: Vector2i) -> bool: return map.growth_layer.get_cell_atlas_coords(c) == house), "every fire stands on a town house that is still there")
+	var belonging := {}
+	for base in bases:
+		for cell in GrowthLayers.plume(base):
+			belonging[cell] = true
+			t.truth(_role_at(map, cell) != "", "plume cell %s of the fire at %s is drawn" % [cell, base])
+		t.equal(_role_at(map, GrowthLayers.plume(base)[1]) in ["fire", "smoke_mid"], true, "the cell above a fire holds smoke")
+	t.truth(drawn.all(func(c: Vector2i) -> bool: return belonging.has(c)), "nothing on the smoke layer lies outside a plume")
+	t.truth(drawn.size() >= 2 * bases.size(), "plumes are columns, not single cells")
+	t.near(map.smoke_timer.wait_time * GrowthPainter.SMOKE_FRAMES, 0.4, 1e-6, "three frames cycle in 0.4 seconds")
 
 
 func _check_map_trouble(map: ArdeniaMap, geo: MapGeometry) -> void:
 	map.apply_snapshot(_rows(geo, BASE_POPULATION * 3.0, 0.9, 0.1), "")
 	await create_timer(1.6).timeout
 	t.equal(_smoke_total(map), 0, "a calm map has no smoke")
+	t.equal(map.smoke_layer.get_used_cells().size(), 0, "a calm map has an empty smoke layer")
 	t.equal(_count_sprite(map, "barricade"), 0, "a calm map has no barricades")
 	t.truth(_count_prefix(map, "paved") > 0 and _count_prefix(map, "rail") > 0, "a calm developed map shows paved roads and rail")
 	map.set_dusk(true)
@@ -355,7 +390,7 @@ func _check_map_trouble(map: ArdeniaMap, geo: MapGeometry) -> void:
 
 	map.apply_snapshot(_troubled(geo, 0.8, 0.9), "")
 	await create_timer(1.6).timeout
-	var smoke := _smoke_signature(map)
+	var smoke: Dictionary = _smoke_signature(map)
 	t.truth(_smoke_total(map) > 0, "a crisis raises smoke")
 	t.truth(_count_sprite(map, "barricade") > 0, "a crisis raises barricades")
 	_check_smoke_layer(map)
@@ -366,12 +401,13 @@ func _check_map_trouble(map: ArdeniaMap, geo: MapGeometry) -> void:
 	map.set_dusk(true)
 	t.equal(_count_sprite(map, "house_lit"), 0, "a crisis leaves the towns dark at dusk")
 	map.set_dusk(false)
-	await create_timer(0.5).timeout
+	await create_timer(0.2).timeout
 	t.truth(_smoke_signature(map) != smoke, "smoke cycles through its frames")
 
 	map.apply_snapshot(_rows(geo, BASE_POPULATION * 3.0, 0.9, 0.1), "")
 	await create_timer(1.6).timeout
 	t.equal(_smoke_total(map), 0, "recovery clears the smoke")
+	t.equal(map.smoke_layer.get_used_cells().size(), 0, "recovery leaves no plume cell behind")
 	t.equal(_count_sprite(map, "barricade"), 0, "recovery clears the barricades")
 	t.truth(map.smoke_timer.is_stopped(), "the smoke timer stops once nothing smoulders")
 	map.set_dusk(true)
@@ -387,6 +423,7 @@ func _run() -> void:
 	_check_tiers_and_trouble()
 	_check_trouble_cells(geo, tiles)
 	_check_routes(geo, tiles)
+	_check_plume_cells()
 
 	root.size = Vector2i(1920, 1080)
 	var map: ArdeniaMap = (load("res://scenes/map/ardenia_map.tscn") as PackedScene).instantiate()
