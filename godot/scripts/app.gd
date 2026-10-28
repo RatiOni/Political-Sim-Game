@@ -25,6 +25,8 @@ var _budget_adjustments := {}
 var _budget_preview: Dictionary = {}
 var _legislation_open := false
 var _situation_open := false
+var _diplomacy_open := false
+var _selected_country_id := ""
 var _selected_event_id := ""
 ## Situations already seen, so only a genuinely new one pauses the clock.
 var _known_situations := {}
@@ -55,6 +57,9 @@ func _ready() -> void:
 	%LegislationPanel.find_child("LobbyButton").pressed.connect(_lobby_bill)
 	%LegislationPanel.find_child("LobbyChoice").item_selected.connect(_on_bill_lobby_selected)
 	%SituationPanel.find_child("CloseSituationButton").pressed.connect(_close_situation)
+	%DiplomacyButton.pressed.connect(_open_diplomacy)
+	%DiplomacyPanel.find_child("CloseDiplomacyButton").pressed.connect(_close_diplomacy)
+	%DiplomacyPanel.find_child("CountryChoice").item_selected.connect(_on_country_selected)
 	get_window().size_changed.connect(_resize_layout)
 	_resize_layout()
 	_sfx = get_node_or_null("/root/UiSfx")
@@ -103,12 +108,16 @@ func _resize_layout() -> void:
 	var compact := get_window().size.x < 1500 or get_window().size.y < 850
 	find_child("OfficeLabel").visible = not compact
 	find_child("PreviewStatus").visible = not compact
+	# A date needs ~110 px; the wide reserve is a luxury the compact header
+	# cannot afford once every desk has its header button.
+	%DateLabel.custom_minimum_size.x = 120 if compact else 192
 	find_child("NationalPanel").visible = not compact and not _desk_open()
 	find_child("MapPanel").visible = not _desk_open()
 	%RegionBrief.visible = not _desk_open()
 	%BudgetPanel.visible = _budget_open
 	%LegislationPanel.visible = _legislation_open
 	%SituationPanel.visible = _situation_open
+	%DiplomacyPanel.visible = _diplomacy_open
 	find_child("MapHint").visible = not compact and not _desk_open()
 	%MonthlyReport.custom_minimum_size.y = 88 if compact else 192
 	%RegionBrief.find_child("Details").custom_minimum_size.y = 48 if compact else 84
@@ -123,6 +132,8 @@ func _resize_layout() -> void:
 			_refresh_legislation()
 		elif _situation_open:
 			_refresh_situation()
+		elif _diplomacy_open:
+			_refresh_diplomacy()
 		else:
 			_refresh_region()
 
@@ -177,6 +188,8 @@ func apply_snapshot(value: Dictionary) -> void:
 		_refresh_legislation()
 	elif _situation_open:
 		_refresh_situation()
+	elif _diplomacy_open:
+		_refresh_diplomacy()
 	_notice_new_situations()
 	_refresh_controls()
 
@@ -214,6 +227,7 @@ func _open_budget() -> void:
 	if snapshot.is_empty() or _fatal:
 		return
 	_sfx_cue("navigation")
+	_diplomacy_open = false
 	_legislation_open = false
 	_situation_open = false
 	_budget_open = true
@@ -430,6 +444,7 @@ func _open_legislation() -> void:
 	if snapshot.is_empty() or _fatal:
 		return
 	_sfx_cue("navigation")
+	_diplomacy_open = false
 	_budget_open = false
 	_situation_open = false
 	_legislation_open = true
@@ -437,8 +452,104 @@ func _open_legislation() -> void:
 	_resize_layout()
 
 
+func _open_diplomacy() -> void:
+	if snapshot.is_empty() or _fatal:
+		return
+	_sfx_cue("navigation")
+	_budget_open = false
+	_legislation_open = false
+	_situation_open = false
+	_diplomacy_open = true
+	_set_diplomacy_status("")
+	_resize_layout()
+
+
+func _close_diplomacy() -> void:
+	_sfx_cue("navigation")
+	_diplomacy_open = false
+	_resize_layout()
+
+
+func _on_country_selected(index: int) -> void:
+	var choice: OptionButton = %DiplomacyPanel.find_child("CountryChoice")
+	_selected_country_id = str(choice.get_item_metadata(index))
+	_sfx_cue("selection")
+	_refresh_diplomacy()
+
+
+func _refresh_diplomacy() -> void:
+	var rows: Array = snapshot.get("diplomacy", [])
+	var panel = %DiplomacyPanel
+	var choice: OptionButton = panel.find_child("CountryChoice")
+	choice.clear()
+	var selected: Dictionary = {}
+	for row in rows:
+		choice.add_item("%s — %s" % [row.get("name", ""), row.get("status", "")])
+		choice.set_item_metadata(choice.item_count - 1, str(row.get("id", "")))
+		if str(row.get("id", "")) == _selected_country_id:
+			selected = row
+			choice.select(choice.item_count - 1)
+	if selected.is_empty() and not rows.is_empty():
+		selected = rows[0]
+		_selected_country_id = str(selected.get("id", ""))
+		choice.select(0)
+	var actions_box: VBoxContainer = panel.find_child("DiplomacyActions")
+	for child in actions_box.get_children():
+		actions_box.remove_child(child)
+		child.queue_free()
+	if selected.is_empty():
+		panel.find_child("CountryStanding").text = "No foreign relations are known."
+		panel.find_child("CountryDetail").text = ""
+		return
+	panel.find_child("CountryStanding").text = "%s / %s (%+.2f)" % [
+		str(selected.get("name", "")).to_upper(), selected.get("status", ""), float(selected.get("score", 0.0))]
+	var lines: Array[String] = []
+	lines.append("Government: %s" % str(selected.get("regime", "")).replace("_", " "))
+	lines.append("Trade: %.0f M a year%s" % [float(selected.get("trade", 0.0)), " — under your sanctions" if selected.get("sanctioned", false) else ""])
+	if selected.get("in_civil_war", false):
+		lines.append("At war with itself.")
+	var treaty_names: Array[String] = []
+	for tr in selected.get("treaties", []):
+		treaty_names.append("%s (%d months)" % [tr.get("name", ""), int(tr.get("months", 0))])
+	lines.append("Treaties: %s" % (", ".join(treaty_names) if not treaty_names.is_empty() else "none"))
+	panel.find_child("CountryDetail").text = "\n".join(lines)
+	for action in selected.get("actions", []):
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 44)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var cost := float(action.get("cost", 0.0))
+		button.text = str(action.get("label", "")) + ("   · %.0f PC" % cost if cost > 0.0 else "")
+		button.disabled = not action.get("eligible", false)
+		button.tooltip_text = str(action.get("disabled_reason", ""))
+		button.pressed.connect(_take_diplomatic_action.bind(str(action.get("verb", "")), str(action.get("treaty_id", ""))))
+		actions_box.add_child(button)
+		var reason := str(action.get("disabled_reason", ""))
+		if reason != "":
+			var why := Label.new()
+			why.theme_type_variation = &"Muted"
+			why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			why.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			why.text = reason
+			actions_box.add_child(why)
+
+
+func _take_diplomatic_action(verb: String, treaty_id: String) -> void:
+	if _game == null or _selected_country_id.is_empty():
+		return
+	var result: Dictionary = _game.diplomacy_act(verb, _selected_country_id, treaty_id)
+	_sfx_result(result)
+	if not result.get("ok", false):
+		_set_diplomacy_status("REFUSED / %s" % result.get("error", "Unknown error"))
+		return
+	_set_diplomacy_status(str(result.get("message", "")))
+
+
+func _set_diplomacy_status(text: String) -> void:
+	%DiplomacyPanel.find_child("DiplomacyStatus").text = text
+
+
 func _desk_open() -> bool:
-	return _budget_open or _legislation_open or _situation_open
+	return _budget_open or _legislation_open or _situation_open or _diplomacy_open
 
 
 ## A situation the player has not yet seen pauses the clock and is
@@ -462,6 +573,7 @@ func _open_situation(event_id: String) -> void:
 	if snapshot.is_empty() or _fatal:
 		return
 	_sfx_cue("navigation")
+	_diplomacy_open = false
 	_budget_open = false
 	_legislation_open = false
 	_situation_open = true
@@ -934,6 +1046,7 @@ func _refresh_controls() -> void:
 	var ready := not snapshot.is_empty() and not _fatal
 	%BudgetButton.disabled = not ready or _desk_open()
 	%LegislationButton.disabled = not ready or _desk_open()
+	%DiplomacyButton.disabled = not ready or _desk_open()
 	%PlayButton.disabled = not ready
 	%PlayButton.text = "Paused" if _paused else "Playing ×%d" % _speed
 	for index in range(5):

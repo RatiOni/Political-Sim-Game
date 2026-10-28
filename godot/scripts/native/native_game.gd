@@ -87,6 +87,7 @@ func advance_day() -> Dictionary:
 		BudgetSimScript.process_fiscal_year(_state)
 		PoliticalCapitalScript.regenerate(_state)
 		MinistriesSimScript.simulate(_state)
+		DiplomacySim.monthly(_state)
 		EconomySimScript.update(_state)
 		RegionsSimScript.simulate(_state)
 		HouseholdsSimScript.simulate(_state)
@@ -198,6 +199,23 @@ func withdraw_budget() -> Dictionary:
 
 ## Native lawmaking boundary. Preview is pure; every successful mutation
 ## emits one detached snapshot while the re-entrancy guard is held.
+## One diplomatic action. DiplomacyActions owns every rule; this method owns
+## the operation guard and notification.
+func diplomacy_act(verb: String, country_id: String, treaty_id: String = "") -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = DiplomacyActions.act(_state, verb, country_id, treaty_id)
+	if result.get("ok", false):
+		var snap := snapshot()
+		result["snapshot"] = snap
+		state_changed.emit(snap)
+	_busy = false
+	return result
+
+
 ## Decides a waiting situation. EventActions owns the rules; this method
 ## owns the operation guard and notification.
 func resolve_situation(event_id: String, option_id: String) -> Dictionary:
@@ -479,6 +497,7 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 		"legislation": LawActionsScript.read_model(state).duplicate(true),
 		"cabinet": CabinetActionsScript.read_model(state).duplicate(true),
 		"situations": EventActions.read_model(state).duplicate(true),
+		"diplomacy": DiplomacyActions.read_model(state).duplicate(true),
 		"ministries": _ministries_snapshot(state),
 		"households": _household_snapshot(state),
 		"digest": state.monthly_digest.duplicate(),

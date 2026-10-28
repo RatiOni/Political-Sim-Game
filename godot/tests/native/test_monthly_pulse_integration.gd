@@ -73,6 +73,7 @@ static func _run_reference_rollover(state: GameState) -> void:
 	BudgetSimScript.process_fiscal_year(state)
 	PoliticalCapitalScript.regenerate(state)
 	MinistriesSimScript.simulate(state)
+	DiplomacySim.monthly(state)
 	EconomySimScript.update(state)
 	RegionsSimScript.simulate(state)
 	HouseholdsSimScript.simulate(state)

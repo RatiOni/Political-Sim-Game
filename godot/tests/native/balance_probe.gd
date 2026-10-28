@@ -67,6 +67,7 @@ func _tick(s: GameState) -> void:
 		BudgetSim.process_fiscal_year(s)
 		PoliticalCapital.regenerate(s)
 		MinistriesSim.simulate(s)
+		DiplomacySim.monthly(s)
 		EconomySim.update(s)
 		RegionsSim.simulate(s)
 		HouseholdsSim.simulate(s)

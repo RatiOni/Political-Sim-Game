@@ -1,8 +1,8 @@
 # Ardenia Godot — the living world (Phase 4)
 
 **Status:** situations engine, the schemer arc, the party leadership
-challenge, the Vasca question, Vetrenka and the civil-war gauge are
-playable — 44 of 46 events (2026-10-28). Arcs, the civil-war gauge, diplomacy verbs, the AI countries,
+challenge, the Vasca question, Vetrenka, the civil-war gauge and
+diplomacy are playable — 44 of 46 events (2026-10-28). Arcs, the civil-war gauge, diplomacy verbs, the AI countries,
 opposition play and the press remain. Same native-design rules as
 `SIM_REDESIGN.md`: Python is a reference for what Ardenia contains, never a
 formula to match.
@@ -22,7 +22,8 @@ formula to match.
    conditions (`schemer_plotting`, `vasca_stirring`, `vetrenka_friction_due`,
    `vetrenka_crossroads_ready`) join `Arcs.CONDITIONS` with them.
 3. **Civil-war gauge** — done (`sim/crisis_sim.gd`).
-4. **Diplomacy verbs** — pacts, sanctions, summits, treaty exit, loans.
+4. **Diplomacy verbs** — done (`actions/diplomacy_actions.gd`,
+   `sim/diplomacy_sim.gd`, the Diplomacy desk).
 5. **The world acts** — the eight AI countries deliberate and act, including
    on the player.
 6. **Opposition play** — the domestic-AI government, pledges, shadow cabinet.
@@ -153,3 +154,37 @@ government.
   figures — the report announces it first, the numbers follow.
 - Ties for "worst relation" break by country id, so a reload cannot change
   which neighbour a diplomatic situation is about.
+
+## Diplomacy
+
+Nine verbs through one guarded entry point (`DiplomacyActions.act`), each
+refusing with a stated reason and no side effect: outreach (+0.05 to
++0.10, scaled by the Foreign Affairs minister), a trade pact (once per
+partner, growth benefit phasing in over two years), a defence pact (needs
+trust ≥ 0.45; steadies the government; alarms the partner's rival),
+sanctions (refused against a friend; halt trade; cost your own exporters
+if the market was big), lifting them, summits (one every 8 months),
+condemnation (pleases the nationalist right), tearing up a treaty (−0.20,
+or −0.30 for a defence pact; a trade pact's growth benefit dies with it),
+and the foreign loan. Foreign policy belongs to the government.
+
+**The loan is a native design.** With real debt and market interest, a
+loan that merely added cash and debt would be meaningless. A patron
+refinances 5% of GDP of the public debt for 48 months at a concessional
+rate (2%, +1% for an authoritarian lender, less for a warm relationship).
+The saving against what the state actually pays is a contractual,
+non-institutional budget line: about 98 M a year for a heavily indebted
+Ardenia, 12 M for a lightly indebted one — and it always costs
+nationalist goodwill.
+
+Every month (`DiplomacySim`, run before the economy so customs read this
+month's trade): like drifts toward like (democracies warm to democracies,
+cool to autocracies); trade under a pact approaches a ceiling of
+4000 × warmth at 4% of the gap a month and decays the same way when
+relations cool; sanctions cost their target stability and output;
+treaties count their months; loans run their term and retire. Both sides
+of every relationship change together through `DiplomacySim.shift`, which
+situations now use too.
+
+The compact (1280×720) header now gives the date 120 px instead of 192 so
+the Diplomacy button fits.

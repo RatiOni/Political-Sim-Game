@@ -365,11 +365,4 @@ static func apply_option(state: GameState, event: Dictionary, option: Dictionary
 
 
 static func _shift_relation(state: GameState, country_id: String, delta: float) -> void:
-	if country_id == "" or not state.country.relations.has(country_id):
-		return
-	var rel: Country.BilateralRelation = state.country.relations[country_id]
-	rel.score = clampf(rel.score + delta, -1.0, 1.0)
-	for c in state.world:
-		if c.id == country_id and c.relations.has(state.country.id):
-			var mirror: Country.BilateralRelation = c.relations[state.country.id]
-			mirror.score = rel.score
+	DiplomacySim.shift(state, country_id, delta)

@@ -1,0 +1,73 @@
+[gd_scene format=3]
+
+[node name="DiplomacyPanel" type="PanelContainer"]
+visible = false
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Content" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+
+[node name="Heading" type="Label" parent="Content/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Title"
+text = "DIPLOMACY"
+
+[node name="CloseDiplomacyButton" type="Button" parent="Content/Header"]
+custom_minimum_size = Vector2(96, 44)
+layout_mode = 2
+text = "Close"
+
+[node name="Intro" type="Label" parent="Content"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = "Choose a country to see where you stand with it, then decide how to spend political capital on the relationship."
+autowrap_mode = 3
+
+[node name="Rule" type="HSeparator" parent="Content"]
+layout_mode = 2
+
+[node name="CountryChoice" type="OptionButton" parent="Content"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DiplomacyScroll" type="ScrollContainer" parent="Content"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="DiplomacyBody" type="VBoxContainer" parent="Content/DiplomacyScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="CountryStanding" type="Label" parent="Content/DiplomacyScroll/DiplomacyBody"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Section"
+text = ""
+autowrap_mode = 3
+
+[node name="CountryDetail" type="Label" parent="Content/DiplomacyScroll/DiplomacyBody"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = ""
+autowrap_mode = 3
+
+[node name="DiplomacyActions" type="VBoxContainer" parent="Content/DiplomacyScroll/DiplomacyBody"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="DiplomacyStatus" type="Label" parent="Content"]
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = ""
+autowrap_mode = 3
