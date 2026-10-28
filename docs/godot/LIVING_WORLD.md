@@ -2,8 +2,9 @@
 
 **Status:** situations engine, the schemer arc, the party leadership
 challenge, the Vasca question, Vetrenka, the civil-war gauge and
-diplomacy are playable — 44 of 46 events (2026-10-28), and the eight AI
-countries deliberate and act. Opposition play and the press remain. Same native-design rules as
+diplomacy are playable — all 46 events (2026-10-28) — the eight AI
+countries deliberate and act, and opposition is a full career. The press
+remains. Same native-design rules as
 `SIM_REDESIGN.md`: Python is a reference for what Ardenia contains, never a
 formula to match.
 
@@ -13,19 +14,16 @@ formula to match.
    follow-up chains, the shared effect pipeline, role resolution, persistence,
    the "needs you" queue and the situation panel.
 2. **The arcs** — done: the schemer, the leadership challenge, Vasca and
-   Vetrenka (`sim/arcs.gd`, `sim/cabinet_sim.gd`). The two opposition events
-   (`government_policy_retreat`, `opposition_by_election`) wait for slice 6,
-   because their consequences act on the opposition layer. Each needs its bespoke
-   consequence handlers (`on_apply` ids) written into
-   `Arcs.HANDLERS`; until a handler exists, its events cannot
-   fire (`EventsSim.unplayable_events()` lists them). Their trigger
-   conditions (`schemer_plotting`, `vasca_stirring`, `vetrenka_friction_due`,
-   `vetrenka_crossroads_ready`) join `Arcs.CONDITIONS` with them.
+   Vetrenka (`sim/arcs.gd`, `sim/cabinet_sim.gd`), and since slice 6 the two
+   opposition events, whose handlers live in `OppositionSim` and are listed in
+   `Arcs.HANDLERS`. An event whose handler is missing still cannot fire;
+   `EventsSim.unplayable_events()` is now empty.
 3. **Civil-war gauge** — done (`sim/crisis_sim.gd`).
 4. **Diplomacy verbs** — done (`actions/diplomacy_actions.gd`,
    `sim/diplomacy_sim.gd`, the Diplomacy desk).
 5. **The world acts** — done (`sim/world_sim.gd`).
-6. **Opposition play** — the domestic-AI government, pledges, shadow cabinet.
+6. **Opposition play** — done (`sim/opposition_sim.gd`,
+   `actions/opposition_actions.gd`, `state/opposition_state.gd`).
 7. **The press** — dispatch voice and the monthly front page.
 
 ## How situations work (and why)
@@ -225,3 +223,55 @@ every figure stays bounded.
 
 A binary save whose length happened to begin with a space byte was misread
 as JSON and refused; the loader now tries JSON and falls back to binary.
+
+## Opposition play
+
+**Player-facing job:** opposition is a career, not a waiting room. The
+player cannot govern, but can shape what the government passes, build a
+platform, staff a team, and arrive in office with a mandate to keep.
+
+- **The government legislates.** A month after the campaign opens, and four
+  months after each division, the ruling party brings a bill from the shared
+  catalogue: the one closest to its ideology and its own interests, raised
+  by the country's live problems — inflation lifts bills that cut prices,
+  unemployment bills that add jobs or growth, a deficit bills that raise
+  revenue or cut spending, war risk defence. A bill it lost is not retried
+  for two years. The division comes the month after introduction, through
+  the same vote and effect pipeline as the player's own laws
+  (`LawActions.resolve`), with the ruling party and coalition whipped.
+- **One declared position per bill.** Support (4 PC) whips the player's
+  party for it, oppose (4 PC) against; amend (8 PC) offers the party's votes
+  for a text pulled 30% toward the player's ideology with its material
+  effects softened by a fifth. The division is held on the amended text.
+- **A platform of three.** Pledges (5 PC) name catalogue bills; decrees and
+  laws already in force cannot be pledged. Campaigning (8 PC, each pledge
+  rests six months) moves support from the ruling party to the player's,
+  more against a shaky government, and builds credibility — more with an
+  able shadow minister for the brief. Dropping a pledge costs credibility,
+  more for one that was campaigned on. Backing a bill you promised is
+  consistent; opposing it is not. A pledge the government passes is
+  *adopted* if you backed it, *undercut* if you fought it.
+- **A shadow cabinet** (6 PC a post) is named from the player's party and
+  gains a little experience each month. `OppositionSim.take_office` — the
+  hook an election will call — restores the government title, builds the
+  coalition around the player's party, promotes every shadow into the real
+  post, lapses the outgoing government's bill and turns the platform into a
+  mandate.
+- **Promises are judged.** `electoral_edge` reads credibility, campaign
+  coverage and staffing in opposition, and delivered against undelivered
+  pledges in government; `judge_mandate` marks undelivered pledges broken
+  at the vote, costing credibility and support.
+- **The two opposition situations play.** *The Government Retreats* now
+  arrives only within three months of a government defeat on the floor
+  (`government_in_retreat`): claim it (the quicker support gain) or publish
+  the alternative (credibility). *A By-Election Opening* (from month 6)
+  is decided, never rolled, by standing — support against the ruling party,
+  credibility, and the government's weakness: a national push wins only
+  from ahead and is costly to lose; a local campaign wins from slightly
+  behind for a smaller prize; a won seat comes from the government.
+
+Not yet native: the general election itself. `take_office`,
+`electoral_edge` and `judge_mandate` are its inputs and are tested
+directly. The catalogue holds nine parliamentary bills, so a long
+opposition term exhausts the government's programme after about five
+years.

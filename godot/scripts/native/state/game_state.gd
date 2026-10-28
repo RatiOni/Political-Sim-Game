@@ -94,6 +94,7 @@ var scheduled_events: Array[Dictionary] = []
 var event_fire_history: Dictionary = {}
 var event_history: Array[Dictionary] = []
 var world_arcs: Dictionary = {}
+var opposition: OppositionState = OppositionState.new()
 
 var rng: SimRng = SimRng.from_seed(0)
 
@@ -182,6 +183,7 @@ func to_dict() -> Dictionary:
 		"event_fire_history": event_fire_history.duplicate(true),
 		"event_history": event_history.duplicate(true),
 		"world_arcs": world_arcs.duplicate(),
+		"opposition": opposition.to_dict(),
 		"rng": rng_snapshot,
 	}
 
@@ -407,6 +409,10 @@ static func from_dict(data: Dictionary) -> GameState:
 		return null
 	for key in arcs:
 		state.world_arcs[String(key)] = String(arcs[key])
+	state.opposition = OppositionState.from_dict(data.get("opposition", null))
+	if state.opposition == null:
+		push_error("GameState.from_dict: malformed opposition")
+		return null
 	if not data.has("rng"):
 		push_error("GameState.from_dict: missing required 'rng' (every writer since format v1 includes it)")
 		return null

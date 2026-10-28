@@ -65,6 +65,7 @@ static func close_month(state: GameState) -> void:
 	MinistriesSimScript.simulate(state)
 	DiplomacySim.monthly(state)
 	var world_notes := WorldSim.monthly(state)
+	world_notes.append_array(OppositionSim.monthly(state))
 	EconomySimScript.update(state)
 	RegionsSimScript.simulate(state)
 	HouseholdsSimScript.simulate(state)
@@ -289,6 +290,40 @@ func appoint_minister(portfolio: String, candidate_id: String) -> Dictionary:
 		state_changed.emit(result["snapshot"])
 	_busy = false
 	return result
+func respond_to_government_bill(response: String) -> Dictionary:
+	return _guarded(func() -> Dictionary: return OppositionActions.respond(_state, response))
+
+
+func add_pledge(bill_id: String) -> Dictionary:
+	return _guarded(func() -> Dictionary: return OppositionActions.add_pledge(_state, bill_id))
+
+
+func drop_pledge(bill_id: String) -> Dictionary:
+	return _guarded(func() -> Dictionary: return OppositionActions.drop_pledge(_state, bill_id))
+
+
+func campaign_on_pledge(bill_id: String) -> Dictionary:
+	return _guarded(func() -> Dictionary: return OppositionActions.campaign(_state, bill_id))
+
+
+func appoint_shadow_minister(portfolio: String) -> Dictionary:
+	return _guarded(func() -> Dictionary: return OppositionActions.appoint_shadow(_state, portfolio))
+
+
+func _guarded(action: Callable) -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = action.call()
+	if result.get("ok", false):
+		result["snapshot"] = snapshot()
+		state_changed.emit(result["snapshot"])
+	_busy = false
+	return result
+
+
 func save(slot: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -443,6 +478,7 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 		"cabinet": CabinetActionsScript.read_model(state).duplicate(true),
 		"situations": EventActions.read_model(state).duplicate(true),
 		"diplomacy": DiplomacyActions.read_model(state).duplicate(true),
+		"opposition": OppositionActions.read_model(state).duplicate(true),
 		"ministries": _ministries_snapshot(state),
 		"households": _household_snapshot(state),
 		"digest": state.monthly_digest.duplicate(),

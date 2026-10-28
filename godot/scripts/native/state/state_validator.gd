@@ -46,6 +46,7 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_laws(state, errors)
 	_validate_world_plans(state, errors)
 	_validate_world_arcs(state, errors)
+	_validate_opposition(state, errors)
 
 	if state.player != null:
 		_validate_player(state, errors)
@@ -275,7 +276,7 @@ static func _validate_laws(state: GameState, errors: Array[String]) -> void:
 	for i in range(state.law_history.size()):
 		var historical: Law = state.law_history[i]
 		_validate_law(historical, "law_history[%s]" % i,
-			["enacted", "rejected", "withdrawn"], known, faction_ids, errors)
+			["enacted", "rejected", "withdrawn", "lapsed"], known, faction_ids, errors)
 		_validate_law_lifecycle(historical, "law_history[%s]" % i, state.turn,
 			total_seats, errors)
 		if historical != null and historical.status == "enacted":
@@ -341,7 +342,7 @@ static func _validate_law_lifecycle(law: Law, label: String, current_turn: int,
 				errors.append("%s has an impossible enactment outcome" % label)
 		elif law.enacted_turn != -1 or law.votes_for >= threshold:
 			errors.append("%s has an impossible rejected outcome" % label)
-	elif law.status == "withdrawn" and (law.enacted_turn != -1 or law.votes_for != 0 or law.votes_against != 0):
+	elif law.status in ["withdrawn", "lapsed"] and (law.enacted_turn != -1 or law.votes_for != 0 or law.votes_against != 0):
 		errors.append("%s has impossible withdrawn fields" % label)
 
 
@@ -570,3 +571,39 @@ static func _validate_world_arcs(state: GameState, errors: Array[String]) -> voi
 			errors.append("world arc '%s' does not name two known countries" % key)
 		if not (String(state.world_arcs[key]) in WorldSim.ARC_KINDS):
 			errors.append("world arc '%s' has an unknown kind" % key)
+
+
+static func _validate_opposition(state: GameState, errors: Array[String]) -> void:
+	var opp := state.opposition
+	if opp == null:
+		errors.append("opposition state is missing")
+		return
+	if not is_finite(opp.credibility) or opp.credibility < 0.0 or opp.credibility > 1.0:
+		errors.append("opposition credibility out of range")
+	if opp.pledges.size() > OppositionActions.MAX_PLEDGES:
+		errors.append("more than %d pledges" % OppositionActions.MAX_PLEDGES)
+	var known := {}
+	for law in LawActions.catalog_laws():
+		known[law.id] = true
+	var seen := {}
+	for p in opp.pledges:
+		var bill_id := String(p.get("bill_id", ""))
+		if not known.has(bill_id) or seen.has(bill_id):
+			errors.append("pledge '%s' is unknown or repeated" % bill_id)
+		seen[bill_id] = true
+		if not (String(p.get("status", "")) in OppositionState.PLEDGE_STATUSES) or int(p.get("campaigns", 0)) < 0:
+			errors.append("pledge '%s' has an impossible record" % bill_id)
+	var portfolios := {}
+	for m in opp.shadow_cabinet:
+		if not CabinetActions.CORE_PORTFOLIOS.has(m.portfolio) or portfolios.has(m.portfolio) 				or m.faction_id != state.player.faction_id:
+			errors.append("shadow minister '%s' holds an impossible post" % m.id)
+		portfolios[m.portfolio] = true
+	if not (opp.response in OppositionState.RESPONSES):
+		errors.append("opposition response '%s' is unknown" % opp.response)
+	if opp.government_bill != null:
+		if state.player.in_government:
+			errors.append("a domestic government bill exists while the player governs")
+		if opp.government_bill.status != "proposed" or not known.has(opp.government_bill.id) 				or opp.government_bill.proposed_by != state.ruling_faction_id:
+			errors.append("the government bill record is impossible")
+	elif opp.response != "":
+		errors.append("an opposition response exists without a government bill")

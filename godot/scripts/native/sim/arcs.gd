@@ -13,10 +13,12 @@ const HANDLERS := [
 	"vetrenka_launch_offensive", "vetrenka_formalise", "vetrenka_settle",
 	"vetrenka_talks_failed", "vetrenka_won", "vetrenka_lost", "vetrenka_partitioned",
 	"vetrenka_normal", "vetrenka_backlash_lands",
+	"opposition_claims_retreat", "opposition_offers_alternative", "opposition_misses_retreat",
+	"by_election_national_push", "by_election_local_push", "by_election_stand_down",
 ]
 
 const CONDITIONS := ["schemer_plotting", "vasca_stirring", "vetrenka_friction_due",
-	"vetrenka_crossroads_ready"]
+	"vetrenka_crossroads_ready", "government_in_retreat", "by_election_opening"]
 
 const FRICTION_BEFORE_CROSSROADS := 3
 const OCCUPATION_INSURGENCY := 0.25
@@ -41,6 +43,8 @@ static func has_handler(handler_id: String) -> bool:
 
 
 static func run(state: GameState, handler_id: String) -> String:
+	if handler_id in OppositionSim.EVENT_HANDLERS:
+		return OppositionSim.run_event(state, handler_id)
 	match handler_id:
 		"schemer_noted":
 			var m := arc_schemer(state)
@@ -240,6 +244,8 @@ static func _schedule(state: GameState, event_id: String, delay: int) -> void:
 
 
 static func condition_met(state: GameState, rule_id: String) -> bool:
+	if rule_id in OppositionSim.EVENT_CONDITIONS:
+		return OppositionSim.condition_met(state, rule_id)
 	match rule_id:
 		"vetrenka_friction_due":
 			return vetrenka_open(state)
