@@ -27,6 +27,8 @@ var tile_px := OVERVIEW
 var zoom := 1
 var terrain_layer := TileMapLayer.new()
 var growth_layer := TileMapLayer.new()
+var growth_desired: Dictionary = {}
+var growth_tween: Tween
 var lines_rect := TextureRect.new()
 var zoom_in_button := Button.new()
 var zoom_out_button := Button.new()
@@ -47,6 +49,7 @@ var _day_textures: Dictionary = {}
 var _dusk_textures: Dictionary = {}
 var _lines: Dictionary = {}
 var _dusk := false
+var _growth_started := false
 var _user_zoomed := false
 var _screen_scale := 1.0
 var _base := Vector2.ZERO
@@ -79,6 +82,7 @@ func _ready() -> void:
 	zoom_in_button.visible = not unavailable
 	zoom_out_button.visible = not unavailable
 	_layout()
+	_paint_growth()
 
 
 func _notification(what: int) -> void:
@@ -215,6 +219,10 @@ func atlas_texture() -> Texture2D:
 	return _source(terrain_layer.tile_set).texture
 
 
+func is_dusk() -> bool:
+	return _dusk
+
+
 func set_dusk(on: bool) -> void:
 	if unavailable:
 		return
@@ -222,6 +230,7 @@ func set_dusk(on: bool) -> void:
 	for px in _tilesets:
 		_source(_tilesets[px]).texture = _dusk_textures[px] if on else _day_textures[px]
 	_apply_lines()
+	GrowthPainter.refresh_lights(self)
 
 
 func _apply_lines() -> void:
@@ -362,7 +371,18 @@ func apply_snapshot(values: Array, selection: String) -> void:
 		if region is Dictionary and region.has("id"):
 			regions[str(region["id"])] = region.duplicate(true)
 	selected_id = selection if polygons.has(selection) else ""
+	_paint_growth()
 	_redraw()
+
+
+func _paint_growth() -> void:
+	if unavailable or _geo == null or terrain_layer.tile_set == null or regions.is_empty():
+		return
+	var all_targets := {}
+	for id in regions:
+		all_targets[id] = GrowthLayers.targets(regions[id], _geo, _tiles)
+	GrowthPainter.apply(self, all_targets, _growth_started)
+	_growth_started = true
 
 
 func select_region(region_id: String) -> void:
