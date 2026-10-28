@@ -34,7 +34,7 @@ static func _world_month(state: GameState) -> Array[String]:
 func _test_each_agenda_reads_its_national_interest(t) -> void:
 	var state := _state()
 	var krasova := WorldSim.national_interest(state, _c(state, "krasova"))
-	t.equal(krasova, {"objective": "undermine", "target": "veldoria"}, "a hegemon presses its authored rival")
+	t.equal(krasova, {"objective": "undermine", "target": "ardenia"}, "Krasova, the core successor state, presses Ardenia")
 	t.equal(WorldSim.national_interest(state, _c(state, "terand")),
 		{"objective": "undermine", "target": "solheim"}, "a revanchist presses the country it holds a grudge against")
 	var solheim := WorldSim.national_interest(state, _c(state, "solheim"))
@@ -59,10 +59,26 @@ func _test_each_agenda_reads_its_national_interest(t) -> void:
 
 func _test_a_hegemon_with_a_spent_rivalry_tends_its_sphere(t) -> void:
 	var state := _state()
-	_set_score(state, "krasova", "veldoria", -0.9)
+	_set_score(state, "krasova", "ardenia", -0.9)
 	var plan := WorldSim.national_interest(state, _c(state, "krasova"))
 	t.equal(plan["objective"], "court", "a bottomed-out rivalry is not worth the month")
-	t.truth(plan["target"] != "veldoria", "so the hegemon courts someone else")
+	t.truth(plan["target"] != "ardenia", "so the hegemon courts someone else")
+
+
+func _test_krasova_presses_while_vetrenka_is_contested(t) -> void:
+	var state := _state()
+	_set_score(state, "krasova", "ardenia", -0.9)
+	state.campaign_meta["vetrenka_status"] = "retaken"
+	t.equal(WorldSim.national_interest(state, _c(state, "krasova")), {"objective": "undermine", "target": "ardenia"},
+		"a reconquered Vetrenka keeps its backer pressing however bad relations are")
+	state.campaign_meta["vetrenka_status"] = "settled"
+	_set_score(state, "krasova", "ardenia", -0.5)
+	t.equal(WorldSim.national_interest(state, _c(state, "krasova"))["objective"], "court",
+		"a settlement cools the backer's grudge sooner")
+	var other := _state()
+	_set_score(other, "krasova", "ardenia", -0.5)
+	t.equal(WorldSim.national_interest(other, _c(other, "krasova"))["objective"], "undermine",
+		"while an unsettled line keeps it pressing at the same depth")
 
 
 func _test_an_ideologue_presses_its_rival(t) -> void:
@@ -232,6 +248,12 @@ func _test_the_validator_rejects_impossible_world_state(t) -> void:
 	t.truth(not StateValidator.validate(state).is_empty(), "an unknown plan objective is rejected")
 	_c(state, "krasova").plan = {"objective": "undermine", "target": "krasova", "matures_turn": 3}
 	t.truth(not StateValidator.validate(state).is_empty(), "a country cannot plan against itself")
+	_c(state, "krasova").plan = {"objective": "undermine", "target": "", "matures_turn": 3}
+	t.truth(not StateValidator.validate(state).is_empty(), "a hostile plan needs a target")
+	_c(state, "krasova").plan = {"objective": "consolidate", "target": "", "matures_turn": 3, "foreshadowed": "yes"}
+	t.truth(not StateValidator.validate(state).is_empty(), "a plan's leak flag is a flag")
+	_c(state, "krasova").plan = {"objective": "consolidate", "target": "", "matures_turn": 3, "last_acted_turn": 99}
+	t.truth(not StateValidator.validate(state).is_empty(), "a plan cannot have acted in the future")
 	_c(state, "krasova").plan = {}
 	var old := state.to_dict()
 	old.erase("world_arcs")
@@ -291,10 +313,55 @@ func _test_a_decade_of_the_living_world_stays_bounded(t) -> void:
 		t.truth(acted >= state.world.size() * 20, "and the world kept acting (%d actions, %s)" % [acted, role])
 
 
+static func _sign_defence_pact(state: GameState, partner: String) -> void:
+	var pact := {"id": "defense_%s_0" % partner, "type": "defense", "name": "Pact", "parties": ["ardenia", partner], "turns_active": 0}
+	(state.country.relations[partner] as Country.BilateralRelation).treaties.append(pact.duplicate(true))
+	(_c(state, partner).relations["ardenia"] as Country.BilateralRelation).treaties.append(pact.duplicate(true))
+
+
+static func _decade_against_ardenia(seed: int, pact: bool) -> Dictionary:
+	var state := _state("government", seed)
+	if pact:
+		_sign_defence_pact(state, "veldoria")
+	var krasova := _c(state, "krasova")
+	var out := {"hostile": 0, "shelved": 0, "warned": 0, "lowest": 1.0, "final": 0.0}
+	var warned_for := -1
+	for _m in range(120):
+		NativeGameScript.close_month(state)
+		var plan := krasova.plan
+		if plan.get("objective") == "undermine" and plan.get("target") == "ardenia" \
+				and bool(plan.get("foreshadowed", false)) and warned_for != int(plan["matures_turn"]):
+			warned_for = int(plan["matures_turn"])
+			out["warned"] += 1
+		if int(plan.get("last_acted_turn", -1)) == state.turn:
+			match String(plan.get("last_outcome", "")):
+				"condemned", "undermined":
+					out["hostile"] += 1
+				"shelved":
+					out["shelved"] += 1
+		out["lowest"] = minf(out["lowest"], _score(state, "krasova", "ardenia"))
+	out["final"] = _score(state, "krasova", "ardenia")
+	return out
+
+
+func _test_krasova_acts_against_ardenia_across_a_decade(t) -> void:
+	for seed in [515151, 7, 99]:
+		var plain := _decade_against_ardenia(seed, false)
+		var covered := _decade_against_ardenia(seed, true)
+		t.truth(plain["hostile"] > 0, "seed %d: Krasova moves against Ardenia (%d hostile moves; relations low %.2f, final %.2f)" % [
+			seed, plain["hostile"], plain["lowest"], plain["final"]])
+		t.truth(plain["warned"] > 0, "seed %d: and its threats are foreshadowed (%d warnings)" % [seed, plain["warned"]])
+		t.equal(plain["shelved"], 0, "seed %d: without a pact nothing is shelved" % seed)
+		t.truth(covered["shelved"] > 0, "seed %d: a defence pact shelves some of them (%d shelved, %d landed)" % [
+			seed, covered["shelved"], covered["hostile"]])
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_each_agenda_reads_its_national_interest(t)
 	_test_a_hegemon_with_a_spent_rivalry_tends_its_sphere(t)
+	_test_krasova_presses_while_vetrenka_is_contested(t)
+	_test_krasova_acts_against_ardenia_across_a_decade(t)
 	_test_an_ideologue_presses_its_rival(t)
 	_test_a_sanctioning_power_outranks_everything(t)
 	_test_openings_are_staggered_then_paced(t)

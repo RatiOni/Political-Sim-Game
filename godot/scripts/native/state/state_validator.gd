@@ -47,6 +47,7 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_world_plans(state, errors)
 	_validate_world_arcs(state, errors)
 	_validate_opposition(state, errors)
+	_validate_press(state, errors)
 
 	if state.player != null:
 		_validate_player(state, errors)
@@ -558,6 +559,13 @@ static func _validate_world_plans(state: GameState, errors: Array[String]) -> vo
 		var matures: Variant = c.plan.get("matures_turn", null)
 		if not (matures is int or matures is float) or float(matures) < 0.0:
 			errors.append("world country(%s) plan has no maturity" % c.id)
+		if target == "" and String(c.plan.get("objective", "")) != "consolidate":
+			errors.append("world country(%s) plan has no target" % c.id)
+		if not (c.plan.get("foreshadowed", false) is bool):
+			errors.append("world country(%s) plan has a malformed leak flag" % c.id)
+		var acted: Variant = c.plan.get("last_acted_turn", -1)
+		if not (acted is int or acted is float) or float(acted) > state.turn:
+			errors.append("world country(%s) plan acted at an impossible time" % c.id)
 
 
 static func _validate_world_arcs(state: GameState, errors: Array[String]) -> void:
@@ -595,7 +603,8 @@ static func _validate_opposition(state: GameState, errors: Array[String]) -> voi
 			errors.append("pledge '%s' has an impossible record" % bill_id)
 	var portfolios := {}
 	for m in opp.shadow_cabinet:
-		if not CabinetActions.CORE_PORTFOLIOS.has(m.portfolio) or portfolios.has(m.portfolio) 				or m.faction_id != state.player.faction_id:
+		if not CabinetActions.CORE_PORTFOLIOS.has(m.portfolio) or portfolios.has(m.portfolio) \
+				or m.faction_id != state.player.faction_id:
 			errors.append("shadow minister '%s' holds an impossible post" % m.id)
 		portfolios[m.portfolio] = true
 	if not (opp.response in OppositionState.RESPONSES):
@@ -603,7 +612,24 @@ static func _validate_opposition(state: GameState, errors: Array[String]) -> voi
 	if opp.government_bill != null:
 		if state.player.in_government:
 			errors.append("a domestic government bill exists while the player governs")
-		if opp.government_bill.status != "proposed" or not known.has(opp.government_bill.id) 				or opp.government_bill.proposed_by != state.ruling_faction_id:
+		if opp.government_bill.status != "proposed" or not known.has(opp.government_bill.id) \
+				or opp.government_bill.proposed_by != state.ruling_faction_id:
 			errors.append("the government bill record is impossible")
 	elif opp.response != "":
 		errors.append("an opposition response exists without a government bill")
+
+
+static func _validate_press(state: GameState, errors: Array[String]) -> void:
+	for item in state.monthly_news:
+		if String(item.get("key", "")) == "" or not (item.get("fields", null) is Dictionary) \
+				or not (item.get("text", null) is String):
+			errors.append("a news item is malformed")
+	var page := state.front_page
+	if page.is_empty():
+		return
+	var lead: Variant = page.get("lead", null)
+	if not (page.get("masthead", null) is String) or not (page.get("dateline", null) is String) \
+			or not (lead is Dictionary) or not (lead.get("headline", null) is String) \
+			or not (lead.get("body", null) is String) or not (page.get("headlines", null) is Array) \
+			or not (page.get("briefs", null) is Array) or not (page.get("numbers", null) is Array):
+		errors.append("the front page is malformed")

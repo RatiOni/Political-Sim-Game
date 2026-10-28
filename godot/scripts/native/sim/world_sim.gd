@@ -18,6 +18,9 @@ const HOSTILE_AGENDA_LINE := 0.5
 const TURN_INWARD_STABILITY := 0.35
 const SURVIVOR_SAFE_STABILITY := 0.6
 const SPENT_RIVALRY := -0.8
+const SETTLED_RIVALRY := -0.3
+const CAUSE_NEVER_SPENT := ["retaken"]
+const CAUSE_SETTLED := ["settled"]
 
 const OPENING_DELAY_MONTHS := 3
 const OPENING_STAGGER := 4
@@ -79,13 +82,23 @@ static func national_interest(state: GameState, actor: Country) -> Dictionary:
 	if float(AGGRESSION[kind]) >= HOSTILE_AGENDA_LINE:
 		var rival := _partner(state, actor, "rival", false)
 		if rival != null:
-			if kind == "hegemon" and _rel(actor, rival).score < SPENT_RIVALRY:
+			if kind == "hegemon" and _rel(actor, rival).score < spent_rivalry(state, actor, rival):
 				var client := _partner(state, actor, "ally", true, rival)
 				if client != null:
 					return _interest("court", client)
 			return _interest("undermine", rival)
 	var ally := _partner(state, actor, "ally", true)
 	return _interest("court", ally) if ally != null else _interest("consolidate", null)
+
+
+static func spent_rivalry(state: GameState, actor: Country, rival: Country) -> float:
+	var cause := String(actor.agenda.get("backs", ""))
+	if cause == "" or rival != state.country or not state.regions.has(cause):
+		return SPENT_RIVALRY
+	var status := String(state.campaign_meta.get("%s_status" % cause, ""))
+	if status in CAUSE_NEVER_SPENT:
+		return -INF
+	return SETTLED_RIVALRY if status in CAUSE_SETTLED else SPENT_RIVALRY
 
 
 static func hostile_action(state: GameState, actor: Country, target: Country, notes: Array[String]) -> String:
@@ -157,8 +170,9 @@ static func _deliberate(state: GameState, actor: Country, index: int, notes: Arr
 		_make_plan(state, actor, state.turn + OPENING_DELAY_MONTHS - 1 + index % OPENING_STAGGER, -1)
 		return
 	if state.turn >= int(actor.plan.get("matures_turn", 0)):
-		_execute(state, actor, notes)
+		var outcome := _execute(state, actor, notes)
 		_make_plan(state, actor, state.turn + PLAN_MIN_MONTHS + state.rng.choose_index(PLAN_SPREAD_MONTHS), state.turn)
+		actor.plan["last_outcome"] = outcome
 		return
 	_foreshadow(state, actor, notes)
 
@@ -182,15 +196,15 @@ static func _foreshadow(state: GameState, actor: Country, notes: Array[String]) 
 	_say(state, notes, "world_deliberates", actor, target)
 
 
-static func _execute(state: GameState, actor: Country, notes: Array[String]) -> void:
+static func _execute(state: GameState, actor: Country, notes: Array[String]) -> String:
 	var target := country_by_id(state, String(actor.plan.get("target", "")))
 	match String(actor.plan.get("objective", "")):
-		"consolidate":
-			actor.stability = minf(CONSOLIDATION_CEILING, actor.stability + CONSOLIDATION_GAIN)
 		"undermine":
-			hostile_action(state, actor, target, notes)
+			return hostile_action(state, actor, target, notes)
 		"court", "trade":
-			cooperative_action(state, actor, target, notes)
+			return cooperative_action(state, actor, target, notes)
+	actor.stability = minf(CONSOLIDATION_CEILING, actor.stability + CONSOLIDATION_GAIN)
+	return "consolidated"
 
 
 static func _say(state: GameState, notes: Array[String], key: String, actor: Country, target: Country) -> void:
