@@ -1,0 +1,132 @@
+extends SceneTree
+
+const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
+const CANON_BORDERS := {
+	"anera": ["vashtera", "sela", "vetrenka"],
+	"karsen": ["anera", "vashtera", "zavost"],
+	"vashtera": ["karsen", "zavost", "sela", "orvena"],
+	"zavost": ["karsen", "vashtera", "sela", "darev"],
+	"darev": ["zavost", "sela"],
+	"sela": ["vashtera", "zavost", "darev", "kelvet", "orvena"],
+	"kelvet": ["sela", "orvena"],
+	"orvena": ["anera", "vashtera", "sela", "kelvet", "vetrenka"],
+	"vetrenka": ["anera", "orvena"],
+}
+
+
+func _initialize() -> void:
+	var t = TestSupportScript.new()
+	var geo := MapGeometry.load_world()
+	var height := MapBaker.bake_height(geo)
+	t.equal(Vector2i(height.get_width(), height.get_height()), MapBaker.RESOLUTION, "the heightmap is the baked resolution")
+	t.equal(MapBaker.bake_height(geo).get_data(), height.get_data(), "baking is deterministic")
+
+	var west_sea := height.get_pixel(5, MapBaker.RESOLUTION.y / 2).r
+	t.truth(west_sea <= 0.0, "the far west is sea")
+	var ridge := _max_row(height, int(MapBaker.RESOLUTION.y * 0.17))
+	var plain := _max_row(height, int(MapBaker.RESOLUTION.y * 0.60))
+	t.truth(ridge > plain * 2.0, "the northern wall stands far above the plains (%.0f m vs %.0f m)" % [ridge, plain])
+	t.truth(ridge <= MapBaker.MAX_HEIGHT_M, "and never exceeds the height ceiling")
+
+	var regions := MapBaker.bake_regions(geo, height)
+	for id in geo.region_ids:
+		t.equal(MapBaker.region_at_map(regions, geo, geo.seeds[id]), id, "%s's seed lies inside %s" % [id, id])
+	for c in geo.cities:
+		t.equal(MapBaker.region_at_map(regions, geo, c["point"]), c["region"], "%s lies in %s" % [c["name"], c["region"]])
+	t.equal(MapBaker.region_at_map(regions, geo, Vector2(0.01, 0.5)), "", "the sea belongs to no region")
+	for id in geo.region_ids:
+		t.truth(_is_contiguous(regions, geo.region_ids.find(id)), "%s is one connected territory" % id)
+
+	var control := MapBaker.bake_control(height, regions, geo)
+	t.equal(Vector2i(control.get_width(), control.get_height()), MapBaker.RESOLUTION, "the control map matches the heightmap")
+	t.equal(MapBaker.base_material_at(control, _highest(height)), MapAssets.material_id("snow"), "the highest peak is snow")
+	t.equal(MapBaker.base_material_at(control, Vector2i(int(0.42 * MapBaker.RESOLUTION.x), int(0.66 * MapBaker.RESOLUTION.y))) in
+		[MapAssets.material_id("grass"), MapAssets.material_id("farmland")], true, "the central plain is grassland or farmland")
+
+	var borders := MapBaker.trace_borders(regions, geo)
+	t.truth(borders["national"].size() >= 1, "the national border is traced")
+	t.truth(borders["internal"].size() >= 8, "every internal border is traced")
+	t.truth(borders["ceasefire"].size() >= 1, "the ceasefire line is traced separately from ordinary borders")
+	var line: PackedVector2Array = borders["national"][0]
+	t.truth(line[0].distance_to(line[line.size() - 1]) < 0.01, "the national border closes on itself")
+	t.truth(_max_turn(line) < deg_to_rad(80.0), "borders are smooth curves, not pixel staircases")
+
+	var outlines := MapBaker.trace_outlines(regions, geo)
+	t.equal(outlines.size(), 9, "every region has an outline")
+	for id in geo.region_ids:
+		var ring: PackedVector2Array = outlines.get(id, PackedVector2Array())
+		t.truth(ring.size() > 3 and ring[0] == ring[ring.size() - 1], "%s's outline is a closed ring" % id)
+		t.truth(Geometry2D.is_point_in_polygon(geo.seeds[id], ring), "%s's seed lies inside its outline" % id)
+
+	var pairs := MapBaker.adjacent_pairs(regions, geo)
+	for pair in _canon_pairs(true):
+		t.truth(pairs.has(pair), "canon adjacency %s is present" % pair)
+	for pair in _canon_pairs(false):
+		t.truth(not pairs.has(pair), "%s do not touch, as the canon says" % pair)
+	quit(t.finish())
+
+
+static func _max_row(img: Image, y: int) -> float:
+	var best := -INF
+	for x in img.get_width():
+		best = maxf(best, img.get_pixel(x, y).r)
+	return best
+
+
+static func _highest(img: Image) -> Vector2i:
+	var best := Vector2i.ZERO
+	var h := -INF
+	for y in img.get_height():
+		for x in img.get_width():
+			if img.get_pixel(x, y).r > h:
+				h = img.get_pixel(x, y).r
+				best = Vector2i(x, y)
+	return best
+
+
+static func _is_contiguous(img: Image, index: int) -> bool:
+	var start := Vector2i(-1, -1)
+	var count := 0
+	for y in img.get_height():
+		for x in img.get_width():
+			if int(round(img.get_pixel(x, y).r * 255.0)) == index:
+				count += 1
+				if start.x < 0:
+					start = Vector2i(x, y)
+	if count == 0:
+		return false
+	var seen := {start: true}
+	var stack: Array[Vector2i] = [start]
+	while not stack.is_empty():
+		var p: Vector2i = stack.pop_back()
+		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var q: Vector2i = p + d
+			if q.x < 0 or q.y < 0 or q.x >= img.get_width() or q.y >= img.get_height() or seen.has(q):
+				continue
+			if int(round(img.get_pixel(q.x, q.y).r * 255.0)) == index:
+				seen[q] = true
+				stack.append(q)
+	return seen.size() == count
+
+
+static func _max_turn(line: PackedVector2Array) -> float:
+	var worst := 0.0
+	for i in range(1, line.size() - 1):
+		var a := (line[i] - line[i - 1]).normalized()
+		var b := (line[i + 1] - line[i]).normalized()
+		worst = maxf(worst, a.angle_to(b) if a != Vector2.ZERO and b != Vector2.ZERO else 0.0)
+	return absf(worst)
+
+
+static func _canon_pairs(required: bool) -> Array[String]:
+	var ids: Array = CANON_BORDERS.keys()
+	ids.sort()
+	var out: Array[String] = []
+	for i in ids.size():
+		for j in range(i + 1, ids.size()):
+			var a: String = ids[i]
+			var b: String = ids[j]
+			var listed := int(b in CANON_BORDERS[a]) + int(a in CANON_BORDERS[b])
+			if (required and listed == 2) or (not required and listed == 0):
+				out.append("%s|%s" % [a, b])
+	return out

@@ -6,6 +6,7 @@ const WORLD_PATH := "res://data/map/ardenia_world.json"
 var extent_m := Vector2.ZERO
 var region_ids: Array[String] = []
 var seeds: Dictionary = {}
+var weights: Dictionary = {}
 var cities: Array[Dictionary] = []
 var routes: Array[Dictionary] = []
 var ceasefire := PackedVector2Array()
@@ -27,6 +28,8 @@ static func load_world(path: String = WORLD_PATH) -> MapGeometry:
 	for id in data["regions"]:
 		geo.region_ids.append(String(id))
 		geo.seeds[String(id)] = _vec(data["regions"][id])
+	for id in data.get("weights", {}):
+		geo.weights[String(id)] = float(data["weights"][id])
 	for c in data["cities"]:
 		geo.cities.append({"name": String(c["name"]), "region": String(c["region"]),
 			"point": _vec(c["point"]), "capital": bool(c.get("capital", false))})
