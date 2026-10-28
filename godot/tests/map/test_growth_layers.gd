@@ -46,7 +46,7 @@ func _check_curves() -> void:
 	t.equal(GrowthLayers.town_tiles(50.0, false), 3, "50k people fill 3 tiles")
 	t.equal(GrowthLayers.town_tiles(400.0, false), 12, "400k people fill 12 tiles")
 	t.truth(absi(GrowthLayers.town_tiles(1000.0, true) - 30) <= 1, "the capital at 1,000k fills about 30 tiles")
-	t.equal(GrowthLayers.town_tiles(1.0e9, true), 60, "the capital ceiling is 60")
+	t.equal(GrowthLayers.town_tiles(1.0e9, true), 120, "the capital ceiling is 120")
 	t.equal(GrowthLayers.town_tiles(1.0e9, false), 40, "the default ceiling is 40")
 	t.truth(GrowthLayers.farm_share(0.9) >= GrowthLayers.farm_share(0.2), "development grows the farm share")
 	t.near(GrowthLayers.farm_share(-1.0), 0.05, 1e-6, "farm share floors at 0.05")
@@ -62,16 +62,16 @@ func _check_curves() -> void:
 func _check_cells(geo: MapGeometry, tiles: Dictionary) -> void:
 	for city in geo.cities:
 		var centre := Vector2i(Vector2(city["point"]) * Vector2(TileBaker.GRID))
-		var region := geo.region_ids.find(city["region"])
 		var cells := GrowthLayers.cells_for_town(centre, 30, tiles)
 		t.equal(cells, GrowthLayers.cells_for_town(centre, 30, tiles), "%s's cells are deterministic" % city["name"])
 		t.equal(cells.size(), 30, "%s gets all 30 cells" % city["name"])
 		t.truth((cells[0] - centre).length() <= 3.0, "%s grows outward from beside its own tile" % city["name"])
 		var clean := true
 		for c in cells:
-			clean = clean and _kind(tiles, c) not in WATER and _kind(tiles, c) != "river" and TileBaker.region_at_tile(tiles, c) == region
-		t.truth(clean, "%s's cells are dry land inside %s" % [city["name"], city["region"]])
+			clean = clean and _kind(tiles, c) not in WATER and _kind(tiles, c) != "river" and TileBaker.region_at_tile(tiles, c) < MapBaker.FOREIGN_REGION
+		t.truth(clean, "%s's cells are dry Ardenian land" % city["name"])
 		t.equal(GrowthLayers.cells_for_town(centre, 12, tiles), cells.slice(0, 12), "%s's smaller town is a prefix of its larger one" % city["name"])
+	_check_spill(geo, tiles)
 	var row := {"id": "vashtera", "population": 1500.0, "development": 0.8, "pressure": 0.1, "control": "full"}
 	var targets := GrowthLayers.targets(row, geo, tiles)
 	for key in ["town_cells", "lit_cells", "farm_cells", "fallow_cells"]:
@@ -90,6 +90,50 @@ func _check_cells(geo: MapGeometry, tiles: Dictionary) -> void:
 	t.truth(bigger["town_cells"].size() > town.size(), "more people fill more town cells")
 	t.equal(targets, GrowthLayers.targets(row, geo, tiles), "targets are deterministic")
 
+
+func _check_spill(geo: MapGeometry, tiles: Dictionary) -> void:
+	var spilled := false
+	for city in geo.cities:
+		var centre := Vector2i(Vector2(city["point"]) * Vector2(TileBaker.GRID))
+		var own := geo.region_ids.find(city["region"])
+		var cells := GrowthLayers.cells_for_town(centre, 120, tiles)
+		var across := {}
+		for c in cells:
+			var r := TileBaker.region_at_tile(tiles, c)
+			t.truth(r < MapBaker.FOREIGN_REGION and _kind(tiles, c) not in WATER and _kind(tiles, c) != "river", "%s spills only onto dry Ardenian land" % city["name"])
+			if r != own:
+				across[r] = true
+		spilled = spilled or not across.is_empty()
+		for r in across:
+			var fenced := GrowthLayers.cells_for_town(centre, 120, tiles, {r: true})
+			t.truth(fenced.all(func(c: Vector2i) -> bool: return TileBaker.region_at_tile(tiles, c) != r), "%s keeps out of blocked region %d" % [city["name"], r])
+	t.truth(spilled, "a town at a region edge gets cells across it")
+	var rows := _rows(geo, 600.0, 0.5)
+	var plan := GrowthLayers.all_targets(rows, geo, tiles)
+	var seen := {}
+	var total := 0
+	for id in plan:
+		for c in plan[id]["town_cells"]:
+			seen[c] = true
+			total += 1
+	t.equal(seen.size(), total, "two towns never share a cell")
+	rows[geo.region_ids.find("vetrenka")]["control"] = "separatist"
+	var fenced_plan := GrowthLayers.all_targets(rows, geo, tiles)
+	var vetrenka := geo.region_ids.find("vetrenka")
+	var intruders := 0
+	for id in fenced_plan:
+		if id == "vetrenka":
+			continue
+		for c in fenced_plan[id]["town_cells"]:
+			if TileBaker.region_at_tile(tiles, c) == vetrenka:
+				intruders += 1
+	t.equal(intruders, 0, "no town spills into a separatist region")
+	var small := GrowthLayers.all_targets(_rows(geo, 400.0, 0.5), geo, tiles)
+	var large := GrowthLayers.all_targets(_rows(geo, 1200.0, 0.5), geo, tiles)
+	for id in small:
+		t.truth(large[id]["town_cells"].size() >= 2 * small[id]["town_cells"].size(), "%s: tripled population at least doubles its town (%d to %d)" % [id, small[id]["town_cells"].size(), large[id]["town_cells"].size()])
+	for pop in [50.0, 150.0, 300.0, 600.0]:
+		t.truth(GrowthLayers.town_tiles(pop * 3.0, false) >= 2 * GrowthLayers.town_tiles(pop, false), "town_tiles at %dk tripled at least doubles" % pop)
 
 func _run() -> void:
 	var geo := MapGeometry.load_world()

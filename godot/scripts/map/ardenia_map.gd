@@ -378,10 +378,7 @@ func apply_snapshot(values: Array, selection: String) -> void:
 func _paint_growth() -> void:
 	if unavailable or _geo == null or terrain_layer.tile_set == null or regions.is_empty():
 		return
-	var all_targets := {}
-	for id in regions:
-		all_targets[id] = GrowthLayers.targets(regions[id], _geo, _tiles)
-	GrowthPainter.apply(self, all_targets, _growth_started)
+	GrowthPainter.apply(self, GrowthLayers.all_targets(regions.values(), _geo, _tiles), _growth_started)
 	_growth_started = true
 
 
