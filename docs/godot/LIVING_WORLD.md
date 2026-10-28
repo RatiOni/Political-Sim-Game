@@ -1,7 +1,8 @@
 # Ardenia Godot — the living world (Phase 4)
 
 **Status:** situations engine, the schemer arc, the party leadership
-challenge, the Vasca question and Vetrenka are playable — 44 of 46 events (2026-10-28). Arcs, the civil-war gauge, diplomacy verbs, the AI countries,
+challenge, the Vasca question, Vetrenka and the civil-war gauge are
+playable — 44 of 46 events (2026-10-28). Arcs, the civil-war gauge, diplomacy verbs, the AI countries,
 opposition play and the press remain. Same native-design rules as
 `SIM_REDESIGN.md`: Python is a reference for what Ardenia contains, never a
 formula to match.
@@ -20,8 +21,7 @@ formula to match.
    fire (`EventsSim.unplayable_events()` lists them). Their trigger
    conditions (`schemer_plotting`, `vasca_stirring`, `vetrenka_friction_due`,
    `vetrenka_crossroads_ready`) join `Arcs.CONDITIONS` with them.
-3. **Civil-war gauge** — insurgency pressure and the latched catastrophe,
-   fed by the arcs.
+3. **Civil-war gauge** — done (`sim/crisis_sim.gd`).
 4. **Diplomacy verbs** — pacts, sanctions, summits, treaty exit, loans.
 5. **The world acts** — the eight AI countries deliberate and act, including
    on the player.
@@ -119,3 +119,37 @@ harden in about 15 months.
 
 Follow-up situations are now reported as "Following on from an earlier
 decision", so the monthly report shows cause and effect.
+
+## The civil-war gauge
+
+Risk is never rolled: it is a deterministic reading of six named
+components (collapsing stability, hostile factions, unrest, no governing
+majority, the worst grievance, insurgency), which the gauge chases at 12%
+of the gap a month. War breaks out at 0.75 and ends only below 0.40; each
+month of war costs stability, approval, 5 PC and 1% of output, but never
+ends the game. Insurgency weighs only 0.12 (it cannot start a war alone)
+and decays 0.03 a month unless an arc feeds it. The eight world countries
+run the same dynamics from coarser readings, and the monthly report names
+any that falls into or out of war. Over 20 years no fiscal policy tips
+Ardenia into war; reckless ones run at 0.50–0.52 against 0.37 for steady
+government.
+
+## Decisions from the slice-2 code review
+
+- **Government business waits for a government.** A follow-up whose
+  audience is not met (government business while the player is out of
+  office) stays scheduled and arrives once it can; a pending situation in
+  that state is frozen — it does not lapse, cannot be decided, and is not
+  shown. Without this, losing office mid-arc would strand Vasca or Vetrenka
+  for ever. Only content that can never play is dropped from the schedule.
+- **Looking away costs what choosing would.** A lapse charges the default
+  option's political-capital cost (as much as the government has), so
+  ignoring a situation is never the cheap way to pick its default.
+- **The decision window** runs through the end of the deadline month: a
+  situation arriving in month T can be decided in T, T+1 and T+2 and
+  lapses at the T+3 close. "Decide this month" in the last month is exact.
+- **Lag is deliberate.** Situations close the month, after approval and
+  stability, so an effect from a lapse or an arc shows in the next month's
+  figures — the report announces it first, the numbers follow.
+- Ties for "worst relation" break by country id, so a reload cannot change
+  which neighbour a diplomatic situation is about.

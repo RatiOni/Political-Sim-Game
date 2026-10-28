@@ -51,6 +51,7 @@ func _run(label: String, step: float, pass_budget: bool, trace := false) -> void
 		label, e.inflation, e.unemployment, e.natural_unemployment, start_unemp, e.public_debt_pct,
 		e.effective_interest_rate, e.debt_service, e.structural_expenditure, e.growth_rate,
 		s.player.approval, s.stability_value, s.player.political_capital, emergency_months, votes_lost])
+	print("      crisis: civil-war risk %.2f (war=%s) insurgency %.2f vasca=%s vetrenka=%s situations=%d" % [s.civil_war_risk, s.civil_war, s.insurgency_pressure, s.campaign_meta.get("vasca_status", "-"), s.campaign_meta.get("vetrenka_status", "-"), s.event_history.size()])
 	print("      households: conf %.3f hardship %.3f services %.3f real_income %.3f | welfare_delivery %.2f | econ_signal %.3f | Interior delivery %.2f" % [
 		HouseholdsSim.national_confidence(s), HouseholdsSim.national_hardship(s), HouseholdsSim.national_service_access(s),
 		HouseholdsSim.national_real_income(s), HouseholdsSim.welfare_delivery(s), StabilitySim.economic_signal(s),
@@ -69,9 +70,12 @@ func _tick(s: GameState) -> void:
 		EconomySim.update(s)
 		RegionsSim.simulate(s)
 		HouseholdsSim.simulate(s)
+		CabinetSim.monthly(s)
 		StabilitySim.update_approval(s)
 		StabilitySim.update_stability(s)
+		CrisisSim.monthly(s)
 		Modifiers.age_all(s)
+		EventsSim.monthly(s)
 
 
 func _initialize() -> void:

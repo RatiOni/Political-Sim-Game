@@ -447,7 +447,8 @@ func _notice_new_situations() -> void:
 	var fresh := false
 	var live := {}
 	for row in snapshot.get("situations", []):
-		var id := str(row.get("event_id", ""))
+		# Keyed by arrival too: the same event returning later is news again.
+		var id := "%s@%s" % [row.get("event_id", ""), row.get("arrived_turn", 0)]
 		live[id] = true
 		if not _known_situations.has(id):
 			fresh = true

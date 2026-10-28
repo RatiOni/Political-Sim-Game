@@ -12,6 +12,8 @@ static func resolve(state: GameState, event_id: String, option_id: String) -> Di
 	if situation == null:
 		return _error("That situation is not waiting on a decision.")
 	var event := EventsSim.event_by_id(event_id)
+	if not EventsSim.audience_ok(state, event):
+		return _error("This is a matter for the government, not the opposition.")
 	var option := EventsSim.option_by_id(event, option_id)
 	if option.is_empty():
 		return _error("That is not one of the choices.")
@@ -45,7 +47,7 @@ static func read_model(state: GameState) -> Array:
 		return rows
 	for situation in state.pending_situations:
 		var event := EventsSim.event_by_id(situation.event_id)
-		if event.is_empty():
+		if event.is_empty() or not EventsSim.audience_ok(state, event):
 			continue
 		var options: Array = []
 		for option in event.get("options", []):
@@ -61,6 +63,7 @@ static func read_model(state: GameState) -> Array:
 			})
 		rows.append({
 			"event_id": situation.event_id,
+			"arrived_turn": situation.arrived_turn,
 			"title": String(event.get("title", "")),
 			"description": String(event.get("description", "")),
 			"category": String(event.get("category", "")),

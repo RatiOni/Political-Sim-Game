@@ -46,11 +46,14 @@ static func catalog() -> Array:
 	return events if events is Array else []
 
 
+static var _by_id: Dictionary = {}
+
+
 static func event_by_id(event_id: String) -> Dictionary:
-	for e in catalog():
-		if String(e.get("id", "")) == event_id:
-			return e
-	return {}
+	if _by_id.is_empty():
+		for e in catalog():
+			_by_id[String(e.get("id", ""))] = e
+	return _by_id.get(event_id, {})
 
 
 static func option_by_id(event: Dictionary, option_id: String) -> Dictionary:
@@ -163,7 +166,11 @@ static func _own_party(state: GameState) -> Faction:
 static func _worst_relation(state: GameState, below: float) -> String:
 	var worst := ""
 	var worst_score := below
-	for key in state.country.relations:
+	# Sorted, so equally bad relations resolve the same way after a reload
+	# (a save stores keys in sorted order, not insertion order).
+	var keys := state.country.relations.keys()
+	keys.sort()
+	for key in keys:
 		var rel: Country.BilateralRelation = state.country.relations[key]
 		if rel.score < worst_score:
 			worst = String(key)
@@ -205,15 +212,24 @@ static func monthly(state: GameState) -> Array[String]:
 	return notes
 
 
+## A situation not decided by the end of its deadline month takes its
+## default — and costs what choosing the default would have cost (as much of
+## it as the government has), so looking away is never the cheap way to
+## pick it. Government business frozen by a change of office does not lapse
+## onto someone who cannot decide it; it waits for a government.
 static func _lapse_overdue(state: GameState, notes: Array[String]) -> void:
 	for situation in state.pending_situations.duplicate():
 		if state.turn <= situation.deadline_turn:
 			continue
 		var event := event_by_id(situation.event_id)
+		if not audience_ok(state, event):
+			continue
 		var option := option_by_id(event, String(event.get("default_option_id", "")))
 		state.pending_situations.erase(situation)
 		if option.is_empty():
 			continue
+		state.player.political_capital = maxf(0.0,
+			state.player.political_capital - float(option.get("pc_cost", 0.0)))
 		var line := apply_option(state, event, option, situation, true)
 		notes.append("Left undecided, %s was settled by default: %s." % [
 			String(event.get("title", situation.event_id)), String(option.get("label", ""))])
@@ -221,14 +237,20 @@ static func _lapse_overdue(state: GameState, notes: Array[String]) -> void:
 			notes.append(line)
 
 
+## A follow-up nobody can receive yet — government business while the
+## player is out of office, or one already waiting — stays scheduled and
+## arrives once it can. Only content that can never play is dropped.
 static func _deliver_follow_ups(state: GameState, notes: Array[String]) -> void:
 	for row in state.scheduled_events.duplicate():
 		if int(row.get("due_turn", 0)) > state.turn:
 			continue
-		state.scheduled_events.erase(row)
 		var event := event_by_id(String(row.get("event_id", "")))
-		if not is_playable(event) or not audience_ok(state, event) or _is_pending(state, event["id"]):
+		if not is_playable(event):
+			state.scheduled_events.erase(row)
 			continue
+		if not audience_ok(state, event) or _is_pending(state, event["id"]):
+			continue
+		state.scheduled_events.erase(row)
 		_arrive(state, event, String(row.get("target_country_id", "")), notes, true)
 
 

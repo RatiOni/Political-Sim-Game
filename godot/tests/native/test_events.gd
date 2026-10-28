@@ -342,6 +342,67 @@ func _test_situations_reach_the_player_through_the_game(t) -> void:
 	game.queue_free()
 
 
+# ── Review fixes: power changes, lapse costs, tie-breaks ─────────────────
+
+func _test_a_follow_up_waits_for_a_government_to_receive_it(t) -> void:
+	var state := _state()
+	state.turn = 20
+	state.scheduled_events.append({"event_id": "vetrenka_settled", "due_turn": 21, "target_country_id": ""})
+	state.player.in_government = false
+	for _i in range(3):
+		_month(state)
+	t.equal(state.scheduled_events.size(), 1, "out of office, a government follow-up is kept, not thrown away")
+	t.truth(not state.pending_situations.any(func(s): return s.event_id == "vetrenka_settled"), "and is not handed to the opposition")
+	state.player.in_government = true
+	_month(state)
+	t.truth(state.pending_situations.any(func(s): return s.event_id == "vetrenka_settled"),
+		"back in office, the chain resumes where it stopped")
+
+
+func _test_government_business_freezes_while_out_of_office(t) -> void:
+	var state := _state()
+	state.turn = 20
+	state.player.political_capital = 100.0
+	_force(state, "vetrenka_crossroads")
+	state.player.in_government = false
+	for _i in range(EventsSim.DECISION_WINDOW_MONTHS + 3):
+		_month(state)
+	t.truth(state.pending_situations.any(func(s): return s.event_id == "vetrenka_crossroads"),
+		"a government decision does not lapse onto an opposition leader")
+	t.truth(not state.campaign_meta.has("vetrenka_status") and state.scheduled_events.is_empty(),
+		"so nothing is decided in their name")
+	var r := EventActions.resolve(state, "vetrenka_crossroads", "formalise")
+	t.truth(not r.get("ok", true), "and they cannot decide it themselves")
+	t.truth(EventActions.read_model(state).is_empty(), "nor is it shown on their desk")
+
+
+func _test_looking_away_costs_what_choosing_would(t) -> void:
+	var state := _state()
+	state.turn = 20
+	state.player.political_capital = 50.0
+	_force(state, "vetrenka_crossroads")
+	for _i in range(EventsSim.DECISION_WINDOW_MONTHS + 1):
+		_month(state)
+	t.near(state.player.political_capital, 40.0, 1e-9,
+		"letting the default happen costs its 10 political capital, so ignoring is never the cheap way to choose it")
+	var poor := _state()
+	poor.turn = 20
+	poor.player.political_capital = 4.0
+	_force(poor, "vetrenka_crossroads")
+	for _i in range(EventsSim.DECISION_WINDOW_MONTHS + 1):
+		_month(poor)
+	t.near(poor.player.political_capital, 0.0, 1e-9, "a government short of capital pays what it has, never below zero")
+
+
+func _test_a_tie_for_worst_relation_survives_a_reload(t) -> void:
+	var state := _state()
+	for key in state.country.relations:
+		(state.country.relations[key] as Country.BilateralRelation).score = -0.5
+	var before := EventsSim._worst_relation(state, INF)
+	var copy := GameState.from_dict(state.to_dict())
+	t.equal(EventsSim._worst_relation(copy, INF), before, "equally bad relations pick the same country before and after a reload")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_catalog_integrity(t)
@@ -360,4 +421,8 @@ func _initialize() -> void:
 	_test_situations_survive_save_and_reload(t)
 	_test_validator_rejects_impossible_situations(t)
 	_test_situations_reach_the_player_through_the_game(t)
+	_test_a_follow_up_waits_for_a_government_to_receive_it(t)
+	_test_government_business_freezes_while_out_of_office(t)
+	_test_looking_away_costs_what_choosing_would(t)
+	_test_a_tie_for_worst_relation_survives_a_reload(t)
 	quit(t.finish())

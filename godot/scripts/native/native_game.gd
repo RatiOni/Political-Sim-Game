@@ -93,9 +93,11 @@ func advance_day() -> Dictionary:
 		CabinetSim.monthly(_state)
 		StabilitySimScript.update_approval(_state)
 		StabilitySimScript.update_stability(_state)
+		var crisis_notes := CrisisSim.monthly(_state)
 		Modifiers.age_all(_state)
 		var situation_notes := EventsSim.monthly(_state)
 		_state.monthly_digest = MonthlyDigestScript.build(_state, before)
+		_state.monthly_digest.append_array(crisis_notes)
 		_state.monthly_digest.append_array(situation_notes)
 	var snap := snapshot()
 	state_changed.emit(snap)
@@ -490,6 +492,8 @@ static func _decisions(state: GameState) -> Array:
 	var rows: Array = []
 	for situation in state.pending_situations:
 		var event := EventsSim.event_by_id(situation.event_id)
+		if not EventsSim.audience_ok(state, event):
+			continue
 		var months := maxi(0, situation.deadline_turn - state.turn)
 		rows.append({
 			"tag": String(event.get("category", "Situation")),
