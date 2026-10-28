@@ -34,15 +34,21 @@ static func pair(state: GameState, country_id: String) -> Array:
 
 
 static func shift(state: GameState, country_id: String, delta: float, note := "") -> void:
-	var p := pair(state, country_id)
-	if p.is_empty():
+	var other := world_country(state, country_id)
+	if other != null:
+		shift_between(state.country, other, delta, note)
+
+
+static func shift_between(a: Country, b: Country, delta: float, note := "") -> void:
+	var ab: Country.BilateralRelation = a.relations.get(b.id)
+	var ba: Country.BilateralRelation = b.relations.get(a.id)
+	if ab == null or ba == null:
 		return
-	var mine: Country.BilateralRelation = p[0]
-	mine.score = clampf(mine.score + delta, -1.0, 1.0)
-	(p[1] as Country.BilateralRelation).score = mine.score
+	ab.score = clampf(ab.score + delta, -1.0, 1.0)
+	ba.score = ab.score
 	if note != "":
-		mine.history.append(note)
-		(p[1] as Country.BilateralRelation).history.append(note)
+		ab.history.append(note)
+		ba.history.append(note)
 
 
 static func set_trade(state: GameState, country_id: String, volume: float) -> void:

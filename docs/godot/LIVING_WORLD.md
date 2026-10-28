@@ -2,8 +2,8 @@
 
 **Status:** situations engine, the schemer arc, the party leadership
 challenge, the Vasca question, Vetrenka, the civil-war gauge and
-diplomacy are playable — 44 of 46 events (2026-10-28). Arcs, the civil-war gauge, diplomacy verbs, the AI countries,
-opposition play and the press remain. Same native-design rules as
+diplomacy are playable — 44 of 46 events (2026-10-28), and the eight AI
+countries deliberate and act. Opposition play and the press remain. Same native-design rules as
 `SIM_REDESIGN.md`: Python is a reference for what Ardenia contains, never a
 formula to match.
 
@@ -24,8 +24,7 @@ formula to match.
 3. **Civil-war gauge** — done (`sim/crisis_sim.gd`).
 4. **Diplomacy verbs** — done (`actions/diplomacy_actions.gd`,
    `sim/diplomacy_sim.gd`, the Diplomacy desk).
-5. **The world acts** — the eight AI countries deliberate and act, including
-   on the player.
+5. **The world acts** — done (`sim/world_sim.gd`).
 6. **Opposition play** — the domestic-AI government, pledges, shadow cabinet.
 7. **The press** — dispatch voice and the monthly front page.
 
@@ -188,3 +187,41 @@ situations now use too.
 
 The compact (1280×720) header now gives the date 120 px instead of 192 so
 the Diplomacy button fits.
+
+## The world acts
+
+**Player-facing job:** the neighbours have their own interests, and the
+player can read them coming. A foreign move should feel like policy, not
+weather.
+
+- **Interest, not dice.** Each country reads its national interest from its
+  agenda (hegemon, revanchist, trader, reformer, survivor, ideologue, plus an
+  authored rival or ally; an undeclared agenda follows the regime). A country
+  at war with itself or below 0.35 stability turns inward; a survivor does so
+  below 0.60. Whoever sanctions a country becomes its target, ahead of every
+  other interest. A hegemon whose rivalry has bottomed out (below −0.8)
+  spends the cycle courting a client instead.
+- **Plans, then action.** The choice is a persisted `Country.plan` with a
+  maturity month. Openings are staggered (first moves in months 3–6), then
+  each country acts every 3–5 months — the one random draw in the
+  scheduler, from the saved campaign stream, so a reload replays exactly.
+- **Threats leak.** A hostile or trade plan is reported a month before it
+  matures ("X is weighing its options toward Y"); courtesies are not.
+- **Deterrence works.** Half of hostile moves against a defence-pact holder
+  are quietly shelved. A condemnation costs 0.12 of relations, pressure 0.06.
+- **No treaty without consent.** Foreign powers court the player (+0.06) but
+  never sign a pact on the player's behalf; world-to-world trade pacts form
+  between friends (relations above 0.1) and trade then grows like the
+  player's. A country never courts the power sanctioning it.
+- **Camps drift.** World-to-world relations warm within a regime camp and
+  cool across camps at the same rates as the player's own.
+- **Named arcs.** A pair above 0.7 with a trade pact becomes an *axis*; a
+  pair below −0.7 a *feud*. Each is announced once, persisted in
+  `GameState.world_arcs`, and dissolves (axis below 0.3, feud above −0.3)
+  with a report of its end.
+
+Over ten years in office or opposition the world takes about 240 actions and
+every figure stays bounded.
+
+A binary save whose length happened to begin with a space byte was misread
+as JSON and refused; the loader now tries JSON and falls back to binary.

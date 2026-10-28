@@ -93,6 +93,7 @@ var pending_situations: Array[Situation] = []
 var scheduled_events: Array[Dictionary] = []
 var event_fire_history: Dictionary = {}
 var event_history: Array[Dictionary] = []
+var world_arcs: Dictionary = {}
 
 var rng: SimRng = SimRng.from_seed(0)
 
@@ -180,6 +181,7 @@ func to_dict() -> Dictionary:
 		"scheduled_events": scheduled_events.duplicate(true),
 		"event_fire_history": event_fire_history.duplicate(true),
 		"event_history": event_history.duplicate(true),
+		"world_arcs": world_arcs.duplicate(),
 		"rng": rng_snapshot,
 	}
 
@@ -399,6 +401,12 @@ static func from_dict(data: Dictionary) -> GameState:
 		return null
 	for key in fired:
 		state.event_fire_history[String(key)] = int(fired[key])
+	var arcs: Variant = data.get("world_arcs", {})
+	if not (arcs is Dictionary):
+		push_error("GameState.from_dict: malformed world_arcs")
+		return null
+	for key in arcs:
+		state.world_arcs[String(key)] = String(arcs[key])
 	if not data.has("rng"):
 		push_error("GameState.from_dict: missing required 'rng' (every writer since format v1 includes it)")
 		return null

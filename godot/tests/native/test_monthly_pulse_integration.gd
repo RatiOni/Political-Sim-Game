@@ -72,6 +72,7 @@ static func _run_reference_rollover(state: GameState) -> void:
 	PoliticalCapitalScript.regenerate(state)
 	MinistriesSimScript.simulate(state)
 	DiplomacySim.monthly(state)
+	var world_notes := WorldSim.monthly(state)
 	EconomySimScript.update(state)
 	RegionsSimScript.simulate(state)
 	HouseholdsSimScript.simulate(state)
@@ -82,6 +83,7 @@ static func _run_reference_rollover(state: GameState) -> void:
 	Modifiers.age_all(state)
 	var situation_notes := EventsSim.monthly(state)
 	state.monthly_digest = MonthlyDigestScript.build(state, before)
+	state.monthly_digest.append_array(world_notes)
 	state.monthly_digest.append_array(crisis_notes)
 	state.monthly_digest.append_array(situation_notes)
 

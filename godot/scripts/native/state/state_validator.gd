@@ -44,6 +44,8 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_region_growth(state, errors)
 	_validate_budgets(state, errors)
 	_validate_laws(state, errors)
+	_validate_world_plans(state, errors)
+	_validate_world_arcs(state, errors)
 
 	if state.player != null:
 		_validate_player(state, errors)
@@ -537,3 +539,34 @@ static func _validate_region_growth(state: GameState, errors: Array[String]) -> 
 			errors.append("region '%s' population out of range" % region.id)
 		if not is_finite(region.development) or region.development < 0.0 or region.development > 1.0:
 			errors.append("region '%s' development out of range" % region.id)
+
+
+static func _validate_world_plans(state: GameState, errors: Array[String]) -> void:
+	var ids := {state.country.id: true}
+	for c in state.world:
+		if c != null:
+			ids[c.id] = true
+	for c in state.world:
+		if c == null or c.plan.is_empty():
+			continue
+		var target := String(c.plan.get("target", ""))
+		if not (String(c.plan.get("objective", "")) in WorldSim.OBJECTIVES):
+			errors.append("world country(%s) plan has an unknown objective" % c.id)
+		if target == c.id or (target != "" and not ids.has(target)):
+			errors.append("world country(%s) plan has an impossible target '%s'" % [c.id, target])
+		var matures: Variant = c.plan.get("matures_turn", null)
+		if not (matures is int or matures is float) or float(matures) < 0.0:
+			errors.append("world country(%s) plan has no maturity" % c.id)
+
+
+static func _validate_world_arcs(state: GameState, errors: Array[String]) -> void:
+	var ids := {state.country.id: true}
+	for c in state.world:
+		if c != null:
+			ids[c.id] = true
+	for key in state.world_arcs:
+		var parts := String(key).split("|")
+		if parts.size() != 2 or parts[0] >= parts[1] or not ids.has(parts[0]) or not ids.has(parts[1]):
+			errors.append("world arc '%s' does not name two known countries" % key)
+		if not (String(state.world_arcs[key]) in WorldSim.ARC_KINDS):
+			errors.append("world arc '%s' has an unknown kind" % key)

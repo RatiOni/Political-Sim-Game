@@ -71,7 +71,9 @@ static func _read_payload(path: String) -> Variant:
 	if bytes.is_empty():
 		return null
 	if bytes[0] == 0x7B or bytes[0] == 0x20 or bytes[0] == 0x0A or bytes[0] == 0x0D or bytes[0] == 0x09:
-		return JSON.parse_string(bytes.get_string_from_utf8())
+		var json := JSON.new()
+		if json.parse(bytes.get_string_from_utf8()) == OK:
+			return json.data
 	var file := FileAccess.open(path, FileAccess.READ)
 	return null if file == null else file.get_var()
 
