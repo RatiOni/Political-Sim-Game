@@ -47,6 +47,8 @@ var control: String = "state"
 var issue_id: String = ""
 var party_support: Dictionary = {}
 var support_anchor: Dictionary = {}
+var population: float = 0.0
+var development: float = 0.0
 
 
 func to_dict() -> Dictionary:
@@ -59,6 +61,8 @@ func to_dict() -> Dictionary:
 		"issue_id": issue_id,
 		"party_support": party_support.duplicate(true),
 		"support_anchor": support_anchor.duplicate(true),
+		"population": population,
+		"development": development,
 	}
 
 
@@ -77,6 +81,8 @@ static func from_dict(data: Dictionary) -> RegionState:
 	r.party_support = party_support_data.duplicate(true) if party_support_data is Dictionary else {}
 	var anchor_data: Variant = data.get("support_anchor", {})
 	r.support_anchor = anchor_data.duplicate(true) if anchor_data is Dictionary else {}
+	r.population = float(data.get("population", 0.0))
+	r.development = float(data.get("development", 0.0))
 	return r
 
 

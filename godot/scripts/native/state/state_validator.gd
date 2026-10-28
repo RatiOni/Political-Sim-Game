@@ -41,6 +41,7 @@ static func validate(state: GameState) -> PackedStringArray:
 	if not is_finite(state.insurgency_pressure) or state.insurgency_pressure < 0.0 or state.insurgency_pressure > 1.0:
 		errors.append("insurgency_pressure out of range")
 	_validate_households(state, errors)
+	_validate_region_growth(state, errors)
 	_validate_budgets(state, errors)
 	_validate_laws(state, errors)
 
@@ -525,3 +526,14 @@ static func _validate_situations(state: GameState, errors: Array[String]) -> voi
 		if not (row.get("due_turn", null) is int or row.get("due_turn", null) is float):
 			errors.append("scheduled follow-up '%s' has no due turn" % String(row.get("event_id", "")))
 
+
+
+static func _validate_region_growth(state: GameState, errors: Array[String]) -> void:
+	for key in state.regions:
+		var region: RegionState = state.regions[key] as RegionState
+		if region == null:
+			continue
+		if not is_finite(region.population) or region.population < 0.0:
+			errors.append("region '%s' population out of range" % region.id)
+		if not is_finite(region.development) or region.development < 0.0 or region.development > 1.0:
+			errors.append("region '%s' development out of range" % region.id)

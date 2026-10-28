@@ -374,6 +374,8 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 			"pressure": region.pressure,
 			"unemployment": region.unemployment,
 			"state_reach": region.state_reach,
+			"population": region.population,
+			"development": region.development,
 			"control": region.control,
 			"issue_id": region.issue_id,
 			"active_program": active_model,

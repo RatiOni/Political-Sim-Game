@@ -171,7 +171,7 @@ static func _weighted(state: GameState, attr: String, region_id: String = "") ->
 		var h: HouseholdGroupState = value
 		if region_id != "" and h.region_id != region_id:
 			continue
-		var weight := float(profiles.get(h.region_id, {}).get("population_weight", 0.0)) * h.population_share
+		var weight := RegionsSim.population_weight(state, h.region_id) * h.population_share
 		total += float(h.get(attr)) * weight
 		weight_total += weight
 	return total / weight_total if weight_total > 0.0 else 0.0

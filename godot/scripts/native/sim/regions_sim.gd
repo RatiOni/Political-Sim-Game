@@ -41,6 +41,81 @@ const VETRENKA_PRESSURE_BIAS := {
 }
 
 
+const NATURAL_GROWTH_PER_YEAR := 0.004
+const MIGRATION_SHARE_PER_MONTH := 0.002
+const DEVELOPMENT_CONVERGENCE := 0.015
+const DEVELOPMENT_REACH_BONUS := 0.10
+const SEPARATIST_DEVELOPMENT_CEILING := 0.25
+
+
+static func population_weight(state: GameState, region_id: String) -> float:
+	var total := 0.0
+	for r in state.regions.values():
+		total += (r as RegionState).population
+	var region: RegionState = state.regions.get(region_id)
+	if total <= 0.0 or region == null or region.population <= 0.0:
+		return float(_region_profiles().get(region_id, {}).get("population_weight", 0.0))
+	return region.population / total
+
+
+static func _seed_growth_state(state: GameState, region: RegionState, profile: Dictionary) -> void:
+	if region.population <= 0.0:
+		region.population = float(profile.get("population_weight", 0.0)) * float(state.country.population) / 1000.0
+	if region.development <= 0.0:
+		region.development = roundf(clampf(0.15 + region.state_reach * 0.55 - region.unemployment * 0.8, 0.05, 0.9) * 1000.0) / 1000.0
+
+
+static func _attractiveness(region: RegionState) -> float:
+	return (1.0 - region.unemployment * 3.0) + region.state_reach * 0.5 - region.pressure * 0.6
+
+
+static func _update_population(state: GameState) -> void:
+	var monthly_natural := pow(1.0 + NATURAL_GROWTH_PER_YEAR, 1.0 / 12.0) - 1.0
+	var open: Array[RegionState] = []
+	var mean := 0.0
+	for r in state.regions.values():
+		var region := r as RegionState
+		region.population *= 1.0 + monthly_natural
+		if region.control != "separatist":
+			open.append(region)
+			mean += _attractiveness(region)
+	if open.size() < 2:
+		return
+	mean /= open.size()
+	var flows := {}
+	var net := 0.0
+	for region in open:
+		var flow := region.population * MIGRATION_SHARE_PER_MONTH * (_attractiveness(region) - mean)
+		flows[region] = flow
+		net += flow
+	for region in open:
+		region.population = maxf(1.0, region.population + float(flows[region]) - net / open.size())
+
+
+static func _development_target(state: GameState, region: RegionState, region_id: String, profile: Dictionary) -> float:
+	var portfolio := String(profile.get("development_portfolio", "Economy"))
+	var ministry: MinistryState = state.ministries.get(portfolio)
+	var delivery := 1.0 if ministry == null else ministry.delivery
+	var programme := 0.15 if state.regional_programs.any(func(p): return p.region_id == region_id) else 0.0
+	var growth := clampf(state.country.economy.growth_rate * 4.0, -0.2, 0.2)
+	var crisis := (0.35 if state.civil_war else 0.0) + state.insurgency_pressure * 0.25 + region.pressure * 0.2
+	var target := 0.2 + delivery * 0.35 + region.state_reach * 0.25 + programme + growth - crisis
+	if region.control == "separatist":
+		target = minf(target, SEPARATIST_DEVELOPMENT_CEILING)
+	return clampf(target, 0.02, 0.98)
+
+
+static func _advance_development(state: GameState, profiles: Dictionary) -> void:
+	MinistriesSim.ensure_ministries(state)
+	for region_id in state.regions.keys():
+		var region: RegionState = state.regions[region_id] as RegionState
+		var profile: Variant = profiles.get(String(region_id))
+		if region == null or not (profile is Dictionary):
+			continue
+		var target := _development_target(state, region, String(region_id), profile)
+		region.development = clampf(region.development + (target - region.development) * DEVELOPMENT_CONVERGENCE, 0.0, 1.0)
+
+
 static func _region_profiles() -> Dictionary:
 	var content: Dictionary = ContentRepositoryScript.load_all()
 	var catalogs_raw: Variant = content.get("catalogs", {})
@@ -101,6 +176,7 @@ static func ensure_region_states(state: GameState) -> void:
 		else:
 			region.party_support = {}
 		region.support_anchor = national_support.duplicate(true)
+		_seed_growth_state(state, region, profile)
 		state.regions[rid] = region
 
 
@@ -119,8 +195,11 @@ static func simulate(state: GameState) -> void:
 		if not (profile_raw is Dictionary):
 			continue
 		var profile: Dictionary = profile_raw
+		_seed_growth_state(state, region, profile)
 		_tick_region(state, region, rid, profile)
 	_advance_programs(state, profiles, definitions)
+	_update_population(state)
+	_advance_development(state, profiles)
 
 
 static func _tick_region(state: GameState, region: RegionState, region_id: String,
@@ -135,7 +214,7 @@ static func _tick_region(state: GameState, region: RegionState, region_id: Strin
 		region.unemployment + (unemployment_target - region.unemployment) * UNEMPLOYMENT_CONVERGENCE,
 		0.0, 0.60)
 
-	var reach_target: float = capacity + float(profile.get("reach_offset", 0.0)) + (stability - 0.5) * 0.12
+	var reach_target: float = capacity + float(profile.get("reach_offset", 0.0)) + (stability - 0.5) * 0.12 + (region.development - 0.5) * DEVELOPMENT_REACH_BONUS
 	if region.control == "limited":
 		reach_target = minf(reach_target, CONTROL_LIMITED_MAX)
 	elif region.control == "autonomous":

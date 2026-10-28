@@ -40,7 +40,8 @@ static func national_pressure(state: GameState) -> float:
 		var profile: Variant = profiles.get(String(key), {})
 		var weight := 1.0
 		if profile is Dictionary:
-			weight = float((profile as Dictionary).get("population_weight", 1.0))
+			if (profile as Dictionary).has("population_weight"):
+				weight = RegionsSim.population_weight(state, String(key))
 		weighted += region.pressure * weight
 		total += weight
 	return weighted / total if total > 0.0 else 0.0
