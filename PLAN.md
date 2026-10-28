@@ -309,353 +309,92 @@ close to drop-in).
       days of advance, save, quit, relaunch, continue.
 - [ ] Commit `feat(godot): own native campaign lifecycle and cut the bridge`.
 
-### Phase 2 — The monthly simulation
+### Phase 2 — The monthly political economy
 
-Port the monthly pulse as game systems, in the phase order `engine/turn.py`
-documents (order is load-bearing — later phases read earlier same-turn results):
-economy (growth, inflation, unemployment, debt, revenue/expenditure), annual
-appropriations, ministry capacity/workload/delivery/backlog, regional
-conditions, the 54 household records (six groups across nine authored Ardenian
-regions), then approval and stability. Plus the
-political-capital economy and governing overhead, and the monthly digest.
+**Native means designed for the player, not transcribed from another runtime.**
+Every Phase 2 system starts with the experience it must create: a decision has a
+legible cost, delayed consequences, and a credible trade-off. Godot owns the
+numbers, equations, thresholds and update order. Reference material may explain
+Ardenia's institutions and causal relationships, but it cannot prescribe an
+equation, a constant, a class layout, or a test expectation.
 
-*Playable result:* time means something. The map's pressure colours move for real
-reasons; the monthly report explains why.
+The monthly pulse exists to answer one question after each meaningful period:
+**what changed, who felt it, and what did the government trade to cause it?**
+It is deliberately monthly because fiscal capacity, ministry performance,
+household confidence and regional conditions should be read as political trends,
+not daily noise.
 
-#### Phase 2 tasks
+The six simulation domains are budget and public debt, political capital,
+ministries, economy, regions, and households. Their redesign specifications
+live in `docs/godot/SIM_REDESIGN.md`. Economy and debt are the dependency-first
+work: until deficits accumulate into debt and debt has an interest cost, a
+budget cannot be a serious political choice.
 
-Decomposed for subagent dispatch, following `engine/turn.py: TurnEngine._run_monthly_pulse`'s
-documented call order (its own docstring numbers all 23 phases — order is
-load-bearing because later phases read earlier same-turn results). Phase 2
-implements this subset, in this order:
+**Rules for every rebuild in this phase:**
 
-```
-budget.process_fiscal_year        (Task 5)
-_regenerate_political_capital     (Task 5)
-ministries.simulate_ministries    (Task 6)
-_update_economy (+6 sub-phases)   (Task 7)
-regions.simulate_regions          (Task 8)
-households.simulate_households    (Task 9)
-_update_approval                  (Task 10)
-_update_stability                 (Task 10)
-```
+1. State the intended player experience before selecting a formula.
+2. Give every retained or newly chosen constant a Godot-side design reason,
+   stated beside the system or in its design record.
+3. Never copy a formula, numeric constant, update sequence, or test assertion
+   merely because it existed elsewhere.
+4. Replace tests that assert inherited numbers with tests of intended player
+   behaviour, ranges, monotonic directions, boundedness, and save continuity.
+   Record every altered test in the task report.
+5. Do not weaken or remove an assertion simply to make a build pass.
+6. Use play sessions to tune the numbers after the behavioural tests are green.
 
-Numbered globally, continuing from Phase 1's Tasks 1-4 (the `task-brief`
-tooling matches `### Task N` by number across the whole plan file, not
-per-phase — task numbers must be unique file-wide).
+The existing typed state, save boundary, content JSON, calendar, map and scenes
+remain valuable infrastructure. Existing simulation code and its tests are not
+to be deleted. They are quarantined as an auditable baseline while each domain
+is redesigned deliberately.
 
-Everything else in `_run_monthly_pulse` (domestic-government/opposition
-simulation, world relations and worldsim, loans, faction loyalty and
-grievances, minister/cabinet updates, protests, confidence votes, civil war,
-faction support, elections, law tracking, events, rival watch) is later-phase
-territory (Phase 3/4) and stays out of scope here — do not implement it early
-just because it's in the same Python method.
+#### Phase 2 redesign order
 
-**Testing pattern, same as Phase 1:** each of Tasks 5-9 builds and unit-tests
-one subsystem function against a constructed `GameState`, called directly —
-not yet wired into `NativeGame`'s monthly pulse. **Task 10 does the
-integration**: it adds approval/stability, then wires all of Tasks 5-9's
-functions plus its own into `NativeGame`'s monthly-rollover path in the exact
-order above (currently that path only calls `Modifiers.age_all()`, from
-Phase 1 Task 4), and proves the whole chain with an end-to-end test that
-advances a real campaign through a month boundary and checks fields from
-every subsystem moved. This mirrors how Phase 1 Task 4 was the integration
-point for Phase 1's Tasks 1-3.
+1. **Economy and debt:** deficits add to public debt; debt interest constrains
+   future budgets; inflation has political and household costs; unemployment
+   tends toward a labour-market floor rather than falling forever.
+2. **Budget:** a passed plan funds commitments; failure to pass one produces a
+   politically costly emergency settlement rather than an optimal quiet cut.
+3. **Ministries:** funding, leadership and overload produce visibly different
+   delivery outcomes; a budget change must be felt in implementation.
+4. **Political capital:** attention is scarce but never permanently capped out
+   by invisible bookkeeping; commitments make governing harder without making
+   play inert.
+5. **Regions and households:** national choices reach places and groups through
+   administration, prices, jobs and state reach, then return as political
+   pressure and confidence.
+6. **Approval, stability and the digest:** the player sees a causal account of
+   material changes, rather than a pile of unexplained stat movement.
 
-### Task 5: Annual budget and political capital
-
-**Files:**
-- Create: `godot/scripts/native/sim/budget_sim.gd`
-- Create: `godot/scripts/native/sim/political_capital.gd`
-- Create: `godot/tests/native/test_budget_and_pc.gd`
-
-**Interfaces:**
-- Produces: `BudgetSim.process_fiscal_year(state: GameState) -> void` — applies
-  a pending/continuing budget at January rollover into `state.active_budget`.
-- Produces: `PoliticalCapital.regenerate(state: GameState) -> void` and
-  `PoliticalCapital.upkeep(state: GameState) -> Dictionary` (breakdown by
-  source, mirroring `political_upkeep()`'s return shape).
-
-**Read first:** `engine/budget.py` (`process_fiscal_year`, and how a fresh
-campaign seeds its first `AnnualBudget` from `Economy.structural_expenditure`
-— native campaigns have no `active_budget` yet per Phase 1 Task 2's documented
-scope, so this task's first job is seeding one, not just processing rollover),
-`turn.py: political_upkeep()` and `_regenerate_political_capital`.
-
-**Note:** native `Country`/`GameState` has no `Legislature`/laws/treaties
-class yet (Phase 3 territory) — read `country.gd` to see what relation/treaty
-data, if any, already exists on the ported `Country`/relation classes, and
-adapt `upkeep()`'s law/treaty/sanction counts to whatever is genuinely present
-today (likely just sanctions, since `BilateralRelation.sanctioned` is exactly
-the kind of per-relation flag Phase 1 would have ported). Do not invent a
-Legislature class to make this task's parity look more complete — an upkeep
-total that's currently law-free because no laws exist yet is correct, not a
-gap.
-
-- [ ] Write failing tests: a fresh campaign gets a seeded budget on its first
-      January if none exists; an approved `pending_budget` becomes
-      `active_budget` at January rollover; a government with no plan passed by
-      January gets the continuing-budget reduction; PC upkeep sums correctly
-      from whatever commitment data natively exists; PC regen respects
-      `PC_REGEN_FLOOR`.
-- [ ] Run test; expect missing-script failure.
-- [ ] Implement `BudgetSim` and `PoliticalCapital` as a design-reference port
-      of the Python logic above.
-- [ ] Run test; all assertions pass.
-- [ ] Commit `feat(godot): add native budget rollover and political capital`.
-
-### Task 6: Ministry capacity, workload, delivery, backlog
-
-**Files:**
-- Create: `godot/scripts/native/sim/ministries_sim.gd`
-- Create: `godot/tests/native/test_ministries_sim.gd`
-
-**Interfaces:**
-- Produces: `MinistriesSim.simulate(state: GameState) -> void` — recalculates
-  every `MinistryState` in `state.ministries` (populated for the first time by
-  this task; Phase 1 left it an empty dict per `game_factory.gd`'s documented
-  scope).
-
-**Read first:** `engine/ministries.py` (capacity/workload/delivery/backlog
-formulas), `CLAUDE.md`'s "Ministry capacity and delivery" section (workload
-sources, the backlog-doesn't-clear-overnight design intent), `models/ministry.py`
-(already ported as `ministry_state.gd` in Phase 1 — read it for the exact
-field names you're computing into).
-
-- [ ] Write failing tests: a ministry's capacity responds to funding ratio,
-      minister competence/loyalty (if a minister is assigned to that
-      portfolio — Phase 1's ministers may be stale/unassigned per the parked
-      opposition-cabinet finding; handle a missing/mismatched minister
-      gracefully, don't crash), bureaucratic capacity, and stability; workload
-      accumulates from whatever sources natively exist today (active laws:
-      none yet, so 0 — same reasoning as Task 5; regional pressure and civil
-      war ARE native today via Phase 1's typed classes); backlog only clears
-      with spare capacity, never instantly; `months_overloaded` increments
-      correctly.
-- [ ] Run test; expect missing-script failure.
-- [ ] Seed every `CORE_PORTFOLIO` ministry into `state.ministries` on
-      campaign creation if not already done — check whether Phase 1's
-      `GameFactory` already creates empty entries; if not, this task owns that
-      seeding too (read `game_factory.gd`'s header note to confirm the exact
-      boundary).
-- [ ] Implement `MinistriesSim.simulate()` as a design-reference port.
-- [ ] Run test; all assertions pass.
-- [ ] Commit `feat(godot): add native ministry capacity and delivery`.
-
-### Task 7: The monthly economy
-
-**Files:**
-- Create: `godot/scripts/native/sim/economy_sim.gd`
-- Create: `godot/tests/native/test_economy_sim.gd`
-
-**Interfaces:**
-- Produces: `EconomySim.update(state: GameState) -> void` — the full
-  `_update_economy` chain: workforce quality, bureaucratic capacity, sectors,
-  structural fiscal baseline, organic inflation, applying modifiers to
-  headline stats, then compounding GDP.
-
-**Read first:** `engine/turn.py`'s six `_update_*`/`_compound_gdp` private
-methods this task ports (`_update_workforce_quality`,
-`_update_bureaucratic_capacity`, `_update_sectors`,
-`_update_structural_fiscal_baseline`, `_update_structural_inflation`,
-`_apply_modifiers_to_headline_stats`, `_compound_gdp`), `CLAUDE.md`'s "Organic
-inflation" and "The PC economy" sections, `models/economy.py` (`economy.gd`
-from Phase 1 — read for exact field names). This is the largest single
-formula surface in Phase 2; read it once, fully, before writing any test.
-
-- [ ] Write failing tests: workforce quality and bureaucratic capacity respond
-      to their documented inputs; sector `gdp_share`/`growth_rate` evolve
-      plausibly (not fixed); structural fiscal baseline reflects
-      `active_budget`'s size and composition once Task 5 exists (if Task 5
-      isn't complete when this task starts per the ledger, coordinate — this
-      task consumes Task 5's `active_budget`); inflation drifts toward
-      `INFLATION_ANCHOR`, pushed by deficit and overheating, bounded by
-      `STRUCTURAL_INFLATION_MAX`; active modifiers apply to growth/
-      unemployment/inflation/debt exactly once per pulse (no double-application
-      across a save/reload); GDP compounds from growth correctly over several
-      months.
-- [ ] Run test; expect missing-script failure.
-- [ ] Implement `EconomySim.update()` as a design-reference port of the six
-      sub-phases, in order.
-- [ ] Run test; all assertions pass.
-- [ ] Commit `feat(godot): add native monthly economy simulation`.
-
-### Task 8: Regional conditions
-
-**Files:**
-- Create: `godot/scripts/native/sim/regions_sim.gd`
-- Create: `godot/tests/native/test_regions_sim.gd`
-
-**Interfaces:**
-- Produces: `RegionsSim.simulate(state: GameState) -> void` — updates every
-  `RegionState` in `state.regions` from national economy, bureaucratic
-  capacity, and stability; applies one month of delivery to any active
-  `RegionalProgram`, removing it on completion.
-
-**Read first:** `engine/regions.py: simulate_regions` and
-`program_delivery_quality`, `CLAUDE.md`'s "Regional simulation" section
-(control doesn't flip passively; separatist territory inaccessible;
-population-weighted pressure feeds unrest modestly), `content/regions.py`
-(authored starting profiles — already exported as JSON by Phase 1 Task 1 under
-`godot/data/native/catalogs/regions_and_programs.json`; `game_factory.gd`
-does not yet seed `state.regions` from it, so this task likely owns that
-seeding too — check the factory's header note).
-
-- [ ] Write failing tests: Ardenia's nine authored regions seed correctly (or
-      confirm they already do, if Task 2's factory work turned out to cover
-      it) with their authored unemployment/state-reach/pressure/control/issue
-      values; a country with no authored regional data (all eight others)
-      keeps an empty `state.regions` for that country and doesn't crash;
-      regional unemployment/pressure respond to national conditions;
-      separatist-controlled territory stays inaccessible to programmes; an
-      active `RegionalProgram` advances one month and completes/removes
-      itself on its authored duration.
-- [ ] Carry forward to Task 10: a separatist programme freeze must preserve
-      the programme's intended delivery window. Prefer extending the relevant
-      modifier delivery window during each frozen month; the only alternative is a
-      deliberately accepted, documented delivery slip. Add a focused test for
-      the chosen behaviour.
-- [ ] Run test; expect missing-script failure.
-- [ ] Implement `RegionsSim.simulate()` as a design-reference port.
-- [ ] Run test; all assertions pass.
-- [ ] Commit `feat(godot): add native regional simulation`.
-
-### Task 9: The household economy
-
-**Files:**
-- Create: `godot/scripts/native/sim/households_sim.gd`
-- Create: `godot/tests/native/test_households_sim.gd`
-
-**Interfaces:**
-- Produces: `HouseholdsSim.simulate(state: GameState) -> void` — updates every
-  `HouseholdGroupState` in `state.households` (nominal income, living costs,
-  real income, employment security, service access, hardship, confidence),
-  run after `RegionsSim` and before approval/stability, per the documented
-  monthly order.
-
-**Read first:** `engine/households.py: simulate_households`, `CLAUDE.md`'s
-"The household economy" section (54 records = 6 groups × 9 authored Ardenian regions;
-national figures are population-weighted aggregates, not a second economy;
-countries without authored data keep an empty ledger), `content/households.py`
-(already exported by Phase 1 Task 1 under
-`godot/data/native/catalogs/household_groups.json`; likely needs seeding into
-`state.households` by this task, same pattern as Task 8's regions).
-
-- [ ] Write failing tests: Ardenia's 54 household records (six groups across
-      nine authored Ardenian regions) seed correctly;
-      inflation/growth/local unemployment/state reach move
-      income/security/hardship/confidence in the documented directions; a
-      country with no authored household data keeps an empty
-      `state.households`; national aggregates are population-weighted, not a
-      flat average.
-- [ ] Run test; expect missing-script failure.
-- [ ] Implement `HouseholdsSim.simulate()` as a design-reference port.
-- [ ] Run test; all assertions pass.
-- [ ] Commit `feat(godot): add native household economy simulation`.
-
-### Task 10: Approval, stability, the monthly digest, and full pulse integration
-
-**Files:**
-- Create: `godot/scripts/native/sim/stability_sim.gd`
-- Create: `godot/scripts/native/presentation/monthly_digest.gd`
-- Modify: `godot/scripts/native/native_game.gd` (wire the full monthly-pulse
-  call order into the rollover path)
-- Modify: `godot/scripts/native/sim/regions_sim.gd` (preserve a frozen
-  programme's finite treasury-modifier delivery window while normal modifier
-  ageing continues)
-- Modify: `godot/scripts/native/state/game_state.gd` (persist the completed
-  `monthly_digest: Array[String]` with an empty default for older saves)
-- Modify: `godot/scripts/native/state/state_validator.gd` (reject malformed or
-  non-finite household data at the load boundary)
-- Modify: `godot/scripts/native/sim/ministries_sim.gd` and
-  `godot/tests/native/test_ministries_sim.gd` (replace the earlier temporary
-  unweighted-pressure and programme-workload approximations now that regional
-  data is available)
-- Create: `godot/tests/native/test_stability_and_digest.gd`
-- Create: `godot/tests/native/test_monthly_pulse_integration.gd`
-- Modify: `godot/tests/native/test_native_persistence.gd` (round-trip and
-  malformed-input coverage for the persisted monthly digest)
-
-**Interfaces:**
-- Produces: `StabilitySim.update_approval(state: GameState) -> void`,
-  `StabilitySim.update_stability(state: GameState) -> void`.
-- Produces: `MonthlyDigest.build(state: GameState, before: Dictionary) -> Array[String]`
-  — the snapshot digest array for the dashboard's monthly report, replacing
-  the bridge-era stub (`digest: []` in `native_game.gd`'s snapshot). The UI
-  formats these strings only; it does not derive simulation state.
-- Persists: the completed `GameState.monthly_digest: Array[String]`, so the
-  report survives save/load without replaying simulation or digest formulas.
-  Missing data in older saves loads as an empty report; malformed present data
-  is rejected by the normal persistence boundary.
-- Modifies: `NativeGame`'s monthly-rollover handler to call, in order:
-  `BudgetSim.process_fiscal_year` → `PoliticalCapital.regenerate` →
-  `MinistriesSim.simulate` → `EconomySim.update` → `RegionsSim.simulate` →
-  `HouseholdsSim.simulate` → `StabilitySim.update_approval` →
-  `StabilitySim.update_stability` → (existing) `Modifiers.age_all`.
-- Modifies: `NativeGame.snapshot()` to expose read-only budget, ministry, and
-  national household-summary data for the UI surfaces already backed by this
-  phase. The UI formats those snapshot fields only; it must not recompute them.
-
-**Read first:** `engine/turn.py: _update_approval`, `_update_stability`,
-`engine/stability.py` (shared signal functions — CLAUDE.md: "Elections,
-turnout, stability, civil-war risk are never rolled — they're deterministic
-functions of tracked state"), `engine/digest.py` (`snapshot()` — already
-called by `_run_monthly_pulse` for the before/after digest), the current
-`godot/scripts/native/native_game.gd` monthly-rollover method you're
-extending.
-
-- [ ] Write failing tests for `StabilitySim`: approval and government
-      stability respond to economy/household/regional signals in the
-      documented directions; both stay bounded (never leave their valid
-      range regardless of extreme inputs). Implement from existing native
-      state directly — faction seats, coalition membership, loyalty and
-      cohesion, ministers, economy, regions, and households — without
-      inventing a `Legislature` or `Cabinet` class before Phase 3. Keep the
-      outputs deterministic and bounded.
-- [ ] Write a failing end-to-end test in `test_monthly_pulse_integration.gd`:
-      construct a real Ardenia campaign via `GameFactory`, advance it through
-      a full month via `NativeGame`, and assert that budget, ministries,
-      economy, regions, households, approval, and stability all show
-      evidence of having actually run (not just that the date advanced) —
-      this is the test that proves Tasks 5-10 are genuinely wired together in
-      the right order, not just individually correct in isolation.
-- [ ] Run tests; expect missing-script/assertion failures.
-- [ ] Implement `StabilitySim` and `MonthlyDigest` as design-reference ports.
-- [ ] Wire the full call order into `native_game.gd`'s rollover path, in the
-      exact sequence given above.
-- [ ] Persist completed digest lines through `GameState.to_dict()` / `from_dict()`
-      and prove a saved-and-reloaded campaign retains them without running a
-      second monthly pulse.
-- [ ] Update the dashboard's `digest` snapshot field to use `MonthlyDigest.build()`
-      instead of the empty stub, so the monthly report on screen shows real
-      content.
-- [ ] Expose the read-only budget, ministry, and national household-summary
-      snapshot fields used by Phase 2 UI surfaces, and test that the UI-facing
-      snapshot is sufficient for formatting without any UI-side derivation.
-- [ ] Resolve the Task 8 separatist-programme-freeze carry-forward: preferably
-      extend the relevant modifier delivery window during every frozen month; if
-      accepting a delivery slip instead, document that ruling explicitly. Test
-      the selected behaviour.
-- [ ] Run all Phase 2 tests plus the full Phase 1 regression suite
-      (`test_content_repository.gd`, `test_game_factory.gd`,
-      `test_foundation_mechanics.gd`, `test_native_persistence.gd`,
-      `test_native_game.gd`, `run_contract_tests.gd`,
-      `godot/scripts/tests/vertical_slice_test.gd`); all must pass.
-- [ ] Manually launch the game and play through several months: confirm the
-      map's regional pressure colours change, the monthly report shows real
-      content, and nothing crashes across a save/reload mid-campaign.
-- [ ] Commit `feat(godot): wire the full native monthly simulation`.
-
+A task is complete only after its focused behaviour tests, a save/reload
+continuation check, a play session through the relevant decision, and an
+independent review. The ledger retains the historical task records; it does not
+authorize their inherited equations.
 ### Phase 3 — Government play
 
-Legislation (bill catalogue, parliamentary arithmetic, bloc/wing votes and
-rebellions), reform objectives, cabinet (ministers, traits, shortlists,
-appointment), parties and coalition cohesion, elections and deterministic
-turnout, regional programmes and regional campaigning.
+Government play turns the political economy into authorship. The player should
+form a governing project: select priorities, fund them, appoint people who can
+or cannot deliver them, negotiate through parliament, and live with the social
+and regional effects. Each new action is native game design, not a compatibility
+exercise.
 
-*Playable result:* you can actually govern — pass a law, appoint a minister,
-run a budget, fight an election.
+Every Phase 3 slice must state:
 
+- the decision the player is making and the uncertainty they can understand;
+- the lasting political, administrative and economic consequence;
+- the information shown before commitment and the explanation shown after it;
+- why the system is fun across more than one campaign.
+
+Legislation, cabinet appointments, reforms, parties, coalition cohesion,
+elections, regional programmes and campaigning remain in scope. No slice may
+reuse inherited vote arithmetic, fixed costs, or outcome thresholds solely
+because they were previously implemented. Existing action code remains
+uncommitted and untouched until its underlying economic and political design is
+reviewed against this standard.
+
+*Playable result:* a player can pursue a distinct governing project, understand
+why it is succeeding or failing, and make a different credible strategy on the
+next campaign.
 ### Task 11: Regional programme player-action slice
 
 This is the first player-directed Phase 3 slice, not Phase 3 completion. Reuse

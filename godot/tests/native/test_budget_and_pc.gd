@@ -5,7 +5,7 @@ extends SceneTree
 ## Run via:
 ##   Godot --headless --path godot --script res://tests/native/test_budget_and_pc.gd
 ##
-## These check the ported logic on its own terms (a fresh campaign gets a
+## These check the native game behaviours: a fresh campaign gets a
 ## seeded budget, an approved plan activates at January rollover, a
 ## no-plan government eats the continuing-budget cut, PC upkeep sums the
 ## commitments that genuinely exist natively today, PC regen respects its
@@ -264,88 +264,64 @@ func _test_upkeep_counts_sanctions_and_treaties(t, content: Dictionary) -> void:
 
 	var breakdown: Dictionary = PoliticalCapitalScript.upkeep(state)
 	t.equal(float(breakdown.get("laws", -1.0)), 0.0, "law upkeep remains zero until a law is enacted")
-	t.near(float(breakdown.get("sanctions", -1.0)), 2.0 * 1.0, 0.0001,
+	t.near(float(breakdown.get("sanctions", -1.0)), 2.0 * PoliticalCapitalScript.PC_UPKEEP_SANCTIONS, 0.0001,
 		"two sanctioned relations cost PC_UPKEEP_SANCTIONS each")
-	t.near(float(breakdown.get("treaties", -1.0)), 2.0 * 0.6, 0.0001,
+	t.near(float(breakdown.get("treaties", -1.0)), 2.0 * PoliticalCapitalScript.PC_UPKEEP_TREATY, 0.0001,
 		"two treaties on one relation cost PC_UPKEEP_TREATY each")
 
 
 # ── PoliticalCapital: regen ──────────────────────────────────────────────
 
-func _test_regen_formula_above_floor(t, content: Dictionary) -> void:
-	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
-	t.truth(state != null, "campaign builds")
-	if state == null:
+func _test_regen_tracks_mandate_and_commitments(t, content: Dictionary) -> void:
+	var strong: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	var fragile: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	t.truth(strong != null and fragile != null, "campaigns build for political-capital comparison")
+	if strong == null or fragile == null:
 		return
-
-	# Zero every commitment so upkeep is exactly zero and the formula is
-	# exercised in isolation.
-	for rel in state.country.relations.values():
-		rel.sanctioned = false
-		rel.treaties = []
-
-	# Exactly one faction in coalition, with a known loyalty, isolates the
-	# coalition_bonus term.
-	var chosen: Faction = state.country.factions[0]
-	for f in state.country.factions:
-		f.in_coalition = (f.id == chosen.id)
-	chosen.loyalty = 0.8
-
-	state.player.approval = 0.7
-	state.stability_value = 0.6
-	state.player.pc_regen_base = 10.0
-	state.player.political_capital = 50.0
-
-	# approval_bonus = (0.7-0.5)*10 = 2.0; coalition_bonus = 0.8*5 = 4.0;
-	# stability_bonus = (0.6-0.5)*4 = 0.4; upkeep = 0.
-	# regen = 10.0 + 2.0 + 4.0 + 0.4 - 0.0 = 16.4
-	PoliticalCapitalScript.regenerate(state)
-	t.near(state.player.political_capital, 50.0 + 16.4, 0.001,
-		"regen formula matches the hand-computed value above the floor")
-
-
-func _test_regen_respects_floor(t, content: Dictionary) -> void:
-	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
-	t.truth(state != null, "campaign builds")
-	if state == null:
-		return
-
-	# Pile on enough upkeep and drag every bonus term to its worst case so the
-	# raw formula goes deeply negative — regen must still clamp to the floor.
-	var relation_ids: Array = state.country.relations.keys()
-	for rid in relation_ids:
-		var rel: Country.BilateralRelation = state.country.relations[rid]
+	strong.player.political_capital = 40.0
+	fragile.player.political_capital = 40.0
+	strong.player.approval = 0.75
+	strong.stability_value = 0.70
+	fragile.player.approval = 0.25
+	fragile.stability_value = 0.30
+	var strong_preview := PoliticalCapitalScript.regeneration_preview(strong)
+	var fragile_preview := PoliticalCapitalScript.regeneration_preview(fragile)
+	t.truth(float(strong_preview["regen"]) > float(fragile_preview["regen"]),
+		"stronger mandate and stability create more governing room")
+	for rel in fragile.country.relations.values():
 		rel.sanctioned = true
-	for f in state.country.factions:
-		f.in_coalition = false
+	fragile.enacted_laws.append(Law.new())
+	fragile.enacted_laws.append(Law.new())
+	var burdened := PoliticalCapitalScript.regeneration_preview(fragile)
+	t.truth(float(burdened["commitments"]) > float(fragile_preview["commitments"]),
+		"commitments create visible governing overhead")
+	t.truth(float(burdened["regen"]) >= PoliticalCapitalScript.MIN_REGEN,
+		"heavy commitments reduce room to act without creating a political-capital soft lock")
 
-	state.player.approval = 0.0
-	state.stability_value = 0.0
-	state.player.pc_regen_base = 0.0
-	state.player.political_capital = 50.0
-
-	PoliticalCapitalScript.regenerate(state)
-	t.near(state.player.political_capital, 50.0 + PoliticalCapitalScript.PC_REGEN_FLOOR, 0.0001,
-		"regen never drops below PC_REGEN_FLOOR even under heavy upkeep and low morale")
-
-
-func _test_regen_caps_at_one_hundred(t, content: Dictionary) -> void:
-	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
-	t.truth(state != null, "campaign builds")
-	if state == null:
+func _test_regen_uses_a_soft_limit_not_a_hard_one_hundred(t, content: Dictionary) -> void:
+	var below: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	var above: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	t.truth(below != null and above != null, "campaigns build for soft-limit comparison")
+	if below == null or above == null:
 		return
-	for rel in state.country.relations.values():
-		rel.sanctioned = false
-		rel.treaties = []
-	state.player.approval = 1.0
-	state.stability_value = 1.0
-	state.player.pc_regen_base = 50.0
-	state.player.political_capital = 99.0
-
-	PoliticalCapitalScript.regenerate(state)
-	t.equal(state.player.political_capital, 100.0, "political_capital never exceeds the 100 ceiling")
-
-
+	for state in [below, above]:
+		state.player.approval = 0.70
+		state.stability_value = 0.65
+	below.player.political_capital = PoliticalCapitalScript.SOFT_LIMIT - 1.0
+	above.player.political_capital = 101.0
+	var below_gain := float(PoliticalCapitalScript.regeneration_preview(below)["regen"])
+	var above_preview := PoliticalCapitalScript.regeneration_preview(above)
+	t.truth(not bool(PoliticalCapitalScript.regeneration_preview(below)["soft_limited"]),
+		"political capital below the reserve limit receives normal regeneration")
+	t.truth(bool(above_preview["soft_limited"]) and float(above_preview["regen"]) < below_gain,
+		"hoarding above the reserve limit slows regeneration instead of pinning at 100")
+	PoliticalCapitalScript.regenerate(above)
+	t.truth(above.player.political_capital > 101.0,
+		"political capital can cross 100 when the government retains momentum")
+	above.player.political_capital = PoliticalCapitalScript.ABSOLUTE_LIMIT - 0.1
+	PoliticalCapitalScript.regenerate(above)
+	t.truth(above.player.political_capital <= PoliticalCapitalScript.ABSOLUTE_LIMIT,
+		"the extreme-state safety bound prevents unbounded accumulation")
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 
@@ -364,9 +340,7 @@ func _initialize() -> void:
 		_test_upkeep_zero_on_a_fresh_campaign(t, content)
 		_test_upkeep_counts_enacted_laws(t, content)
 		_test_upkeep_counts_sanctions_and_treaties(t, content)
-
-		_test_regen_formula_above_floor(t, content)
-		_test_regen_respects_floor(t, content)
-		_test_regen_caps_at_one_hundred(t, content)
+	_test_regen_tracks_mandate_and_commitments(t, content)
+	_test_regen_uses_a_soft_limit_not_a_hard_one_hundred(t, content)
 
 	quit(t.finish())

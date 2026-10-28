@@ -1,21 +1,27 @@
 class_name PoliticalCapital
 extends RefCounted
 
-## Native political-capital economy. Standing commitments consume governing
-## capacity each month; approval, coalition loyalty and stability replenish it.
-## Laws are campaign-owned native Law records, while treaties and sanctions
-## remain on bilateral relations.
-const PC_UPKEEP_LAW := 0.8
-const PC_UPKEEP_TREATY := 0.6
-const PC_UPKEEP_SANCTIONS := 1.0
-const PC_REGEN_FLOOR := 3.0
+## Governing bandwidth, not a score to hoard. The player spends political
+## capital to force priorities through a crowded political system, then earns
+## room back through mandate, coalition confidence and a functioning state.
+##
+## Design reasons for these values:
+## - BASE_REGEN keeps a new government able to act between monthly decisions.
+## - MIN_REGEN prevents a low-morale administration from becoming a dead save.
+## - SOFT_LIMIT makes a comfortable reserve useful without turning 100 into a
+##   permanent flat ceiling; action still matters above it, but hoarding slows.
+## - ABSOLUTE_LIMIT is a safety boundary for malformed or extreme campaigns,
+##   not a target a normal campaign should sit against.
+const BASE_REGEN := 5.0
+const MIN_REGEN := 1.0
+const SOFT_LIMIT := 80.0
+const ABSOLUTE_LIMIT := 140.0
+const ABOVE_SOFT_REGEN_FACTOR := 0.25
+const PC_UPKEEP_LAW := 0.9
+const PC_UPKEEP_TREATY := 0.7
+const PC_UPKEEP_SANCTIONS := 1.2
 
-
-## The PC-per-turn cost of everything the government currently maintains,
-## broken down by source — mirrors engine/turn.py: political_upkeep, except
-## the total is left for the caller to sum (regenerate() does this) since
-## "breakdown by source" is exactly what the brief asks this Dictionary to
-## be, and GDScript has no tuple return to mirror Python's (total, breakdown).
+## The recurring political attention absorbed by existing commitments.
 static func upkeep(state: GameState) -> Dictionary:
 	var laws := state.enacted_laws.size()
 	var treaties := 0
@@ -25,45 +31,40 @@ static func upkeep(state: GameState) -> Dictionary:
 		treaties += relation.treaties.size()
 		if relation.sanctioned:
 			sanctions += 1
-	return {
-		"laws": laws * PC_UPKEEP_LAW,
-		"treaties": treaties * PC_UPKEEP_TREATY,
-		"sanctions": sanctions * PC_UPKEEP_SANCTIONS,
-	}
-
+	return {"laws": laws * PC_UPKEEP_LAW, "treaties": treaties * PC_UPKEEP_TREATY,
+		"sanctions": sanctions * PC_UPKEEP_SANCTIONS}
 
 static func _total_upkeep(state: GameState) -> float:
-	var breakdown := upkeep(state)
 	var total := 0.0
-	for v in breakdown.values():
-		total += float(v)
+	for value in upkeep(state).values():
+		total += float(value)
 	return total
 
-
-## PC regen from approval, coalition loyalty, and stability, minus governing
-## overhead, floored at PC_REGEN_FLOOR and capped at 100 — mirrors
-## engine/turn.py: TurnEngine._regenerate_political_capital exactly (reads
-## `state.stability_value`, this port's scalar stand-in for Python's
-## `state.stability.value` — see game_state.gd's header note).
-static func regenerate(state: GameState) -> void:
-	var approval_bonus := (state.player.approval - 0.5) * 10.0
-
-	var coalition_ids := state.coalition_faction_ids()
+## Read-only explanation for the UI and tests. This is intentionally a
+## political story, not an inherited arithmetic contract: mandate, coalition
+## confidence, institutional stability and commitments pull in opposite ways.
+static func regeneration_preview(state: GameState) -> Dictionary:
 	var coalition_loyalty := 0.0
-	if not coalition_ids.is_empty():
-		var loyalty_sum := 0.0
-		var member_count := 0
-		for f in state.country.factions:
-			if coalition_ids.has(f.id):
-				loyalty_sum += f.loyalty
-				member_count += 1
-		if member_count > 0:
-			coalition_loyalty = loyalty_sum / member_count
-	var coalition_bonus := coalition_loyalty * 5.0
+	var members := 0
+	for faction in state.country.factions:
+		if faction.in_coalition:
+			coalition_loyalty += faction.loyalty
+			members += 1
+	if members > 0:
+		coalition_loyalty /= float(members)
+	var mandate := (state.player.approval - 0.5) * 6.0
+	var coalition := coalition_loyalty * 3.0
+	var stability := (state.stability_value - 0.5) * 4.0
+	var commitments := _total_upkeep(state)
+	var raw := BASE_REGEN + mandate + coalition + stability - commitments
+	var normal_regen := maxf(MIN_REGEN, raw)
+	var factor := ABOVE_SOFT_REGEN_FACTOR if state.player.political_capital >= SOFT_LIMIT else 1.0
+	return {"base": BASE_REGEN, "mandate": mandate, "coalition": coalition,
+		"stability": stability, "commitments": commitments, "raw": raw,
+		"soft_limit_factor": factor, "regen": normal_regen * factor,
+		"soft_limited": factor < 1.0}
 
-	var stability_bonus := (state.stability_value - 0.5) * 4.0
-
-	var regen := (state.player.pc_regen_base + approval_bonus + coalition_bonus
-		+ stability_bonus - _total_upkeep(state))
-	regen = maxf(PC_REGEN_FLOOR, regen)
-	state.player.political_capital = minf(100.0, state.player.political_capital + regen)
+static func regenerate(state: GameState) -> void:
+	var preview := regeneration_preview(state)
+	state.player.political_capital = minf(ABSOLUTE_LIMIT,
+		state.player.political_capital + float(preview["regen"]))
