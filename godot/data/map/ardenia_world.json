@@ -1,0 +1,30 @@
+{
+  "extent_m": [16800, 10000],
+  "regions": {
+    "vetrenka": [0.13, 0.30], "anera": [0.27, 0.27], "karsen": [0.47, 0.24],
+    "orvena": [0.25, 0.50], "vashtera": [0.56, 0.45], "kelvet": [0.17, 0.72],
+    "sela": [0.42, 0.66], "zavost": [0.76, 0.36], "darev": [0.83, 0.55]
+  },
+  "cities": [
+    {"name": "Vashtera", "region": "vashtera", "point": [0.585, 0.475], "capital": true},
+    {"name": "Tavri", "region": "kelvet", "point": [0.19, 0.83], "capital": false},
+    {"name": "Duvinsk", "region": "zavost", "point": [0.74, 0.40], "capital": false},
+    {"name": "Selvara", "region": "orvena", "point": [0.27, 0.53], "capital": false},
+    {"name": "Karsen", "region": "karsen", "point": [0.48, 0.28], "capital": false},
+    {"name": "Anera", "region": "anera", "point": [0.29, 0.31], "capital": false},
+    {"name": "Darev", "region": "darev", "point": [0.85, 0.58], "capital": false},
+    {"name": "Sela", "region": "sela", "point": [0.42, 0.68], "capital": false},
+    {"name": "Vetrenka", "region": "vetrenka", "point": [0.12, 0.33], "capital": false}
+  ],
+  "routes": [
+    {"kind": "rail", "points": [[0.585, 0.475], [0.66, 0.43], [0.74, 0.40]]},
+    {"kind": "road", "points": [[0.585, 0.475], [0.50, 0.58], [0.42, 0.68], [0.30, 0.78], [0.19, 0.83]]},
+    {"kind": "rail", "points": [[0.585, 0.475], [0.50, 0.60], [0.35, 0.74], [0.19, 0.83]]},
+    {"kind": "pipeline", "points": [[0.98, 0.45], [0.85, 0.58], [0.74, 0.40], [0.585, 0.475]]},
+    {"kind": "road", "points": [[0.585, 0.475], [0.48, 0.28]]},
+    {"kind": "road", "points": [[0.27, 0.53], [0.585, 0.475]]},
+    {"kind": "road", "points": [[0.29, 0.31], [0.27, 0.53]]}
+  ],
+  "ceasefire": [[0.20, 0.17], [0.21, 0.24], [0.19, 0.31], [0.21, 0.37], [0.18, 0.44]],
+  "kesla": [[0.50, 0.24], [0.54, 0.33], [0.585, 0.475], [0.50, 0.60], [0.42, 0.68], [0.30, 0.78], [0.19, 0.84], [0.15, 0.87]]
+}
