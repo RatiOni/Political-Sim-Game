@@ -5,9 +5,15 @@ signal region_selected(region_id: String)
 
 const BORDERS_PATH := "res://data/map/baked/borders.json"
 const UNAVAILABLE_TEXT := "Map data unavailable"
+const OVERVIEW := TileArt.HALF
+const DETAIL := TileArt.CELL
 const HOVER_WIDTH := 1.0
 const SELECTION_WIDTH := 2.0
 const DRAG_THRESHOLD := 4.0
+const BUTTON_SIZE := Vector2(44, 44)
+const BUTTON_MARGIN := 8.0
+const ZOOM_IN_KEYS: Array[Key] = [KEY_EQUAL, KEY_PLUS, KEY_KP_ADD]
+const ZOOM_OUT_KEYS: Array[Key] = [KEY_MINUS, KEY_KP_SUBTRACT]
 const SIDES: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 const CORNERS: Array[Vector2i] = [Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]
 
@@ -17,12 +23,15 @@ var polygons: Dictionary = {}
 var selected_id := ""
 var hovered_id := ""
 var unavailable := false
-var tile_px := TileArt.CELL
+var tile_px := OVERVIEW
 var zoom := 1
 var terrain_layer := TileMapLayer.new()
 var growth_layer := TileMapLayer.new()
 var lines_rect := TextureRect.new()
+var zoom_in_button := Button.new()
+var zoom_out_button := Button.new()
 var _sea := ColorRect.new()
+var _physical := Node2D.new()
 var _canvas := Node2D.new()
 var _highlight := Node2D.new()
 var _labels := MapLabels.new()
@@ -32,25 +41,24 @@ var _tiles: Dictionary = {}
 var _outlines: Dictionary = {}
 var _cells: Dictionary = {}
 var _centres: Dictionary = {}
+var _country := Rect2()
 var _tilesets: Dictionary = {}
 var _day_textures: Dictionary = {}
 var _dusk_textures: Dictionary = {}
 var _lines: Dictionary = {}
 var _dusk := false
-var _offset := Vector2.ZERO
+var _user_zoomed := false
+var _screen_scale := 1.0
+var _base := Vector2.ZERO
+var _origin := Vector2.ZERO
 var _focus := Vector2(0.5, 0.5)
 var _press_at := Vector2.ZERO
 var _pressing := false
 var _dragging := false
 
 
-static func choose_level(panel: Vector2) -> Vector2i:
-	for px in TileArt.SIZES:
-		var canvas := Vector2(TileBaker.GRID * px)
-		var k := floori(minf(panel.x / canvas.x, panel.y / canvas.y))
-		if k >= 1:
-			return Vector2i(px, k)
-	return Vector2i(TileArt.SIZES[-1], 1)
+static func level_zoom(physical_width: float, px: int) -> int:
+	return maxi(1, floori(physical_width / (TileBaker.GRID.x * px)))
 
 
 func _init() -> void:
@@ -59,15 +67,23 @@ func _init() -> void:
 
 func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	set_notify_transform(true)
 	resized.connect(_layout)
+	get_viewport().size_changed.connect(_layout)
 	mouse_exited.connect(func(): hovered_id = ""; _redraw())
 	focus_entered.connect(queue_redraw)
 	focus_exited.connect(queue_redraw)
 	unavailable = not _load()
 	_notice.visible = unavailable
-	_canvas.visible = not unavailable
-	_labels.visible = not unavailable
+	_physical.visible = not unavailable
+	zoom_in_button.visible = not unavailable
+	zoom_out_button.visible = not unavailable
 	_layout()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSFORM_CHANGED and is_node_ready() and not unavailable:
+		_place()
 
 
 func _build_nodes() -> void:
@@ -77,8 +93,10 @@ func _build_nodes() -> void:
 	_sea.show_behind_parent = true
 	_sea.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_sea)
-	_canvas.show_behind_parent = true
-	add_child(_canvas)
+	_physical.show_behind_parent = true
+	_physical.name = "Physical"
+	add_child(_physical)
+	_physical.add_child(_canvas)
 	for layer in [terrain_layer, growth_layer]:
 		layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		_canvas.add_child(layer)
@@ -91,8 +109,7 @@ func _build_nodes() -> void:
 	_highlight.draw.connect(_draw_highlight)
 	_canvas.add_child(_highlight)
 	_labels.name = "Labels"
-	_labels.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(_labels)
+	_physical.add_child(_labels)
 	_notice.name = "Unavailable"
 	_notice.text = UNAVAILABLE_TEXT
 	_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -100,6 +117,30 @@ func _build_nodes() -> void:
 	_notice.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_notice.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_notice)
+	_build_zoom_button(zoom_in_button, "ZoomIn", "+", "Zoom in to detail (+ or mouse wheel)", zoom_in)
+	_build_zoom_button(zoom_out_button, "ZoomOut", "-", "Zoom out to the overview (- or mouse wheel)", zoom_out)
+
+
+func _build_zoom_button(button: Button, id: String, label: String, tip: String, action: Callable) -> void:
+	button.name = id
+	button.text = label
+	button.tooltip_text = tip
+	button.focus_mode = Control.FOCUS_NONE
+	button.custom_minimum_size = BUTTON_SIZE
+	button.size = BUTTON_SIZE
+	button.add_theme_font_override("font", MapLabels._crisp(MapLabels.REGION_FONT))
+	button.add_theme_font_size_override("font_size", 32)
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		var box := StyleBoxFlat.new()
+		box.bg_color = MapPalette.DAY[MapPalette.INK if state != "hover" else MapPalette.ROCK_DARK]
+		box.border_color = MapPalette.DAY[MapPalette.GOLD_DARK if state == "disabled" else MapPalette.GOLD]
+		box.set_border_width_all(2)
+		box.anti_aliasing = false
+		button.add_theme_stylebox_override(state, box)
+	button.add_theme_color_override("font_color", MapPalette.DAY[MapPalette.SNOW])
+	button.add_theme_color_override("font_disabled_color", MapPalette.DAY[MapPalette.ROCK])
+	button.pressed.connect(func(): action.call())
+	add_child(button)
 
 
 func _load() -> bool:
@@ -122,7 +163,7 @@ func _load() -> bool:
 	_centres = _region_centres()
 	_labels.cities = _geo.cities
 	_labels.region_points = _centres
-	_labels.to_local = map_to_local
+	_labels.to_physical = _map_to_physical
 	return true
 
 
@@ -134,6 +175,7 @@ func _fill_terrain() -> void:
 	var cells := TileArt.index()
 	var kinds: PackedByteArray = _tiles["kinds"]
 	var variants: PackedByteArray = _tiles["variants"]
+	var country := PackedVector2Array()
 	for id in _geo.region_ids:
 		_cells[id] = {}
 	for y in TileBaker.GRID.y:
@@ -145,6 +187,11 @@ func _fill_terrain() -> void:
 			terrain_layer.set_cell(Vector2i(x, y), 0, Vector2i(cells[key][0], cells[key][1]))
 			if region < _geo.region_ids.size():
 				_cells[_geo.region_ids[region]][Vector2i(x, y)] = true
+				country.append(Vector2(x, y))
+	var bounds := Rect2(country[0], Vector2.ONE)
+	for p in country:
+		bounds = bounds.expand(p).expand(p + Vector2.ONE)
+	_country = Rect2(bounds.position / Vector2(TileBaker.GRID), bounds.size / Vector2(TileBaker.GRID))
 
 
 func _region_centres() -> Dictionary:
@@ -173,8 +220,6 @@ func set_dusk(on: bool) -> void:
 
 
 func _apply_lines() -> void:
-	if unavailable:
-		return
 	var key := Vector2i(tile_px, int(_dusk))
 	if not _lines.has(key):
 		_lines[key] = ImageTexture.create_from_image(MapLines.build(_tiles, _geo, MapPalette.DUSK if _dusk else MapPalette.DAY, tile_px))
@@ -182,18 +227,40 @@ func _apply_lines() -> void:
 	lines_rect.size = Vector2(MapLines.canvas_size(tile_px))
 
 
+func screen_transform() -> Transform2D:
+	return get_viewport().get_final_transform() * get_global_transform_with_canvas()
+
+
+func physical_size() -> Vector2:
+	return size * screen_transform().get_scale().x
+
+
+func default_tile_px() -> int:
+	var panel := physical_size()
+	var detail := Vector2(TileBaker.GRID * DETAIL * level_zoom(panel.x, DETAIL))
+	return DETAIL if detail.x <= panel.x and (_country.size * detail).y <= panel.y else OVERVIEW
+
+
 func _layout() -> void:
-	var level := choose_level(size)
-	if unavailable:
+	zoom_in_button.position = Vector2(size.x - BUTTON_SIZE.x - BUTTON_MARGIN, BUTTON_MARGIN)
+	zoom_out_button.position = zoom_in_button.position + Vector2(0, BUTTON_SIZE.y + BUTTON_MARGIN / 2.0)
+	if unavailable or not is_inside_tree():
 		return
-	if level.x != tile_px or terrain_layer.tile_set == null:
-		tile_px = level.x
+	_set_level(tile_px if _user_zoomed else default_tile_px())
+
+
+func _set_level(px: int) -> void:
+	if px != tile_px or terrain_layer.tile_set == null:
+		tile_px = px
 		terrain_layer.tile_set = _tilesets[tile_px]
 		growth_layer.tile_set = _tilesets[tile_px]
 		_apply_lines()
-	zoom = level.y
+	zoom = level_zoom(physical_size().x, tile_px)
 	_canvas.scale = Vector2(zoom, zoom)
-	_labels.zoom = zoom
+	_labels.region_size = 2 * tile_px * zoom
+	_labels.city_scale = zoom
+	zoom_in_button.disabled = tile_px == DETAIL
+	zoom_out_button.disabled = tile_px == OVERVIEW
 	_place()
 
 
@@ -202,16 +269,24 @@ func canvas_extent() -> Vector2:
 
 
 func _place() -> void:
+	var screen := screen_transform()
+	_screen_scale = screen.get_scale().x
+	var physical_origin := screen.origin
+	_base = physical_origin - physical_origin.round()
+	_physical.scale = Vector2.ONE / _screen_scale
+	_physical.position = -_base / _screen_scale
+	var panel := size * _screen_scale
 	var extent := canvas_extent()
-	var wanted := (size / 2.0 - _focus * extent).round()
+	var wanted := Vector2.ZERO
 	for axis in 2:
-		if extent[axis] <= size[axis]:
-			wanted[axis] = roundf((size[axis] - extent[axis]) / 2.0)
+		if extent[axis] <= panel[axis]:
+			wanted[axis] = roundf(_base[axis] + (panel[axis] - extent[axis]) / 2.0)
 		else:
-			wanted[axis] = clampf(wanted[axis], size[axis] - extent[axis], 0.0)
-	_offset = wanted
-	_focus = (size / 2.0 - _offset) / extent
-	_canvas.position = _offset
+			var free := roundf(_base[axis] + panel[axis] / 2.0 - _focus[axis] * extent[axis])
+			wanted[axis] = clampf(free, ceilf(_base[axis] + panel[axis] - extent[axis]), floorf(_base[axis]))
+	_origin = wanted
+	_focus = (_base + panel / 2.0 - _origin) / extent
+	_canvas.position = _origin
 	polygons.clear()
 	for id in _outlines:
 		var ring := PackedVector2Array()
@@ -221,10 +296,26 @@ func _place() -> void:
 	_redraw()
 
 
+func _map_to_physical(p: Vector2) -> Vector2:
+	return _origin + p * canvas_extent()
+
+
+func map_to_local(p: Vector2) -> Vector2:
+	return _physical.position + _map_to_physical(p) / _screen_scale
+
+
+func local_to_map(p: Vector2) -> Vector2:
+	return ((p - _physical.position) * _screen_scale - _origin) / canvas_extent()
+
+
+func _point(value: Array) -> Vector2:
+	return map_to_local(Vector2(float(value[0]), float(value[1])) / 100.0)
+
+
 func pan_by(delta: Vector2) -> void:
 	if unavailable:
 		return
-	_focus -= delta / canvas_extent()
+	_focus -= delta * _screen_scale / canvas_extent()
 	_place()
 
 
@@ -235,22 +326,29 @@ func centre_on(map_point: Vector2) -> void:
 	_place()
 
 
+func zoom_in(anchor: Variant = null) -> void:
+	_zoom_to(DETAIL, anchor)
+
+
+func zoom_out(anchor: Variant = null) -> void:
+	_zoom_to(OVERVIEW, anchor)
+
+
+func _zoom_to(px: int, anchor: Variant) -> void:
+	if unavailable or px == tile_px:
+		return
+	var at: Vector2 = anchor if anchor is Vector2 else (map_to_local(_centres[selected_id]) if _centres.has(selected_id) else size / 2.0)
+	var held := local_to_map(at)
+	_user_zoomed = true
+	_set_level(px)
+	_focus = held + (_base + size * _screen_scale / 2.0 - (at - _physical.position) * _screen_scale) / canvas_extent()
+	_place()
+
+
 func _redraw() -> void:
 	queue_redraw()
 	_highlight.queue_redraw()
 	_labels.queue_redraw()
-
-
-func map_to_local(p: Vector2) -> Vector2:
-	return _offset + p * canvas_extent()
-
-
-func local_to_map(p: Vector2) -> Vector2:
-	return (p - _offset) / canvas_extent()
-
-
-func _point(value: Array) -> Vector2:
-	return map_to_local(Vector2(float(value[0]), float(value[1])) / 100.0)
 
 
 func apply_snapshot(values: Array, selection: String) -> void:
@@ -281,8 +379,14 @@ func region_at(position: Vector2) -> String:
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		_on_motion(event)
-	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		_on_left_button(event)
+	elif event is InputEventMouseButton:
+		_on_button(event)
+	elif event is InputEventKey and event.pressed and (event.keycode in ZOOM_IN_KEYS or event.keycode in ZOOM_OUT_KEYS):
+		if event.keycode in ZOOM_IN_KEYS:
+			zoom_in()
+		else:
+			zoom_out()
+		accept_event()
 	elif event.is_action_pressed("ui_right") or event.is_action_pressed("ui_down") or event.is_action_pressed("ui_left") or event.is_action_pressed("ui_up"):
 		var ids := polygons.keys()
 		if ids.is_empty():
@@ -294,10 +398,7 @@ func _gui_input(event: InputEvent) -> void:
 
 func _on_motion(event: InputEventMouseMotion) -> void:
 	if _pressing and (_dragging or event.position.distance_to(_press_at) > DRAG_THRESHOLD):
-		if not _dragging:
-			pan_by(event.position - _press_at)
-		else:
-			pan_by(event.relative)
+		pan_by(event.relative if _dragging else event.position - _press_at)
 		_dragging = true
 		accept_event()
 		return
@@ -307,17 +408,23 @@ func _on_motion(event: InputEventMouseMotion) -> void:
 		_redraw()
 
 
-func _on_left_button(event: InputEventMouseButton) -> void:
-	if event.pressed:
+func _on_button(event: InputEventMouseButton) -> void:
+	if event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP:
+		zoom_in(event.position)
+	elif event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		zoom_out(event.position)
+	elif event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		grab_focus()
 		_pressing = true
 		_dragging = false
 		_press_at = event.position
-	else:
+	elif event.button_index == MOUSE_BUTTON_LEFT:
 		if _pressing and not _dragging:
 			select_region(region_at(event.position))
 		_pressing = false
 		_dragging = false
+	else:
+		return
 	accept_event()
 
 
