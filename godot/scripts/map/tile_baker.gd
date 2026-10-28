@@ -4,6 +4,7 @@ extends RefCounted
 const GRID := Vector2i(168, 100)
 const TILE := 8
 const TILES_PATH := "res://data/map/baked/tiles.json"
+const HASH_MASK := 0xFFFF
 const NOISE_SEED := 7
 const NOISE_FREQUENCY := 0.08
 const SNOW_HEIGHT := 0.80
@@ -14,7 +15,7 @@ const FARM_HEIGHT := 0.17
 const SAND_HEIGHT := 0.05
 const FARM_RADIUS := 9.0
 const OPEN_SEA_RADIUS := 5
-const ORTHOGONAL: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+const SIDES: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 const SHALLOW_REACH: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(2, 0), Vector2i(-2, 0), Vector2i(0, 2), Vector2i(0, -2)]
 
 
@@ -44,14 +45,14 @@ static func bake(height: Image, regions: Image, geo: MapGeometry) -> Dictionary:
 		for tx in GRID.x:
 			var i := ty * GRID.x + tx
 			out_kinds[i] = TileArt.KINDS.find(kinds[i])
-			variants[i] = int(_hash(tx, ty) * TileArt.VARIANTS) % TileArt.VARIANTS
+			variants[i] = int(float(cell_hash(Vector2i(tx, ty))) / HASH_MASK * TileArt.VARIANTS) % TileArt.VARIANTS
 	return {"grid": [GRID.x, GRID.y], "kinds": out_kinds, "regions": region_ids, "variants": variants}
 
 
 static func region_at_tile(data: Dictionary, cell: Vector2i) -> int:
 	var regions: PackedByteArray = data.get("regions", PackedByteArray())
 	var index := cell.y * GRID.x + cell.x
-	if not _in_grid(cell) or index >= regions.size():
+	if not in_grid(cell) or index >= regions.size():
 		return MapBaker.SEA_REGION
 	return regions[index]
 
@@ -132,10 +133,10 @@ static func _region_sample(regions: Image, tx: int, ty: int) -> int:
 	return int(round(regions.get_pixel(tx * TILE + TILE / 2, ty * TILE + TILE / 2).r * 255.0))
 
 
-static func _hash(x: int, y: int, salt: int = 0) -> float:
-	var n := (x * 73856093) ^ (y * 19349663) ^ (salt * 83492791)
+static func cell_hash(cell: Vector2i, salt: int = 0) -> int:
+	var n := (cell.x * 73856093) ^ (cell.y * 19349663) ^ (salt * 83492791)
 	n = (n ^ (n >> 13)) * 1274126177
-	return float((n >> 8) & 0xFFFF) / 65535.0
+	return (n >> 8) & HASH_MASK
 
 
 static func _near_city(geo: MapGeometry, tx: int, ty: int) -> bool:
@@ -164,7 +165,7 @@ static func _land_kind(region: int, h: float, noise: FastNoiseLite, tx: int, ty:
 	return "grass"
 
 
-static func _in_grid(cell: Vector2i) -> bool:
+static func in_grid(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.y >= 0 and cell.x < GRID.x and cell.y < GRID.y
 
 
@@ -176,7 +177,7 @@ static func _add_shallows(kinds: Array[String]) -> void:
 				continue
 			for d in SHALLOW_REACH:
 				var n := Vector2i(tx, ty) + d
-				if _in_grid(n) and kinds[n.y * GRID.x + n.x] not in ["sea", "shallows"]:
+				if in_grid(n) and kinds[n.y * GRID.x + n.x] not in ["sea", "shallows"]:
 					kinds[i] = "shallows"
 					break
 
@@ -193,7 +194,7 @@ static func _land_within(land: Array[String], tx: int, ty: int, radius: int) -> 
 	for dy in range(-radius, radius + 1):
 		for dx in range(-radius, radius + 1):
 			var n := Vector2i(tx + dx, ty + dy)
-			if _in_grid(n) and land[n.y * GRID.x + n.x] != "sea":
+			if in_grid(n) and land[n.y * GRID.x + n.x] != "sea":
 				return true
 	return false
 
@@ -204,9 +205,9 @@ static func _add_sand(kinds: Array[String], height: Image) -> void:
 			var i := ty * GRID.x + tx
 			if kinds[i] not in ["grass", "farm"] or _height_sample(height, tx, ty) >= SAND_HEIGHT:
 				continue
-			for d in ORTHOGONAL:
+			for d in SIDES:
 				var n := Vector2i(tx, ty) + d
-				if _in_grid(n) and kinds[n.y * GRID.x + n.x] == "shallows":
+				if in_grid(n) and kinds[n.y * GRID.x + n.x] == "shallows":
 					kinds[i] = "sand"
 					break
 
@@ -214,5 +215,5 @@ static func _add_sand(kinds: Array[String], height: Image) -> void:
 static func _add_river(kinds: Array[String], geo: MapGeometry) -> void:
 	for cell in line_tiles(geo.kesla):
 		var i := cell.y * GRID.x + cell.x
-		if _in_grid(cell) and kinds[i] not in ["deep_sea", "sea", "shallows"]:
+		if in_grid(cell) and kinds[i] not in ["deep_sea", "sea", "shallows"]:
 			kinds[i] = "river"

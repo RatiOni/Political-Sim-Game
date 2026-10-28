@@ -1,7 +1,6 @@
 class_name MapLines
 extends RefCounted
 
-const SIDES: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 const AROUND: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]
 const DASH_PERIOD := 4
 const DASH_ON := 3
@@ -76,7 +75,7 @@ static func _internal_borders(img: Image, tiles: Dictionary, count: int, colour:
 			var own := TileBaker.region_at_tile(tiles, cell)
 			if own >= count:
 				continue
-			for side in SIDES:
+			for side in TileBaker.SIDES:
 				var other := TileBaker.region_at_tile(tiles, cell + side)
 				if other < count and other > own:
 					_dashed_edge(img, cell, side, colour, tile_px)
@@ -92,7 +91,7 @@ static func _dashed_edge(img: Image, cell: Vector2i, side: Vector2i, colour: Col
 
 
 static func _route_cells(points: PackedVector2Array) -> Array[Vector2i]:
-	return TileBaker.line_tiles(points).filter(func(c: Vector2i) -> bool: return Rect2i(Vector2i.ZERO, TileBaker.GRID).has_point(c))
+	return TileBaker.line_tiles(points).filter(TileBaker.in_grid)
 
 
 static func _road(img: Image, points: PackedVector2Array, colour: Color, tile_px: int, covered: Dictionary) -> void:

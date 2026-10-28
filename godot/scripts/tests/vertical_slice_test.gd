@@ -218,7 +218,7 @@ func _run() -> void:
 		for panel_name in ["RegionBrief", "MonthlyReport", "DecisionRail", "Header"]:
 			if not _check(not map_rect.intersects(scene.find_child(panel_name, true, false).get_global_rect()), "Map does not overlap " + panel_name):
 				return
-		if not _check(map.region_at(map._point([55, 48])) == "vashtera" and map.region_at(Vector2.ZERO).is_empty(), "Shared map transform hit-tests land and sea"):
+		if not _check(map.region_at(map.map_to_local(Vector2(0.55, 0.48))) == "vashtera" and map.region_at(Vector2.ZERO).is_empty(), "Shared map transform hit-tests land and sea"):
 			return
 		scene.find_child("NextDecision").grab_focus()
 		var tab := InputEventKey.new()
@@ -236,7 +236,7 @@ func _run() -> void:
 		if not _check(map.selected_id != "vashtera" and brief.find_child("RegionId").text == map.selected_id, "Keyboard region selection updates the brief"):
 			return
 		var motion := InputEventMouseMotion.new()
-		motion.position = map.global_position + map._point([55, 48])
+		motion.position = map.global_position + map.map_to_local(Vector2(0.55, 0.48))
 		root.push_input(motion)
 		await process_frame
 		if not _check(map.hovered_id == "vashtera", "Pointer hover uses the shared transform"):
@@ -244,7 +244,7 @@ func _run() -> void:
 		var click := InputEventMouseButton.new()
 		click.button_index = MOUSE_BUTTON_LEFT
 		click.pressed = true
-		click.position = map.global_position + map._point([55, 48])
+		click.position = map.global_position + map.map_to_local(Vector2(0.55, 0.48))
 		root.push_input(click)
 		click.pressed = false
 		root.push_input(click)

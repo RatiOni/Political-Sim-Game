@@ -14,7 +14,6 @@ const BUTTON_SIZE := Vector2(44, 44)
 const BUTTON_MARGIN := 8.0
 const ZOOM_IN_KEYS: Array[Key] = [KEY_EQUAL, KEY_PLUS, KEY_KP_ADD]
 const ZOOM_OUT_KEYS: Array[Key] = [KEY_MINUS, KEY_KP_SUBTRACT]
-const SIDES: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 const CORNERS: Array[Vector2i] = [Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]
 
 var tiles_path := TileBaker.TILES_PATH
@@ -35,6 +34,7 @@ var smoke_timer := Timer.new()
 var smoke_frame := 0
 var last_changed_cells := 0
 var lines_builds := 0
+var unknown_warnings := 0
 var lines_rect := TextureRect.new()
 var zoom_in_button := Button.new()
 var zoom_out_button := Button.new()
@@ -56,6 +56,7 @@ var _dusk_textures: Dictionary = {}
 var _lines: Dictionary = {}
 var _covered: Dictionary = {}
 var _dusk := false
+var _warned_ids: Dictionary = {}
 var _growth_started := false
 var _user_zoomed := false
 var _screen_scale := 1.0
@@ -336,10 +337,6 @@ func local_to_map(p: Vector2) -> Vector2:
 	return ((p - _physical.position) * _screen_scale - _origin) / canvas_extent()
 
 
-func _point(value: Array) -> Vector2:
-	return map_to_local(Vector2(float(value[0]), float(value[1])) / 100.0)
-
-
 func pan_by(delta: Vector2) -> void:
 	if unavailable:
 		return
@@ -387,7 +384,9 @@ func apply_snapshot(values: Array, selection: String) -> void:
 		var id := str(region["id"])
 		if _geo == null or _geo.region_ids.has(id):
 			regions[id] = region.duplicate(true)
-		else:
+		elif not _warned_ids.has(id):
+			_warned_ids[id] = true
+			unknown_warnings += 1
 			push_warning("ArdeniaMap: ignoring unknown region id '%s'" % id)
 	selected_id = selection if polygons.has(selection) else ""
 	_paint_growth()
@@ -488,7 +487,7 @@ func _outline(cells: Dictionary, width: float, colour: Color) -> void:
 	var tile := float(tile_px)
 	for cell in cells:
 		var origin := Vector2(cell) * tile
-		for side in SIDES:
+		for side in TileBaker.SIDES:
 			if cells.has(cell + side):
 				continue
 			var at := origin + Vector2(tile - width if side.x > 0 else 0.0, tile - width if side.y > 0 else 0.0)

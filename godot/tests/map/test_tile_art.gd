@@ -9,7 +9,6 @@ func _initialize() -> void:
 	t.equal(MapPalette.DUSK.size(), 32, "the dusk palette has 32 colours")
 	t.truth(MapPalette.DUSK[MapPalette.GRASS].get_luminance() < MapPalette.DAY[MapPalette.GRASS].get_luminance(), "grass darkens at dusk")
 	t.equal(MapPalette.DUSK[MapPalette.LIT], MapPalette.DAY[MapPalette.LIT], "lit windows keep their glow at dusk")
-	t.equal(MapPalette.nearest(MapPalette.DAY[MapPalette.ROOF]), MapPalette.ROOF, "a palette colour is its own nearest")
 	t.truth(MapPalette.FOREIGN.size() > 1, "a foreign grey ramp exists")
 	t.equal(MapPalette.FOREIGN_DUSK.size(), MapPalette.FOREIGN.size(), "the foreign ramp has a dusk twin")
 	for c in MapPalette.FOREIGN:

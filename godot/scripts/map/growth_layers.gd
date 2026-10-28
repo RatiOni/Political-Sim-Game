@@ -59,22 +59,22 @@ static func fallow_share(development: float, pressure: float) -> float:
 	return clampf(pressure, 0.0, 1.0) * (1.0 - clampf(development, 0.0, 1.0)) * FALLOW_WEIGHT
 
 
-static func stable_hash(cell: Vector2i, salt: int = 0) -> int:
-	return ((cell.x * 73856093) ^ (cell.y * 19349663) ^ (salt * 83492791)) & 0x7fffffff
+static func cell_less(a: Vector2i, b: Vector2i) -> bool:
+	return a.y < b.y or (a.y == b.y and a.x < b.x)
 
 
 static func hash_order(cells: Array, salt: int = 0) -> Array[Vector2i]:
 	var ordered: Array[Vector2i] = []
 	ordered.assign(cells)
 	ordered.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-		var ha := stable_hash(a, salt)
-		var hb := stable_hash(b, salt)
-		return ha < hb or (ha == hb and (a.y < b.y or (a.y == b.y and a.x < b.x))))
+		var ha := TileBaker.cell_hash(a, salt)
+		var hb := TileBaker.cell_hash(b, salt)
+		return ha < hb or (ha == hb and cell_less(a, b)))
 	return ordered
 
 
 static func kind_at(tiles: Dictionary, cell: Vector2i) -> String:
-	if cell.x < 0 or cell.y < 0 or cell.x >= TileBaker.GRID.x or cell.y >= TileBaker.GRID.y:
+	if not TileBaker.in_grid(cell):
 		return ""
 	return TileArt.KINDS[tiles["kinds"][cell.y * TileBaker.GRID.x + cell.x]]
 
@@ -90,7 +90,7 @@ static func cells_for_town(center: Vector2i, count: int, tiles: Dictionary, bloc
 	candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
 		var da := (a - center).length_squared()
 		var db := (b - center).length_squared()
-		return da < db or (da == db and (a.y < b.y or (a.y == b.y and a.x < b.x))))
+		return da < db or (da == db and cell_less(a, b)))
 	var out: Array[Vector2i] = []
 	out.assign(candidates.slice(0, count))
 	return out
@@ -128,7 +128,7 @@ static func all_targets(rows: Array, geo: MapGeometry, tiles: Dictionary) -> Dic
 			entry["cells"].append(cell)
 			if city["capital"] and cell == cells[0]:
 				entry["capitals"].append(cell)
-			elif stable_hash(cell, 2) % TOWER_EVERY == 0:
+			elif TileBaker.cell_hash(cell, 2) % TOWER_EVERY == 0:
 				entry["towers"].append(cell)
 			else:
 				entry["houses"].append(cell)
@@ -189,7 +189,7 @@ static func _farm_cells(region: int, occupied: Dictionary, centres: Array, devel
 					reach[cell] = distance
 	var ordered: Array = reach.keys()
 	ordered.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-		return reach[a] < reach[b] or (reach[a] == reach[b] and (a.y < b.y or (a.y == b.y and a.x < b.x))))
+		return reach[a] < reach[b] or (reach[a] == reach[b] and cell_less(a, b)))
 	var out: Array[Vector2i] = []
 	out.assign(ordered.slice(0, roundi(ordered.size() * farm_share(development))))
 	return out
@@ -247,7 +247,7 @@ static func _nearest_to(candidates: Array, towns: Array) -> Array[Vector2i]:
 	var ordered: Array[Vector2i] = []
 	ordered.assign(candidates)
 	ordered.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-		return gap[a] < gap[b] or (gap[a] == gap[b] and (a.y < b.y or (a.y == b.y and a.x < b.x))))
+		return gap[a] < gap[b] or (gap[a] == gap[b] and cell_less(a, b)))
 	return ordered
 
 
@@ -311,6 +311,6 @@ static func _route_walk(geo: MapGeometry, tiles: Dictionary, by_id: Dictionary) 
 static func plume(base: Vector2i) -> Array[Vector2i]:
 	var out: Array[Vector2i] = [base]
 	for rise in PLUME_RISE:
-		if Rect2i(Vector2i.ZERO, TileBaker.GRID).has_point(base + rise):
+		if TileBaker.in_grid(base + rise):
 			out.append(base + rise)
 	return out

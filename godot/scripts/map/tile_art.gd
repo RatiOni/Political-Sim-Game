@@ -5,7 +5,7 @@ const CELL := 8
 const VARIANTS := 4
 const COLUMNS := 16
 const KINDS: Array[String] = ["deep_sea", "sea", "shallows", "sand", "grass", "farm", "fallow", "forest", "hills", "mountain", "snow", "river"]
-const SPRITES: Array[String] = ["house", "house_lit", "tower", "capital", "tree", "crops", "road", "paved", "rail", "barricade", "fire_0", "fire_1", "fire_2", "smoke_mid_0", "smoke_mid_1", "smoke_mid_2", "smoke_top_0", "smoke_top_1", "smoke_top_2", "road_v", "road_d1", "road_d2", "paved_v", "paved_d1", "paved_d2", "rail_v", "rail_d1", "rail_d2"]
+const SPRITES: Array[String] = ["house", "house_lit", "tower", "capital", "road", "paved", "rail", "barricade", "fire_0", "fire_1", "fire_2", "smoke_mid_0", "smoke_mid_1", "smoke_mid_2", "smoke_top_0", "smoke_top_1", "smoke_top_2", "road_v", "road_d1", "road_d2", "paved_v", "paved_d1", "paved_d2", "rail_v", "rail_d1", "rail_d2"]
 const HALF := 4
 const SIZES: Array[int] = [CELL, HALF]
 const ATLAS_PNG := "res://data/map/tile_atlas.png"
@@ -25,8 +25,6 @@ const KENNEY := {
 	"house": [Vector2i(5, 7), [MapPalette.ROOF, MapPalette.ROOF, MapPalette.INK, MapPalette.WALL]],
 	"house_lit": [Vector2i(5, 7), [MapPalette.ROOF, MapPalette.ROOF, MapPalette.LIT, MapPalette.WALL]],
 	"tower": [Vector2i(6, 7), [MapPalette.ROCK_DARK, MapPalette.ROCK, MapPalette.WALL]],
-	"tree": [Vector2i(4, 5), [MapPalette.TRUNK, MapPalette.TRUNK, MapPalette.FOREST_DARK, MapPalette.FOREST]],
-	"crops": [Vector2i(5, 4), [MapPalette.FARM_GREEN, MapPalette.FARM_GREEN, MapPalette.FARM]],
 	"barricade": [Vector2i(12, 2), [MapPalette.ROAD, MapPalette.ROAD, MapPalette.CEASEFIRE]],
 }
 
@@ -183,7 +181,6 @@ static func dusk_atlas(day: Image) -> Image:
 	return out
 
 
-
 static func recolour(sheet: Image, at: Vector2i, ramp: Array) -> PackedInt32Array:
 	var source: Array[Color] = []
 	var tones := {}
@@ -209,12 +206,6 @@ static func drawn(rows: Array) -> PackedInt32Array:
 	return out
 
 
-static func _hash(x: int, y: int, s: int = 0) -> float:
-	var n := (x * 73856093) ^ (y * 19349663) ^ (s * 83492791)
-	n = (n ^ (n >> 13)) * 1274126177
-	return float((n >> 8) & 0xFFFF) / 65535.0
-
-
 static func ground(kind: String, variant: int, tile_px: int = CELL) -> PackedInt32Array:
 	if tile_px != CELL and kind not in REDRAWN:
 		return halve(ground(kind, variant))
@@ -223,7 +214,7 @@ static func ground(kind: String, variant: int, tile_px: int = CELL) -> PackedInt
 	var out := PackedInt32Array()
 	for y in tile_px:
 		for x in tile_px:
-			out.append(_ground_pixel(kind, variant, v, x, y, _hash(x + salt * CELL, y, 3), tile_px))
+			out.append(_ground_pixel(kind, variant, v, x, y, float(TileBaker.cell_hash(Vector2i(x + salt * CELL, y), 3)) / TileBaker.HASH_MASK, tile_px))
 	return out
 
 

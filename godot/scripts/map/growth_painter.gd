@@ -76,7 +76,7 @@ static func _smoke_cells(overlay: Dictionary) -> Dictionary:
 			for base in signs["smoke"]:
 				var column := GrowthLayers.plume(base)
 				if role < column.size():
-					out[column[role]] = {"role": PLUME_ROLES[role], "phase": GrowthLayers.stable_hash(base) % SMOKE_FRAMES}
+					out[column[role]] = {"role": PLUME_ROLES[role], "phase": TileBaker.cell_hash(base) % SMOKE_FRAMES}
 	return out
 
 
@@ -105,9 +105,9 @@ static func _desired(all_targets: Dictionary, overlay: Dictionary) -> Dictionary
 	for region_id in all_targets:
 		var targets: Dictionary = all_targets[region_id]
 		for cell in targets["farm_cells"]:
-			out[cell] = {"sprite": TileArt.variant_key("farm", GrowthLayers.stable_hash(cell) % TileArt.VARIANTS), "lit": false}
+			out[cell] = {"sprite": TileArt.variant_key("farm", TileBaker.cell_hash(cell) % TileArt.VARIANTS), "lit": false}
 		for cell in targets["fallow_cells"]:
-			out[cell] = {"sprite": TileArt.variant_key("fallow", GrowthLayers.stable_hash(cell) % TileArt.VARIANTS), "lit": false}
+			out[cell] = {"sprite": TileArt.variant_key("fallow", TileBaker.cell_hash(cell) % TileArt.VARIANTS), "lit": false}
 		for cell in targets["town_cells"]:
 			out[cell] = {"sprite": "house", "lit": false}
 		for cell in targets["tower_cells"]:

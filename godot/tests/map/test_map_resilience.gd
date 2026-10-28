@@ -63,6 +63,11 @@ func _check_unknown_ids(map: ArdeniaMap, geo: MapGeometry) -> void:
 	t.equal(map.regions.size(), geo.region_ids.size(), "every known region still applies")
 	t.equal(map.selected_id, "", "an unknown selection id is dropped")
 	t.equal(_growth_cells(map), reference, "unknown rows leave the growth layer as the known rows alone paint it")
+	var warned := map.unknown_warnings
+	map.apply_snapshot(rows, "")
+	map.apply_snapshot(rows, "")
+	t.equal(map.unknown_warnings, warned, "each unknown region id is warned about once")
+	t.equal(warned, 2, "both unknown ids were warned about")
 
 
 func _check_budget(geo: MapGeometry) -> void:

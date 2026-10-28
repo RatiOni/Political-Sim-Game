@@ -44,18 +44,6 @@ static func _dusk_of(day: PackedColorArray, emissive: Array[int] = EMISSIVE) -> 
 	return out
 
 
-static func nearest(c: Color) -> int:
-	var best := 0
-	var best_d := INF
-	for i in DAY.size():
-		var p := DAY[i]
-		var d := Vector3(p.r - c.r, p.g - c.g, p.b - c.b).length_squared()
-		if d < best_d:
-			best_d = d
-			best = i
-	return best
-
-
 static func nearest_foreign(c: Color) -> int:
 	var lum := c.get_luminance()
 	var best := 0
