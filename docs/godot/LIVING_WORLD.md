@@ -381,5 +381,18 @@ from what happened, never from a roll.
 - **New Campaign in Opposition** on the main menu opens a campaign with
   another party in power.
 
-Twenty years from either opening hold five elections and three changes of
-office, finite and valid throughout.
+- **The polls move with the record** (`sim/polls_sim.gd`). Each month the
+  ruling party gains or loses with approval against 0.5 (×0.012), household
+  confidence against 0.5 (×0.010) and misery — inflation plus unemployment
+  above their structural levels (×0.06); coalition partners take half. The
+  opposition takes what the government loses, more for parties nearer the
+  public mood (the support-weighted average ideology). Every party is pulled
+  3% a month back toward its starting share, no party moves more than a
+  point a month or falls below 1%, and shares stay normalised. Campaigns,
+  situations and by-elections still move support on top. Regions follow
+  through the count's national swing while keeping their own character, and
+  the monthly report carries a poll line.
+
+Twenty years from either opening hold five elections and about four changes
+of office; across six journeys the governments that fell averaged approval
+0.43 against 0.49 for those returned.

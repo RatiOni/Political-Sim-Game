@@ -187,6 +187,7 @@ static func staff_cabinet(state: GameState, preferred: Array[Minister]) -> Array
 static func hold(state: GameState, snap: bool) -> ElectionResult:
 	var was_governing := state.player.in_government
 	var old_ruling := state.ruling_faction_id
+	var incumbent_approval := PollsSim.government_approval(state)
 	var old_seats := {}
 	var total_seats := 0
 	for f in state.country.factions:
@@ -234,6 +235,7 @@ static func hold(state: GameState, snap: bool) -> ElectionResult:
 	result.player_lost_office = was_governing and not state.player.in_government
 	result.player_gained_office = not was_governing and state.player.in_government
 	result.mandate = verdict
+	result.incumbent_approval = incumbent_approval
 	state.election_history.append(result)
 	state.last_election_turn = state.turn
 	return result
@@ -250,7 +252,7 @@ static func report(state: GameState, result: ElectionResult) -> Array[String]:
 			parties.append("%s %d (%+d)" % [f.name, f.seats, int(result.seat_changes.get(f.id, 0))])
 	var headline := "%s — turnout %.1f%%. Seats: %s." % [tag, result.turnout * 100.0, ", ".join(parties)]
 	notes.append(headline)
-	notes.append("Regions: %s." % "; ".join(_regional_lines(state, result)))
+	notes.append("Regions:\n%s" % "\n".join(_regional_lines(state, result)))
 	var winner := _faction(state, result.ruling_faction_id)
 	var winner_name := "a new coalition" if winner == null else winner.name
 	var leader := "its leadership" if winner == null or winner.leader == "" else winner.leader
@@ -280,14 +282,14 @@ static func _regional_lines(state: GameState, result: ElectionResult) -> Array[S
 		var name := String(profiles.get(region_id, {}).get("name", String(region_id).capitalize()))
 		var shares: Dictionary = result.regional_vote_share[region_id]
 		if float(result.regional_access.get(region_id, 0.0)) <= 0.0:
-			lines.append("%s — no poll" % name)
+			lines.append("  %s — no poll" % name)
 			continue
 		var best := ""
 		for id in shares:
 			if best == "" or float(shares[id]) > float(shares[best]):
 				best = id
 		var party := _faction(state, best)
-		lines.append("%s — %s %.0f%%" % [name, best if party == null else party.name, float(shares.get(best, 0.0)) * 100.0])
+		lines.append("  %s — %s %.0f%%" % [name, best if party == null else party.name, float(shares.get(best, 0.0)) * 100.0])
 	return lines
 
 

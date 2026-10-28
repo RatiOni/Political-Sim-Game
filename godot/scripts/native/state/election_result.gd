@@ -22,6 +22,7 @@ var player_in_government: bool = false
 var player_lost_office: bool = false
 var player_gained_office: bool = false
 var mandate: Dictionary = {"delivered": 0, "broken": 0}
+var incumbent_approval: float = 0.5
 
 
 func to_dict() -> Dictionary:
@@ -35,6 +36,7 @@ func to_dict() -> Dictionary:
 		"ruling_faction_id": ruling_faction_id, "coalition_faction_ids": coalition_faction_ids.duplicate(),
 		"player_in_government": player_in_government, "player_lost_office": player_lost_office,
 		"player_gained_office": player_gained_office, "mandate": mandate.duplicate(),
+		"incumbent_approval": incumbent_approval,
 	}
 
 
@@ -78,4 +80,5 @@ static func from_dict(data: Variant) -> ElectionResult:
 	r.player_in_government = GameState._bool_field(data, "player_in_government", false)
 	r.player_lost_office = GameState._bool_field(data, "player_lost_office", false)
 	r.player_gained_office = GameState._bool_field(data, "player_gained_office", false)
+	r.incumbent_approval = float(data.get("incumbent_approval", 0.5))
 	return r

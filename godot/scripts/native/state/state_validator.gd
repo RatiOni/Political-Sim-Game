@@ -49,6 +49,7 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_opposition(state, errors)
 	_validate_press(state, errors)
 	_validate_elections(state, errors)
+	_validate_support_base(state, errors)
 
 	if state.player != null:
 		_validate_player(state, errors)
@@ -666,3 +667,13 @@ static func _validate_elections(state: GameState, errors: Array[String]) -> void
 		for value in r.regional_access.values() + r.regional_turnout.values():
 			if not is_finite(float(value)) or float(value) < 0.0 or float(value) > 1.0:
 				errors.append("an election result has an impossible regional figure")
+
+
+static func _validate_support_base(state: GameState, errors: Array[String]) -> void:
+	var ids := {}
+	for f in state.country.factions:
+		ids[f.id] = true
+	for key in state.support_base:
+		var value := float(state.support_base[key])
+		if not ids.has(key) or not is_finite(value) or value < 0.0 or value > 1.0:
+			errors.append("support base for '%s' is impossible" % key)
