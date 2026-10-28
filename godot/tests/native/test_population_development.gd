@@ -78,7 +78,6 @@ func _initialize() -> void:
 	t.truth(RegionsSim.population_weight(held, "vetrenka") <= v0 + 1e-6, "nobody migrates across the ceasefire line toward opportunity")
 
 	var feedback := _state()
-	var reach0 := (feedback.regions["darev"] as RegionState).state_reach
 	(feedback.regions["darev"] as RegionState).development = 0.95
 	for _i in range(24):
 		RegionsSim.simulate(feedback)

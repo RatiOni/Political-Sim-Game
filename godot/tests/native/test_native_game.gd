@@ -256,11 +256,11 @@ func _test_failed_validation_load_keeps_state_no_fatal(t) -> void:
 	t.truth(game.save(slot).get("ok", false), "badworld: the valid campaign saves")
 	var path := _slot_path(slot, "")
 	var reader := FileAccess.open(path, FileAccess.READ)
-	var payload = JSON.parse_string(reader.get_as_text())
+	var payload = reader.get_var()
 	reader.close()
 	(payload["state"] as Dictionary)["world"] = []
 	var writer := FileAccess.open(path, FileAccess.WRITE)
-	writer.store_string(JSON.stringify(payload))
+	writer.store_var(payload)
 	writer.flush()
 	writer.close()
 	var fatal_messages: Array = []

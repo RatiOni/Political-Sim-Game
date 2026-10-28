@@ -178,6 +178,36 @@ func _test_emergency_escalation_is_capped(t) -> void:
 		"a years-long emergency costs a steep but bounded amount each month")
 
 
+static func _test_save_floats_keep_full_precision(t) -> void:
+	var slot := "test_precision"
+	var config := {"country_id": "ardenia", "background_id": "none", "difficulty_id": "normal",
+		"opening_role": "contextual", "seed": 424242}
+	var game = load("res://scripts/native/native_game.gd").new()
+	game.new_campaign(config)
+	for _i in range(70):
+		game.advance_day()
+	t.truth(game.save(slot).get("ok", false), "precision: save succeeds")
+	var recorded: Dictionary = game._state.to_dict()
+	game.load(slot)
+	t.truth(game._state.to_dict() == recorded, "precision: a loaded state equals the saved one exactly")
+	var second = load("res://scripts/native/native_game.gd").new()
+	second.load(slot)
+	for _i in range(40):
+		game.advance_day()
+		second.advance_day()
+	t.truth(game._state.to_dict() == second._state.to_dict(), "precision: two loads of one file continue identically")
+	var legacy_slot := "test_precision_json"
+	var legacy := FileAccess.open("user://saves/%s.json" % legacy_slot, FileAccess.WRITE)
+	legacy.store_string(JSON.stringify({"version": SaveStore.SAVE_FORMAT_VERSION, "state": game._state.to_dict()}))
+	legacy.close()
+	t.truth(second.load(legacy_slot).get("ok", false), "precision: an old JSON-format save still loads")
+	DirAccess.remove_absolute("user://saves/%s.json" % legacy_slot)
+	game.free()
+	second.free()
+	for suffix in ["", ".tmp", ".bak"]:
+		DirAccess.remove_absolute("user://saves/%s.json%s" % [slot, suffix])
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_growth_wears_down_the_debt_ratio(t)
@@ -193,4 +223,5 @@ func _initialize() -> void:
 	_test_validator_checks_every_shortlist_candidate(t)
 	_test_an_event_growth_shock_fades(t)
 	_test_emergency_escalation_is_capped(t)
+	_test_save_floats_keep_full_precision(t)
 	quit(t.finish())

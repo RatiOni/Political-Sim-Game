@@ -62,7 +62,7 @@ static func _seed_growth_state(state: GameState, region: RegionState, profile: D
 	if region.population <= 0.0:
 		region.population = float(profile.get("population_weight", 0.0)) * float(state.country.population) / 1000.0
 	if region.development <= 0.0:
-		region.development = roundf(clampf(0.15 + region.state_reach * 0.55 - region.unemployment * 0.8, 0.05, 0.9) * 1000.0) / 1000.0
+		region.development = clampf(0.15 + region.state_reach * 0.55 - region.unemployment * 0.8, 0.05, 0.9)
 
 
 static func _attractiveness(region: RegionState) -> float:

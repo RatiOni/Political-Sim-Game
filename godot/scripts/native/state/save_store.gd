@@ -30,7 +30,7 @@ static func save_slot(slot: String, state: GameState) -> Dictionary:
 	var file := FileAccess.open(tmp_path, FileAccess.WRITE)
 	if file == null:
 		return {"ok": false, "error": "could not open '%s' for writing" % tmp_path}
-	file.store_string(JSON.stringify(payload))
+	file.store_var(payload)
 	file.flush()
 	file.close()
 	if FileAccess.file_exists(main_path):
@@ -66,14 +66,24 @@ static func load_slot(slot: String) -> Dictionary:
 		[slot, main_result.get("error", "unknown error")]}
 
 
+static func _read_payload(path: String) -> Variant:
+	var bytes := FileAccess.get_file_as_bytes(path)
+	if bytes.is_empty():
+		return null
+	if bytes[0] == 0x7B or bytes[0] == 0x20 or bytes[0] == 0x0A or bytes[0] == 0x0D or bytes[0] == 0x09:
+		return JSON.parse_string(bytes.get_string_from_utf8())
+	var file := FileAccess.open(path, FileAccess.READ)
+	return null if file == null else file.get_var()
+
+
 static func _load_file(path: String) -> Dictionary:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {"ok": false, "error": "could not open '%s'" % path}
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	var parsed: Variant = _read_payload(path)
 	file.close()
 	if not (parsed is Dictionary):
-		return {"ok": false, "error": "corrupt JSON in '%s'" % path}
+		return {"ok": false, "error": "corrupt save in '%s'" % path}
 	if not _version_matches(parsed.get("version")):
 		return {"ok": false, "error": "unsupported save version in '%s'" % path}
 	var state_data: Variant = parsed.get("state")
