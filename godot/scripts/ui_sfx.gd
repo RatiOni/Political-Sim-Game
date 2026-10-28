@@ -56,6 +56,12 @@ func month_rollover() -> void:
 	_play(PackedFloat32Array([262.0, 392.0]), 0.17, 0.15, 12.0)
 
 
+## A situation has arrived and the clock has stopped for it: a rising
+## two-step that reads as "attention", distinct from confirm and deny.
+func alert() -> void:
+	_play(PackedFloat32Array([523.0, 784.0, 523.0, 784.0]), 0.20, 0.17, 8.0)
+
+
 func _play(notes: PackedFloat32Array, duration: float, gain: float, sweep: float) -> void:
 	if not enabled or notes.is_empty() or _voices.is_empty():
 		return

@@ -280,49 +280,7 @@ static func _projection(state: GameState, law: Law) -> Dictionary:
 	return ParliamentaryVoteScript.project(state.country.factions, motion)
 
 static func _apply_effects_once(state: GameState, law: Law) -> void:
-	var economy := state.country.economy
-	var effects := law.effects
-	var growth := float(effects.get("gdp_growth_delta", 0.0))
-	var unemployment := float(effects.get("unemployment_delta", 0.0))
-	var inflation := float(effects.get("inflation_delta", 0.0))
-	var revenue := float(effects.get("budget_revenue_delta", 0.0))
-	var expenditure := float(effects.get("budget_expenditure_delta", 0.0))
-	economy.structural_growth_rate += growth
-	economy.growth_rate += growth
-	economy.structural_unemployment = clampf(economy.structural_unemployment + unemployment, 0.0, 1.0)
-	economy.unemployment = clampf(economy.unemployment + unemployment, 0.0, 1.0)
-	economy.structural_inflation += inflation
-	economy.inflation += inflation
-	economy.structural_revenue += revenue
-	economy.structural_expenditure += expenditure
-	economy.budget.revenue += revenue
-	economy.budget.expenditure += expenditure
-	economy.public_debt_pct = maxf(0.0, economy.public_debt_pct +
-		float(effects.get("one_time_debt_pct_delta", 0.0)))
-	var loyalty: Dictionary = effects.get("faction_loyalty_deltas", {})
-	var power: Dictionary = effects.get("faction_power_deltas", {})
-	for faction in state.country.factions:
-		if loyalty.has(faction.id):
-			faction.loyalty = clampf(faction.loyalty + float(loyalty[faction.id]), -1.0, 1.0)
-		if power.has(faction.id):
-			faction.power = clampf(faction.power + float(power[faction.id]), 0.0, 1.0)
-	for raw in effects.get("modifiers", []):
-		if not (raw is Dictionary):
-			continue
-		var modifier := Modifier.new()
-		modifier.id = String(raw.get("id", ""))
-		modifier.source = String(raw.get("source", law.name))
-		modifier.target = String(raw.get("target", ""))
-		modifier.magnitude = float(raw.get("magnitude", 0.0))
-		modifier.onset_delay = int(raw.get("onset_delay", 0))
-		modifier.ramp_duration = int(raw.get("ramp_duration", 1))
-		modifier.hold_duration = -1 if raw.get("hold_duration", null) == null else int(raw["hold_duration"])
-		modifier.decay_duration = int(raw.get("decay_duration", 0))
-		modifier.age = int(raw.get("age", 0))
-		modifier.source_id = law.id
-		modifier.portfolio = "" if raw.get("portfolio", null) == null else String(raw["portfolio"])
-		modifier.institutional = bool(raw.get("institutional", true))
-		state.modifiers.append(modifier)
+	EffectBundle.apply(state, law.effects, law.name, law.id)
 
 static func _apply_rebellion_penalties(state: GameState, rebellions: Array) -> void:
 	var rebel_ids := {}

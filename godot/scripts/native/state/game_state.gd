@@ -137,6 +137,14 @@ var monthly_digest: Array[String] = []
 ## traits) as a plain Dictionary, matching Python's campaign_meta.
 var campaign_meta: Dictionary = {}
 
+## Situations: those waiting on the government, follow-ups already set in
+## motion ({event_id, due_turn, target_country_id}), the turn each event last
+## arrived, and every decision taken ({event_id, option_id, turn, lapsed}).
+var pending_situations: Array[Situation] = []
+var scheduled_events: Array[Dictionary] = []
+var event_fire_history: Dictionary = {}   # String event_id -> int turn
+var event_history: Array[Dictionary] = []
+
 ## The campaign RNG. Never null: a fresh state opens on seed 0 and NativeGame
 ## reseeds it from the campaign config in unit B.
 var rng: SimRng = SimRng.from_seed(0)
@@ -224,6 +232,10 @@ func to_dict() -> Dictionary:
 		"stability_value": stability_value,
 		"monthly_digest": monthly_digest.duplicate(),
 		"campaign_meta": campaign_meta.duplicate(true),
+		"pending_situations": _situations_to_array(),
+		"scheduled_events": scheduled_events.duplicate(true),
+		"event_fire_history": event_fire_history.duplicate(true),
+		"event_history": event_history.duplicate(true),
 		"rng": rng_snapshot,
 	}
 
@@ -424,6 +436,32 @@ static func from_dict(data: Dictionary) -> GameState:
 			state.monthly_digest.append(line)
 	var meta_data: Variant = data.get("campaign_meta", {})
 	state.campaign_meta = meta_data.duplicate(true) if meta_data is Dictionary else {}
+	var situations_data: Variant = data.get("pending_situations", [])
+	if not (situations_data is Array):
+		push_error("GameState.from_dict: malformed pending_situations")
+		return null
+	for row in situations_data:
+		var situation := Situation.from_dict(row)
+		if situation == null:
+			return null
+		state.pending_situations.append(situation)
+	for key in ["scheduled_events", "event_history"]:
+		var rows: Variant = data.get(key, [])
+		if not (rows is Array):
+			push_error("GameState.from_dict: malformed %s" % key)
+			return null
+		for row in rows:
+			if not (row is Dictionary):
+				push_error("GameState.from_dict: malformed %s entry" % key)
+				return null
+			var target: Array[Dictionary] = state.scheduled_events if key == "scheduled_events" else state.event_history
+			target.append((row as Dictionary).duplicate(true))
+	var fired: Variant = data.get("event_fire_history", {})
+	if not (fired is Dictionary):
+		push_error("GameState.from_dict: malformed event_fire_history")
+		return null
+	for key in fired:
+		state.event_fire_history[String(key)] = int(fired[key])
 	if not data.has("rng"):
 		push_error("GameState.from_dict: missing required 'rng' (every writer since format v1 includes it)")
 		return null
@@ -493,4 +531,11 @@ func _cabinet_shortlists_to_dict() -> Dictionary:
 				if candidate is Minister:
 					serial.append((candidate as Minister).to_dict())
 		out[portfolio] = serial
+	return out
+
+
+func _situations_to_array() -> Array:
+	var out: Array = []
+	for situation in pending_situations:
+		out.append(situation.to_dict())
 	return out

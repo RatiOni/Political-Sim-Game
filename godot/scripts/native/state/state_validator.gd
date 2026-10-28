@@ -48,6 +48,7 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_date(state, errors)
 	_validate_ministers(state, errors)
 	_validate_cabinet_shortlists(state, errors)
+	_validate_situations(state, errors)
 	_validate_households(state, errors)
 	_validate_budgets(state, errors)
 	_validate_laws(state, errors)
@@ -515,3 +516,26 @@ static func _validate_country(country: Country, errors: Array[String], label: St
 	# gauge"); the GameState-level mirror is checked in validate().
 	if country.civil_war_risk < 0.0 or country.civil_war_risk > 1.0:
 		errors.append("%s: civil_war_risk out of range" % label)
+
+
+## Waiting situations must name a known event, once each, with a sane
+## deadline; scheduled follow-ups must name a known event and a due turn.
+static func _validate_situations(state: GameState, errors: Array[String]) -> void:
+	var seen := {}
+	for situation in state.pending_situations:
+		if situation == null:
+			errors.append("pending_situations contains a null entry")
+			continue
+		if EventsSim.event_by_id(situation.event_id).is_empty():
+			errors.append("pending situation names unknown event '%s'" % situation.event_id)
+		if seen.has(situation.event_id):
+			errors.append("situation '%s' is pending twice" % situation.event_id)
+		seen[situation.event_id] = true
+		if situation.deadline_turn < situation.arrived_turn:
+			errors.append("situation '%s' has a deadline before it arrived" % situation.event_id)
+	for row in state.scheduled_events:
+		if EventsSim.event_by_id(String(row.get("event_id", ""))).is_empty():
+			errors.append("scheduled follow-up names unknown event '%s'" % String(row.get("event_id", "")))
+		if not (row.get("due_turn", null) is int or row.get("due_turn", null) is float):
+			errors.append("scheduled follow-up '%s' has no due turn" % String(row.get("event_id", "")))
+

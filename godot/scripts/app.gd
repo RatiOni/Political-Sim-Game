@@ -24,6 +24,10 @@ var _budget_open := false
 var _budget_adjustments := {}
 var _budget_preview: Dictionary = {}
 var _legislation_open := false
+var _situation_open := false
+var _selected_event_id := ""
+## Situations already seen, so only a genuinely new one pauses the clock.
+var _known_situations := {}
 var _selected_bill_id := ""
 var _bill_preview: Dictionary = {}
 
@@ -50,6 +54,7 @@ func _ready() -> void:
 	%LegislationPanel.find_child("WithdrawBillButton").pressed.connect(_withdraw_bill)
 	%LegislationPanel.find_child("LobbyButton").pressed.connect(_lobby_bill)
 	%LegislationPanel.find_child("LobbyChoice").item_selected.connect(_on_bill_lobby_selected)
+	%SituationPanel.find_child("CloseSituationButton").pressed.connect(_close_situation)
 	get_window().size_changed.connect(_resize_layout)
 	_resize_layout()
 	_sfx = get_node_or_null("/root/UiSfx")
@@ -98,12 +103,13 @@ func _resize_layout() -> void:
 	var compact := get_window().size.x < 1500 or get_window().size.y < 850
 	find_child("OfficeLabel").visible = not compact
 	find_child("PreviewStatus").visible = not compact
-	find_child("NationalPanel").visible = not compact and not _budget_open and not _legislation_open
-	find_child("MapPanel").visible = not _budget_open and not _legislation_open
-	%RegionBrief.visible = not _budget_open and not _legislation_open
+	find_child("NationalPanel").visible = not compact and not _desk_open()
+	find_child("MapPanel").visible = not _desk_open()
+	%RegionBrief.visible = not _desk_open()
 	%BudgetPanel.visible = _budget_open
 	%LegislationPanel.visible = _legislation_open
-	find_child("MapHint").visible = not compact and not _budget_open and not _legislation_open
+	%SituationPanel.visible = _situation_open
+	find_child("MapHint").visible = not compact and not _desk_open()
 	%MonthlyReport.custom_minimum_size.y = 88 if compact else 192
 	%RegionBrief.find_child("Details").custom_minimum_size.y = 48 if compact else 84
 	for name in ["Rule", "PressureHeading", "PressureValue", "Details"]:
@@ -115,6 +121,8 @@ func _resize_layout() -> void:
 			_refresh_budget()
 		elif _legislation_open:
 			_refresh_legislation()
+		elif _situation_open:
+			_refresh_situation()
 		else:
 			_refresh_region()
 
@@ -167,6 +175,9 @@ func apply_snapshot(value: Dictionary) -> void:
 		_refresh_budget()
 	elif _legislation_open:
 		_refresh_legislation()
+	elif _situation_open:
+		_refresh_situation()
+	_notice_new_situations()
 	_refresh_controls()
 
 func _sfx_cue(cue: String) -> void:
@@ -204,6 +215,7 @@ func _open_budget() -> void:
 		return
 	_sfx_cue("navigation")
 	_legislation_open = false
+	_situation_open = false
 	_budget_open = true
 	_budget_adjustments.clear()
 	_budget_preview.clear()
@@ -419,9 +431,123 @@ func _open_legislation() -> void:
 		return
 	_sfx_cue("navigation")
 	_budget_open = false
+	_situation_open = false
 	_legislation_open = true
 	_bill_preview.clear()
 	_resize_layout()
+
+
+func _desk_open() -> bool:
+	return _budget_open or _legislation_open or _situation_open
+
+
+## A situation the player has not yet seen pauses the clock and is
+## announced, so it cannot slip past at high speed and lapse unseen.
+func _notice_new_situations() -> void:
+	var fresh := false
+	var live := {}
+	for row in snapshot.get("situations", []):
+		var id := str(row.get("event_id", ""))
+		live[id] = true
+		if not _known_situations.has(id):
+			fresh = true
+	_known_situations = live
+	if fresh:
+		_paused = true
+		_sfx_cue("alert")
+
+
+func _open_situation(event_id: String) -> void:
+	if snapshot.is_empty() or _fatal:
+		return
+	_sfx_cue("navigation")
+	_budget_open = false
+	_legislation_open = false
+	_situation_open = true
+	_selected_event_id = event_id
+	_set_situation_status("")
+	_resize_layout()
+
+
+func _close_situation() -> void:
+	_sfx_cue("navigation")
+	_situation_open = false
+	_resize_layout()
+
+
+func _situation_row() -> Dictionary:
+	for row in snapshot.get("situations", []):
+		if str(row.get("event_id", "")) == _selected_event_id:
+			return row
+	return {}
+
+
+func _refresh_situation() -> void:
+	var row := _situation_row()
+	var panel = %SituationPanel
+	var options_box: VBoxContainer = panel.find_child("Options")
+	for child in options_box.get_children():
+		options_box.remove_child(child)
+		child.queue_free()
+	if row.is_empty():
+		panel.find_child("SituationTitle").text = "This situation has been settled."
+		panel.find_child("SituationDescription").text = ""
+		panel.find_child("SituationMeta").text = ""
+		return
+	panel.find_child("SituationTitle").text = str(row.get("title", "Situation"))
+	panel.find_child("SituationDescription").text = str(row.get("description", ""))
+	var months := int(row.get("months_left", 0))
+	var deadline := "decide this month or it is decided for you" if months <= 0 \
+		else "decide within %d month%s" % [months, "" if months == 1 else "s"]
+	var meta := "%s / %s" % [str(row.get("category", "")).to_upper(), deadline]
+	if str(row.get("target_country", "")) != "":
+		meta += " / concerns %s" % row["target_country"]
+	panel.find_child("SituationMeta").text = meta
+	for option in row.get("options", []):
+		var card := VBoxContainer.new()
+		card.add_theme_constant_override("separation", 4)
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 44)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var cost := float(option.get("pc_cost", 0.0))
+		var label := str(option.get("label", ""))
+		if cost > 0.0:
+			label += "   · %.0f PC" % cost
+		if option.get("is_default", false):
+			label += "   · what happens if you do nothing"
+		button.text = label
+		button.disabled = not option.get("eligible", false)
+		button.tooltip_text = str(option.get("disabled_reason", ""))
+		button.pressed.connect(_choose_situation_option.bind(str(option.get("id", ""))))
+		card.add_child(button)
+		var detail := Label.new()
+		detail.theme_type_variation = &"Muted"
+		detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var text := str(option.get("description", ""))
+		var reason := str(option.get("disabled_reason", ""))
+		if reason != "":
+			text += "\n" + reason
+		detail.text = text
+		card.add_child(detail)
+		options_box.add_child(card)
+
+
+func _choose_situation_option(option_id: String) -> void:
+	if _game == null or _selected_event_id.is_empty():
+		return
+	var result: Dictionary = _game.resolve_situation(_selected_event_id, option_id)
+	_sfx_result(result)
+	if not result.get("ok", false):
+		_set_situation_status("REFUSED / %s" % result.get("error", "Unknown error"))
+		return
+	_set_status("DECIDED / %s" % result.get("message", ""))
+	_situation_open = false
+	_resize_layout()
+
+
+func _set_situation_status(text: String) -> void:
+	%SituationPanel.find_child("SituationStatus").text = text
 
 
 func _close_legislation() -> void:
@@ -688,6 +814,9 @@ func _next_decision() -> void:
 	if decisions.is_empty():
 		return
 	_decision_index = (_decision_index + 1) % decisions.size()
+	var event_id := str(decisions[_decision_index].get("event_id", ""))
+	if not event_id.is_empty():
+		_open_situation(event_id)
 	var region_id := str(decisions[_decision_index].get("region_id", ""))
 	if not region_id.is_empty():
 		%ArdeniaMap.select_region(region_id)
@@ -802,8 +931,8 @@ func _start_selected_program() -> void:
 
 func _refresh_controls() -> void:
 	var ready := not snapshot.is_empty() and not _fatal
-	%BudgetButton.disabled = not ready or _budget_open or _legislation_open
-	%LegislationButton.disabled = not ready or _budget_open or _legislation_open
+	%BudgetButton.disabled = not ready or _desk_open()
+	%LegislationButton.disabled = not ready or _desk_open()
 	%PlayButton.disabled = not ready
 	%PlayButton.text = "Paused" if _paused else "Playing ×%d" % _speed
 	for index in range(5):

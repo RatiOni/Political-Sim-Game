@@ -319,7 +319,7 @@
       "title": "Bumper Harvest",
       "description": "An unusually strong harvest has left the country with a real, if modest, surplus. A rare piece of good news for the Economy Ministry to manage.",
       "category": "Economic",
-      "condition": "<lambda>",
+      "condition": "always",
       "chance": 0.06,
       "options": [
         {
@@ -402,7 +402,7 @@
       "title": "Currency Speculators Circle",
       "description": "Investors are testing the currency's resolve, betting on either inflation or debt forcing your hand. Finance wants direction.",
       "category": "Economic",
-      "condition": "<lambda>",
+      "condition": "price_or_debt_alarm",
       "chance": 0.12,
       "options": [
         {
@@ -742,7 +742,9 @@
           "pc_cost": 5,
           "follow_up": null,
           "on_apply": null,
-          "requires": "check"
+          "requires": {
+            "background": "economist"
+          }
         }
       ],
       "default_option_id": "let_it_fail",
@@ -875,7 +877,9 @@
           "pc_cost": 4,
           "follow_up": null,
           "on_apply": null,
-          "requires": "check"
+          "requires": {
+            "background": "union_leader"
+          }
         }
       ],
       "default_option_id": "hold_firm",
@@ -1015,7 +1019,9 @@
           "pc_cost": 18,
           "follow_up": null,
           "on_apply": null,
-          "requires": "check"
+          "requires": {
+            "player_social_at_most": -0.2
+          }
         }
       ],
       "default_option_id": "wait_out",
@@ -1185,7 +1191,7 @@
       "title": "The Government Retreats",
       "description": "After weeks of pressure, the government has abandoned one of its headline proposals. You cannot issue orders from opposition — but you can decide what political meaning the retreat will carry.",
       "category": "Opposition",
-      "condition": "<lambda>",
+      "condition": "out_of_office",
       "chance": 0.08,
       "options": [
         {
@@ -1263,7 +1269,7 @@
       "title": "A By-Election Opening",
       "description": "A vacant constituency has produced an unexpected contest. This is not a decision about the country; it is a test of how your opposition party spends its limited people, money, and attention.",
       "category": "Opposition",
-      "condition": "<lambda>",
+      "condition": "own_party_seated_in_opposition",
       "chance": 0.06,
       "options": [
         {
@@ -1485,7 +1491,9 @@
             "chance": 1.0
           },
           "on_apply": null,
-          "requires": "check"
+          "requires": {
+            "background": "lawyer"
+          }
         }
       ],
       "default_option_id": "ride_it_out",
@@ -1654,7 +1662,7 @@
       "title": "The Chairman's Offer",
       "description": "The owner of the country's largest media group requests a private dinner. Over dessert he offers 'a fairer hearing' for the government — and mentions, in passing, a broadcasting regulation he'd like relaxed.",
       "category": "Political",
-      "condition": "<lambda>",
+      "condition": "always",
       "chance": 0.05,
       "options": [
         {
@@ -1993,7 +2001,7 @@
       "title": "The Students Are Marching",
       "description": "A student movement has grown out of the universities — idealistic, loud, and photogenic. Their demands are a mix of the impossible and the overdue.",
       "category": "Social",
-      "condition": "<lambda>",
+      "condition": "high_unemployment",
       "chance": 0.06,
       "options": [
         {
@@ -2068,7 +2076,7 @@
       "title": "Faith and State",
       "description": "A dispute over religious symbols in public schools has escalated from a local quarrel into a national argument about what kind of country this is.",
       "category": "Social",
-      "condition": "<lambda>",
+      "condition": "always",
       "chance": 0.04,
       "options": [
         {
@@ -2152,7 +2160,7 @@
       "title": "The River Breaks Its Banks",
       "description": "A week of rain has put three districts underwater. Farms, mills, and homes are gone; the cameras are already there, and so must you be.",
       "category": "Wildcard",
-      "condition": "<lambda>",
+      "condition": "always",
       "chance": 0.03,
       "options": [
         {
@@ -2307,7 +2315,9 @@
           "pc_cost": 2,
           "follow_up": null,
           "on_apply": null,
-          "requires": "check"
+          "requires": {
+            "background": "former_general"
+          }
         }
       ],
       "default_option_id": "measured_review",
@@ -3082,7 +3092,9 @@
           "pc_cost": 20,
           "follow_up": null,
           "on_apply": "vasca_lead_personally",
-          "requires": "check"
+          "requires": {
+            "background": "former_general"
+          }
         }
       ],
       "default_option_id": "downplay",

@@ -93,7 +93,9 @@ func advance_day() -> Dictionary:
 		StabilitySimScript.update_approval(_state)
 		StabilitySimScript.update_stability(_state)
 		Modifiers.age_all(_state)
+		var situation_notes := EventsSim.monthly(_state)
 		_state.monthly_digest = MonthlyDigestScript.build(_state, before)
+		_state.monthly_digest.append_array(situation_notes)
 	var snap := snapshot()
 	state_changed.emit(snap)
 	_busy = false
@@ -193,6 +195,23 @@ func withdraw_budget() -> Dictionary:
 
 ## Native lawmaking boundary. Preview is pure; every successful mutation
 ## emits one detached snapshot while the re-entrancy guard is held.
+## Decides a waiting situation. EventActions owns the rules; this method
+## owns the operation guard and notification.
+func resolve_situation(event_id: String, option_id: String) -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = EventActions.resolve(_state, event_id, option_id)
+	if result.get("ok", false):
+		var snap := snapshot()
+		result["snapshot"] = snap
+		state_changed.emit(snap)
+	_busy = false
+	return result
+
+
 func preview_bill(bill_id: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -452,16 +471,35 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 		"economy": economy,
 		"regions": regions,
 		"factions": factions,
-		"decisions": [],
+		"decisions": _decisions(state),
 		"budget": _budget_snapshot(state),
 		"legislation": LawActionsScript.read_model(state).duplicate(true),
 		"cabinet": CabinetActionsScript.read_model(state).duplicate(true),
+		"situations": EventActions.read_model(state).duplicate(true),
 		"ministries": _ministries_snapshot(state),
 		"households": _household_snapshot(state),
 		"digest": state.monthly_digest.duplicate(),
 		"reform": {"active": null, "objectives": []},
 		"dispatches": [],
 	}
+
+
+## The "needs you" queue: every waiting situation, soonest deadline first.
+static func _decisions(state: GameState) -> Array:
+	var rows: Array = []
+	for situation in state.pending_situations:
+		var event := EventsSim.event_by_id(situation.event_id)
+		var months := maxi(0, situation.deadline_turn - state.turn)
+		rows.append({
+			"tag": String(event.get("category", "Situation")),
+			"title": String(event.get("title", situation.event_id)),
+			"due_text": "decide this month" if months == 0 else "decide within %d month%s" % [months, "" if months == 1 else "s"],
+			"event_id": situation.event_id,
+			"region_id": "",
+			"months_left": months,
+		})
+	rows.sort_custom(func(a, b): return int(a["months_left"]) < int(b["months_left"]))
+	return rows
 
 
 static func _budget_snapshot(state: GameState) -> Dictionary:
