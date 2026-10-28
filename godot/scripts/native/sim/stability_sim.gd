@@ -29,6 +29,8 @@ const SERVICES_EXPECTED := 0.58
 const SERVICES_APPROVAL_WEIGHT := 0.40
 ## A state whose ministries cannot deliver is a weaker state, whoever runs it.
 const STATE_PRESENCE_WEIGHT := 0.15
+## How much of an active insurgency registers as national unrest.
+const INSURGENCY_UNREST_WEIGHT := 0.40
 
 static func economic_signal(state: GameState) -> float:
 	var econ := state.country.economy
@@ -171,7 +173,9 @@ static func _unrest(state: GameState) -> float:
 	var unemployment := maxf(0.0, state.country.economy.unemployment - 0.10) * 3.0
 	var region := maxf(0.0, national_pressure(state) - 0.45) * 0.50
 	var household := maxf(0.0, HouseholdsSimScript.national_hardship(state) - 0.35) * 0.35
-	return clampf(grievance * 0.60 + unemployment + region + household, 0.0, 1.0)
+	# An armed movement inside the country is unrest on its own terms.
+	var insurgency := state.insurgency_pressure * INSURGENCY_UNREST_WEIGHT
+	return clampf(grievance * 0.60 + unemployment + region + household + insurgency, 0.0, 1.0)
 
 static func _region_profiles() -> Dictionary:
 	var content: Dictionary = ContentRepositoryScript.load_all()

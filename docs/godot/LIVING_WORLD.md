@@ -1,7 +1,7 @@
 # Ardenia Godot — the living world (Phase 4)
 
-**Status:** situations engine, the schemer arc and the party leadership
-challenge are playable (2026-10-28). Arcs, the civil-war gauge, diplomacy verbs, the AI countries,
+**Status:** situations engine, the schemer arc, the party leadership
+challenge and the Vasca question are playable (2026-10-28). Arcs, the civil-war gauge, diplomacy verbs, the AI countries,
 opposition play and the press remain. Same native-design rules as
 `SIM_REDESIGN.md`: Python is a reference for what Ardenia contains, never a
 formula to match.
@@ -11,9 +11,9 @@ formula to match.
 1. **Situations engine** — done. Arrival, pacing, decisions, default lapse,
    follow-up chains, the shared effect pipeline, role resolution, persistence,
    the "needs you" queue and the situation panel.
-2. **The arcs** — the schemer and the leadership challenge are done
-   (`sim/arcs.gd`, `sim/cabinet_sim.gd`); the Vasca question, Vetrenka and
-   opposition by-elections remain. Each needs its bespoke
+2. **The arcs** — the schemer, the leadership challenge and Vasca are done
+   (`sim/arcs.gd`, `sim/cabinet_sim.gd`); Vetrenka and opposition
+   by-elections remain. Each needs its bespoke
    consequence handlers (`on_apply` ids) written into
    `Arcs.HANDLERS`; until a handler exists, its events cannot
    fire (`EventsSim.unplayable_events()` lists them). Their trigger
@@ -84,3 +84,17 @@ let them rise). A schemer who rises emboldens the player's own party and
 forces a formal leadership challenge: face it down, accommodate the wing
 (the leader's ideology moves toward it), or purge it. Every step finds its
 schemer fresh and does nothing if they have already gone.
+
+## The Vasca question
+
+The west stirs (once per campaign, never before month 8) for a government
+that looks weak: stability under 0.65, approval under 0.50, or civil-war
+risk over 0.25. A crackdown succeeds in proportion to real security
+effectiveness — the Interior and Defense ministers' implementation quality
+(0.30 for a vacancy) weighted 60/40 with stability, capped at 92% — and a
+former general leading in person adds 20 points. An amnesty holds with
+odds 0.35 + approval × 0.5. Every road moves `insurgency_pressure`, which
+now feeds national unrest (×0.40). Five recorded endings live in
+`campaign_meta["vasca_status"]`: captured, dead, exiled, isolated, and
+unresolved — "no ending" is recorded too, and any ending closes the arc.
+Rolls use the campaign RNG, so reloads replay the same story.

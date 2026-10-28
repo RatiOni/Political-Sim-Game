@@ -49,6 +49,8 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_ministers(state, errors)
 	_validate_cabinet_shortlists(state, errors)
 	_validate_situations(state, errors)
+	if not is_finite(state.insurgency_pressure) or state.insurgency_pressure < 0.0 or state.insurgency_pressure > 1.0:
+		errors.append("insurgency_pressure out of range")
 	_validate_households(state, errors)
 	_validate_budgets(state, errors)
 	_validate_laws(state, errors)

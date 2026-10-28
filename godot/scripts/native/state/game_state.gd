@@ -122,6 +122,9 @@ var ruling_faction_id: String = ""
 ## a later phase). An ongoing pressure, not a game-over.
 var civil_war_risk: float = 0.0
 var civil_war: bool = false
+## 0..1 armed resistance to the state inside the country (Vasca in the west,
+## Vetrenka across the line). Raised and lowered by the arcs; feeds unrest.
+var insurgency_pressure: float = 0.0
 
 ## Plain scalar stand-in for Python's GovernmentStability aggregate — see
 ## header note. Default matches models/stability.py: GovernmentStability.value
@@ -232,6 +235,7 @@ func to_dict() -> Dictionary:
 		"stability_value": stability_value,
 		"monthly_digest": monthly_digest.duplicate(),
 		"campaign_meta": campaign_meta.duplicate(true),
+		"insurgency_pressure": insurgency_pressure,
 		"pending_situations": _situations_to_array(),
 		"scheduled_events": scheduled_events.duplicate(true),
 		"event_fire_history": event_fire_history.duplicate(true),
@@ -436,6 +440,7 @@ static func from_dict(data: Dictionary) -> GameState:
 			state.monthly_digest.append(line)
 	var meta_data: Variant = data.get("campaign_meta", {})
 	state.campaign_meta = meta_data.duplicate(true) if meta_data is Dictionary else {}
+	state.insurgency_pressure = float(data.get("insurgency_pressure", 0.0))
 	var situations_data: Variant = data.get("pending_situations", [])
 	if not (situations_data is Array):
 		push_error("GameState.from_dict: malformed pending_situations")
