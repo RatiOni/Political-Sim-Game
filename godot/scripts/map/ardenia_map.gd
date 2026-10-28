@@ -27,6 +27,8 @@ var tile_px := OVERVIEW
 var zoom := 1
 var terrain_layer := TileMapLayer.new()
 var growth_layer := TileMapLayer.new()
+var smoke_layer := TileMapLayer.new()
+var smoke_desired: Dictionary = {}
 var growth_desired: Dictionary = {}
 var growth_tween: Tween
 var smoke_timer := Timer.new()
@@ -104,11 +106,12 @@ func _build_nodes() -> void:
 	_physical.name = "Physical"
 	add_child(_physical)
 	_physical.add_child(_canvas)
-	for layer in [terrain_layer, growth_layer]:
+	for layer in [terrain_layer, growth_layer, smoke_layer]:
 		layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		_canvas.add_child(layer)
 	terrain_layer.name = "Terrain"
 	growth_layer.name = "Growth"
+	smoke_layer.name = "Smoke"
 	lines_rect.name = "Lines"
 	lines_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	lines_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -275,6 +278,7 @@ func _set_level(px: int) -> void:
 		tile_px = px
 		terrain_layer.tile_set = _tilesets[tile_px]
 		growth_layer.tile_set = _tilesets[tile_px]
+		smoke_layer.tile_set = _tilesets[tile_px]
 		_apply_lines()
 	zoom = level_zoom(physical_size().x, tile_px)
 	_canvas.scale = Vector2(zoom, zoom)

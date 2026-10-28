@@ -32,11 +32,12 @@ func _kind(tiles: Dictionary, cell: Vector2i) -> String:
 	return TileArt.KINDS[tiles["kinds"][cell.y * TileBaker.GRID.x + cell.x]]
 
 
-func _count_sprite(map: ArdeniaMap, sprite: String) -> int:
+func _count_sprite(map: ArdeniaMap, sprite: String, layer: TileMapLayer = null) -> int:
+	layer = layer if layer != null else map.growth_layer
 	var coords := Vector2i(TileArt.index()[sprite][0], TileArt.index()[sprite][1])
 	var total := 0
-	for cell in map.growth_layer.get_used_cells():
-		if map.growth_layer.get_cell_atlas_coords(cell) == coords:
+	for cell in layer.get_used_cells():
+		if layer.get_cell_atlas_coords(cell) == coords:
 			total += 1
 	return total
 
@@ -207,7 +208,7 @@ func _count_prefix(map: ArdeniaMap, prefix: String) -> int:
 
 
 func _smoke_signature(map: ArdeniaMap) -> Array:
-	return [_count_sprite(map, "smoke_0"), _count_sprite(map, "smoke_1"), _count_sprite(map, "smoke_2")]
+	return [_count_sprite(map, "smoke_0", map.smoke_layer), _count_sprite(map, "smoke_1", map.smoke_layer), _count_sprite(map, "smoke_2", map.smoke_layer)]
 
 
 func _smoke_total(map: ArdeniaMap) -> int:
@@ -327,6 +328,20 @@ func _check_routes(geo: MapGeometry, tiles: Dictionary) -> void:
 	t.equal(_pixels(covered, MapPalette.DAY[MapPalette.CEASEFIRE]), line, "covering routes leaves the ceasefire line alone")
 
 
+
+func _check_smoke_layer(map: ArdeniaMap) -> void:
+	var canvas := map.terrain_layer.get_parent()
+	t.truth(map.smoke_layer.get_parent() == canvas, "smoke has its own layer in the same canvas as the terrain")
+	t.truth(map.smoke_layer.get_index() > map.growth_layer.get_index(), "smoke is drawn above the growth layer")
+	t.truth(map.smoke_layer.tile_set == map.terrain_layer.tile_set, "smoke uses the terrain's atlas")
+	t.equal(map.smoke_layer.texture_filter, map.terrain_layer.texture_filter, "smoke is filtered like the terrain")
+	t.equal(map.smoke_layer.get_global_transform(), map.terrain_layer.get_global_transform(), "smoke follows the terrain transform")
+	var smoking: Array[Vector2i] = map.smoke_layer.get_used_cells()
+	t.truth(smoking.size() > 0, "smoke is drawn on its own layer")
+	var house := Vector2i(TileArt.index()["house"][0], TileArt.index()["house"][1])
+	t.truth(smoking.all(func(c: Vector2i) -> bool: return map.growth_layer.get_cell_atlas_coords(c) == house), "every smoking cell keeps its house underneath")
+
+
 func _check_map_trouble(map: ArdeniaMap, geo: MapGeometry) -> void:
 	map.apply_snapshot(_rows(geo, BASE_POPULATION * 3.0, 0.9, 0.1), "")
 	await create_timer(1.6).timeout
@@ -343,6 +358,11 @@ func _check_map_trouble(map: ArdeniaMap, geo: MapGeometry) -> void:
 	var smoke := _smoke_signature(map)
 	t.truth(_smoke_total(map) > 0, "a crisis raises smoke")
 	t.truth(_count_sprite(map, "barricade") > 0, "a crisis raises barricades")
+	_check_smoke_layer(map)
+	map.zoom_in()
+	_check_smoke_layer(map)
+	map.zoom_out()
+	_check_smoke_layer(map)
 	map.set_dusk(true)
 	t.equal(_count_sprite(map, "house_lit"), 0, "a crisis leaves the towns dark at dusk")
 	map.set_dusk(false)

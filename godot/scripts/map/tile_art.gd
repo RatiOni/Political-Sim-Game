@@ -32,7 +32,7 @@ const KENNEY := {
 
 const DRAWN_LEGEND := {
 	"g": MapPalette.GOLD, "d": MapPalette.GOLD_DARK, "r": MapPalette.ROAD, "k": MapPalette.ROCK_DARK,
-	"l": MapPalette.ROCK_LIGHT, "m": MapPalette.ROCK, "#": MapPalette.RAIL,
+	"l": MapPalette.ROCK_LIGHT, "m": MapPalette.ROCK, "#": MapPalette.RAIL, "i": MapPalette.INK,
 }
 
 const DRAWN := {
@@ -40,9 +40,9 @@ const DRAWN := {
 	"road": ["........", "........", "........", "........", "........", "rr.rr.rr", "........", "........"],
 	"paved": ["........", "........", "........", "kkkkkkkk", "kllkkllk", "kkkkkkkk", "........", "........"],
 	"rail": ["........", "#..#..#.", "########", "#..#..#.", "........", "........", "........", "........"],
-	"smoke_0": ["........", "........", "........", "........", "...ll...", "..llll..", "..lmll..", "...ll..."],
-	"smoke_1": ["........", "........", "....ll..", "...llll.", "...lmll.", "....ll..", "........", "........"],
-	"smoke_2": ["...mm...", "..mllm..", "...mm...", "........", "........", "........", "........", "........"],
+	"smoke_0": ["...ii...", "..iklk..", "..ikki..", ".iklkki.", "..ikki..", "..ikli..", ".ikkki..", "..iiii.."],
+	"smoke_1": ["..ii....", ".iklki..", ".ikkki..", "..iklki.", ".ikkki..", "..iklki.", "..ikki..", "...ii..."],
+	"smoke_2": ["....ii..", "...iklk.", "..ikkki.", "..iklki.", "...ikki.", "..iklki.", "...ikki.", "....ii.."],
 	"road_d1": ["r.......", ".r......", "........", "...r....", "....r...", "........", "......r.", ".......r"],
 	"paved_d1": ["lk......", "kkk.....", ".klk....", "..kkk...", "...klk..", "....kkk.", ".....klk", "......kl"],
 	"rail_d1": ["#.#.....", ".#......", "#.#.....", "...#.#..", "....#...", "...#.#..", "......#.", ".......#"],

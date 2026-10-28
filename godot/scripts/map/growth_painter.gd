@@ -9,6 +9,8 @@ const NONE := Vector2i(-1, -1)
 
 static func apply(map: ArdeniaMap, all_targets: Dictionary, overlay: Dictionary, animate: bool) -> void:
 	map.growth_desired = _desired(all_targets, overlay)
+	map.smoke_desired = _smoke_cells(overlay)
+	_paint_smoke(map)
 	_sync_smoke(map)
 	if map.growth_tween != null and map.growth_tween.is_valid():
 		map.growth_tween.kill()
@@ -43,9 +45,7 @@ static func refresh_lights(map: ArdeniaMap) -> void:
 
 static func step_smoke(map: ArdeniaMap) -> void:
 	map.smoke_frame = (map.smoke_frame + 1) % SMOKE_FRAMES
-	for cell in map.growth_desired:
-		if map.growth_desired[cell].get("smoke", false) and map.growth_layer.get_cell_atlas_coords(cell) != NONE:
-			paint(map, cell)
+	_paint_smoke(map)
 
 
 static func paint(map: ArdeniaMap, cell: Vector2i) -> void:
@@ -56,9 +56,25 @@ static func paint(map: ArdeniaMap, cell: Vector2i) -> void:
 		map.growth_layer.set_cell(cell, 0, coords)
 
 
+static func _paint_smoke(map: ArdeniaMap) -> void:
+	for cell in map.smoke_layer.get_used_cells():
+		if not map.smoke_desired.has(cell):
+			map.smoke_layer.erase_cell(cell)
+	for cell in map.smoke_desired:
+		var at: Array = TileArt.index()["smoke_%d" % ((map.smoke_frame + GrowthLayers.stable_hash(cell)) % SMOKE_FRAMES)]
+		map.smoke_layer.set_cell(cell, 0, Vector2i(at[0], at[1]))
+
+
+static func _smoke_cells(overlay: Dictionary) -> Dictionary:
+	var out := {}
+	for signs in overlay["trouble"].values():
+		for cell in signs["smoke"]:
+			out[cell] = true
+	return out
+
+
 static func _sync_smoke(map: ArdeniaMap) -> void:
-	var smouldering := map.growth_desired.values().any(func(entry: Dictionary) -> bool: return entry.get("smoke", false))
-	if not smouldering:
+	if map.smoke_desired.is_empty():
 		map.smoke_timer.stop()
 	elif map.smoke_timer.is_stopped() and map.is_inside_tree():
 		map.smoke_timer.start()
@@ -69,9 +85,7 @@ static func _coords(map: ArdeniaMap, cell: Vector2i) -> Vector2i:
 		return NONE
 	var entry: Dictionary = map.growth_desired[cell]
 	var sprite: String = entry["sprite"]
-	if entry.get("smoke", false):
-		sprite = "smoke_%d" % ((map.smoke_frame + GrowthLayers.stable_hash(cell)) % SMOKE_FRAMES)
-	elif entry["lit"] and map.is_dusk():
+	if entry["lit"] and map.is_dusk():
 		sprite = "house_lit"
 	var at: Array = TileArt.index()[sprite]
 	return Vector2i(at[0], at[1])
@@ -99,6 +113,4 @@ static func _desired(all_targets: Dictionary, overlay: Dictionary) -> Dictionary
 				out[cell]["lit"] = true
 		for cell in signs.get("barricade", []):
 			out[cell] = {"sprite": "barricade", "lit": false}
-		for cell in signs.get("smoke", []):
-			out[cell] = {"sprite": "smoke_0", "lit": false, "smoke": true}
 	return out
