@@ -83,7 +83,7 @@ func _test_the_front_page_leads_with_the_most_dramatic_story(t) -> void:
 	Voice.say(state, "world_deliberates", {"actor": "Krasova", "actor_leader": "K", "target": "Veldoria"})
 	Voice.say(state, "world_civil_war_out", {"country": "Valmora", "leader": "V"})
 	Voice.say(state, "world_deepen", {"actor": "Merova", "actor_leader": "M", "target": "Veldoria", "target_leader": "L"})
-	Voice.record(state, "government_bill", {"bill": "X"}, "A plain brief.")
+	Voice.record(state, "unheadlined_note", {}, "A plain brief.")
 	var page := Press.front_page(state, {"approval": 0.5}, {"approval": 0.52})
 	t.equal(page["masthead"], "The Vashtera Herald", "the masthead is the country's own paper")
 	t.truth(String(page["lead"]["headline"]).contains("VALMORA"), "a neighbour's civil war leads the paper")
@@ -158,6 +158,30 @@ func _test_the_world_and_parliament_speak_through_the_voice(t) -> void:
 		"a government division is reported in the voice of the chamber")
 
 
+func _test_a_government_bill_makes_the_paper(t) -> void:
+	var state := _state("opposition")
+	Voice.record(state, "government_bill", {"bill": "Minimum Wage Act", "party": "National Conservatives"}, "A bill.")
+	Voice.say(state, "world_deepen", {"actor": "Merova", "actor_leader": "M", "target": "Veldoria", "target_leader": "L"})
+	var page := Press.front_page(state)
+	t.truth(String(page["lead"]["headline"]).contains("MINIMUM WAGE ACT"), "a government bill awaiting your answer leads the paper")
+	t.truth(Press.DRAMA["government_bill"] > Press.DRAMA["world_deepen"], "above foreign courtesies")
+
+
+func _test_missing_pools_and_bad_press_records_are_refused(t) -> void:
+	var state := _state()
+	t.equal(Voice.say(state, "no_such_dispatch", {}), "", "an unknown dispatch says nothing")
+	t.truth(state.monthly_news.is_empty(), "and records nothing")
+	var bad := GameState.from_dict(state.to_dict())
+	bad.monthly_news.append({"key": "", "fields": {}, "text": "x"})
+	t.truth(not StateValidator.validate(bad).is_empty(), "a news item needs a key")
+	bad = GameState.from_dict(state.to_dict())
+	bad.front_page = {"masthead": "M"}
+	t.truth(not StateValidator.validate(bad).is_empty(), "a front page needs every part")
+	bad = GameState.from_dict(state.to_dict())
+	bad.front_page = Press.front_page(bad)
+	t.truth(StateValidator.validate(bad).is_empty(), "a real front page validates")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_a_dispatch_is_voiced_and_recorded(t)
@@ -169,4 +193,6 @@ func _initialize() -> void:
 	_test_secondary_headlines_are_capped(t)
 	_test_the_monthly_report_carries_the_front_page(t)
 	_test_the_world_and_parliament_speak_through_the_voice(t)
+	_test_a_government_bill_makes_the_paper(t)
+	_test_missing_pools_and_bad_press_records_are_refused(t)
 	quit(t.finish())

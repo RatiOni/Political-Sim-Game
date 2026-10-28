@@ -58,7 +58,7 @@ static func apply_amendment(state: GameState, law: Law) -> void:
 			m["magnitude"] = float(m.get("magnitude", 0.0)) * AMENDMENT_SOFTENING
 
 
-static func add_pledge(state: GameState, bill_id: String) -> Dictionary:
+static func pledge_reason(state: GameState, bill_id: String) -> String:
 	var reason := _opposition_reason(state, PLEDGE_COST)
 	if reason == "" and state.opposition.pledges.size() >= MAX_PLEDGES:
 		reason = "Your platform already carries %d pledges." % MAX_PLEDGES
@@ -69,8 +69,14 @@ static func add_pledge(state: GameState, bill_id: String) -> Dictionary:
 		reason = "That policy is already in your platform."
 	if reason == "" and state.enacted_laws.any(func(l: Law) -> bool: return l.id == bill_id):
 		reason = "That policy is already law."
+	return reason
+
+
+static func add_pledge(state: GameState, bill_id: String) -> Dictionary:
+	var reason := pledge_reason(state, bill_id)
 	if reason != "":
 		return _error(reason)
+	var law := _law(bill_id)
 	state.player.political_capital -= PLEDGE_COST
 	state.opposition.pledges.append({"bill_id": bill_id, "status": "pledged", "campaigns": 0})
 	OppositionSim.shift_credibility(state, 0.01)
@@ -124,7 +130,7 @@ static func appoint_shadow(state: GameState, portfolio: String) -> Dictionary:
 	if reason != "":
 		return _error(reason)
 	state.player.political_capital -= SHADOW_COST
-	var minister: Minister = CabinetActions._generate_candidate(state, portfolio, own, false)
+	var minister: Minister = CabinetActions.generate_candidate(state, portfolio, own, false)
 	minister.id = "shadow_%s" % minister.id
 	state.opposition.shadow_cabinet = state.opposition.shadow_cabinet.filter(
 		func(m: Minister) -> bool: return m.portfolio != portfolio)
@@ -163,9 +169,22 @@ static func read_model(state: GameState) -> Dictionary:
 	var shadows: Array = []
 	for m in opp.shadow_cabinet:
 		shadows.append({"id": m.id, "name": m.name, "portfolio": m.portfolio, "competence": m.competence, "trait": m.trait_label()})
+	var options: Array = []
+	for law in LawActions.catalog_laws():
+		if law.tier == "executive_order":
+			continue
+		var reason := pledge_reason(state, law.id)
+		options.append({"id": law.id, "name": law.name, "cost": PLEDGE_COST, "eligible": reason == "", "disabled_reason": reason})
+	var portfolios: Array = []
+	var shadow_reason := _opposition_reason(state, SHADOW_COST)
+	for portfolio in CabinetActions.CORE_PORTFOLIOS:
+		var holder := opp.shadow_for(portfolio)
+		portfolios.append({"portfolio": portfolio, "holder": "" if holder == null else holder.name, "cost": SHADOW_COST,
+			"eligible": shadow_reason == "", "disabled_reason": shadow_reason})
 	return {"active": not state.player.in_government, "credibility": opp.credibility,
 		"government_bill": bill, "pledges": pledges, "shadow_cabinet": shadows,
-		"electoral_edge": OppositionSim.electoral_edge(state)}
+		"electoral_edge": OppositionSim.electoral_edge(state),
+		"pledge_options": options, "portfolios": portfolios}
 
 
 static func _opposition_reason(state: GameState, cost: float) -> String:

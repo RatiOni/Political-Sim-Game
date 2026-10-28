@@ -22,8 +22,7 @@ const SUPPORT_CEILING := 0.85
 
 const DELIVERED_CREDIT := 0.09
 const ATTEMPTED_CREDIT := 0.015
-const ADOPTED_CREDIT := 0.035
-const UNDERCUT_COST := -0.06
+const ADOPTION_CREDIT := {"support": 0.035, "amend": 0.035, "oppose": -0.06, "": 0.0}
 const BROKEN_COST := -0.10
 const BROKEN_SUPPORT_COST := 0.008
 const CONSISTENT_SUPPORT := 0.04
@@ -124,7 +123,7 @@ static func take_office(state: GameState) -> Array[String]:
 		notes.append("\"%s\" lapses with the outgoing government." % opp.government_bill.name)
 	opp.government_bill = null
 	opp.response = ""
-	GameFactory._configure_government(state, state.player.faction_id, [])
+	GameFactory.configure_government(state, state.player.faction_id, [])
 	state.player.in_government = true
 	state.ruling_faction_id = state.player.faction_id
 	state.player.title = _government_title(state)
@@ -230,9 +229,9 @@ static func note_bill_result(state: GameState, law: Law, passed: bool) -> void:
 		p["status"] = "delivered" if passed else "attempted"
 		shift_credibility(state, DELIVERED_CREDIT if passed else ATTEMPTED_CREDIT)
 	elif passed:
-		var backed := state.opposition.response in ["support", "amend"]
-		p["status"] = "adopted" if backed else "undercut"
-		shift_credibility(state, ADOPTED_CREDIT if backed else UNDERCUT_COST)
+		var response := state.opposition.response
+		p["status"] = "undercut" if response == "oppose" else "adopted"
+		shift_credibility(state, ADOPTION_CREDIT.get(response, 0.0))
 
 
 static func condition_met(state: GameState, rule_id: String) -> bool:

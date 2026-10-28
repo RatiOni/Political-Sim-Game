@@ -31,7 +31,9 @@ static func variant_index(turn: int, key: String, position: int, size: int) -> i
 
 static func say(state: GameState, key: String, fields: Dictionary) -> String:
 	var text := render(state, key, fields)
-	assert(text != "", "no dispatch pool for '%s'" % key)
+	if text == "":
+		push_error("Voice.say: no dispatch pool for '%s'" % key)
+		return ""
 	record(state, key, fields, text)
 	return text
 

@@ -196,6 +196,10 @@
     ],
     "world_deliberates": [
       "{actor} weighs its options on {target}"
+    ],
+    "government_bill": [
+      "{party} bring \"{bill}\" before the chamber",
+      "government tables \"{bill}\"; the opposition must choose"
     ]
   },
   "leads": {
@@ -232,6 +236,9 @@
     "quiet": [
       "No crisis, no collapse, no scandal worth the ink — a month of government by administration. The nation, suspicious of its own good fortune, reads the small print.",
       "The quietest month in recent memory. Ministers governed, markets traded, and nobody resigned. It will not last."
+    ],
+    "government_bill": [
+      "The government has put \"{bill}\" before parliament and expects to divide on it next month. The opposition benches must decide whether to back it, fight it, or try to rewrite it before the vote."
     ]
   },
   "sample_fields": {
@@ -500,6 +507,10 @@
       "actor_leader": "XL",
       "target": "Y"
     },
-    "quiet": {}
+    "quiet": {},
+    "government_bill": {
+      "bill": "X",
+      "party": "Y"
+    }
   }
 }

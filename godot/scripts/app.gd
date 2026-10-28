@@ -24,6 +24,7 @@ var _budget_open := false
 var _budget_adjustments := {}
 var _budget_preview: Dictionary = {}
 var _legislation_open := false
+var _opposition_open := false
 var save_slot := SAVE_SLOT
 var _pending_snapshot: Dictionary = {}
 var _snapshot_flush_queued := false
@@ -64,6 +65,8 @@ func _ready() -> void:
 	%DiplomacyButton.pressed.connect(_open_diplomacy)
 	%DiplomacyPanel.find_child("CloseDiplomacyButton").pressed.connect(_close_diplomacy)
 	%DiplomacyPanel.find_child("CountryChoice").item_selected.connect(_on_country_selected)
+	%OppositionPanel.requested.connect(_on_opposition_request)
+	%OppositionPanel.close_requested.connect(_close_opposition)
 	get_window().size_changed.connect(_resize_layout)
 	_resize_layout()
 	_sfx = get_node_or_null("/root/UiSfx")
@@ -113,6 +116,7 @@ func _resize_layout() -> void:
 	%LegislationPanel.visible = _legislation_open
 	%SituationPanel.visible = _situation_open
 	%DiplomacyPanel.visible = _diplomacy_open
+	%OppositionPanel.visible = _opposition_open
 	find_child("MapHint").visible = not compact and not _desk_open()
 	%MonthlyReport.custom_minimum_size.y = 88 if compact else 192
 	%RegionBrief.find_child("Details").custom_minimum_size.y = 48 if compact else 84
@@ -131,6 +135,8 @@ func _resize_layout() -> void:
 			_refresh_situation()
 		elif _diplomacy_open:
 			_refresh_diplomacy()
+		elif _opposition_open:
+			_refresh_opposition()
 		else:
 			_refresh_region()
 
@@ -190,6 +196,8 @@ func apply_snapshot(value: Dictionary) -> void:
 		_refresh_situation()
 	elif _diplomacy_open:
 		_refresh_diplomacy()
+	elif _opposition_open:
+		_refresh_opposition()
 	_notice_new_situations()
 	_refresh_controls()
 
@@ -230,6 +238,7 @@ func _open_budget() -> void:
 	_diplomacy_open = false
 	_legislation_open = false
 	_situation_open = false
+	_opposition_open = false
 	_budget_open = true
 	_budget_adjustments.clear()
 	_budget_preview.clear()
@@ -452,10 +461,14 @@ func _signed_adjustment(value: float) -> String:
 func _open_legislation() -> void:
 	if snapshot.is_empty() or _fatal:
 		return
+	if not _in_government():
+		_open_opposition()
+		return
 	_sfx_cue("navigation")
 	_diplomacy_open = false
 	_budget_open = false
 	_situation_open = false
+	_opposition_open = false
 	_legislation_open = true
 	_bill_preview.clear()
 	_resize_layout()
@@ -468,6 +481,7 @@ func _open_diplomacy() -> void:
 	_budget_open = false
 	_legislation_open = false
 	_situation_open = false
+	_opposition_open = false
 	_diplomacy_open = true
 	_set_diplomacy_status("")
 	_resize_layout()
@@ -559,7 +573,7 @@ func _set_diplomacy_status(text: String) -> void:
 
 
 func _desk_open() -> bool:
-	return _budget_open or _legislation_open or _situation_open or _diplomacy_open
+	return _budget_open or _legislation_open or _situation_open or _diplomacy_open or _opposition_open
 
 
 func _notice_new_situations() -> void:
@@ -587,6 +601,7 @@ func _open_situation(event_id: String) -> void:
 	_diplomacy_open = false
 	_budget_open = false
 	_legislation_open = false
+	_opposition_open = false
 	_situation_open = true
 	_paused = true
 	_selected_event_id = event_id
@@ -674,6 +689,49 @@ func _choose_situation_option(option_id: String) -> void:
 
 func _set_situation_status(text: String) -> void:
 	%SituationPanel.find_child("SituationStatus").text = text
+
+
+func _in_government() -> bool:
+	return bool(snapshot.get("player", {}).get("in_government", true))
+
+
+func _open_opposition() -> void:
+	_sfx_cue("navigation")
+	_budget_open = false
+	_legislation_open = false
+	_situation_open = false
+	_diplomacy_open = false
+	_opposition_open = true
+	%OppositionPanel.set_status("")
+	_resize_layout()
+
+
+func _close_opposition() -> void:
+	_sfx_cue("navigation")
+	_opposition_open = false
+	_resize_layout()
+
+
+func _refresh_opposition() -> void:
+	%OppositionPanel.show_model(snapshot.get("opposition", {}))
+
+
+func _on_opposition_request(action: String, argument: String) -> void:
+	if _game == null or argument == "":
+		return
+	var result: Dictionary
+	match action:
+		"respond": result = _game.respond_to_government_bill(argument)
+		"pledge": result = _game.add_pledge(argument)
+		"drop": result = _game.drop_pledge(argument)
+		"campaign": result = _game.campaign_on_pledge(argument)
+		"shadow": result = _game.appoint_shadow_minister(argument)
+		_: return
+	_flush_snapshot()
+	_sfx_result(result)
+	%OppositionPanel.set_status(str(result.get("message", "")) if result.get("ok", false)
+		else "REFUSED / %s" % result.get("error", "Unknown error"))
+	_refresh_opposition()
 
 
 func _close_legislation() -> void:
@@ -966,7 +1024,7 @@ func _campaign_config() -> Dictionary:
 		"country_id": "ardenia",
 		"background_id": "none",
 		"difficulty_id": "normal",
-		"opening_role": "contextual",
+		"opening_role": GameFlow.pending_role,
 		"seed": seed,
 	}
 
@@ -1050,6 +1108,7 @@ func _reset_desks() -> void:
 	_budget_open = false
 	_legislation_open = false
 	_situation_open = false
+	_opposition_open = false
 	_diplomacy_open = false
 	_selected_event_id = ""
 	_selected_bill_id = ""
@@ -1120,6 +1179,7 @@ func _refresh_controls() -> void:
 	var ready := not snapshot.is_empty() and not _fatal
 	%BudgetButton.disabled = not ready or _desk_open()
 	%LegislationButton.disabled = not ready or _desk_open()
+	%LegislationButton.text = "Legislation" if _in_government() else "Opposition"
 	%DiplomacyButton.disabled = not ready or _desk_open()
 	%PlayButton.disabled = not ready
 	%PlayButton.text = "Paused" if _paused else "Playing ×%d" % _speed
@@ -1189,6 +1249,8 @@ func _close_open_desk() -> void:
 		_close_situation()
 	elif _diplomacy_open:
 		_close_diplomacy()
+	elif _opposition_open:
+		_close_opposition()
 
 
 func _unhandled_key_input(event: InputEvent) -> void:

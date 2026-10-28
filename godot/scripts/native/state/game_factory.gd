@@ -262,7 +262,7 @@ static func _apply_opening_position(state: GameState, opening_role_cfg: String) 
 
 	if role == "government":
 		if state.ruling_faction_id != own.id:
-			_configure_government(state, own.id, [])
+			configure_government(state, own.id, [])
 		else:
 			state.player.in_government = true
 	else:
@@ -276,14 +276,14 @@ static func _apply_opening_position(state: GameState, opening_role_cfg: String) 
 				for f in rivals:
 					if f.seats > lead.seats:
 						lead = f
-				_configure_government(state, lead.id, [own.id])
+				configure_government(state, lead.id, [own.id])
 		state.player.in_government = false
 
 	if not state.player.in_government:
 		state.player.title = "Opposition Leader"
 
 
-static func _configure_government(state: GameState, ruling_faction_id: String,
+static func configure_government(state: GameState, ruling_faction_id: String,
 		excluded_ids: Array) -> Array[Faction]:
 	var factions: Array[Faction] = []
 	for f in state.country.factions:

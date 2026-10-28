@@ -30,7 +30,7 @@ static func issue_shortlist(state: GameState, portfolio: String) -> Dictionary:
 	var candidates: Array[Minister] = []
 	for index in range(3):
 		var faction: Faction = picks[index] if index < picks.size() and picks[index] != null else factions[index % factions.size()]
-		candidates.append(_generate_candidate(state, portfolio, faction, index == 2))
+		candidates.append(generate_candidate(state, portfolio, faction, index == 2))
 	state.cabinet_shortlists[portfolio] = candidates
 	state.player.political_capital -= SHORTLIST_COST
 	return {"ok": true, "message": "Three candidates are ready for %s." % portfolio}
@@ -135,7 +135,7 @@ static func _wildcard_faction(state: GameState, excluded: Array) -> Faction:
 	if options.is_empty(): options = _candidate_factions(state)
 	return options[state.rng.choose_index(options.size())]
 
-static func _generate_candidate(state: GameState, portfolio: String, faction: Faction, wildcard: bool) -> Minister:
+static func generate_candidate(state: GameState, portfolio: String, faction: Faction, wildcard: bool) -> Minister:
 	var minister := Minister.new()
 	minister.id = "cab_%s_%d" % [portfolio.to_lower().replace(" ", "_"), state.rng.next_u32()]
 	minister.name = "%s %s" % [FIRST_NAMES[state.rng.choose_index(FIRST_NAMES.size())], LAST_NAMES[state.rng.choose_index(LAST_NAMES.size())]]

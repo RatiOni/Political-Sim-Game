@@ -15,7 +15,7 @@ const DRAMA := {
 	"schemer_ascendant": 78, "vetrenka_talks_failed": 76, "vetrenka_backlash": 74,
 	"vasca_unresolved": 72, "situation": 70, "vetrenka_talks": 70,
 	"schemer_neutralized": 68, "vasca_isolated": 66, "civil_war_ongoing": 65,
-	"vasca_operation": 64, "vote_failed": 60, "vasca_amnesty": 60,
+	"vasca_operation": 64, "government_bill": 62, "vote_failed": 60, "vasca_amnesty": 60,
 	"vote_passed": 55, "schemer_bought": 52, "protest": 50,
 	"situation_lapsed": 47, "situation_resolved": 45, "vetrenka_normalised": 44,
 	"schemer_arc": 44, "minister_restless": 42, "wing_takeover": 40,

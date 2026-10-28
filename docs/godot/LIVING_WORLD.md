@@ -3,8 +3,11 @@
 **Status:** situations engine, the schemer arc, the party leadership
 challenge, the Vasca question, Vetrenka, the civil-war gauge and
 diplomacy are playable — all 46 events (2026-10-28) — the eight AI
-countries deliberate and act, opposition is a full career, and the month
-ends with a front page. Phase 4 is complete. Same native-design rules as
+countries deliberate and act (Krasova against Ardenia), opposition is a
+playable career with its own desk, and the month ends with a front page.
+Slices 1–7 are built. Open: the native general election (Phase 3 scope), so
+`take_office`, `electoral_edge` and `judge_mandate` are hooks no vote calls
+yet, and opposition cannot end. Same native-design rules as
 `SIM_REDESIGN.md`: Python is a reference for what Ardenia contains, never a
 formula to match.
 
@@ -203,6 +206,12 @@ weather.
   scheduler, from the saved campaign stream, so a reload replays exactly.
 - **Threats leak.** A hostile or trade plan is reported a month before it
   matures ("X is weighing its options toward Y"); courtesies are not.
+- **Krasova is the antagonist.** Krasova's authored rival is Ardenia and it
+  backs Vetrenka (`agenda.backs`). A hegemon rests a rivalry below −0.8;
+  while the backed region is retaken by force it never rests, and once
+  Vetrenka is settled it rests below −0.3. Over ten years in office it
+  moves against Ardenia 9–11 times on three seeds, every move leaked a
+  month ahead, and relations bottom out at −1.00 (a feud).
 - **Deterrence works.** Half of hostile moves against a defence-pact holder
   are quietly shelved. A condemnation costs 0.12 of relations, pressure 0.06.
 - **No treaty without consent.** Foreign powers court the player (+0.06) but
@@ -248,7 +257,9 @@ platform, staff a team, and arrive in office with a mandate to keep.
   able shadow minister for the brief. Dropping a pledge costs credibility,
   more for one that was campaigned on. Backing a bill you promised is
   consistent; opposing it is not. A pledge the government passes is
-  *adopted* if you backed it, *undercut* if you fought it.
+  *adopted* if you backed it (credibility +0.035) or stayed silent (no
+  credit: you did not fight your own promise, but did nothing for it), and
+  *undercut* only if you voted against it (−0.06).
 - **A shadow cabinet** (6 PC a post) is named from the player's party and
   gains a little experience each month. `OppositionSim.take_office` — the
   hook an election will call — restores the government title, builds the
@@ -303,3 +314,15 @@ without ever changing what happened.
   `GameState.front_page` (saved) and clearing the news; news from the
   player's own actions between closes runs in the next edition. The monthly
   report's dispatch column shows the masthead, the lead and the headlines.
+
+## The opposition desk
+
+**Player-facing job:** out of office, the header's Legislation button
+becomes **Opposition** and opens a desk in the same place (no header
+reflow). It shows credibility and the electoral edge, the government bill
+with Support / Oppose / Amend, three fixed platform slots (Campaign, Drop;
+an empty slot stays in place, blank and disabled), a pledge picker, and the
+six shadow posts with an Appoint picker. Every button takes its eligibility
+and refusal reason from `OppositionActions.read_model`; the desk's size never
+changes with its contents. `GameFlow.pending_role` chooses the opening role
+for a new campaign (the menu still starts in the contextual role).

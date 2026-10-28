@@ -187,12 +187,18 @@ func _test_a_government_that_enacts_your_pledge(t) -> void:
 	var law := LawActions.catalog_laws()[0]
 	var backed := _state()
 	var undercut := _state()
-	for s in [backed, undercut]:
+	var silent := _state()
+	for s in [backed, undercut, silent]:
 		OppositionActions.add_pledge(s, law.id)
 		law.proposed_by = s.ruling_faction_id
 	backed.opposition.response = "support"
+	undercut.opposition.response = "oppose"
+	var silent_before := silent.opposition.credibility
 	OppositionSim.note_bill_result(backed, law, true)
 	OppositionSim.note_bill_result(undercut, law, true)
+	OppositionSim.note_bill_result(silent, law, true)
+	t.equal(silent.opposition.pledge_for(law.id)["status"], "adopted", "a pledge passed while you stayed silent is still adopted")
+	t.near(silent.opposition.credibility, silent_before, 1e-9, "but earns you nothing")
 	t.equal(backed.opposition.pledge_for(law.id)["status"], "adopted", "a pledge you helped pass is adopted")
 	t.equal(undercut.opposition.pledge_for(law.id)["status"], "undercut", "one passed over your opposition is undercut")
 	t.truth(backed.opposition.credibility > undercut.opposition.credibility, "and only the first helps you")
@@ -351,6 +357,22 @@ func _test_opposition_years_replay_and_stay_bounded(t) -> void:
 	t.truth(ok, "and ten years of opposition stay valid")
 
 
+func _test_the_read_model_explains_every_choice(t) -> void:
+	var state := _state()
+	OppositionActions.add_pledge(state, "minimum_wage_act")
+	OppositionActions.appoint_shadow(state, "Finance")
+	var model := OppositionActions.read_model(state)
+	var options: Array = model["pledge_options"]
+	t.truth(options.size() >= 8 and not options.any(func(o): return o["id"] == "emergency_price_controls"),
+		"every parliamentary bill is offered as a pledge, never a decree")
+	var pledged: Dictionary = options.filter(func(o): return o["id"] == "minimum_wage_act")[0]
+	t.truth(not pledged["eligible"] and String(pledged["disabled_reason"]) != "", "a pledged bill says why it cannot be pledged again")
+	t.equal(model["portfolios"].size(), CabinetActions.CORE_PORTFOLIOS.size(), "every shadow post is listed")
+	var finance: Dictionary = model["portfolios"].filter(func(p): return p["portfolio"] == "Finance")[0]
+	t.truth(String(finance["holder"]) != "" and finance["eligible"], "with its holder, and can be reshuffled")
+	t.truth(not OppositionActions.read_model(_state("government"))["portfolios"][0]["eligible"], "a government names no shadow team")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_the_government_runs_a_programme(t)
@@ -368,4 +390,5 @@ func _initialize() -> void:
 	_test_the_opposition_events_are_playable(t)
 	_test_opposition_state_persists_and_validates(t)
 	_test_opposition_years_replay_and_stay_bounded(t)
+	_test_the_read_model_explains_every_choice(t)
 	quit(t.finish())
