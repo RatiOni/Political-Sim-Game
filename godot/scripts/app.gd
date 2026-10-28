@@ -24,6 +24,11 @@ var _budget_open := false
 var _budget_adjustments := {}
 var _budget_preview: Dictionary = {}
 var _legislation_open := false
+var save_slot := SAVE_SLOT
+var _pending_snapshot: Dictionary = {}
+var _snapshot_flush_queued := false
+var _budget_view_key := 0
+var _decisions_key := 0
 var _situation_open := false
 var _diplomacy_open := false
 var _selected_country_id := ""
@@ -84,19 +89,16 @@ func _ready() -> void:
 		_do_new_campaign()
 
 func _process(delta: float) -> void:
-	if _paused or _fatal or snapshot.is_empty():
+	if _paused or _fatal or snapshot.is_empty() or _clock_held():
 		return
 	_clock_elapsed += delta
 	if _clock_elapsed >= SPEED_DELAYS[_speed - 1]:
 		_clock_elapsed = 0.0
 		var result: Dictionary = _game.advance_day()
+		_flush_snapshot()
 		if not result.get("ok", false):
 			_set_status("ADVANCE FAILED / %s" % result.get("error", "Unknown error"))
 		else:
-			var tick_snap: Dictionary = result.get("snapshot", {})
-			if tick_snap.is_empty():
-				tick_snap = _game.snapshot()
-			apply_snapshot(tick_snap)
 			_set_status("LIVE SIMULATION / READY")
 			if bool(result.get("month_rolled", false)):
 				_sfx_cue("month_rollover")
@@ -125,6 +127,8 @@ func _resize_layout() -> void:
 		%RegionBrief.find_child(name).visible = not compact
 	find_child("Layout").add_theme_constant_override("separation", 12 if compact else 16)
 	%MonthlyReport.find_child("DispatchColumn").visible = not compact
+	if not snapshot.is_empty():
+		_refresh_controls()
 	if not snapshot.is_empty():
 		if _budget_open:
 			_refresh_budget()
@@ -176,7 +180,10 @@ func apply_snapshot(value: Dictionary) -> void:
 		label.text = "No decisions waiting."
 		items.add_child(label)
 	find_child("NextDecision").disabled = decisions.is_empty()
-	_decision_index = -1
+	var decisions_key := decisions.hash()
+	if decisions_key != _decisions_key:
+		_decisions_key = decisions_key
+		_decision_index = -1
 	%MonthlyReport.find_child("ReportText").text = _lines(snapshot.get("digest", []), "No monthly report yet. Advance a day once connected.")
 	%MonthlyReport.find_child("DispatchText").text = _lines(snapshot.get("dispatches", []), "No dispatches this period.")
 	%ArdeniaMap.apply_snapshot(snapshot.get("regions", []), selected_region_id)
@@ -249,6 +256,10 @@ func _reset_budget_draft() -> void:
 
 func _refresh_budget() -> void:
 	var model: Dictionary = snapshot.get("budget", {})
+	var view_key := [model, _budget_adjustments, _budget_preview].hash()
+	if view_key == _budget_view_key:
+		return
+	_budget_view_key = view_key
 	var actions: Dictionary = model.get("actions", {})
 	var preview_action: Dictionary = actions.get("preview", {})
 	var rows: VBoxContainer = %BudgetPanel.find_child("BudgetRows")
@@ -300,6 +311,7 @@ func _refresh_budget() -> void:
 		rows.add_child(row)
 
 	var lobby_choice: OptionButton = %BudgetPanel.find_child("LobbyChoice")
+	var keep_budget_lobby := _selected_id(lobby_choice)
 	lobby_choice.clear()
 	var first_eligible := -1
 	for faction in model.get("lobby_factions", []):
@@ -311,7 +323,7 @@ func _refresh_budget() -> void:
 		lobby_choice.get_popup().set_item_tooltip(index, str(faction.get("disabled_reason", "")))
 		if first_eligible < 0 and eligible:
 			first_eligible = index
-	if lobby_choice.item_count > 0:
+	if lobby_choice.item_count > 0 and not _reselect(lobby_choice, keep_budget_lobby):
 		lobby_choice.select(first_eligible if first_eligible >= 0 else 0)
 
 	var preview: Variant = model.get("pending_preview")
@@ -400,6 +412,7 @@ func _update_budget_lobby_control(_index: int = -1) -> void:
 
 func _propose_budget() -> void:
 	var result: Dictionary = _game.propose_budget(_budget_adjustments)
+	_flush_snapshot()
 	_set_budget_status(str(result.get("message", "Budget refused: %s" % result.get("error", "Unknown error"))))
 	_sfx_result(result)
 
@@ -412,12 +425,14 @@ func _lobby_budget() -> void:
 	if not (faction is Dictionary):
 		return
 	var result: Dictionary = _game.lobby_budget(str(faction.get("id", "")))
+	_flush_snapshot()
 	_set_budget_status(str(result.get("message", "Lobbying refused: %s" % result.get("error", "Unknown error"))))
 	_sfx_result(result)
 
 
 func _call_budget_vote() -> void:
 	var result: Dictionary = _game.call_budget_vote()
+	_flush_snapshot()
 	if result.get("ok", false):
 		_set_budget_status("Budget approved." if result.get("passed", false) else "Budget defeated.")
 	else:
@@ -427,6 +442,7 @@ func _call_budget_vote() -> void:
 
 func _withdraw_budget() -> void:
 	var result: Dictionary = _game.withdraw_budget()
+	_flush_snapshot()
 	_set_budget_status(str(result.get("message", "Withdrawal refused: %s" % result.get("error", "Unknown error"))))
 	_sfx_result(result)
 
@@ -537,6 +553,7 @@ func _take_diplomatic_action(verb: String, treaty_id: String) -> void:
 	if _game == null or _selected_country_id.is_empty():
 		return
 	var result: Dictionary = _game.diplomacy_act(verb, _selected_country_id, treaty_id)
+	_flush_snapshot()
 	_sfx_result(result)
 	if not result.get("ok", false):
 		_set_diplomacy_status("REFUSED / %s" % result.get("error", "Unknown error"))
@@ -577,6 +594,7 @@ func _open_situation(event_id: String) -> void:
 	_budget_open = false
 	_legislation_open = false
 	_situation_open = true
+	_paused = true
 	_selected_event_id = event_id
 	_set_situation_status("")
 	_resize_layout()
@@ -650,6 +668,7 @@ func _choose_situation_option(option_id: String) -> void:
 	if _game == null or _selected_event_id.is_empty():
 		return
 	var result: Dictionary = _game.resolve_situation(_selected_event_id, option_id)
+	_flush_snapshot()
 	_sfx_result(result)
 	if not result.get("ok", false):
 		_set_situation_status("REFUSED / %s" % result.get("error", "Unknown error"))
@@ -703,6 +722,7 @@ func _refresh_legislation() -> void:
 		else:
 			_on_bill_selected(selected_index)
 	var lobby_choice: OptionButton = %LegislationPanel.find_child("LobbyChoice")
+	var keep_bill_lobby := _selected_id(lobby_choice)
 	lobby_choice.clear()
 	var first_eligible := -1
 	for faction in model.get("lobby_factions", []):
@@ -714,7 +734,7 @@ func _refresh_legislation() -> void:
 		lobby_choice.get_popup().set_item_tooltip(index, str(faction.get("disabled_reason", "")))
 		if first_eligible < 0 and eligible:
 			first_eligible = index
-	if lobby_choice.item_count > 0:
+	if lobby_choice.item_count > 0 and not _reselect(lobby_choice, keep_bill_lobby):
 		lobby_choice.select(first_eligible if first_eligible >= 0 else 0)
 	var enacted_names: Array[String] = []
 	for law in model.get("enacted", []):
@@ -806,6 +826,7 @@ func _update_bill_lobby_control(_index: int = -1) -> void:
 
 func _propose_bill() -> void:
 	var result: Dictionary = _game.propose_law(_selected_bill_id)
+	_flush_snapshot()
 	_set_legislation_status(str(result.get("message", "Proposal refused: %s" % result.get("error", "Unknown error"))))
 	_sfx_result(result)
 
@@ -817,12 +838,14 @@ func _lobby_bill() -> void:
 	var faction: Variant = choice.get_item_metadata(choice.selected)
 	if faction is Dictionary:
 		var result: Dictionary = _game.lobby_law(str(faction.get("id", "")))
+		_flush_snapshot()
 		_set_legislation_status(str(result.get("message", "Lobbying refused: %s" % result.get("error", "Unknown error"))))
 		_sfx_result(result)
 
 
 func _call_bill_vote() -> void:
 	var result: Dictionary = _game.call_law_vote()
+	_flush_snapshot()
 	if result.get("ok", false):
 		_set_legislation_status("LAW ENACTED" if result.get("passed", false) else "BILL DEFEATED")
 	else:
@@ -832,6 +855,7 @@ func _call_bill_vote() -> void:
 
 func _withdraw_bill() -> void:
 	var result: Dictionary = _game.withdraw_law()
+	_flush_snapshot()
 	_set_legislation_status(str(result.get("message", "Withdrawal refused: %s" % result.get("error", "Unknown error"))))
 	_sfx_result(result)
 
@@ -846,6 +870,7 @@ func _select_region(region_id: String) -> void:
 
 func _refresh_region() -> void:
 	var choice: OptionButton = %RegionBrief.find_child("ProgramChoice")
+	var keep_program := _selected_program_id
 	choice.clear()
 	_selected_program_id = ""
 	_selected_program_option = {}
@@ -875,7 +900,9 @@ func _refresh_region() -> void:
 			choice.get_popup().set_item_tooltip(index, str(option.get("disabled_reason", option.get("body", ""))))
 			if first_eligible < 0 and option.get("eligible", false):
 				first_eligible = index
-		if first_eligible >= 0:
+		if _reselect(choice, keep_program):
+			_on_program_selected(choice.selected)
+		elif first_eligible >= 0:
 			choice.select(first_eligible)
 			_on_program_selected(first_eligible)
 		elif choice.item_count > 0:
@@ -950,10 +977,12 @@ func _campaign_config() -> Dictionary:
 	}
 
 func _do_new_campaign() -> void:
+	_reset_desks()
 	if _fatal:
 		return
 	_set_status("WORKING / NEW CAMPAIGN")
 	var result: Dictionary = _game.new_campaign(_campaign_config())
+	_flush_snapshot()
 	if not result.get("ok", false):
 		_set_status("NEW CAMPAIGN FAILED / %s" % result.get("error", "Unknown error"))
 		_refresh_controls()
@@ -969,7 +998,7 @@ func _do_new_campaign() -> void:
 func _do_save() -> void:
 	if _fatal or snapshot.is_empty():
 		return
-	var result: Dictionary = _game.save(SAVE_SLOT)
+	var result: Dictionary = _game.save(save_slot)
 	if not result.get("ok", false):
 		_set_status("SAVE FAILED / %s" % result.get("error", "Unknown error"))
 	else:
@@ -981,7 +1010,9 @@ func _do_load() -> void:
 	if _fatal:
 		return
 	var was_starting := _starting
-	var result: Dictionary = _game.load(SAVE_SLOT)
+	_reset_desks()
+	var result: Dictionary = _game.load(save_slot)
+	_flush_snapshot()
 	if not result.get("ok", false):
 		if was_starting:
 			# The last known save could not be loaded (most likely: this
@@ -1006,10 +1037,62 @@ func _do_load() -> void:
 	_refresh_controls()
 
 func _on_state_changed(value: Dictionary) -> void:
-	apply_snapshot(value)
+	_pending_snapshot = value
+	if not _snapshot_flush_queued:
+		_snapshot_flush_queued = true
+		_flush_snapshot.call_deferred()
+
+
+func _flush_snapshot() -> void:
+	_snapshot_flush_queued = false
+	if _pending_snapshot.is_empty():
+		return
+	apply_snapshot(_pending_snapshot)
+	_pending_snapshot = {}
 	_refresh_controls()
 
+
+func _clock_held() -> bool:
+	return _situation_open or (_budget_open and not _budget_adjustments.is_empty())
+
+
+func _reset_desks() -> void:
+	_budget_open = false
+	_legislation_open = false
+	_situation_open = false
+	_diplomacy_open = false
+	_selected_event_id = ""
+	_selected_bill_id = ""
+	_selected_country_id = ""
+	_selected_program_id = ""
+	_budget_adjustments.clear()
+	_budget_preview.clear()
+	_bill_preview.clear()
+	_known_situations = {}
+	_budget_view_key = 0
+	_decisions_key = 0
+
+
+func _reselect(choice: OptionButton, wanted: String) -> bool:
+	if wanted == "":
+		return false
+	for index in range(choice.item_count):
+		var meta: Variant = choice.get_item_metadata(index)
+		var id := str((meta as Dictionary).get("id", "")) if meta is Dictionary else str(meta)
+		if id == wanted and not choice.is_item_disabled(index):
+			choice.select(index)
+			return true
+	return false
+
+
+func _selected_id(choice: OptionButton) -> String:
+	if choice.selected < 0:
+		return ""
+	var meta: Variant = choice.get_item_metadata(choice.selected)
+	return str((meta as Dictionary).get("id", "")) if meta is Dictionary else str(meta)
+
 func _on_fatal_error(message: String) -> void:
+	_reset_desks()
 	_fatal = true
 	_paused = true
 	_starting = false
@@ -1035,6 +1118,7 @@ func _start_selected_program() -> void:
 	if _selected_program_id.is_empty():
 		return
 	var result: Dictionary = _game.start_regional_program(selected_region_id, _selected_program_id)
+	_flush_snapshot()
 	if not result.get("ok", false):
 		_set_status("PROGRAMME REFUSED / %s" % result.get("error", "Unknown error"))
 	else:
@@ -1095,9 +1179,30 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		get_tree().quit()
 
-func _unhandled_key_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
+	if _fatal or snapshot.is_empty():
+		return
 	if event.is_action_pressed("pause"):
 		_toggle_pause()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("back") and _desk_open():
+		_close_open_desk()
+		get_viewport().set_input_as_handled()
+
+
+func _close_open_desk() -> void:
+	if _budget_open:
+		_close_budget()
+	elif _legislation_open:
+		_close_legislation()
+	elif _situation_open:
+		_close_situation()
+	elif _diplomacy_open:
+		_close_diplomacy()
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if (event.is_action_pressed("save") or event.is_action_pressed("load")) and _desk_open():
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("next_decision"):
 		_next_decision()

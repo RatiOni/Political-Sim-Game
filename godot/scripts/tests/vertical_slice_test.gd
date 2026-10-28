@@ -6,7 +6,7 @@ extends SceneTree
 # save, quit-equivalent state drop, reload restoration, and a real regional
 # programme from launch through monthly delivery and continued post-load work.
 
-const APP_SLOT := "godot_slice"
+const APP_SLOT := "test_vertical_slice"
 const FIXED_SEED := 424242
 
 
@@ -53,6 +53,7 @@ func _run() -> void:
 	if not _check(ResourceLoader.exists("res://scenes/main.tscn"), "main.tscn exists"):
 		return
 	var scene = load("res://scenes/main.tscn").instantiate()
+	scene.save_slot = APP_SLOT
 	root.add_child(scene)
 	for frame in range(3):
 		await process_frame
