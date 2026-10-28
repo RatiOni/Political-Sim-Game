@@ -25,6 +25,7 @@ static func apply(map: ArdeniaMap, all_targets: Dictionary, overlay: Dictionary,
 	for cell in cells:
 		if map.growth_layer.get_cell_atlas_coords(cell) != _coords(map, cell):
 			changed.append(cell)
+	map.last_changed_cells = changed.size()
 	if not animate or changed.is_empty() or not map.is_inside_tree():
 		for cell in changed:
 			paint(map, cell)

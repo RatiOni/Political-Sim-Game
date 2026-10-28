@@ -188,3 +188,6 @@ situations now use too.
 
 The compact (1280×720) header now gives the date 120 px instead of 192 so
 the Diplomacy button fits.
+
+The dashboard map is a DOS-style pixel map whose tiles grow, develop and
+burn with each region's monthly state; see `PIXEL_MAP.md`.

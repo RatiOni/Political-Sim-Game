@@ -33,6 +33,8 @@ var growth_desired: Dictionary = {}
 var growth_tween: Tween
 var smoke_timer := Timer.new()
 var smoke_frame := 0
+var last_changed_cells := 0
+var lines_builds := 0
 var lines_rect := TextureRect.new()
 var zoom_in_button := Button.new()
 var zoom_out_button := Button.new()
@@ -246,6 +248,7 @@ func set_dusk(on: bool) -> void:
 func _apply_lines() -> void:
 	var key := Vector2i(tile_px, int(_dusk))
 	if not _lines.has(key):
+		lines_builds += 1
 		_lines[key] = ImageTexture.create_from_image(MapLines.build(_tiles, _geo, MapPalette.DUSK if _dusk else MapPalette.DAY, tile_px, _covered))
 	lines_rect.texture = _lines[key]
 	lines_rect.size = Vector2(MapLines.canvas_size(tile_px))
@@ -379,8 +382,13 @@ func _redraw() -> void:
 func apply_snapshot(values: Array, selection: String) -> void:
 	regions.clear()
 	for region in values:
-		if region is Dictionary and region.has("id"):
-			regions[str(region["id"])] = region.duplicate(true)
+		if not (region is Dictionary and region.has("id")):
+			continue
+		var id := str(region["id"])
+		if _geo == null or _geo.region_ids.has(id):
+			regions[id] = region.duplicate(true)
+		else:
+			push_warning("ArdeniaMap: ignoring unknown region id '%s'" % id)
 	selected_id = selection if polygons.has(selection) else ""
 	_paint_growth()
 	_redraw()
