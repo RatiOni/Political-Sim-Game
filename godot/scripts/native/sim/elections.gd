@@ -14,7 +14,8 @@ const OPPOSITION_JUDGEMENT := 0.3
 const STABILITY_IN_JUDGEMENT := 0.5
 const LEADER_STANDING := 0.3
 const PLATFORM_WEIGHT := 1.5
-const GOVERNMENT_FATIGUE := 0.025
+const GOVERNMENT_FATIGUE := 0.12
+const FATIGUE_TERM_CAP := 3
 
 const CONTROL_ACCESS := {"state": 1.0, "autonomous": 0.9, "limited": 0.55, "separatist": 0.0}
 const REACH_IN_ACCESS := 0.3
@@ -32,27 +33,29 @@ static func monthly(state: GameState) -> Array[String]:
 
 
 static func government_performance(state: GameState) -> float:
-	return (HouseholdsSim.national_confidence(state) - PollsSim.ORDINARY_CONFIDENCE) \
-		+ (state.stability_value - PollsSim.ORDINARY_STABILITY) * STABILITY_IN_JUDGEMENT
+	var ordinary := PollsSim.ordinary_government(state)
+	return (HouseholdsSim.national_confidence(state) - float(ordinary["confidence"])) \
+		+ (state.stability_value - float(ordinary["stability"])) * STABILITY_IN_JUDGEMENT
 
 
 static func enthusiasm(state: GameState, f: Faction) -> float:
 	var performance := government_performance(state)
 	var value := TURNOUT_BASELINE + (performance * GOVERNMENT_JUDGEMENT if f.in_coalition else -performance * OPPOSITION_JUDGEMENT)
 	if f.id == state.ruling_faction_id:
-		value -= GOVERNMENT_FATIGUE * terms_in_office(state)
+		value -= GOVERNMENT_FATIGUE * (terms_in_office(state) - 1)
 	if f.id == state.player.faction_id:
-		value += (state.player.approval - PollsSim.ORDINARY_APPROVAL) * LEADER_STANDING + OppositionSim.electoral_edge(state) * PLATFORM_WEIGHT
+		value += (state.player.approval - float(PollsSim.ORDINARY_PLAYER_GOVERNMENT["approval"])) * LEADER_STANDING + OppositionSim.electoral_edge(state) * PLATFORM_WEIGHT
 	return clampf(value, TURNOUT_FLOOR, TURNOUT_CEILING)
 
 
 static func terms_in_office(state: GameState) -> int:
 	var terms := 1
 	for i in range(state.election_history.size() - 1, -1, -1):
-		if state.election_history[i].ruling_faction_id != state.ruling_faction_id:
+		var r: ElectionResult = state.election_history[i]
+		if r.ruling_faction_id != state.ruling_faction_id or r.previous_ruling_faction_id != state.ruling_faction_id:
 			break
 		terms += 1
-	return terms
+	return mini(terms, FATIGUE_TERM_CAP)
 
 
 static func access(region: RegionState) -> float:
@@ -161,7 +164,9 @@ static func form_government(state: GameState) -> Array[Faction]:
 	seated.sort_custom(func(a: Faction, b: Faction) -> bool: return a.seats > b.seats or (a.seats == b.seats and a.id < b.id))
 	var coalition: Array[Faction] = []
 	for seed in seated:
-		coalition = GameFactory.build_coalition_around(seed, seated, total / 2 + 1)
+		var partners := seated if seed.id == state.player.faction_id \
+			else seated.filter(func(f: Faction) -> bool: return f.id != state.player.faction_id)
+		coalition = GameFactory.build_coalition_around(seed, partners, total / 2 + 1)
 		if not coalition.is_empty():
 			break
 	if coalition.is_empty() and not seated.is_empty():
@@ -242,6 +247,7 @@ static func hold(state: GameState, snap: bool) -> ElectionResult:
 	result.regional_turnout = count["regional_turnout"]
 	result.regional_access = count["regional_access"]
 	result.ruling_faction_id = state.ruling_faction_id
+	result.previous_ruling_faction_id = old_ruling
 	for f in coalition:
 		result.coalition_faction_ids.append(f.id)
 	result.player_in_government = state.player.in_government

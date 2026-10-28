@@ -35,7 +35,7 @@ const RELATED_PLEDGE_WEIGHT := 0.65
 
 const EDGE_FLOOR := -0.06
 const EDGE_CEILING := 0.08
-const EMPTY_PLATFORM_EDGE := -0.015
+const EMPTY_PLATFORM_EDGE := -0.03
 
 const RETREAT_WINDOW_MONTHS := 3
 const BY_ELECTION_EARLIEST_TURN := 6
@@ -140,6 +140,8 @@ static func leave_office(state: GameState) -> void:
 		state.pending_budget = null
 	state.player.in_government = false
 	state.player.title = OPPOSITION_TITLE
+	if BudgetSim.is_emergency(state):
+		BudgetSim.activate(state, BudgetSim.government_ai_budget(state))
 	Elections.staff_cabinet(state, [] as Array[Minister])
 	_carry_unfinished_pledges(state)
 	opp.mandate_start_turn = -1

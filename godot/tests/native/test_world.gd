@@ -2,6 +2,7 @@ extends SceneTree
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const NativeGameScript = preload("res://scripts/native/native_game.gd")
+const Polls = preload("res://tests/native/test_polls.gd")
 
 
 static func _state(role: String = "contextual", seed: int = 515151) -> GameState:
@@ -302,7 +303,8 @@ func _test_a_decade_of_the_living_world_stays_bounded(t) -> void:
 		var ok := true
 		var acted := 0
 		for _m in range(120):
-			NativeGameScript.close_month(state)
+			Polls.budget_policy(state, 0.0)
+			NativeGameScript.next_month(state)
 			for c in state.world:
 				if int(c.plan.get("last_acted_turn", -1)) == state.turn:
 					acted += 1

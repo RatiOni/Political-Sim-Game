@@ -4,15 +4,13 @@ extends RefCounted
 
 const MONTHLY_CAP := 0.01
 const SUPPORT_FLOOR := 0.01
-const ORDINARY_APPROVAL := 0.47
-const ORDINARY_CONFIDENCE := 0.445
-const ORDINARY_MISERY := 0.007
-const ORDINARY_STABILITY := 0.52
+const ORDINARY_PLAYER_GOVERNMENT := {"approval": 0.464, "confidence": 0.432, "misery": 0.0034, "stability": 0.503}
+const ORDINARY_AI_GOVERNMENT := {"approval": 0.42, "confidence": 0.425, "misery": 0.004, "stability": 0.44}
 const APPROVAL_WEIGHT := 0.012
 const CONFIDENCE_WEIGHT := 0.010
 const MISERY_WEIGHT := 0.06
 const PARTNER_SHARE := 0.5
-const REVERSION := 0.03
+const REVERSION := 0.01
 const PROXIMITY_FLOOR := 0.05
 const STABILITY_IN_PROXY := 0.5
 
@@ -42,9 +40,14 @@ static func monthly(state: GameState) -> String:
 
 
 static func record(state: GameState) -> float:
-	return (government_approval(state) - ORDINARY_APPROVAL) * APPROVAL_WEIGHT \
-		+ (HouseholdsSim.national_confidence(state) - ORDINARY_CONFIDENCE) * CONFIDENCE_WEIGHT \
-		- (misery_gap(state) - ORDINARY_MISERY) * MISERY_WEIGHT
+	var ordinary := ordinary_government(state)
+	return (government_approval(state) - float(ordinary["approval"])) * APPROVAL_WEIGHT \
+		+ (HouseholdsSim.national_confidence(state) - float(ordinary["confidence"])) * CONFIDENCE_WEIGHT \
+		- (misery_gap(state) - float(ordinary["misery"])) * MISERY_WEIGHT
+
+
+static func ordinary_government(state: GameState) -> Dictionary:
+	return ORDINARY_PLAYER_GOVERNMENT if state.player.in_government else ORDINARY_AI_GOVERNMENT
 
 
 static func misery_gap(state: GameState) -> float:
@@ -55,8 +58,9 @@ static func misery_gap(state: GameState) -> float:
 static func government_approval(state: GameState) -> float:
 	if state.player.in_government:
 		return state.player.approval
-	return clampf(ORDINARY_APPROVAL + (HouseholdsSim.national_confidence(state) - ORDINARY_CONFIDENCE)
-		+ (state.stability_value - ORDINARY_STABILITY) * STABILITY_IN_PROXY, 0.0, 1.0)
+	var ordinary := ORDINARY_AI_GOVERNMENT
+	return clampf(float(ordinary["approval"]) + (HouseholdsSim.national_confidence(state) - float(ordinary["confidence"]))
+		+ (state.stability_value - float(ordinary["stability"])) * STABILITY_IN_PROXY, 0.0, 1.0)
 
 
 static func public_mood(state: GameState) -> Faction.Ideology:

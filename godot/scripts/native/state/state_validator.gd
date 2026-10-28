@@ -50,6 +50,7 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_press(state, errors)
 	_validate_elections(state, errors)
 	_validate_support_base(state, errors)
+	_validate_opposition_out_of_government(state, errors)
 
 	if state.player != null:
 		_validate_player(state, errors)
@@ -677,3 +678,14 @@ static func _validate_support_base(state: GameState, errors: Array[String]) -> v
 		var value := float(state.support_base[key])
 		if not ids.has(key) or not is_finite(value) or value < 0.0 or value > 1.0:
 			errors.append("support base for '%s' is impossible" % key)
+
+
+static func _validate_opposition_out_of_government(state: GameState, errors: Array[String]) -> void:
+	if state.player == null or state.player.in_government:
+		return
+	for f in state.country.factions:
+		if f.id == state.player.faction_id and f.in_coalition:
+			errors.append("the opposition leader's party sits in the governing coalition")
+	for m in state.ministers:
+		if m.faction_id == state.player.faction_id:
+			errors.append("the opposition leader's party holds the government post %s" % m.portfolio)

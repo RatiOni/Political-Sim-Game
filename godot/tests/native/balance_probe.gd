@@ -53,20 +53,7 @@ func _run(label: String, step: float, pass_budget: bool, trace := false) -> void
 
 func _tick(s: GameState) -> void:
 	if Calendar.advance_day(s):
-		s.turn += 1
-		BudgetSim.process_fiscal_year(s)
-		PoliticalCapital.regenerate(s)
-		MinistriesSim.simulate(s)
-		DiplomacySim.monthly(s)
-		EconomySim.update(s)
-		RegionsSim.simulate(s)
-		HouseholdsSim.simulate(s)
-		CabinetSim.monthly(s)
-		StabilitySim.update_approval(s)
-		StabilitySim.update_stability(s)
-		CrisisSim.monthly(s)
-		Modifiers.age_all(s)
-		EventsSim.monthly(s)
+		NativeGameScript.close_month(s)
 
 
 func _initialize() -> void:

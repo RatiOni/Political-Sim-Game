@@ -17,6 +17,7 @@ var regional_vote_share: Dictionary = {}
 var regional_turnout: Dictionary = {}
 var regional_access: Dictionary = {}
 var ruling_faction_id: String = ""
+var previous_ruling_faction_id: String = ""
 var coalition_faction_ids: Array[String] = []
 var player_in_government: bool = false
 var player_lost_office: bool = false
@@ -33,7 +34,8 @@ func to_dict() -> Dictionary:
 		"final_seats": final_seats.duplicate(), "seat_changes": seat_changes.duplicate(),
 		"regional_vote_share": regional_vote_share.duplicate(true),
 		"regional_turnout": regional_turnout.duplicate(), "regional_access": regional_access.duplicate(),
-		"ruling_faction_id": ruling_faction_id, "coalition_faction_ids": coalition_faction_ids.duplicate(),
+		"ruling_faction_id": ruling_faction_id, "previous_ruling_faction_id": previous_ruling_faction_id,
+		"coalition_faction_ids": coalition_faction_ids.duplicate(),
 		"player_in_government": player_in_government, "player_lost_office": player_lost_office,
 		"player_gained_office": player_gained_office, "mandate": mandate.duplicate(),
 		"incumbent_approval": incumbent_approval,
@@ -72,6 +74,7 @@ static func from_dict(data: Variant) -> ElectionResult:
 			shares[String(k)] = float(regional[region_id][k])
 		r.regional_vote_share[String(region_id)] = shares
 	r.ruling_faction_id = String(data.get("ruling_faction_id", ""))
+	r.previous_ruling_faction_id = String(data.get("previous_ruling_faction_id", ""))
 	var coalition: Variant = data.get("coalition_faction_ids", [])
 	if not (coalition is Array):
 		return null

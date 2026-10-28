@@ -123,39 +123,18 @@ func _test_regions_follow_national_moves(t) -> void:
 	t.truth(absf(after - anera) > 0.01, "while each keeps its local character")
 
 
-func _test_twenty_years_change_hands_for_a_reason(t) -> void:
-	var lost: Array[float] = []
-	var kept: Array[float] = []
-	for role in ["government", "opposition"]:
-		for seed in [919191, 31, 4242]:
-			var state := _state(role, seed)
-			var incumbent := state.ruling_faction_id
-			for _m in range(240):
-				NativeGameScript.close_month(state)
-				if not state.election_history.is_empty() and state.election_history[-1].turn == state.turn:
-					var r: ElectionResult = state.election_history[-1]
-					(lost if r.ruling_faction_id != incumbent else kept).append(r.incumbent_approval)
-					incumbent = r.ruling_faction_id
-			t.truth(StateValidator.validate(state).is_empty(), "twenty years from %s (seed %d) stay valid" % [role, seed])
-	var mean := func(xs: Array[float]) -> float:
-		var s := 0.0
-		for x in xs:
-			s += x
-		return s / maxf(1.0, xs.size())
-	t.truth(not lost.is_empty() and not kept.is_empty(), "governments both fall and survive (%d fell, %d survived)" % [lost.size(), kept.size()])
-	t.truth(mean.call(lost) < mean.call(kept), "and those that fell were less approved (%.2f) than those returned (%.2f)" % [mean.call(lost), mean.call(kept)])
-
-
 const ENVELOPES := ["state_administration", "foreign_affairs", "justice_and_policing", "national_defense",
 	"infrastructure", "industry_and_jobs", "education", "health_and_welfare"]
+const CALIBRATION_SEEDS := [11, 22, 33, 44, 55, 66]
 
 
-static func _steady_budget(state: GameState) -> void:
-	if not state.player.in_government or state.month != 10 or state.pending_budget != null:
+static func budget_policy(state: GameState, step: float) -> void:
+	var due := state.month == 10 or BudgetSim.is_emergency(state)
+	if not state.player.in_government or not due or state.pending_budget != null:
 		return
 	var adjustments := {}
 	for e in ENVELOPES:
-		adjustments[e] = -0.05 if state.year == 1993 else 0.0
+		adjustments[e] = step if (step != -0.05 or state.year == 1993) else 0.0
 	if BudgetActions.propose(state, adjustments).get("ok", false):
 		for f in state.country.factions:
 			if not f.in_coalition:
@@ -164,21 +143,61 @@ static func _steady_budget(state: GameState) -> void:
 		BudgetActions.vote(state)
 
 
-func _test_a_steady_government_is_returned_about_half_the_time(t) -> void:
-	var held := 0
-	var returned := 0
-	for seed in [11, 22, 33, 44, 55, 66]:
-		var state := _state("government", seed)
-		for _m in range(240):
-			var governing := state.player.in_government
-			_steady_budget(state)
-			NativeGameScript.next_month(state)
-			if governing and not state.election_history.is_empty() and state.election_history[-1].turn == state.turn:
-				held += 1
-				if state.player.in_government:
-					returned += 1
-	var rate := float(returned) / maxf(1.0, held)
-	t.truth(rate >= 0.4 and rate <= 0.65, "a steady government is returned about half the time (%d of %d, %.2f)" % [returned, held, rate])
+static func journeys(roles: Array, step: float, passes_budgets: bool, able_cabinet := false) -> Dictionary:
+	var out := {"player_held": 0, "player_kept": 0, "ai_held": 0, "ai_kept": 0, "lost": [], "kept": [],
+		"sequences": {}, "valid": true}
+	for role in roles:
+		for seed in CALIBRATION_SEEDS:
+			var state := _state(role, seed)
+			if able_cabinet:
+				for m in state.ministers:
+					m.competence = 0.95
+					m.loyalty = 0.95
+					m.trait_id = "technocrat"
+			var sequence := ""
+			for _m in range(240):
+				var governing := state.player.in_government
+				var ruling := state.ruling_faction_id
+				if passes_budgets:
+					budget_policy(state, step)
+				NativeGameScript.next_month(state)
+				if state.election_history.is_empty() or state.election_history[-1].turn != state.turn:
+					continue
+				var r: ElectionResult = state.election_history[-1]
+				sequence += r.ruling_faction_id + ";"
+				var returned := r.ruling_faction_id == ruling
+				(out["kept"] if returned else out["lost"]).append(r.incumbent_approval)
+				var side := "player" if governing else "ai"
+				out[side + "_held"] += 1
+				out[side + "_kept"] += 1 if returned else 0
+			out["valid"] = out["valid"] and StateValidator.validate(state).is_empty()
+			out["sequences"]["%s:%s" % [role, sequence]] = true
+	return out
+
+
+static func rate(out: Dictionary, side: String) -> float:
+	return float(out[side + "_kept"]) / maxf(1.0, float(out[side + "_held"]))
+
+
+static func mean(xs: Array) -> float:
+	var s := 0.0
+	for x in xs:
+		s += float(x)
+	return s / maxf(1.0, xs.size())
+
+
+func _test_steady_governments_are_judged_like_ordinary_ones(t) -> void:
+	var steady := journeys(["government", "opposition"], -0.05, true)
+	t.truth(steady["valid"], "twenty calendar-true years from either side stay valid")
+	t.truth(rate(steady, "player") >= 0.4 and rate(steady, "player") <= 0.65,
+		"a steady player government is returned about half the time (%d of %d)" % [steady["player_kept"], steady["player_held"]])
+	t.truth(rate(steady, "ai") >= 0.35 and rate(steady, "ai") <= 0.65,
+		"and so is an ordinary AI government (%d of %d)" % [steady["ai_kept"], steady["ai_held"]])
+	t.truth(not steady["lost"].is_empty() and not steady["kept"].is_empty(), "governments both fall and survive")
+	t.truth(mean(steady["lost"]) < mean(steady["kept"]),
+		"and those that fell were less approved (%.2f) than those returned (%.2f)" % [mean(steady["lost"]), mean(steady["kept"])])
+	var government_sequences: Array = (steady["sequences"] as Dictionary).keys().filter(func(k: String) -> bool: return k.begins_with("government:"))
+	t.truth(government_sequences.size() >= 2, "the seeds do not all write the same political history (%d distinct)" % government_sequences.size())
 
 
 func _initialize() -> void:
@@ -188,6 +207,5 @@ func _initialize() -> void:
 	_test_moves_are_bounded_normalised_and_revert(t)
 	_test_the_polls_are_deterministic_and_reported(t)
 	_test_regions_follow_national_moves(t)
-	_test_twenty_years_change_hands_for_a_reason(t)
-	_test_a_steady_government_is_returned_about_half_the_time(t)
+	_test_steady_governments_are_judged_like_ordinary_ones(t)
 	quit(t.finish())

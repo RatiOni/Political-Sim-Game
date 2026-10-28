@@ -281,6 +281,7 @@ static func _apply_opening_position(state: GameState, opening_role_cfg: String) 
 
 	if not state.player.in_government:
 		state.player.title = "Opposition Leader"
+		Elections.staff_cabinet(state, [] as Array[Minister])
 
 
 static func configure_government(state: GameState, ruling_faction_id: String,

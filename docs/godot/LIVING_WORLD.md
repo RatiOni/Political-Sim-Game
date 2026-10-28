@@ -385,20 +385,39 @@ from what happened, never from a roll.
   ruling party gains or loses with approval (×0.012), household confidence
   (×0.010) and misery — inflation plus unemployment above their structural
   levels (×0.06) — each read against what a steady, ordinary government
-  measures in play (approval 0.47, confidence 0.445, misery 0.007,
-  stability 0.52; `PollsSim.ORDINARY_*`, measured from 20-year steady
-  journeys); coalition partners take half. Turnout reads the same
-  references, and a governing party's turnout falls 0.025 for each
-  consecutive term it has held (`GOVERNMENT_FATIGUE`). The
+  measures in play — a player government against approval 0.464,
+  confidence 0.432, misery 0.0034, stability 0.503, an AI government
+  against approval 0.42, confidence 0.425, misery 0.004, stability 0.44
+  (`PollsSim.ORDINARY_PLAYER_GOVERNMENT` / `ORDINARY_AI_GOVERNMENT`,
+  measured on calendar-true 20-year journeys; the AI set sits below the
+  all-terms AI mean because AI governments usually take over a failing
+  government's country); coalition partners take half. Turnout reads the
+  same references. A government's first term is free; each further
+  consecutive term costs its party 0.12 of turnout, up to 3 terms
+  (`GOVERNMENT_FATIGUE`, `FATIGUE_TERM_CAP`) — the price of the structural
+  lead a large party's support base gives it. Terms count from the
+  election a party took power (`ElectionResult.previous_ruling_faction_id`). The
   opposition takes what the government loses, more for parties nearer the
   public mood (the support-weighted average ideology). Every party is pulled
-  3% a month back toward its starting share, no party moves more than a
+  1% a month back toward its starting share, no party moves more than a
   point a month or falls below 1%, and shares stay normalised. Campaigns,
   situations and by-elections still move support on top. Regions follow
   through the count's national swing while keeping their own character, and
   the monthly report carries a poll line.
 
-Over twenty years on six seeds a steady government is returned 52% of the
-time, a strong one (an able, loyal cabinet) 75%, and an austerity or
-no-budget government never; governments that fell averaged lower approval
-than those returned.
+Calendar-true, over twenty years on six seeds: a steady player government
+is returned 58% of the time, an ordinary AI government 50%, a strong player
+government (able, loyal cabinet) 75%, an austerity one 33% and one that
+never passes a budget never. Governments that fell averaged lower approval
+than those returned, and seeds write different histories.
+
+**No unfunded AI years.** An AI government enacts its restrained plan every
+January and at once if it inherits an emergency (including the month the
+player loses office). Its plan re-composes spending toward its priorities
+around the default composition without cutting the total, so it never
+compounds year on year (each envelope stays within 5% of its default share).
+Tabling a neutral budget during an emergency costs no political capital, so
+an exhausted government can always restore supply; reshaping the state still
+costs. When the player is out of office, their party never joins the
+governing coalition or holds a government post (the validator rejects it),
+and an opposition start gives the government its own cabinet.

@@ -2,6 +2,7 @@ extends SceneTree
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const NativeGameScript = preload("res://scripts/native/native_game.gd")
+const Polls = preload("res://tests/native/test_polls.gd")
 const SLOT := "test_elections_slice"
 
 
@@ -264,7 +265,8 @@ func _test_twenty_years_of_elections_stay_bounded(t) -> void:
 		var state := _state(role)
 		var ok := true
 		for _m in range(240):
-			NativeGameScript.close_month(state)
+			Polls.budget_policy(state, 0.0)
+			NativeGameScript.next_month(state)
 			if not _bounded(state):
 				ok = false
 				t.equal(StateValidator.validate(state), PackedStringArray(), "%s journey broke at turn %d" % [role, state.turn])
@@ -283,6 +285,61 @@ func _test_twenty_years_of_elections_stay_bounded(t) -> void:
 		t.truth(totals_ok, "and every result fills the chamber on a plausible turnout")
 
 
+static func _result(ruling: String, previous: String) -> ElectionResult:
+	var r := ElectionResult.new()
+	r.ruling_faction_id = ruling
+	r.previous_ruling_faction_id = previous
+	return r
+
+
+func _test_terms_count_from_taking_office(t) -> void:
+	var state := _state()
+	var ruling := state.ruling_faction_id
+	var other := _rival_id(state)
+	t.equal(Elections.terms_in_office(state), 1, "the opening government is in its first term")
+	state.ruling_faction_id = other
+	state.election_history = [_result(other, ruling)] as Array[ElectionResult]
+	t.equal(Elections.terms_in_office(state), 1, "a party that has just taken power is in its first term")
+	state.election_history.append(_result(other, other))
+	t.equal(Elections.terms_in_office(state), 2, "returned once, it is in its second")
+	for _i in range(4):
+		state.election_history.append(_result(other, other))
+	t.equal(Elections.terms_in_office(state), Elections.FATIGUE_TERM_CAP, "and fatigue stops growing after %d terms" % Elections.FATIGUE_TERM_CAP)
+	var counted := _state()
+	Elections.hold(counted, false)
+	t.equal(counted.election_history[-1].previous_ruling_faction_id, ruling, "a result records who governed going in")
+
+
+func _test_an_opposition_party_never_props_up_a_rival_government(t) -> void:
+	var state := _state("opposition")
+	var own := _faction(state, state.player.faction_id)
+	var largest: Faction = null
+	for f in state.country.factions:
+		if f != own and (largest == null or f.seats > largest.seats):
+			largest = f
+	for f in state.country.factions:
+		f.seats = 0
+	largest.seats = 45
+	own.seats = 40
+	var rest := 100 - 85
+	for f in state.country.factions:
+		if f != own and f != largest and rest > 0:
+			f.seats = rest
+			rest = 0
+	var coalition := Elections.form_government(state)
+	t.equal(state.ruling_faction_id, largest.id, "the largest party forms the government")
+	t.truth(not coalition.has(own), "without the opposition leader's party")
+	t.truth(StateValidator.validate(state).is_empty() or not own.in_coalition, "and the opposition stays out of it")
+	var bad := _state("opposition")
+	_faction(bad, bad.player.faction_id).in_coalition = true
+	t.truth(not StateValidator.validate(bad).is_empty(), "the validator rejects an opposition party inside the governing coalition")
+	var posted := _state("opposition")
+	posted.ministers[0].faction_id = posted.player.faction_id
+	t.truth(not StateValidator.validate(posted).is_empty(), "and an opposition party holding a government post")
+	t.truth(_state("opposition").ministers.all(func(m: Minister) -> bool: return m.faction_id != state.player.faction_id),
+		"an opposition start gives the government its own cabinet")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_the_count_is_deterministic(t)
@@ -297,4 +354,6 @@ func _initialize() -> void:
 	_test_results_persist_and_old_saves_load(t)
 	_test_the_validator_rejects_impossible_results(t)
 	_test_twenty_years_of_elections_stay_bounded(t)
+	_test_terms_count_from_taking_office(t)
+	_test_an_opposition_party_never_props_up_a_rival_government(t)
 	quit(t.finish())

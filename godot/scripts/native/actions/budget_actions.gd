@@ -247,8 +247,9 @@ static func proposal_cost(state: GameState, plan: AnnualBudget) -> float:
 	var moved := 0.0
 	for key in active.allocations:
 		moved += absf(float(plan.allocations.get(key, active.allocations[key])) - float(active.allocations[key]))
+	var base := 0.0 if BudgetSim.is_emergency(state) else PROPOSAL_BASE_COST
 	return minf(PROPOSAL_COST_CAP,
-		PROPOSAL_BASE_COST + PROPOSAL_MOVEMENT_COST * moved / maxf(1.0, active.expenditure()))
+		base + PROPOSAL_MOVEMENT_COST * moved / maxf(1.0, active.expenditure()))
 
 
 static func _build_plan(state: GameState, adjustments: Dictionary) -> Dictionary:
