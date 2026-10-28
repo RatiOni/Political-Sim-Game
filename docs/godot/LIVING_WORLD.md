@@ -5,9 +5,8 @@ challenge, the Vasca question, Vetrenka, the civil-war gauge and
 diplomacy are playable — all 46 events (2026-10-28) — the eight AI
 countries deliberate and act (Krasova against Ardenia), opposition is a
 playable career with its own desk, and the month ends with a front page.
-Slices 1–7 are built. Open: the native general election (Phase 3 scope), so
-`take_office`, `electoral_edge` and `judge_mandate` are hooks no vote calls
-yet, and opposition cannot end. Same native-design rules as
+Slices 1–7 are built, and the general election now decides who governs
+(`sim/elections.gd`). Same native-design rules as
 `SIM_REDESIGN.md`: Python is a reference for what Ardenia contains, never a
 formula to match.
 
@@ -70,9 +69,8 @@ Re-running the retired exporter would undo this; edit the JSON directly.
 
 ## Known gaps
 
-- `OppositionSim.take_office` replaces only the posts a shadow minister
-  holds; an unshadowed portfolio keeps the outgoing government's minister.
-  Settle this with the native election slice.
+- No native confidence vote exists yet, so there are no snap elections:
+  every election is scheduled (`ElectionResult.was_snap` is always false).
 
 - At 1280x720 the situation panel shows one option above the fold; the rest
   scroll. Phase 5 layout work should give the panel more of the body.
@@ -280,11 +278,12 @@ platform, staff a team, and arrive in office with a mandate to keep.
   credit: you did not fight your own promise, but did nothing for it), and
   *undercut* only if you voted against it (−0.06).
 - **A shadow cabinet** (6 PC a post) is named from the player's party and
-  gains a little experience each month. `OppositionSim.take_office` — the
-  hook an election will call — restores the government title, builds the
+  gains a little experience each month. Winning an election
+  (`OppositionSim.take_office`) restores the government title, builds the
   coalition around the player's party, promotes every shadow into the real
-  post, lapses the outgoing government's bill and turns the platform into a
-  mandate.
+  post, fills every other post from the new coalition (never the outgoing
+  minister), lapses the outgoing government's bill and turns the platform
+  into a mandate.
 - **Promises are judged.** `electoral_edge` reads credibility, campaign
   coverage and staffing in opposition, and delivered against undelivered
   pledges in government; `judge_mandate` marks undelivered pledges broken
@@ -298,11 +297,8 @@ platform, staff a team, and arrive in office with a mandate to keep.
   from ahead and is costly to lose; a local campaign wins from slightly
   behind for a smaller prize; a won seat comes from the government.
 
-Not yet native: the general election itself. `take_office`,
-`electoral_edge` and `judge_mandate` are its inputs and are tested
-directly. The catalogue holds nine parliamentary bills, so a long
-opposition term exhausts the government's programme after about five
-years.
+The catalogue holds nine parliamentary bills, so a long opposition term
+exhausts the government's programme after about five years.
 
 ## The press
 
@@ -345,3 +341,45 @@ six shadow posts with an Appoint picker. Every button takes its eligibility
 and refusal reason from `OppositionActions.read_model`; the desk's size never
 changes with its contents. `GameFlow.pending_role` chooses the opening role
 for a new campaign (the menu still starts in the contextual role).
+
+## Elections
+
+**Player-facing job:** every four years the country judges its government
+and the player's party, and office can be won or lost. The result follows
+from what happened, never from a roll.
+
+- **On schedule.** A term is 48 months (`Elections.TERM_MONTHS`); the vote
+  closes the month the term ends, after stability and before the crisis
+  gauge, so a new government faces its first month at once.
+- **Who votes.** Each region contributes its live population weight of
+  the voting-age public (72%). Access is 1.0 for administered ground, 0.9
+  autonomous, 0.55 limited and 0 separatist, scaled 70–100% by state reach:
+  separatist Vetrenka casts no ballot and limited Anera fewer.
+- **How they vote.** Local support is the region's authored party support
+  moved by each party's national swing since the campaign began. Each
+  party's turnout (0.35–0.92 around 0.65) reads the government's record —
+  household confidence and stability lift the coalition and sink its
+  opponents — and, for the player's party, the leader's approval and
+  `electoral_edge` ×1.5: credibility, a campaigned and staffed platform in
+  opposition, kept against broken promises in government
+  (`judge_mandate` runs first and names the broken ones).
+- **Seats.** Largest-remainder proportional representation over the whole
+  chamber; a party under 3% of the vote wins nothing. The largest party
+  that can build a majority with its nearest neighbours governs, falling
+  back to the largest party as a minority.
+- **Consequences.** Winning from opposition takes office with the shadow
+  team (above). Losing office makes the player Leader of the Opposition: the
+  player's own bill and any unapproved budget lapse, the new coalition fills
+  every post, and the platform's unfinished pledges carry over. A change
+  between other parties re-staffs the cabinet and lapses the outgoing
+  government's bill. A party returned to government gains 20 PC and a fresh
+  mandate.
+- **Seen.** The result leads the front page, and the monthly report opens
+  with the seats, a regional line (winner and share, or "no poll"), and
+  what it means for the player. `ElectionResult` keeps national and
+  regional shares, turnout and access in `GameState.election_history`.
+- **New Campaign in Opposition** on the main menu opens a campaign with
+  another party in power.
+
+Twenty years from either opening hold five elections and three changes of
+office, finite and valid throughout.

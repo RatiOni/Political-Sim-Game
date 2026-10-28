@@ -8,7 +8,7 @@ const MAX_SECONDARY_HEADLINES := 4
 const UNRANKED := 10
 
 const DRAMA := {
-	"vetrenka_retaken": 98, "vetrenka_rout": 97, "vasca_dead": 96,
+	"election": 100, "vetrenka_retaken": 98, "vetrenka_rout": 97, "vasca_dead": 96,
 	"civil_war_out": 95, "vetrenka_settled": 95, "vasca_captured": 94,
 	"vetrenka_offensive": 92, "world_civil_war_out": 90, "vasca_exiled": 88,
 	"vetrenka_partition": 86, "civil_war_end": 82, "scandal": 80,

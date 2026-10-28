@@ -48,6 +48,7 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_world_arcs(state, errors)
 	_validate_opposition(state, errors)
 	_validate_press(state, errors)
+	_validate_elections(state, errors)
 
 	if state.player != null:
 		_validate_player(state, errors)
@@ -634,3 +635,34 @@ static func _validate_press(state: GameState, errors: Array[String]) -> void:
 			or not (lead.get("body", null) is String) or not (page.get("headlines", null) is Array) \
 			or not (page.get("briefs", null) is Array) or not (page.get("numbers", null) is Array):
 		errors.append("the front page is malformed")
+
+
+static func _validate_elections(state: GameState, errors: Array[String]) -> void:
+	if state.last_election_turn < 0 or state.last_election_turn > state.turn:
+		errors.append("last_election_turn is impossible")
+	var factions := {}
+	var total_seats := 0
+	for f in state.country.factions:
+		factions[f.id] = true
+		total_seats += f.seats
+	for r in state.election_history:
+		var seats := 0
+		for id in r.final_seats:
+			seats += int(r.final_seats[id])
+			if not factions.has(id):
+				errors.append("an election result seats an unknown party")
+		if seats != total_seats:
+			errors.append("an election result does not fill the chamber")
+		if r.turn < 0 or r.turn > state.turn or not is_finite(r.turnout) or r.turnout < 0.0 or r.turnout > 1.0 \
+				or not factions.has(r.ruling_faction_id):
+			errors.append("an election result is impossible")
+		for share in r.vote_share.values():
+			if not is_finite(float(share)) or float(share) < 0.0 or float(share) > 1.0:
+				errors.append("an election result has an impossible vote share")
+		for table in [r.regional_access, r.regional_turnout, r.regional_vote_share]:
+			for region_id in table:
+				if not state.regions.has(region_id):
+					errors.append("an election result names an unknown region")
+		for value in r.regional_access.values() + r.regional_turnout.values():
+			if not is_finite(float(value)) or float(value) < 0.0 or float(value) > 1.0:
+				errors.append("an election result has an impossible regional figure")

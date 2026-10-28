@@ -3,6 +3,8 @@ extends RefCounted
 
 
 const RESPONSE_MONTHS := 1
+const OPPOSITION_TITLE := "Opposition Leader"
+const FINISHED_PLEDGES := ["adopted", "undercut", "delivered"]
 const BILL_CADENCE_MONTHS := 4
 const RETRY_MONTHS := 24
 const RULING_WHIP := 0.28
@@ -115,6 +117,49 @@ static func material_relief(state: GameState, law: Law) -> float:
 
 
 static func take_office(state: GameState) -> Array[String]:
+	var notes := _lapse_government_bill(state)
+	var opp := state.opposition
+	GameFactory.configure_government(state, state.player.faction_id, [])
+	state.player.in_government = true
+	state.ruling_faction_id = state.player.faction_id
+	state.player.title = _government_title(state)
+	notes.append_array(Elections.staff_cabinet(state, opp.shadow_cabinet))
+	opp.shadow_cabinet.clear()
+	_carry_unfinished_pledges(state)
+	opp.mandate_start_turn = state.turn
+	return notes
+
+
+static func leave_office(state: GameState) -> void:
+	var opp := state.opposition
+	if state.pending_law != null:
+		state.pending_law.status = "lapsed"
+		state.law_history.append(Law.from_dict(state.pending_law.to_dict()))
+		state.pending_law = null
+	if state.pending_budget != null and state.pending_budget.status != "approved":
+		state.pending_budget = null
+	state.player.in_government = false
+	state.player.title = OPPOSITION_TITLE
+	Elections.staff_cabinet(state, [] as Array[Minister])
+	_carry_unfinished_pledges(state)
+	opp.mandate_start_turn = -1
+	opp.government_bill = null
+	opp.response = ""
+	opp.next_bill_turn = state.turn + OppositionState.FIRST_GOVERNMENT_BILL_TURN
+
+
+static func renew_mandate(state: GameState) -> void:
+	_carry_unfinished_pledges(state)
+	state.opposition.mandate_start_turn = state.turn
+
+
+static func hand_over(state: GameState) -> void:
+	_lapse_government_bill(state)
+	Elections.staff_cabinet(state, [] as Array[Minister])
+	state.opposition.next_bill_turn = state.turn + OppositionState.FIRST_GOVERNMENT_BILL_TURN
+
+
+static func _lapse_government_bill(state: GameState) -> Array[String]:
 	var notes: Array[String] = []
 	var opp := state.opposition
 	if opp.government_bill != null:
@@ -123,21 +168,14 @@ static func take_office(state: GameState) -> Array[String]:
 		notes.append("\"%s\" lapses with the outgoing government." % opp.government_bill.name)
 	opp.government_bill = null
 	opp.response = ""
-	GameFactory.configure_government(state, state.player.faction_id, [])
-	state.player.in_government = true
-	state.ruling_faction_id = state.player.faction_id
-	state.player.title = _government_title(state)
-	for shadow in opp.shadow_cabinet:
-		state.ministers = state.ministers.filter(func(m: Minister) -> bool: return m.portfolio != shadow.portfolio)
-		state.ministers.append(shadow)
-		notes.append("%s takes office at %s." % [shadow.name, shadow.portfolio])
-	opp.shadow_cabinet.clear()
-	state.cabinet_shortlists.clear()
-	opp.pledges = opp.pledges.filter(func(p: Dictionary) -> bool: return not (String(p["status"]) in ["adopted", "undercut", "delivered"]))
+	return notes
+
+
+static func _carry_unfinished_pledges(state: GameState) -> void:
+	var opp := state.opposition
+	opp.pledges = opp.pledges.filter(func(p: Dictionary) -> bool: return not (String(p["status"]) in FINISHED_PLEDGES))
 	for p in opp.pledges:
 		p["status"] = "pledged"
-	opp.mandate_start_turn = state.turn
-	return notes
 
 
 static func judge_mandate(state: GameState) -> Dictionary:

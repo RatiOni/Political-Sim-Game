@@ -97,6 +97,8 @@ var world_arcs: Dictionary = {}
 var opposition: OppositionState = OppositionState.new()
 var monthly_news: Array[Dictionary] = []
 var front_page: Dictionary = {}
+var last_election_turn: int = 0
+var election_history: Array[ElectionResult] = []
 
 var rng: SimRng = SimRng.from_seed(0)
 
@@ -188,6 +190,8 @@ func to_dict() -> Dictionary:
 		"opposition": opposition.to_dict(),
 		"monthly_news": monthly_news.duplicate(true),
 		"front_page": front_page.duplicate(true),
+		"last_election_turn": last_election_turn,
+		"election_history": election_history.map(func(r: ElectionResult) -> Dictionary: return r.to_dict()),
 		"rng": rng_snapshot,
 	}
 
@@ -425,6 +429,16 @@ static func from_dict(data: Dictionary) -> GameState:
 		state.monthly_news.append({"key": String(item.get("key", "")), "fields": (item["fields"] as Dictionary).duplicate(),
 			"text": String(item.get("text", ""))})
 	state.front_page = (page as Dictionary).duplicate(true)
+	state.last_election_turn = _int_field(data, "last_election_turn", 0)
+	var elections: Variant = data.get("election_history", [])
+	if not (elections is Array):
+		push_error("GameState.from_dict: malformed election_history")
+		return null
+	for row in elections:
+		var result := ElectionResult.from_dict(row)
+		if result == null:
+			return null
+		state.election_history.append(result)
 	state.opposition = OppositionState.from_dict(data.get("opposition", null))
 	if state.opposition == null:
 		push_error("GameState.from_dict: malformed opposition")
