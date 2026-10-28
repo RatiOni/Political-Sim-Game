@@ -356,12 +356,75 @@ func _test_krasova_acts_against_ardenia_across_a_decade(t) -> void:
 			seed, covered["shelved"], covered["hostile"]])
 
 
+static func _max_outreach(state: GameState) -> void:
+	state.player.political_capital = 140.0
+	DiplomacyActions.act(state, "hold_summit", "krasova")
+	for _i in range(3):
+		DiplomacyActions.act(state, "improve_relations", "krasova")
+
+
+func _test_maximum_outreach_cannot_buy_off_krasova(t) -> void:
+	for seed in [515151, 7, 99]:
+		var state := _state("government", seed)
+		var highest := -1.0
+		var open_months := 0
+		for _m in range(120):
+			_max_outreach(state)
+			NativeGameScript.close_month(state)
+			if String(state.campaign_meta.get("vetrenka_status", "")) != "settled":
+				open_months += 1
+				highest = maxf(highest, _score(state, "krasova", "ardenia"))
+		t.truth(open_months > 0 and highest < 0.0,
+			"seed %d: ten years of maximum outreach keep Krasova below zero while Vetrenka is open (high %.2f)" % [seed, highest])
+
+
+func _test_neglect_still_makes_a_feud_that_breathes(t) -> void:
+	for seed in [515151, 7, 99]:
+		var state := _state("government", seed)
+		var feud := false
+		var pinned := 0
+		for _m in range(120):
+			NativeGameScript.close_month(state)
+			feud = feud or state.world_arcs.get("ardenia|krasova", "") == "feud"
+			if _score(state, "krasova", "ardenia") <= -0.999:
+				pinned += 1
+		t.truth(feud, "seed %d: an unattended Krasova still becomes a feud" % seed)
+		t.truth(pinned < 24, "seed %d: but the feud is not pinned at -1.00 (%d months there)" % [seed, pinned])
+
+
+func _test_a_settled_vetrenka_lets_relations_warm_to_the_higher_cap(t) -> void:
+	var state := _state("government", 515151)
+	state.campaign_meta["vetrenka_status"] = "settled"
+	var highest := -1.0
+	for _m in range(120):
+		_max_outreach(state)
+		NativeGameScript.close_month(state)
+		highest = maxf(highest, _score(state, "krasova", "ardenia"))
+	t.truth(highest > 0.0 and highest <= DiplomacySim.SETTLED_CAUSE_WARMTH_CAP + 1e-9,
+		"after a settlement Krasova can be warmed, up to the settled cap (high %.2f)" % highest)
+
+
+func _test_a_pact_does_not_shield_you_from_your_partner(t) -> void:
+	var state := _state()
+	_sign_defence_pact(state, "veldoria")
+	var shelved := 0
+	for _i in range(200):
+		if WorldSim.hostile_action(state, _c(state, "veldoria"), state.country, []) == "shelved":
+			shelved += 1
+		_set_score(state, "veldoria", "ardenia", 0.0)
+	t.equal(shelved, 0, "a defence pact never shelves the partner's own hostile moves")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_each_agenda_reads_its_national_interest(t)
 	_test_a_hegemon_with_a_spent_rivalry_tends_its_sphere(t)
 	_test_krasova_presses_while_vetrenka_is_contested(t)
 	_test_krasova_acts_against_ardenia_across_a_decade(t)
+	_test_maximum_outreach_cannot_buy_off_krasova(t)
+	_test_neglect_still_makes_a_feud_that_breathes(t)
+	_test_a_settled_vetrenka_lets_relations_warm_to_the_higher_cap(t)
+	_test_a_pact_does_not_shield_you_from_your_partner(t)
 	_test_an_ideologue_presses_its_rival(t)
 	_test_a_sanctioning_power_outranks_everything(t)
 	_test_openings_are_staggered_then_paced(t)

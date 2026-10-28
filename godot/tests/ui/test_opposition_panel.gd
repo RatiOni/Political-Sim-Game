@@ -76,6 +76,11 @@ func _test_the_desk_follows_the_players_side(t) -> void:
 	t.truth(_panel().visible, "it opens")
 	t.truth(not app.find_child("MapPanel", true, false).visible, "in the desk, like every other")
 	t.truth(not app.find_child("LegislationPanel", true, false).visible, "instead of the government's legislation desk")
+	var support: Button = _panel().find_child("SupportButton", true, false)
+	t.truth(support.size.x <= 160.0, "the response buttons keep a compact width (%.0f px)" % support.size.x)
+	var scroll: Control = _panel().find_child("Scroll", true, false)
+	var body: Control = _panel().find_child("Body", true, false)
+	t.truth(scroll.get_global_rect().end.x - body.get_global_rect().end.x >= 12.0, "and the desk's buttons clear the scrollbar")
 
 
 func _test_every_opposition_action_works_through_the_panel(t) -> void:

@@ -621,7 +621,7 @@ static func _validate_opposition(state: GameState, errors: Array[String]) -> voi
 
 static func _validate_press(state: GameState, errors: Array[String]) -> void:
 	for item in state.monthly_news:
-		if String(item.get("key", "")) == "" or not (item.get("fields", null) is Dictionary) \
+		if not (item is Dictionary) or String(item.get("key", "")) == "" or not (item.get("fields", null) is Dictionary) \
 				or not (item.get("text", null) is String):
 			errors.append("a news item is malformed")
 	var page := state.front_page

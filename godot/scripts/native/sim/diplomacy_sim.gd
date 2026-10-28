@@ -9,6 +9,24 @@ const SAME_CAMP_DRIFT := 0.0015
 const OTHER_CAMP_DRIFT := -0.0008
 const SANCTION_STABILITY_COST := 0.01
 const SANCTION_OUTPUT_LOSS := 0.003
+const OPEN_CAUSE_WARMTH_CAP := -0.1
+const SETTLED_CAUSE_WARMTH_CAP := 0.3
+
+
+const SETTLED_CAUSE_STATUSES := ["settled"]
+const NO_WARMTH_CAP := 1.0
+
+
+static func is_rival_of_player(state: GameState, other: Country) -> bool:
+	return other != null and String(other.agenda.get("rival", "")) == state.country.id
+
+
+static func warmth_cap(state: GameState, other: Country) -> float:
+	var cause := String(other.agenda.get("backs", "")) if other != null else ""
+	if not is_rival_of_player(state, other) or cause == "" or not state.regions.has(cause):
+		return NO_WARMTH_CAP
+	var status := String(state.campaign_meta.get("%s_status" % cause, ""))
+	return SETTLED_CAUSE_WARMTH_CAP if status in SETTLED_CAUSE_STATUSES else OPEN_CAUSE_WARMTH_CAP
 
 const REGIME_FAMILY := {
 	"parliamentary_democracy": "democratic",
@@ -35,8 +53,12 @@ static func pair(state: GameState, country_id: String) -> Array:
 
 static func shift(state: GameState, country_id: String, delta: float, note := "") -> void:
 	var other := world_country(state, country_id)
-	if other != null:
-		shift_between(state.country, other, delta, note)
+	if other == null or not state.country.relations.has(country_id):
+		return
+	if delta > 0.0:
+		var current := (state.country.relations[country_id] as Country.BilateralRelation).score
+		delta = minf(delta, maxf(0.0, warmth_cap(state, other) - current))
+	shift_between(state.country, other, delta, note)
 
 
 static func shift_between(a: Country, b: Country, delta: float, note := "") -> void:
@@ -72,8 +94,7 @@ static func monthly(state: GameState) -> void:
 		var mine: Country.BilateralRelation = p[0]
 		var theirs: Country.BilateralRelation = p[1]
 		var same: bool = family == String(REGIME_FAMILY.get(other.regime_type, other.regime_type))
-		mine.score = clampf(mine.score + (SAME_CAMP_DRIFT if same else OTHER_CAMP_DRIFT), -1.0, 1.0)
-		theirs.score = mine.score
+		shift(state, other.id, SAME_CAMP_DRIFT if same else OTHER_CAMP_DRIFT)
 		for rel in [mine, theirs]:
 			for tr in rel.treaties:
 				if tr is Dictionary:

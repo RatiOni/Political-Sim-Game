@@ -70,6 +70,10 @@ Re-running the retired exporter would undo this; edit the JSON directly.
 
 ## Known gaps
 
+- `OppositionSim.take_office` replaces only the posts a shadow minister
+  holds; an unshadowed portfolio keeps the outgoing government's minister.
+  Settle this with the native election slice.
+
 - At 1280x720 the situation panel shows one option above the fold; the rest
   scroll. Phase 5 layout work should give the panel more of the body.
 
@@ -210,8 +214,18 @@ weather.
   backs Vetrenka (`agenda.backs`). A hegemon rests a rivalry below −0.8;
   while the backed region is retaken by force it never rests, and once
   Vetrenka is settled it rests below −0.3. Over ten years in office it
-  moves against Ardenia 9–11 times on three seeds, every move leaked a
-  month ahead, and relations bottom out at −1.00 (a feud).
+  moves against Ardenia 10–11 times on three seeds, every move leaked a
+  month ahead, and an unattended relationship becomes a feud.
+- **Your rival is hard to win over.** Outreach and summits toward a power
+  whose rival is the player gain 0.4× (`RIVAL_RESISTANCE`). A rival that
+  backs a region of yours cannot be warmed past −0.1 while that region's
+  question is open, retaken or partitioned, or past +0.3 once it is settled
+  (`DiplomacySim.warmth_cap`, read from `campaign_meta["<region>_status"]`).
+  Ten years of maximum outreach hold Krasova at −0.10 to −0.22 while it keeps
+  pressing (about 30 moves). Your rival refuses a defence pact, and a pact
+  never shelves the partner's own moves. While the rival is not working
+  against you and relations sit below −0.6 they recover 0.003 a month, so a
+  neglected feud runs −0.83 to −0.96 instead of being pinned at −1.00.
 - **Deterrence works.** Half of hostile moves against a defence-pact holder
   are quietly shelved. A condemnation costs 0.12 of relations, pressure 0.06.
 - **No treaty without consent.** Foreign powers court the player (+0.06) but

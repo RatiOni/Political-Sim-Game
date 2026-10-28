@@ -79,9 +79,9 @@ func _test_a_trade_pact_is_signed_once_and_pays_over_time(t) -> void:
 
 func _test_a_defense_pact_needs_trust(t) -> void:
 	var state := _state()
-	_rel(state, KRASOVA).score = 0.10
-	_mirror(state, KRASOVA).score = 0.10
-	var refused := _do(state, "defense_pact", KRASOVA)
+	_rel(state, "qadir").score = 0.10
+	_mirror(state, "qadir").score = 0.10
+	var refused := _do(state, "defense_pact", "qadir")
 	t.truth(not refused.get("ok", true) and String(refused["error"]).contains("trust"), "a distrusted state will not commit to mutual defence")
 	var id := _friend(state)
 	_rel(state, id).score = 0.60
@@ -244,6 +244,54 @@ func _test_treaties_age(t) -> void:
 	t.equal(int(_rel(state, id).treaties[0].get("turns_active", 0)), 3, "a treaty counts the months it has stood")
 
 
+func _test_your_rival_resists_your_diplomacy(t) -> void:
+	var state := _state()
+	for id in [KRASOVA, "qadir"]:
+		_rel(state, id).score = -0.5
+		_mirror(state, id).score = -0.5
+	_do(state, "improve_relations", KRASOVA)
+	_do(state, "improve_relations", "qadir")
+	var rival_gain := _rel(state, KRASOVA).score + 0.5
+	var other_gain := _rel(state, "qadir").score + 0.5
+	t.near(rival_gain / other_gain, DiplomacyActions.RIVAL_RESISTANCE, 1e-6, "outreach to your own rival gains only a fraction")
+	var summit := _state()
+	_rel(summit, KRASOVA).score = -0.5
+	_mirror(summit, KRASOVA).score = -0.5
+	_do(summit, "hold_summit", KRASOVA)
+	t.near(_rel(summit, KRASOVA).score + 0.5, 0.12 * DiplomacyActions.RIVAL_RESISTANCE, 1e-6, "and so does a summit")
+
+
+func _test_warmth_toward_your_rival_is_capped_while_vetrenka_is_open(t) -> void:
+	for status in ["", "retaken", "partitioned"]:
+		var state := _state()
+		if status != "":
+			state.campaign_meta["vetrenka_status"] = status
+		for _i in range(30):
+			_do(state, "improve_relations", KRASOVA)
+			state.campaign_meta.erase("last_summit_turn")
+			_do(state, "hold_summit", KRASOVA)
+		t.truth(_rel(state, KRASOVA).score <= DiplomacySim.OPEN_CAUSE_WARMTH_CAP + 1e-9,
+			"Krasova will not warm past %.2f while Vetrenka is '%s' (%.2f)" % [DiplomacySim.OPEN_CAUSE_WARMTH_CAP, status, _rel(state, KRASOVA).score])
+	var settled := _state()
+	settled.campaign_meta["vetrenka_status"] = "settled"
+	for _i in range(40):
+		_do(settled, "improve_relations", KRASOVA)
+		settled.campaign_meta.erase("last_summit_turn")
+		_do(settled, "hold_summit", KRASOVA)
+	t.truth(_rel(settled, KRASOVA).score > 0.0, "a settled Vetrenka lets relations warm")
+	t.truth(_rel(settled, KRASOVA).score <= DiplomacySim.SETTLED_CAUSE_WARMTH_CAP + 1e-9, "but only so far")
+	t.equal(DiplomacySim.warmth_cap(_state(), DiplomacySim.world_country(_state(), "qadir")), 1.0, "a country with no cause against you is not capped")
+
+
+func _test_your_rival_will_not_defend_you(t) -> void:
+	var state := _state()
+	_rel(state, KRASOVA).score = 0.6
+	_mirror(state, KRASOVA).score = 0.6
+	var refused := _do(state, "defense_pact", KRASOVA)
+	t.truth(not refused.get("ok", true) and String(refused["error"]).contains("rival"), "your rival refuses a defence pact")
+	t.truth(not DiplomacySim.has_treaty(state, KRASOVA, "defense"), "and nothing is signed")
+
+
 func _test_relations_survive_save_and_reload(t) -> void:
 	var state := _state()
 	var id := _friend(state)
@@ -291,5 +339,8 @@ func _initialize() -> void:
 	_test_sanctions_bleed_their_target(t)
 	_test_treaties_age(t)
 	_test_relations_survive_save_and_reload(t)
+	_test_your_rival_resists_your_diplomacy(t)
+	_test_warmth_toward_your_rival_is_capped_while_vetrenka_is_open(t)
+	_test_your_rival_will_not_defend_you(t)
 	_test_the_desk_lists_every_country_with_reasons(t)
 	quit(t.finish())

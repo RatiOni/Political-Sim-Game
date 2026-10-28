@@ -43,17 +43,22 @@ layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="Body" type="VBoxContainer" parent="Content/Scroll"]
+[node name="BodyMargin" type="MarginContainer" parent="Content/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_right = 16
+
+[node name="Body" type="VBoxContainer" parent="Content/Scroll/BodyMargin"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="BillHeading" type="Label" parent="Content/Scroll/Body"]
+[node name="BillHeading" type="Label" parent="Content/Scroll/BodyMargin/Body"]
 layout_mode = 2
 theme_type_variation = &"Section"
 text = "GOVERNMENT BILL"
 
-[node name="BillName" type="Label" parent="Content/Scroll/Body"]
+[node name="BillName" type="Label" parent="Content/Scroll/BodyMargin/Body"]
 custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -61,43 +66,40 @@ text = ""
 clip_text = true
 text_overrun_behavior = 3
 
-[node name="Responses" type="HBoxContainer" parent="Content/Scroll/Body"]
+[node name="Responses" type="HBoxContainer" parent="Content/Scroll/BodyMargin/Body"]
 layout_mode = 2
 
-[node name="SupportButton" type="Button" parent="Content/Scroll/Body/Responses"]
-custom_minimum_size = Vector2(0, 44)
+[node name="SupportButton" type="Button" parent="Content/Scroll/BodyMargin/Body/Responses"]
+custom_minimum_size = Vector2(128, 44)
 layout_mode = 2
-size_flags_horizontal = 3
 disabled = true
 text = "Support"
 clip_text = true
 
-[node name="OpposeButton" type="Button" parent="Content/Scroll/Body/Responses"]
-custom_minimum_size = Vector2(0, 44)
+[node name="OpposeButton" type="Button" parent="Content/Scroll/BodyMargin/Body/Responses"]
+custom_minimum_size = Vector2(128, 44)
 layout_mode = 2
-size_flags_horizontal = 3
 disabled = true
 text = "Oppose"
 clip_text = true
 
-[node name="AmendButton" type="Button" parent="Content/Scroll/Body/Responses"]
-custom_minimum_size = Vector2(0, 44)
+[node name="AmendButton" type="Button" parent="Content/Scroll/BodyMargin/Body/Responses"]
+custom_minimum_size = Vector2(128, 44)
 layout_mode = 2
-size_flags_horizontal = 3
 disabled = true
 text = "Amend"
 clip_text = true
 
-[node name="PlatformHeading" type="Label" parent="Content/Scroll/Body"]
+[node name="PlatformHeading" type="Label" parent="Content/Scroll/BodyMargin/Body"]
 layout_mode = 2
 theme_type_variation = &"Section"
 text = "PLATFORM"
 
-[node name="Pledge1" type="HBoxContainer" parent="Content/Scroll/Body"]
+[node name="Pledge1" type="HBoxContainer" parent="Content/Scroll/BodyMargin/Body"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 
-[node name="PledgeName1" type="Label" parent="Content/Scroll/Body/Pledge1"]
+[node name="PledgeName1" type="Label" parent="Content/Scroll/BodyMargin/Body/Pledge1"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
@@ -105,23 +107,23 @@ text = "—"
 clip_text = true
 text_overrun_behavior = 3
 
-[node name="CampaignButton1" type="Button" parent="Content/Scroll/Body/Pledge1"]
+[node name="CampaignButton1" type="Button" parent="Content/Scroll/BodyMargin/Body/Pledge1"]
 custom_minimum_size = Vector2(112, 44)
 layout_mode = 2
 disabled = true
 text = "Campaign"
 
-[node name="DropButton1" type="Button" parent="Content/Scroll/Body/Pledge1"]
+[node name="DropButton1" type="Button" parent="Content/Scroll/BodyMargin/Body/Pledge1"]
 custom_minimum_size = Vector2(88, 44)
 layout_mode = 2
 disabled = true
 text = "Drop"
 
-[node name="Pledge2" type="HBoxContainer" parent="Content/Scroll/Body"]
+[node name="Pledge2" type="HBoxContainer" parent="Content/Scroll/BodyMargin/Body"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 
-[node name="PledgeName2" type="Label" parent="Content/Scroll/Body/Pledge2"]
+[node name="PledgeName2" type="Label" parent="Content/Scroll/BodyMargin/Body/Pledge2"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
@@ -129,23 +131,23 @@ text = "—"
 clip_text = true
 text_overrun_behavior = 3
 
-[node name="CampaignButton2" type="Button" parent="Content/Scroll/Body/Pledge2"]
+[node name="CampaignButton2" type="Button" parent="Content/Scroll/BodyMargin/Body/Pledge2"]
 custom_minimum_size = Vector2(112, 44)
 layout_mode = 2
 disabled = true
 text = "Campaign"
 
-[node name="DropButton2" type="Button" parent="Content/Scroll/Body/Pledge2"]
+[node name="DropButton2" type="Button" parent="Content/Scroll/BodyMargin/Body/Pledge2"]
 custom_minimum_size = Vector2(88, 44)
 layout_mode = 2
 disabled = true
 text = "Drop"
 
-[node name="Pledge3" type="HBoxContainer" parent="Content/Scroll/Body"]
+[node name="Pledge3" type="HBoxContainer" parent="Content/Scroll/BodyMargin/Body"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 
-[node name="PledgeName3" type="Label" parent="Content/Scroll/Body/Pledge3"]
+[node name="PledgeName3" type="Label" parent="Content/Scroll/BodyMargin/Body/Pledge3"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
@@ -153,57 +155,57 @@ text = "—"
 clip_text = true
 text_overrun_behavior = 3
 
-[node name="CampaignButton3" type="Button" parent="Content/Scroll/Body/Pledge3"]
+[node name="CampaignButton3" type="Button" parent="Content/Scroll/BodyMargin/Body/Pledge3"]
 custom_minimum_size = Vector2(112, 44)
 layout_mode = 2
 disabled = true
 text = "Campaign"
 
-[node name="DropButton3" type="Button" parent="Content/Scroll/Body/Pledge3"]
+[node name="DropButton3" type="Button" parent="Content/Scroll/BodyMargin/Body/Pledge3"]
 custom_minimum_size = Vector2(88, 44)
 layout_mode = 2
 disabled = true
 text = "Drop"
 
-[node name="PledgeAdd" type="HBoxContainer" parent="Content/Scroll/Body"]
+[node name="PledgeAdd" type="HBoxContainer" parent="Content/Scroll/BodyMargin/Body"]
 layout_mode = 2
 
-[node name="PledgeChoice" type="OptionButton" parent="Content/Scroll/Body/PledgeAdd"]
+[node name="PledgeChoice" type="OptionButton" parent="Content/Scroll/BodyMargin/Body/PledgeAdd"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 clip_text = true
 fit_to_longest_item = false
 
-[node name="AddPledgeButton" type="Button" parent="Content/Scroll/Body/PledgeAdd"]
+[node name="AddPledgeButton" type="Button" parent="Content/Scroll/BodyMargin/Body/PledgeAdd"]
 custom_minimum_size = Vector2(112, 44)
 layout_mode = 2
 disabled = true
 text = "Pledge"
 
-[node name="ShadowHeading" type="Label" parent="Content/Scroll/Body"]
+[node name="ShadowHeading" type="Label" parent="Content/Scroll/BodyMargin/Body"]
 layout_mode = 2
 theme_type_variation = &"Section"
 text = "SHADOW CABINET"
 
-[node name="ShadowList" type="Label" parent="Content/Scroll/Body"]
+[node name="ShadowList" type="Label" parent="Content/Scroll/BodyMargin/Body"]
 custom_minimum_size = Vector2(0, 132)
 layout_mode = 2
 size_flags_horizontal = 3
 text = ""
 clip_text = true
 
-[node name="ShadowAdd" type="HBoxContainer" parent="Content/Scroll/Body"]
+[node name="ShadowAdd" type="HBoxContainer" parent="Content/Scroll/BodyMargin/Body"]
 layout_mode = 2
 
-[node name="ShadowChoice" type="OptionButton" parent="Content/Scroll/Body/ShadowAdd"]
+[node name="ShadowChoice" type="OptionButton" parent="Content/Scroll/BodyMargin/Body/ShadowAdd"]
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
 clip_text = true
 fit_to_longest_item = false
 
-[node name="AppointShadowButton" type="Button" parent="Content/Scroll/Body/ShadowAdd"]
+[node name="AppointShadowButton" type="Button" parent="Content/Scroll/BodyMargin/Body/ShadowAdd"]
 custom_minimum_size = Vector2(112, 44)
 layout_mode = 2
 disabled = true

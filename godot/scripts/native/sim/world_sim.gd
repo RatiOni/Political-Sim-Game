@@ -29,6 +29,8 @@ const PLAN_SPREAD_MONTHS := 3
 const FORESHADOW_LEAD_MONTHS := 1
 
 const PACT_SHELVE_CHANCE := 0.5
+const RIVAL_RECOVERY_RATE := 0.003
+const RIVAL_RECOVERY_TARGET := -0.6
 const CONDEMN_CHANCE := 0.35
 const CONDEMN_COST := -0.12
 const PRESSURE_COST := -0.06
@@ -50,6 +52,7 @@ const FEUD_BREAKS := -0.3
 static func monthly(state: GameState) -> Array[String]:
 	var notes: Array[String] = []
 	_drift_world_relations(state)
+	_rivalries_cool(state)
 	for i in range(state.world.size()):
 		_deliberate(state, state.world[i], i, notes)
 	update_arcs(state, notes)
@@ -105,7 +108,7 @@ static func hostile_action(state: GameState, actor: Country, target: Country, no
 	if target == null:
 		return "none"
 	var against_player := target == state.country
-	if against_player and _player_has_defence_pact(state) and state.rng.next_float() < PACT_SHELVE_CHANCE:
+	if against_player and _shielded_from(state, actor) and state.rng.next_float() < PACT_SHELVE_CHANCE:
 		return "shelved"
 	var condemn := state.rng.next_float() < CONDEMN_CHANCE
 	DiplomacySim.shift_between(actor, target, CONDEMN_COST if condemn else PRESSURE_COST)
@@ -127,7 +130,10 @@ static func cooperative_action(state: GameState, actor: Country, target: Country
 		_sign_trade_pact(state, actor, target)
 		_say(state, notes, "world_trade_pact", actor, target)
 		return "trade_pact"
-	DiplomacySim.shift_between(actor, target, COURT_PLAYER_GAIN if with_player else COURT_GAIN)
+	if with_player:
+		DiplomacySim.shift(state, actor.id, COURT_PLAYER_GAIN)
+	else:
+		DiplomacySim.shift_between(actor, target, COURT_GAIN)
 	if with_player:
 		_say(state, notes, "world_court_player", actor, null)
 	else:
@@ -289,8 +295,18 @@ static func _has_treaty(a: Country, b: Country, kind: String) -> bool:
 	return rel != null and rel.treaties.any(func(tr): return tr is Dictionary and String(tr.get("type", "")) == kind)
 
 
-static func _player_has_defence_pact(state: GameState) -> bool:
+static func _shielded_from(state: GameState, aggressor: Country) -> bool:
 	for other in state.world:
-		if _has_treaty(state.country, other, "defense"):
+		if other != aggressor and _has_treaty(state.country, other, "defense"):
 			return true
 	return false
+
+
+static func _rivalries_cool(state: GameState) -> void:
+	for c in state.world:
+		if not DiplomacySim.is_rival_of_player(state, c) or not c.relations.has(state.country.id):
+			continue
+		var feeding := String(c.plan.get("objective", "")) == "undermine" and String(c.plan.get("target", "")) == state.country.id
+		var score := _rel(c, state.country).score
+		if not feeding and score < RIVAL_RECOVERY_TARGET:
+			DiplomacySim.shift(state, c.id, minf(RIVAL_RECOVERY_RATE, RIVAL_RECOVERY_TARGET - score))
