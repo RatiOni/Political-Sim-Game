@@ -20,8 +20,11 @@ static func resolve(state: GameState, event_id: String, option_id: String) -> Di
 		return _error(reason)
 	state.player.political_capital -= float(option.get("pc_cost", 0.0))
 	state.pending_situations.erase(situation)
-	EventsSim.apply_option(state, event, option, situation, false)
-	return {"ok": true, "message": "%s: %s." % [String(event.get("title", event_id)), String(option.get("label", option_id))]}
+	var line := EventsSim.apply_option(state, event, option, situation, false)
+	var message := "%s: %s." % [String(event.get("title", event_id)), String(option.get("label", option_id))]
+	if line != "":
+		message += " " + line
+	return {"ok": true, "message": message}
 
 
 ## Why the player cannot take this option now, or "".

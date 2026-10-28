@@ -24,10 +24,8 @@ const QUIET_OPENING_MONTHS := 2
 const MAX_PENDING := 3
 const DECISION_WINDOW_MONTHS := 2
 
-## Bespoke consequence handlers (`on_apply` ids) implemented natively. The
-## arcs that need the rest (Vasca, Vetrenka, the schemer, opposition
-## by-elections) arrive with their own slices.
-const ON_APPLY_HANDLERS := {}
+## Bespoke consequence handlers (`on_apply` ids) and arc trigger conditions
+## live in Arcs; an event needing one that is not written there cannot fire.
 
 const TARGET_KEYS := ["__coolest__", "__most_hostile__"]
 
@@ -64,11 +62,12 @@ static func option_by_id(event: Dictionary, option_id: String) -> Dictionary:
 
 ## True when every consequence this event can have is implemented.
 static func is_playable(event: Dictionary) -> bool:
-	if event.is_empty() or not String(event.get("condition", "")) in KNOWN_CONDITIONS:
+	var condition := String(event.get("condition", ""))
+	if event.is_empty() or not (condition in KNOWN_CONDITIONS or condition in Arcs.CONDITIONS):
 		return false
 	for o in event.get("options", []):
 		var handler: Variant = o.get("on_apply", null)
-		if handler != null and not ON_APPLY_HANDLERS.has(String(handler)):
+		if handler != null and not Arcs.has_handler(String(handler)):
 			return false
 	return option_by_id(event, String(event.get("default_option_id", ""))).size() > 0
 
@@ -149,7 +148,7 @@ static func condition_met(state: GameState, rule_id: String) -> bool:
 				return false
 			var dom := party.dominant_wing()
 			return dom != null and dom.loyalty < 0.35
-	return false
+	return Arcs.condition_met(state, rule_id)
 
 
 static func _own_party(state: GameState) -> Faction:
@@ -215,9 +214,11 @@ static func _lapse_overdue(state: GameState, notes: Array[String]) -> void:
 		state.pending_situations.erase(situation)
 		if option.is_empty():
 			continue
-		apply_option(state, event, option, situation, true)
+		var line := apply_option(state, event, option, situation, true)
 		notes.append("Left undecided, %s was settled by default: %s." % [
 			String(event.get("title", situation.event_id)), String(option.get("label", ""))])
+		if line != "":
+			notes.append(line)
 
 
 static func _deliver_follow_ups(state: GameState, notes: Array[String]) -> void:
@@ -309,8 +310,9 @@ static func _diplomatic_target(state: GameState, event: Dictionary) -> String:
 
 ## Applies one option's consequences once. Shared by a player's choice and
 ## by a lapse to default, so the two can never differ in what they do.
+## Returns the arc's line for the record, or "".
 static func apply_option(state: GameState, event: Dictionary, option: Dictionary,
-		situation: Situation, lapsed: bool) -> void:
+		situation: Situation, lapsed: bool) -> String:
 	var event_id := String(event.get("id", ""))
 	EffectBundle.apply(state, option.get("effects", {}), String(event.get("title", event_id)), "event:" + event_id)
 	var deltas: Dictionary = option.get("relation_deltas", {})
@@ -324,8 +326,13 @@ static func apply_option(state: GameState, event: Dictionary, option: Dictionary
 			"due_turn": state.turn + int(follow.get("delay", 1)),
 			"target_country_id": situation.target_country_id,
 		})
+	var note := ""
+	var handler: Variant = option.get("on_apply", null)
+	if handler != null:
+		note = Arcs.run(state, String(handler))
 	state.event_history.append({"event_id": event_id, "option_id": String(option.get("id", "")),
 		"turn": state.turn, "lapsed": lapsed})
+	return note
 
 
 static func _shift_relation(state: GameState, country_id: String, delta: float) -> void:

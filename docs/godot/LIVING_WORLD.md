@@ -1,7 +1,7 @@
 # Ardenia Godot — the living world (Phase 4)
 
-**Status:** situations engine and 23 of 46 authored events playable
-(2026-10-28). Arcs, the civil-war gauge, diplomacy verbs, the AI countries,
+**Status:** situations engine, the schemer arc and the party leadership
+challenge are playable (2026-10-28). Arcs, the civil-war gauge, diplomacy verbs, the AI countries,
 opposition play and the press remain. Same native-design rules as
 `SIM_REDESIGN.md`: Python is a reference for what Ardenia contains, never a
 formula to match.
@@ -11,13 +11,14 @@ formula to match.
 1. **Situations engine** — done. Arrival, pacing, decisions, default lapse,
    follow-up chains, the shared effect pipeline, role resolution, persistence,
    the "needs you" queue and the situation panel.
-2. **The arcs** — the schemer, the Vasca question, Vetrenka, the party
-   leadership challenge and opposition by-elections. Each needs its bespoke
+2. **The arcs** — the schemer and the leadership challenge are done
+   (`sim/arcs.gd`, `sim/cabinet_sim.gd`); the Vasca question, Vetrenka and
+   opposition by-elections remain. Each needs its bespoke
    consequence handlers (`on_apply` ids) written into
-   `EventsSim.ON_APPLY_HANDLERS`; until a handler exists, its events cannot
+   `Arcs.HANDLERS`; until a handler exists, its events cannot
    fire (`EventsSim.unplayable_events()` lists them). Their trigger
    conditions (`schemer_plotting`, `vasca_stirring`, `vetrenka_friction_due`,
-   `vetrenka_crossroads_ready`) join `KNOWN_CONDITIONS` with them.
+   `vetrenka_crossroads_ready`) join `Arcs.CONDITIONS` with them.
 3. **Civil-war gauge** — insurgency pressure and the latched catastrophe,
    fed by the arcs.
 4. **Diplomacy verbs** — pacts, sanctions, summits, treaty exit, loans.
@@ -71,3 +72,15 @@ Re-running the retired exporter would undo this; edit the JSON directly.
   scroll. Phase 5 layout work should give the panel more of the body.
 - No dispatch/press voice yet: arrivals and lapses are reported as plain
   monthly-report lines.
+
+## The schemer arc
+
+A schemer grows abler and more ambitious each month while their loyalty
+wears thin (`CabinetSim`); Ardenia's opening schemer crosses the threat
+line in month 22, and the arc opens between months 22 and 28 across seeds.
+Confronting early leads to a reckoning (buy them off, or force them out);
+waiting lets them move (crush them at a stability cost, expose them, or
+let them rise). A schemer who rises emboldens the player's own party and
+forces a formal leadership challenge: face it down, accommodate the wing
+(the leader's ideology moves toward it), or purge it. Every step finds its
+schemer fresh and does nothing if they have already gone.

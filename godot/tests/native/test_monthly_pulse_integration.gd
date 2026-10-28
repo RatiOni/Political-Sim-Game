@@ -76,10 +76,13 @@ static func _run_reference_rollover(state: GameState) -> void:
 	EconomySimScript.update(state)
 	RegionsSimScript.simulate(state)
 	HouseholdsSimScript.simulate(state)
+	CabinetSim.monthly(state)
 	StabilitySimScript.update_approval(state)
 	StabilitySimScript.update_stability(state)
 	Modifiers.age_all(state)
+	var situation_notes := EventsSim.monthly(state)
 	state.monthly_digest = MonthlyDigestScript.build(state, before)
+	state.monthly_digest.append_array(situation_notes)
 
 
 func _test_full_monthly_pulse(t) -> void:

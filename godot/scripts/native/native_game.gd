@@ -90,6 +90,7 @@ func advance_day() -> Dictionary:
 		EconomySimScript.update(_state)
 		RegionsSimScript.simulate(_state)
 		HouseholdsSimScript.simulate(_state)
+		CabinetSim.monthly(_state)
 		StabilitySimScript.update_approval(_state)
 		StabilitySimScript.update_stability(_state)
 		Modifiers.age_all(_state)
