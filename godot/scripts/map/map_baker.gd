@@ -7,23 +7,6 @@ const SEA_REGION := 255
 const FOREIGN_REGION := 254
 const SEED := 1993
 const BORDER_SMOOTHING_PASSES := 4
-const SNOW_LINE := 0.78
-const ROCK_SLOPE := 0.9
-const FOREST_BAND := Vector2(0.13, 0.66)
-const SAND_CEILING := 0.03
-const MOISTURE_FREQUENCY := 0.004
-const FIELD_FREQUENCY := 0.009
-const WOODLAND_FREQUENCY := 0.014
-const FOOTHILL_FOREST_BIAS := 0.35
-const LOWLAND_WOODLAND_THRESHOLD := 0.4
-const FARM_CEILING := 0.16
-const VALLEY_CEILING := 0.09
-const VALLEY_BONUS := 0.2
-const FARM_THRESHOLD := 0.2
-const TOWN_PULL := 0.5
-const TOWN_RADIUS := 0.1
-const FEATHER_WIDTH := 0.12
-const MAX_FEATHER_BLEND := 255
 const MIN_SHARED_BORDER_PIXELS := 8
 const CHAIN_REACH_HALF_PIXELS := 3
 const MIN_CHAIN_POINTS := 6
@@ -180,95 +163,6 @@ static func region_at_map(regions: Image, geo: MapGeometry, p: Vector2) -> Strin
 	var px := Vector2i(clampi(int(p.x * RESOLUTION.x), 0, RESOLUTION.x - 1), clampi(int(p.y * RESOLUTION.y), 0, RESOLUTION.y - 1))
 	var index := index_at(regions, px)
 	return geo.region_ids[index] if index < geo.region_ids.size() else ""
-
-
-static func encode_control(base: int, overlay: int, blend: int) -> float:
-	return Terrain3DUtil.as_float(Terrain3DUtil.enc_base(base) | Terrain3DUtil.enc_overlay(overlay) | Terrain3DUtil.enc_blend(blend))
-
-
-static func base_material_at(control: Image, pixel: Vector2i) -> int:
-	return Terrain3DUtil.get_base(Terrain3DUtil.as_uint(control.get_pixelv(pixel).r))
-
-
-static func bake_control(height: Image, regions: Image, geo: MapGeometry) -> Image:
-	var img := Image.create_empty(RESOLUTION.x, RESOLUTION.y, false, Image.FORMAT_RF)
-	var moisture := _noise(MOISTURE_FREQUENCY, 3, 21)
-	var fields := _noise(FIELD_FREQUENCY, 2, 31)
-	var woodland := _noise(WOODLAND_FREQUENCY, 3, 41)
-	var grass := MapAssets.material_id("grass")
-	for y in RESOLUTION.y:
-		for x in RESOLUTION.x:
-			var h := height.get_pixel(x, y).r / MAX_HEIGHT_M
-			var slope := _slope(height, x, y)
-			var material := "grass"
-			var feather := 0.0
-			if h < SAND_CEILING:
-				material = "sand"
-			elif h > SNOW_LINE:
-				material = "snow"
-			elif slope > ROCK_SLOPE:
-				material = "rock"
-			else:
-				var forest_score := _forest_score(h, moisture.get_noise_2d(x, y), woodland.get_noise_2d(x, y))
-				var farm_score := _farm_score(h, fields.get_noise_2d(x, y), _town_pull(geo, x, y))
-				if forest_score > 0.0 and forest_score >= farm_score:
-					material = "forest"
-					feather = forest_score
-				elif farm_score > 0.0:
-					material = "farmland"
-					feather = farm_score
-			var overlay := grass if feather > 0.0 else 0
-			var blend := int(clampf(1.0 - feather / FEATHER_WIDTH, 0.0, 1.0) * MAX_FEATHER_BLEND) if feather > 0.0 else 0
-			img.set_pixel(x, y, Color(encode_control(MapAssets.material_id(material), overlay, blend), 0, 0))
-	_paint_routes(img, geo)
-	return img
-
-
-static func _forest_score(h: float, moisture: float, woodland: float) -> float:
-	if h > FOREST_BAND.x and h < FOREST_BAND.y:
-		return moisture + FOOTHILL_FOREST_BIAS
-	return woodland - LOWLAND_WOODLAND_THRESHOLD
-
-
-static func _farm_score(h: float, field: float, town_pull: float) -> float:
-	if h > FARM_CEILING:
-		return -1.0
-	return field + town_pull + (VALLEY_BONUS if h < VALLEY_CEILING else 0.0) - FARM_THRESHOLD
-
-
-static func _town_pull(geo: MapGeometry, x: int, y: int) -> float:
-	var p := Vector2(x, y) / Vector2(RESOLUTION)
-	var nearest := 1.0
-	for c in geo.cities:
-		nearest = minf(nearest, p.distance_to(c["point"]))
-	return TOWN_PULL * maxf(0.0, 1.0 - nearest / TOWN_RADIUS)
-
-
-static func _slope(height: Image, x: int, y: int) -> float:
-	var x1 := mini(x + 1, height.get_width() - 1)
-	var y1 := mini(y + 1, height.get_height() - 1)
-	var metres_per_pixel := 12.5
-	var dx := (height.get_pixel(x1, y).r - height.get_pixel(x, y).r) / metres_per_pixel
-	var dy := (height.get_pixel(x, y1).r - height.get_pixel(x, y).r) / metres_per_pixel
-	return Vector2(dx, dy).length()
-
-
-static func _paint_routes(img: Image, geo: MapGeometry) -> void:
-	var road := MapAssets.material_id("road")
-	for route in geo.routes:
-		if route["kind"] == "pipeline":
-			continue
-		var points: PackedVector2Array = route["points"]
-		for i in range(points.size() - 1):
-			var a := points[i] * Vector2(RESOLUTION)
-			var b := points[i + 1] * Vector2(RESOLUTION)
-			for s in range(int(a.distance_to(b)) + 1):
-				var p := Vector2i(a.lerp(b, float(s) / maxf(1.0, a.distance_to(b))))
-				for d in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1)]:
-					var q: Vector2i = p + d
-					if q.x < RESOLUTION.x and q.y < RESOLUTION.y:
-						var current := Terrain3DUtil.as_uint(img.get_pixelv(q).r)
-						img.set_pixelv(q, Color(encode_control(Terrain3DUtil.get_base(current), road, 180), 0, 0))
 
 
 static func _boundary_edges(regions: Image) -> Dictionary:

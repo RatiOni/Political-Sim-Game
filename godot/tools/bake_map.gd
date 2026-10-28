@@ -9,10 +9,8 @@ func _initialize() -> void:
 	var geo := MapGeometry.load_world()
 	var height := MapBaker.bake_height(geo)
 	var regions := MapBaker.bake_regions(geo, height)
-	var control := MapBaker.bake_control(height, regions, geo)
 	height.save_exr(OUT_DIR + "/height.exr", true)
 	regions.save_png(OUT_DIR + "/region_ids.png")
-	control.save_exr(OUT_DIR + "/control.exr", true)
 	var borders := MapBaker.trace_borders(regions, geo)
 	var doc := {}
 	for kind in ["national", "internal", "ceasefire"]:

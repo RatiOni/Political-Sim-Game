@@ -37,25 +37,6 @@ func _initialize() -> void:
 	for id in geo.region_ids:
 		t.truth(_is_contiguous(regions, geo.region_ids.find(id)), "%s is one connected territory" % id)
 
-	var control := MapBaker.bake_control(height, regions, geo)
-	t.equal(Vector2i(control.get_width(), control.get_height()), MapBaker.RESOLUTION, "the control map matches the heightmap")
-	t.equal(MapBaker.base_material_at(control, _highest(height)), MapAssets.material_id("snow"), "the highest peak is snow")
-	t.equal(MapBaker.base_material_at(control, Vector2i(int(0.42 * MapBaker.RESOLUTION.x), int(0.66 * MapBaker.RESOLUTION.y))) in
-		[MapAssets.material_id("grass"), MapAssets.material_id("farmland")], true, "the central plain is grassland or farmland")
-	var land := 0
-	var forest := 0
-	var farmland := 0
-	for y in MapBaker.RESOLUTION.y:
-		for x in MapBaker.RESOLUTION.x:
-			if height.get_pixel(x, y).r <= 0.0:
-				continue
-			land += 1
-			var base := MapBaker.base_material_at(control, Vector2i(x, y))
-			forest += int(base == MapAssets.material_id("forest"))
-			farmland += int(base == MapAssets.material_id("farmland"))
-	t.truth(float(forest) / land >= 0.12, "forest covers at least 12%% of the land (%.1f%%)" % (100.0 * forest / land))
-	t.truth(float(farmland) / land >= 0.10 and float(farmland) / land <= 0.35, "farmland covers 10-35%% of the land (%.1f%%)" % (100.0 * farmland / land))
-
 	var borders := MapBaker.trace_borders(regions, geo)
 	t.truth(borders["national"].size() >= 1, "the national border is traced")
 	t.truth(borders["internal"].size() >= 8, "every internal border is traced")
@@ -83,17 +64,6 @@ static func _max_row(img: Image, y: int) -> float:
 	var best := -INF
 	for x in img.get_width():
 		best = maxf(best, img.get_pixel(x, y).r)
-	return best
-
-
-static func _highest(img: Image) -> Vector2i:
-	var best := Vector2i.ZERO
-	var h := -INF
-	for y in img.get_height():
-		for x in img.get_width():
-			if img.get_pixel(x, y).r > h:
-				h = img.get_pixel(x, y).r
-				best = Vector2i(x, y)
 	return best
 
 
