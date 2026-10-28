@@ -29,6 +29,12 @@ const PLAN_SPREAD_MONTHS := 3
 const FORESHADOW_LEAD_MONTHS := 1
 
 const PACT_SHELVE_CHANCE := 0.5
+const PATIENCE_FLOOR_MONTHS := 6
+const PATIENCE_CEILING_MONTHS := 18
+const PATIENCE_COLDEST := -0.8
+const PATIENCE_PER_WARMTH := 12.0
+const FORESHADOW_MERGE_MONTHS := 3
+const CARRIED_PLAN_KEYS := ["last_pressed_turn", "last_warned_target", "last_warned_turn"]
 const RIVAL_RECOVERY_RATE := 0.003
 const RIVAL_RECOVERY_TARGET := -0.6
 const CONDEMN_CHANCE := 0.35
@@ -85,13 +91,22 @@ static func national_interest(state: GameState, actor: Country) -> Dictionary:
 	if float(AGGRESSION[kind]) >= HOSTILE_AGENDA_LINE:
 		var rival := _partner(state, actor, "rival", false)
 		if rival != null:
-			if kind == "hegemon" and _rel(actor, rival).score < spent_rivalry(state, actor, rival):
+			var score := _rel(actor, rival).score
+			var resting := kind == "hegemon" and score < spent_rivalry(state, actor, rival)
+			var waiting := rival == state.country \
+				and state.turn - int(actor.plan.get("last_pressed_turn", -999)) < press_interval(score)
+			if resting or waiting:
 				var client := _partner(state, actor, "ally", true, rival)
 				if client != null:
 					return _interest("court", client)
 			return _interest("undermine", rival)
 	var ally := _partner(state, actor, "ally", true)
 	return _interest("court", ally) if ally != null else _interest("consolidate", null)
+
+
+static func press_interval(score: float) -> int:
+	return clampi(PATIENCE_FLOOR_MONTHS + roundi((score - PATIENCE_COLDEST) * PATIENCE_PER_WARMTH),
+		PATIENCE_FLOOR_MONTHS, PATIENCE_CEILING_MONTHS)
 
 
 static func spent_rivalry(state: GameState, actor: Country, rival: Country) -> float:
@@ -177,6 +192,8 @@ static func _deliberate(state: GameState, actor: Country, index: int, notes: Arr
 		return
 	if state.turn >= int(actor.plan.get("matures_turn", 0)):
 		var outcome := _execute(state, actor, notes)
+		if String(actor.plan.get("objective", "")) == "undermine" and String(actor.plan.get("target", "")) == state.country.id:
+			actor.plan["last_pressed_turn"] = state.turn
 		_make_plan(state, actor, state.turn + PLAN_MIN_MONTHS + state.rng.choose_index(PLAN_SPREAD_MONTHS), state.turn)
 		actor.plan["last_outcome"] = outcome
 		return
@@ -185,8 +202,12 @@ static func _deliberate(state: GameState, actor: Country, index: int, notes: Arr
 
 static func _make_plan(state: GameState, actor: Country, matures_turn: int, acted_turn: int) -> void:
 	var interest := national_interest(state, actor)
-	actor.plan = {"objective": interest["objective"], "target": interest["target"],
+	var plan := {"objective": interest["objective"], "target": interest["target"],
 		"matures_turn": matures_turn, "last_acted_turn": acted_turn, "foreshadowed": false}
+	for key in CARRIED_PLAN_KEYS:
+		if actor.plan.has(key):
+			plan[key] = actor.plan[key]
+	actor.plan = plan
 
 
 static func _foreshadow(state: GameState, actor: Country, notes: Array[String]) -> void:
@@ -199,6 +220,11 @@ static func _foreshadow(state: GameState, actor: Country, notes: Array[String]) 
 	if target == null:
 		return
 	plan["foreshadowed"] = true
+	if String(plan.get("last_warned_target", "")) == target.id \
+			and state.turn - int(plan.get("last_warned_turn", -999)) < FORESHADOW_MERGE_MONTHS:
+		return
+	plan["last_warned_target"] = target.id
+	plan["last_warned_turn"] = state.turn
 	_say(state, notes, "world_deliberates", actor, target)
 
 

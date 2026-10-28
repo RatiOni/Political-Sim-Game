@@ -563,9 +563,10 @@ static func _validate_world_plans(state: GameState, errors: Array[String]) -> vo
 			errors.append("world country(%s) plan has no target" % c.id)
 		if not (c.plan.get("foreshadowed", false) is bool):
 			errors.append("world country(%s) plan has a malformed leak flag" % c.id)
-		var acted: Variant = c.plan.get("last_acted_turn", -1)
-		if not (acted is int or acted is float) or float(acted) > state.turn:
-			errors.append("world country(%s) plan acted at an impossible time" % c.id)
+		for key in ["last_acted_turn", "last_pressed_turn", "last_warned_turn"]:
+			var when: Variant = c.plan.get(key, -1)
+			if not (when is int or when is float) or float(when) > state.turn:
+				errors.append("world country(%s) plan has an impossible %s" % [c.id, key])
 
 
 static func _validate_world_arcs(state: GameState, errors: Array[String]) -> void:

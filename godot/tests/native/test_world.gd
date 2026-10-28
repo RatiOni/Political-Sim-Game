@@ -319,7 +319,7 @@ static func _sign_defence_pact(state: GameState, partner: String) -> void:
 	(_c(state, partner).relations["ardenia"] as Country.BilateralRelation).treaties.append(pact.duplicate(true))
 
 
-static func _decade_against_ardenia(seed: int, pact: bool) -> Dictionary:
+static func _decade_against_ardenia(seed: int, pact: bool, outreach := false) -> Dictionary:
 	var state := _state("government", seed)
 	if pact:
 		_sign_defence_pact(state, "veldoria")
@@ -327,6 +327,8 @@ static func _decade_against_ardenia(seed: int, pact: bool) -> Dictionary:
 	var out := {"hostile": 0, "shelved": 0, "warned": 0, "lowest": 1.0, "final": 0.0}
 	var warned_for := -1
 	for _m in range(120):
+		if outreach:
+			_max_outreach(state)
 		NativeGameScript.close_month(state)
 		var plan := krasova.plan
 		if plan.get("objective") == "undermine" and plan.get("target") == "ardenia" \
@@ -415,6 +417,51 @@ func _test_a_pact_does_not_shield_you_from_your_partner(t) -> void:
 	t.equal(shelved, 0, "a defence pact never shelves the partner's own hostile moves")
 
 
+func _test_outreach_never_provokes_krasova(t) -> void:
+	for seed in [515151, 7, 99]:
+		var neglect := _decade_against_ardenia(seed, false)
+		var courted := _decade_against_ardenia(seed, false, true)
+		var neglect_moves: int = neglect["hostile"] + neglect["shelved"]
+		var courted_moves: int = courted["hostile"] + courted["shelved"]
+		t.truth(courted_moves <= neglect_moves,
+			"seed %d: courting Krasova never makes it more hostile (%d moves courted, %d neglected)" % [seed, courted_moves, neglect_moves])
+		t.truth(courted_moves >= 1, "seed %d: but the rivalry stays alive" % seed)
+
+
+func _test_a_warmer_rival_waits_longer(t) -> void:
+	t.truth(WorldSim.press_interval(-0.1) > WorldSim.press_interval(-0.7), "the warmer the relationship, the longer a rival waits between provocations")
+	var state := _state()
+	state.turn = 40
+	_set_score(state, "krasova", "ardenia", -0.3)
+	_c(state, "krasova").plan = {"objective": "court", "target": "qadir", "matures_turn": 40, "last_acted_turn": 39,
+		"foreshadowed": false, "last_pressed_turn": 39}
+	t.equal(WorldSim.national_interest(state, _c(state, "krasova"))["objective"], "court", "a rival that has just pressed tends its sphere")
+	_c(state, "krasova").plan["last_pressed_turn"] = 0
+	t.equal(WorldSim.national_interest(state, _c(state, "krasova")), {"objective": "undermine", "target": "ardenia"},
+		"and presses again once its patience runs out")
+
+
+func _test_one_plan_one_warning(t) -> void:
+	var state := _state()
+	state.turn = 20
+	var krasova := _c(state, "krasova")
+	for c in state.world:
+		c.plan = {"objective": "consolidate", "target": "", "matures_turn": 9999, "last_acted_turn": -1, "foreshadowed": false}
+	krasova.plan = {"objective": "undermine", "target": "ardenia", "matures_turn": 22, "last_acted_turn": -1, "foreshadowed": false}
+	_world_month(state)
+	_world_month(state)
+	var carried := krasova.plan.duplicate()
+	carried["objective"] = "undermine"
+	carried["target"] = "ardenia"
+	carried["matures_turn"] = state.turn + 2
+	carried["foreshadowed"] = false
+	krasova.plan = carried
+	_world_month(state)
+	_world_month(state)
+	var warnings := state.monthly_news.filter(func(i): return i["key"] == "world_deliberates" and i["fields"]["actor"] == krasova.name)
+	t.equal(warnings.size(), 1, "back-to-back plans against the same target leak once, not twice")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_each_agenda_reads_its_national_interest(t)
@@ -425,6 +472,9 @@ func _initialize() -> void:
 	_test_neglect_still_makes_a_feud_that_breathes(t)
 	_test_a_settled_vetrenka_lets_relations_warm_to_the_higher_cap(t)
 	_test_a_pact_does_not_shield_you_from_your_partner(t)
+	_test_outreach_never_provokes_krasova(t)
+	_test_a_warmer_rival_waits_longer(t)
+	_test_one_plan_one_warning(t)
 	_test_an_ideologue_presses_its_rival(t)
 	_test_a_sanctioning_power_outranks_everything(t)
 	_test_openings_are_staggered_then_paced(t)

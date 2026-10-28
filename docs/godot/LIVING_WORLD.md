@@ -214,15 +214,20 @@ weather.
   backs Vetrenka (`agenda.backs`). A hegemon rests a rivalry below −0.8;
   while the backed region is retaken by force it never rests, and once
   Vetrenka is settled it rests below −0.3. Over ten years in office it
-  moves against Ardenia 10–11 times on three seeds, every move leaked a
+  moves against Ardenia 7–8 times on three seeds, every move leaked a
   month ahead, and an unattended relationship becomes a feud.
 - **Your rival is hard to win over.** Outreach and summits toward a power
   whose rival is the player gain 0.4× (`RIVAL_RESISTANCE`). A rival that
   backs a region of yours cannot be warmed past −0.1 while that region's
   question is open, retaken or partitioned, or past +0.3 once it is settled
   (`DiplomacySim.warmth_cap`, read from `campaign_meta["<region>_status"]`).
-  Ten years of maximum outreach hold Krasova at −0.10 to −0.22 while it keeps
-  pressing (about 30 moves). Your rival refuses a defence pact, and a pact
+  Ten years of maximum outreach hold Krasova at about −0.10.
+- **Warmth buys time, never hostility.** A rival waits between provocations
+  against the player for 6 months at −0.8 or colder, one more month per
+  0.083 of warmth, up to 18 (`WorldSim.press_interval`), tending its sphere
+  meanwhile. Courting Krasova for a decade draws 6–7 moves against 7–8 for
+  neglect. Back-to-back plans against the same target leak once
+  (`FORESHADOW_MERGE_MONTHS`). Your rival refuses a defence pact, and a pact
   never shelves the partner's own moves. While the rival is not working
   against you and relations sit below −0.6 they recover 0.003 a month, so a
   neglected feud runs −0.83 to −0.96 instead of being pinned at −1.00.
