@@ -1,23 +1,6 @@
 class_name ContentRepository
 extends RefCounted
 
-## Loads the exported native content tree (godot/data/native/**) into one
-## in-memory Dictionary, keyed by catalog. This is the JSON I/O boundary for
-## Task 2's game systems — it does NOT build campaign/game state, it only
-## exposes raw content by id.
-##
-## Layout of the returned Dictionary on success:
-##   {
-##     "countries": { "<country_id>": <country dict>, ... },   # 9 entries
-##     "catalogs":  { "<catalog_name>": <catalog data>, ... },
-##     "lore":      { "<lore_name>": <lore data>, ... },
-##     "manifest":  <parsed catalog_manifest.json>,
-##   }
-##
-## On any failure (missing file, malformed JSON, duplicate id within a
-## catalog) the whole load is rejected — no partial data — and the return
-## value is instead { "error": "<message>" }. The error is also pushed via
-## push_error so it shows up in test/CI logs.
 
 const DEFAULT_ROOT := "res://data/native/"
 
@@ -42,12 +25,6 @@ static func _load_json_file(path: String):
 	return parsed
 
 
-## Recursively scans loaded content for duplicate ids: any Array whose
-## elements are Dictionaries with an "id" key must not repeat an id value
-## within that same array. Scoped to each array independently, so option
-## ids inside one event, faction ids inside one country, etc. are each
-## their own namespace — exactly matching how the exporter and Task 2's
-## consumers key things.
 static func _find_duplicate_id(value, context: String) -> String:
 	if value is Array:
 		var seen := {}
@@ -68,10 +45,6 @@ static func _find_duplicate_id(value, context: String) -> String:
 	return ""
 
 
-## The shipped content never changes while the game runs, so it is parsed
-## once and frozen. Every caller shares one read-only copy; a write anywhere
-## is an engine error rather than silent corruption of everyone else's data.
-## Other roots (tests building fixture trees) are always read fresh.
 static var _shipped_cache: Dictionary = {}
 
 

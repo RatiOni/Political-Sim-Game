@@ -68,8 +68,6 @@ static func vote(state: GameState) -> Dictionary:
 	var law := _pending(state)
 	if law == null:
 		return _error("No government bill is awaiting a vote.")
-	# Never execute mutable save-file payload as policy. Preserve only campaign
-	# process fields; authored identity and effects are rehydrated by stable id.
 	law = _canonicalized_record(law)
 	if law == null:
 		return _error("The authored bill definition is unavailable.")

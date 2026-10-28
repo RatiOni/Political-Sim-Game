@@ -1,44 +1,20 @@
 class_name EventsSim
 extends RefCounted
 
-## Situations: authored events that arrive, wait on the government, and are
-## decided — by the player, or by default if the government looks away.
-##
-## Design intent (docs/godot/LIVING_WORLD.md):
-## - Pacing over volume. The first months of a government are quiet; after
-##   that at most one unprompted situation arrives a month, and none while
-##   the government already has MAX_PENDING waiting. A situation is news,
-##   not noise.
-## - Consequences arrive on schedule. A follow-up set in motion by an earlier
-##   choice always arrives when due, even into a full queue — the past is not
-##   paced.
-## - Looking away is a decision. A situation not decided within
-##   DECISION_WINDOW_MONTHS takes its default option, and the record says so.
-## - Every roll uses the campaign's own saved random stream, so a reloaded
-##   game unfolds exactly as it would have.
-## - Content is honest about what exists. An event whose options need a
-##   bespoke consequence handler not yet written never fires; it is listed by
-##   `unplayable_events()` instead of silently doing half of what it says.
 
 const QUIET_OPENING_MONTHS := 2
 const MAX_PENDING := 3
 const DECISION_WINDOW_MONTHS := 2
 
-## Bespoke consequence handlers (`on_apply` ids) and arc trigger conditions
-## live in Arcs; an event needing one that is not written there cannot fire.
 
 const TARGET_KEYS := ["__coolest__", "__most_hostile__"]
 
-## Every condition `condition_met` understands. An event naming any other
-## is unplayable rather than silently never firing.
 const KNOWN_CONDITIONS := ["always", "never", "has_serious_grievance", "any_cool_relation",
 	"any_bad_relation", "any_disloyal_minister", "has_opposition", "has_active_trade",
 	"fiscal_strain", "price_or_debt_alarm", "labour_pressure", "high_unemployment",
 	"budget_surplus", "weak_state", "has_active_law", "neighbour_in_civil_war",
 	"shaky_government", "out_of_office", "own_party_seated_in_opposition", "restless_own_party"]
 
-
-# ── Catalog ──────────────────────────────────────────────────────────────
 
 static func catalog() -> Array:
 	var content: Dictionary = ContentRepository.load_all()
@@ -63,7 +39,6 @@ static func option_by_id(event: Dictionary, option_id: String) -> Dictionary:
 	return {}
 
 
-## True when every consequence this event can have is implemented.
 static func is_playable(event: Dictionary) -> bool:
 	var condition := String(event.get("condition", ""))
 	if event.is_empty() or not (condition in KNOWN_CONDITIONS or condition in Arcs.CONDITIONS):
@@ -83,10 +58,6 @@ static func unplayable_events() -> Array[String]:
 	return out
 
 
-# ── Conditions: when the country makes a situation plausible ─────────────
-
-## Whether `rule_id` holds for this state. Unknown rules are false: an event
-## nobody has taught the game to recognise does not fire.
 static func condition_met(state: GameState, rule_id: String) -> bool:
 	var econ := state.country.economy
 	match rule_id:
@@ -161,13 +132,9 @@ static func _own_party(state: GameState) -> Faction:
 	return null
 
 
-## The country this government gets on worst with, if that is below
-## `below`; "" otherwise.
 static func _worst_relation(state: GameState, below: float) -> String:
 	var worst := ""
 	var worst_score := below
-	# Sorted, so equally bad relations resolve the same way after a reload
-	# (a save stores keys in sorted order, not insertion order).
 	var keys := state.country.relations.keys()
 	keys.sort()
 	for key in keys:
@@ -187,7 +154,6 @@ static func audience_ok(state: GameState, event: Dictionary) -> bool:
 	return true
 
 
-## Why an option cannot be chosen by this player, or "".
 static func gate_reason(state: GameState, option: Dictionary) -> String:
 	var gate: Variant = option.get("requires", null)
 	if not (gate is Dictionary):
@@ -199,11 +165,6 @@ static func gate_reason(state: GameState, option: Dictionary) -> String:
 	return ""
 
 
-# ── The monthly close ────────────────────────────────────────────────────
-
-## Runs once per month after the rest of the close: lapses overdue
-## situations, delivers due follow-ups, and perhaps lets one new situation
-## arrive. Returns plain-language notes for the monthly report.
 static func monthly(state: GameState) -> Array[String]:
 	var notes: Array[String] = []
 	_lapse_overdue(state, notes)
@@ -212,11 +173,6 @@ static func monthly(state: GameState) -> Array[String]:
 	return notes
 
 
-## A situation not decided by the end of its deadline month takes its
-## default — and costs what choosing the default would have cost (as much of
-## it as the government has), so looking away is never the cheap way to
-## pick it. Government business frozen by a change of office does not lapse
-## onto someone who cannot decide it; it waits for a government.
 static func _lapse_overdue(state: GameState, notes: Array[String]) -> void:
 	for situation in state.pending_situations.duplicate():
 		if state.turn <= situation.deadline_turn:
@@ -237,9 +193,6 @@ static func _lapse_overdue(state: GameState, notes: Array[String]) -> void:
 			notes.append(line)
 
 
-## A follow-up nobody can receive yet — government business while the
-## player is out of office, or one already waiting — stays scheduled and
-## arrives once it can. Only content that can never play is dropped.
 static func _deliver_follow_ups(state: GameState, notes: Array[String]) -> void:
 	for row in state.scheduled_events.duplicate():
 		if int(row.get("due_turn", 0)) > state.turn:
@@ -267,8 +220,6 @@ static func _maybe_arrive(state: GameState, notes: Array[String]) -> void:
 		none_chance *= (1.0 - chance)
 	if candidates.is_empty():
 		return
-	# One draw decides whether anything happens this month; a second picks
-	# which, in proportion to each situation's own likelihood.
 	if state.rng.next_float() >= 1.0 - none_chance:
 		return
 	var total := 0.0
@@ -308,8 +259,6 @@ static func _is_pending(state: GameState, event_id: String) -> bool:
 	return false
 
 
-## `follows_on` marks a situation an earlier decision set in motion, so the
-## report shows the player cause and effect rather than another surprise.
 static func _arrive(state: GameState, event: Dictionary, target: String, notes: Array[String],
 		follows_on := false) -> void:
 	var situation := Situation.new()
@@ -326,7 +275,6 @@ static func _arrive(state: GameState, event: Dictionary, target: String, notes: 
 		notes.append("A new situation needs a decision: %s." % title)
 
 
-## For an event addressed to "the coolest neighbour", the country that is.
 static func _diplomatic_target(state: GameState, event: Dictionary) -> String:
 	for o in event.get("options", []):
 		for key in o.get("relation_deltas", {}):
@@ -335,11 +283,6 @@ static func _diplomatic_target(state: GameState, event: Dictionary) -> String:
 	return ""
 
 
-# ── Consequences ─────────────────────────────────────────────────────────
-
-## Applies one option's consequences once. Shared by a player's choice and
-## by a lapse to default, so the two can never differ in what they do.
-## Returns the arc's line for the record, or "".
 static func apply_option(state: GameState, event: Dictionary, option: Dictionary,
 		situation: Situation, lapsed: bool) -> String:
 	var event_id := String(event.get("id", ""))

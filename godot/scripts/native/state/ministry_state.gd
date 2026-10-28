@@ -1,10 +1,6 @@
 class_name MinistryState
 extends RefCounted
 
-## Typed mirror of models/ministry.py: one cabinet department's persistent
-## operating condition. GameFactory does not populate these yet (see
-## game_factory.gd header note) — the seeding/recalculation logic lives in
-## engine/ministries.py, which is out of Task 2's scope.
 
 var portfolio: String
 var baseline_funding: float = 0.0
@@ -15,7 +11,7 @@ var capacity: float = 0.0
 var delivery: float = 1.0
 var backlog: float = 0.0
 var months_overloaded: int = 0
-var workload_breakdown: Dictionary = {}   # String label -> float
+var workload_breakdown: Dictionary = {}
 
 
 func load_ratio() -> float:
@@ -66,8 +62,6 @@ static func from_dict(data: Dictionary) -> MinistryState:
 	return m
 
 
-## JSON boundary: Godot parses every JSON number as float, so a whole-number
-## float must read back as an int wherever an int field is expected.
 static func _int_field(data: Dictionary, key: String, fallback: int) -> int:
 	var v: Variant = data.get(key, fallback)
 	if typeof(v) == TYPE_INT:

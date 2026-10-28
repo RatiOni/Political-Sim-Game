@@ -1,18 +1,7 @@
 class_name StateValidator
 extends RefCounted
 
-## Structural sanity checks on a GameState built by GameFactory. An empty
-## PackedStringArray means valid; each entry is one human-readable problem.
-## This checks the shape of Task 2's own typed state (required fields,
-## faction seat sums, relation symmetry, numeric ranges) — it is not a
-## parity/oracle comparison against the Python reference.
-##
-## Every numeric bound enforced here is documented in the Python reference
-## (cited per check); bounds Python does not document are not invented.
 
-## Self-contained Gregorian month table for the day-range check — mirrors
-## sim/calendar.gd deliberately WITHOUT calling it, so the validator stays
-## decoupled from the sim layer.
 const _DAYS_IN_MONTH := [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 
@@ -61,9 +50,6 @@ static func validate(state: GameState) -> PackedStringArray:
 	if state.stability_value < 0.0 or state.stability_value > 1.0:
 		errors.append("stability_value out of range: %s" % state.stability_value)
 
-	# 0..1 pressure gauge per game_state.py ("0..1 pressure gauge + latch",
-	# civil-war section) and engine/crisis.py ("a deterministic 0..1 risk
-	# gauge"); per-country values are checked in _validate_country.
 	if state.civil_war_risk < 0.0 or state.civil_war_risk > 1.0:
 		errors.append("civil_war_risk out of range: %s" % state.civil_war_risk)
 
@@ -129,10 +115,6 @@ static func _validate_relation_symmetry(state: GameState, errors: Array[String])
 				errors.append("relation trade_volume asymmetry between '%s' and '%s'" % [a.id, b.id])
 
 
-## models/relations.py documents score as -1.0 (openly hostile) to +1.0
-## (close allies) (BilateralRelation docstring + field comment) and floors
-## trade at zero (cap_trade_volume clamps to max(0.0, ...)); only those two
-## bounds are enforced — no upper trade ceiling is invented.
 static func _validate_relation_ranges(state: GameState, errors: Array[String]) -> void:
 	var all_countries: Array[Country] = [state.country]
 	all_countries.append_array(state.world)
@@ -160,9 +142,6 @@ static func _days_in_month(year: int, month: int) -> int:
 	return _DAYS_IN_MONTH[month - 1]
 
 
-## game_state.py documents month as 1-12; day_index counts simulated days
-## from 0 and turn counts completed monthly pulses from 0 (both must stay
-## non-negative). Day is checked against the state's own year/month.
 static func _validate_date(state: GameState, errors: Array[String]) -> void:
 	if state.month < 1 or state.month > 12:
 		errors.append("month out of range: %s" % state.month)
@@ -176,11 +155,6 @@ static func _validate_date(state: GameState, errors: Array[String]) -> void:
 		errors.append("turn is negative: %s" % state.turn)
 
 
-## models/cabinet.py documents Minister competence/loyalty/ambition as
-## 0.0-1.0 each (field comments) and trait as a key into TRAIT_EFFECTS with
-## "" meaning no notable personality — an unknown non-empty trait is corrupt
-## data, not a new personality. (Minister loyalty is 0..1, not the faction
-## -1..1 scale.)
 static func _validate_ministers(state: GameState, errors: Array[String]) -> void:
 	var factions := _faction_ids(state)
 	for m in state.ministers:
@@ -406,7 +380,6 @@ static func _validate_budgets(state: GameState, errors: Array[String]) -> void:
 	if state.active_budget != null:
 		_validate_budget(state.active_budget, "active_budget", "active", state.year, expected, portfolios, errors)
 	if state.pending_budget != null:
-		# During an emergency resolution the pending plan may be for this year.
 		var pending_year := state.year if BudgetSim.is_emergency(state) 			and state.pending_budget.year == state.year else state.year + 1
 		_validate_budget(state.pending_budget, "pending_budget", "pending", pending_year - 1, expected, portfolios, errors)
 	for i in range(state.budget_history.size()):
@@ -529,14 +502,10 @@ static func _validate_country(country: Country, errors: Array[String], label: St
 		errors.append("%s: stability out of range" % label)
 	if country.bureaucratic_capacity < 0.0 or country.bureaucratic_capacity > 1.0:
 		errors.append("%s: bureaucratic_capacity out of range" % label)
-	# 0..1 pressure gauge per engine/crisis.py ("a deterministic 0..1 risk
-	# gauge"); the GameState-level mirror is checked in validate().
 	if country.civil_war_risk < 0.0 or country.civil_war_risk > 1.0:
 		errors.append("%s: civil_war_risk out of range" % label)
 
 
-## Waiting situations must name a known event, once each, with a sane
-## deadline; scheduled follow-ups must name a known event and a due turn.
 static func _validate_situations(state: GameState, errors: Array[String]) -> void:
 	var seen := {}
 	for situation in state.pending_situations:

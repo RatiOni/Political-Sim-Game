@@ -1,20 +1,12 @@
 class_name Country
 extends RefCounted
 
-## Typed mirror of models/country.py: Country — plus models/relations.py's
-## BilateralRelation (kept here, not a separate file, since it only ever
-## exists as one country's view of another). Treaty isn't ported as a typed
-## class: no country starts a campaign with one, and the treaty mechanics
-## (engine/diplomacy.py) are out of Task 2's scope.
 
 const REGIME_TYPES: Array[String] = [
 	"parliamentary_democracy", "presidential_democracy", "hybrid_regime",
 	"authoritarian", "totalitarian",
 ]
 
-## Coarse regime "camps" — shared taxonomy for player↔world and world↔world
-## relation drift (a later phase's engine work; kept here as the same design
-## reference Python uses).
 const REGIME_FAMILIES := {
 	"parliamentary_democracy": "democracy",
 	"presidential_democracy": "democracy",
@@ -25,7 +17,6 @@ const REGIME_FAMILIES := {
 
 
 class BilateralRelation extends RefCounted:
-	## score: -1.0 (openly hostile) to +1.0 (close allies).
 	var country_a_id: String
 	var country_b_id: String
 	var score: float = 0.0
@@ -90,31 +81,21 @@ var regime_type: String
 var population: int
 var economy: Economy
 
-## Full for the player country; simplified (still typed) for world countries.
 var factions: Array[Faction] = []
 
-## other_country_id -> BilateralRelation.
 var relations: Dictionary = {}
 
-## Regime-stability signal for WORLD countries. The player's own country uses
-## the full GameState stability system instead (not yet ported — see
-## game_state.gd header note); this field is still seeded from
-## meta.stability_value for every country, player included, matching
-## content/loader.py: build_country.
 var stability: float = 0.7
 
 var bureaucratic_capacity: float = 0.75
 var national_traits: Array[String] = []
 
-## e.g. {"type": "revanchist", "rival": "veldoria"}. Empty -> default by regime.
 var agenda: Dictionary = {}
 
 var leader_name: String = ""
 var paper: String = ""
 var capital: String = ""
 
-## The country's current deliberated plan (engine/worldsim.py, a later
-## phase). Empty = needs deliberation.
 var plan: Dictionary = {}
 
 var civil_war_risk: float = 0.0
@@ -232,8 +213,6 @@ static func from_dict(data: Dictionary) -> Country:
 	return c
 
 
-## JSON boundary: Godot parses every JSON number as float, so a whole-number
-## float must read back as an int wherever an int field is expected.
 static func _int_field(data: Dictionary, key: String, fallback: int) -> int:
 	var v: Variant = data.get(key, fallback)
 	if typeof(v) == TYPE_INT:

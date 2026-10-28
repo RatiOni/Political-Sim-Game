@@ -1,17 +1,6 @@
 class_name PoliticalCapital
 extends RefCounted
 
-## Governing bandwidth, not a score to hoard. The player spends political
-## capital to force priorities through a crowded political system, then earns
-## room back through mandate, coalition confidence and a functioning state.
-##
-## Design reasons for these values:
-## - BASE_REGEN keeps a new government able to act between monthly decisions.
-## - MIN_REGEN prevents a low-morale administration from becoming a dead save.
-## - SOFT_LIMIT makes a comfortable reserve useful without turning 100 into a
-##   permanent flat ceiling; action still matters above it, but hoarding slows.
-## - ABSOLUTE_LIMIT is a safety boundary for malformed or extreme campaigns,
-##   not a target a normal campaign should sit against.
 const BASE_REGEN := 5.0
 const MIN_REGEN := 1.0
 const SOFT_LIMIT := 80.0
@@ -21,7 +10,6 @@ const PC_UPKEEP_LAW := 0.9
 const PC_UPKEEP_TREATY := 0.7
 const PC_UPKEEP_SANCTIONS := 1.2
 
-## The recurring political attention absorbed by existing commitments.
 static func upkeep(state: GameState) -> Dictionary:
 	var laws := state.enacted_laws.size()
 	var treaties := 0
@@ -40,9 +28,6 @@ static func _total_upkeep(state: GameState) -> float:
 		total += float(value)
 	return total
 
-## Read-only explanation for the UI and tests. This is intentionally a
-## political story, not an inherited arithmetic contract: mandate, coalition
-## confidence, institutional stability and commitments pull in opposite ways.
 static func regeneration_preview(state: GameState) -> Dictionary:
 	var coalition_loyalty := 0.0
 	var members := 0

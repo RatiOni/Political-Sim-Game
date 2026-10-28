@@ -1,9 +1,6 @@
 class_name ParliamentaryVote
 extends RefCounted
 
-## Pure projection for one positioned parliamentary motion. The motion is a
-## detached Dictionary with: id, ideology, stakes, lobbying_bonus, sponsor_id
-## and player_faction_id. This kernel knows nothing about budgets or laws.
 
 const SALIENCE := 4.0
 const WING_SALIENCE := 2.0
@@ -70,8 +67,6 @@ static func project(factions: Array, motion: Dictionary) -> Dictionary:
 
 	var seats := votes_for + votes_against
 	var required_fraction := clampf(float(motion.get("required_fraction", 0.5)), 0.5, 1.0)
-	# Preserve strict-majority behaviour for existing motions. A constitutional
-	# motion may explicitly require a fraction of the whole voting chamber.
 	var threshold := floori(float(seats) / 2.0) + 1
 	if required_fraction > 0.5:
 		threshold = ceili(float(seats) * required_fraction)

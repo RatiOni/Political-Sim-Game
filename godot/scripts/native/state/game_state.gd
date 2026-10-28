@@ -1,42 +1,16 @@
 class_name GameState
 extends RefCounted
 
-## Typed mirror of game_state.py: GameState + Player, scoped to what Phase 1
-## Task 2 (campaign construction) actually needs. game_state.py's full field
-## set also covers systems this rebuild's later phases own — the legislative
-## engine (Legislature/Law/Cabinet-as-a-wrapper), elections, shadow cabinet,
-## opposition/domestic-AI politics, the annual budget vote cycle, reform
-## design, the household/ministry turn-by-turn recalculation, events, and the
-## GovernmentStability aggregate. None of those are read by
-## `content/loader.py: build_state_for` at construction time in a way Task 2
-## needs to reproduce (per the brief's own "Read first" list), so they are
-## deliberately not modelled yet:
-##   - `legislature` / `cabinet` (as wrapper types) — cabinet ministers are
-##     just `ministers: Array[Minister]` here (Cabinet is a thin list wrapper
-##     in Python with no fields of its own).
-##   - `stability` (GovernmentStability) — represented as a plain scalar
-##     `stability_value` for now, matching what `loader.build_state_for` seeds
-##     it from (`meta.stability_value`).
-##   - `regions` / `households` / `ministries` / `active_budget` — the typed
-##     container classes exist (region.gd, household_group.gd,
-##     ministry_state.gd, annual_budget.gd) so GameState can hold them, but
-##     GameFactory does not populate them: the seeding logic lives in
-##     engine/regions.py, engine/households.py, engine/ministries.py and
-##     engine/budget.py, none of which are in this task's scope.
-## A future task that ports one of those systems extends this class rather
-## than replacing it.
 
 class Player extends RefCounted:
-	## The head of government — the player's own political identity.
 	var name: String
-	var title: String            # "Prime Minister", "President", etc.
-	var faction_id: String       # the faction that brought them to power
+	var title: String
+	var faction_id: String
 	var ideology_economic: float = 0.0
 	var ideology_social: float = 0.0
 	var approval: float = 0.5
 	var political_capital: float = 50.0
 	var pc_regen_base: float = 10.0
-	## False = in opposition (gates government-only actions).
 	var in_government: bool = true
 	var elections_won: int = 0
 
@@ -75,81 +49,51 @@ class Player extends RefCounted:
 
 
 var year: int
-var month: int   # 1-12
+var month: int
 var day: int = 1
 var day_index: int = 0
 var turn: int = 0
 
 var player: Player
-var country: Country                  # the player's country, full detail
-var world: Array[Country] = []        # other nations
+var country: Country
+var world: Array[Country] = []
 
-## Live subnational conditions, keyed by content/lore/geography.py's stable
-## region ids. Not yet populated by GameFactory — see header note.
-var regions: Dictionary = {}                 # String region_id -> RegionState
-var regional_programs: Array = []            # RegionState.RegionalProgram
+var regions: Dictionary = {}
+var regional_programs: Array = []
 
-## Departmental operating condition, keyed by cabinet portfolio. Not yet
-## populated by GameFactory — see header note.
-var ministries: Dictionary = {}              # String portfolio -> MinistryState
-## Keys are "region_id:group_id". Not yet populated by GameFactory.
-var households: Dictionary = {}              # String -> HouseholdGroupState
+var ministries: Dictionary = {}
+var households: Dictionary = {}
 
-## Annual structural appropriations. Not yet populated by GameFactory.
 var active_budget: AnnualBudget = null
 var pending_budget: AnnualBudget = null
 var budget_history: Array[AnnualBudget] = []
 
-## Native parliamentary legislation: one tabled bill, enacted laws, and the
-## complete outcome ledger (enacted, defeated, or withdrawn).
 var pending_law: Law = null
 var enacted_laws: Array[Law] = []
 var law_history: Array[Law] = []
 
-## The government's ministers — Python's `Cabinet` is just `list[Minister]`
-## plus aggregate helpers, so no wrapper type is ported (see header note).
 var ministers: Array[Minister] = []
-## Outstanding appointment choices, keyed by core portfolio. Candidates are typed Ministers.
 var cabinet_shortlists: Dictionary = {}
 
-## Every active time-shaped policy effect currently in flight (see
-## modifier.gd). Task 3 ages these each simulated day/month.
 var modifiers: Array[Modifier] = []
 
 var ruling_faction_id: String = ""
 
-## 0..1 pressure gauge + latch for the player's country (engine/crisis.py,
-## a later phase). An ongoing pressure, not a game-over.
 var civil_war_risk: float = 0.0
 var civil_war: bool = false
-## 0..1 armed resistance to the state inside the country (Vasca in the west,
-## Vetrenka across the line). Raised and lowered by the arcs; feeds unrest.
 var insurgency_pressure: float = 0.0
 
-## Plain scalar stand-in for Python's GovernmentStability aggregate — see
-## header note. Default matches models/stability.py: GovernmentStability.value
-## (0.55), since Ardenia's own content/countries/ardenia.json has no
-## meta.stability_value key and so hits this exact fallback in a real
-## campaign — must match the Python reference, not drift from it.
 var stability_value: float = 0.55
 
-## Completed native monthly report. Older saves intentionally receive an empty report.
 var monthly_digest: Array[String] = []
 
-## Generation metadata (difficulty, seed, background, opening role, national
-## traits) as a plain Dictionary, matching Python's campaign_meta.
 var campaign_meta: Dictionary = {}
 
-## Situations: those waiting on the government, follow-ups already set in
-## motion ({event_id, due_turn, target_country_id}), the turn each event last
-## arrived, and every decision taken ({event_id, option_id, turn, lapsed}).
 var pending_situations: Array[Situation] = []
 var scheduled_events: Array[Dictionary] = []
-var event_fire_history: Dictionary = {}   # String event_id -> int turn
+var event_fire_history: Dictionary = {}
 var event_history: Array[Dictionary] = []
 
-## The campaign RNG. Never null: a fresh state opens on seed 0 and NativeGame
-## reseeds it from the campaign config in unit B.
 var rng: SimRng = SimRng.from_seed(0)
 
 
@@ -199,10 +143,6 @@ func to_dict() -> Dictionary:
 	var modifier_dicts: Array = []
 	for m in modifiers:
 		modifier_dicts.append(m.to_dict())
-	# The RNG travels through SimRng's own to_dict, except its two int64s are
-	# stored as decimal strings: Godot parses every JSON number as float64,
-	# which cannot hold 64-bit PCG state exactly past 2^53 — plain ints would
-	# silently fork the stream on load (verified empirically).
 	var rng_snapshot := {"state": "0", "inc": "1"}
 	if rng != null:
 		var raw_rng := rng.to_dict()
@@ -244,14 +184,6 @@ func to_dict() -> Dictionary:
 	}
 
 
-## Tolerant reader (mirroring engine/persistence.py): an ABSENT key falls back
-## to its field's declared default and unknown keys are ignored, so older
-## saves load under a newer schema. Strict where tolerance would corrupt:
-## the player/country/rng subtrees are REQUIRED (absent, null, or
-## unparseable rejects the save), and a PRESENT-but-wrongly-typed container
-## (e.g. "world" holding a Dictionary) rejects it too instead of silently
-## loading empty. Scalar coercion and the schemaless campaign_meta stay
-## lenient, as before. Returns null + push_error on any rejection.
 static func from_dict(data: Dictionary) -> GameState:
 	if not (data is Dictionary):
 		push_error("GameState.from_dict: expected a Dictionary, got %s" % [data])
@@ -487,9 +419,6 @@ static func _valid_household(household: HouseholdGroupState) -> bool:
 			return false
 	return true
 
-## Accepts the string form to_dict writes, plus raw ints and whole-number
-## floats (hand-written or foreign saves) — the int/float tolerance the JSON
-## boundary requires. Null + push_error on anything else.
 static func _rng_from_dict(v: Variant) -> SimRng:
 	if not (v is Dictionary):
 		push_error("GameState.from_dict: malformed 'rng', expected a Dictionary, got %s" % [v])
@@ -509,8 +438,6 @@ static func _rng_from_dict(v: Variant) -> SimRng:
 	return SimRng.from_dict(coerced)
 
 
-## JSON boundary: Godot parses every JSON number as float, so a whole-number
-## float must read back as an int wherever an int field is expected.
 static func _int_field(data: Dictionary, key: String, fallback: int) -> int:
 	var v: Variant = data.get(key, fallback)
 	if typeof(v) == TYPE_INT:

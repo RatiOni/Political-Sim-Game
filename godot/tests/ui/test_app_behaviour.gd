@@ -1,10 +1,5 @@
 extends SceneTree
 
-## Behaviour tests for the game screen (scripts/app.gd), driving the real
-## main scene through the NativeGame autoload.
-## Run via:
-##   Godot --headless --path godot --script res://tests/ui/test_app_behaviour.gd
-
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const TEST_SLOT := "test_app_behaviour"
 

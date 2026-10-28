@@ -1,17 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for the civil-war gauge (CrisisSim).
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_crisis.gd
-##
-## Intended behaviour: civil-war risk is a deterministic reading of how close
-## the state is to breaking — never rolled; the gauge chases that reading
-## faster than ordinary politics move; it boils over only past a high bar and
-## clears only well below it, so a war is hard to end; a war costs every month
-## it lasts but is never a game over; an insurgency raises the temperature but
-## cannot start a war by itself, and fades unless something keeps feeding it;
-## the eight world countries live under the same dynamics.
-
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 
 
@@ -33,8 +21,6 @@ static func _break_the_state(state: GameState) -> void:
 			f.in_coalition = false
 	state.insurgency_pressure = 1.0
 
-
-# ── The reading ──────────────────────────────────────────────────────────
 
 func _test_a_calm_country_reads_low(t) -> void:
 	var state := _state()
@@ -66,8 +52,6 @@ func _test_insurgency_alone_cannot_start_a_war(t) -> void:
 	t.truth(hot > calm, "an insurgency raises the temperature")
 	t.truth(hot < CrisisSim.WAR_THRESHOLD, "but men in the hills do not by themselves start a civil war (%.2f)" % hot)
 
-
-# ── The gauge ────────────────────────────────────────────────────────────
 
 func _test_the_gauge_chases_its_reading(t) -> void:
 	var state := _state()
@@ -119,8 +103,6 @@ func _test_a_war_costs_every_month_but_is_no_game_over(t) -> void:
 		"ten years of war leave a battered state, not a broken game")
 
 
-# ── Insurgency fades unless fed ──────────────────────────────────────────
-
 func _test_an_unfed_insurgency_fades(t) -> void:
 	var state := _state()
 	state.insurgency_pressure = 0.30
@@ -131,8 +113,6 @@ func _test_an_unfed_insurgency_fades(t) -> void:
 		CrisisSim.monthly(state)
 	t.near(state.insurgency_pressure, 0.0, 1e-9, "and eventually comes down from the hills")
 
-
-# ── The world ────────────────────────────────────────────────────────────
 
 func _test_world_countries_live_under_the_same_dynamics(t) -> void:
 	var state := _state()
@@ -164,8 +144,6 @@ func _test_neighbours_at_war_are_reported(t) -> void:
 			told = true
 	t.truth(told, "the monthly report names a neighbour that has fallen into civil war")
 
-
-# ── Persistence ──────────────────────────────────────────────────────────
 
 func _test_the_gauge_survives_save_and_reload(t) -> void:
 	var state := _state()

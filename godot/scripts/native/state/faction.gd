@@ -1,15 +1,8 @@
 class_name Faction
 extends RefCounted
 
-## Typed mirror of models/faction.py: Ideology, Grievance, Demand, Faction —
-## plus models/wing.py's Wing (kept here, not a separate file, since it only
-## ever exists as a Faction's child) and engine/parties.py's
-## generate_default_wings (ported per the plan's carried-forward finding from
-## Task 1's review — see game_factory.gd header note for why).
 
 class Ideology extends RefCounted:
-	## 2D political compass position. economic: -1.0 (far left) to +1.0 (far
-	## right). social: -1.0 (authoritarian) to +1.0 (libertarian).
 	var economic: float = 0.0
 	var social: float = 0.0
 
@@ -80,7 +73,7 @@ class Grievance extends RefCounted:
 class Demand extends RefCounted:
 	var description: String
 	var urgency: float = 0.5
-	var law_id: String = ""   # "" == Python's None
+	var law_id: String = ""
 
 
 	func to_dict() -> Dictionary:
@@ -104,11 +97,9 @@ class Wing extends RefCounted:
 	var ideology: Ideology
 	var strength: float
 	var loyalty: float = 0.6
-	## "bloc" marks authored social currents (Ardenia); generic country data
-	## uses "wing".
 	var kind: String = "wing"
 	var description: String = ""
-	var policy_biases: Dictionary = {}   # String law_id -> float
+	var policy_biases: Dictionary = {}
 
 	static func from_json(data: Dictionary) -> Wing:
 		var w := Wing.new()
@@ -166,9 +157,7 @@ var seats: int
 var in_coalition: bool = false
 var grievances: Array[Grievance] = []
 var demands: Array[Demand] = []
-## Share of the electorate backing this party (~sums to 1.0 across all).
 var support: float = 0.2
-## "" == Python's None ("assign one from the shared palette" — cosmetic only).
 var color: String = ""
 var wings: Array[Wing] = []
 var leader: String = ""
@@ -299,13 +288,6 @@ static func from_json(data: Dictionary) -> Faction:
 	return f
 
 
-## Ported from engine/parties.py: generate_default_wings. A moderate wing
-## pulled toward the centre, a mainstream wing at the party line, and a
-## hardline wing pushed further out along the party's own ideological axis.
-## Task 1's exported content only carries authored `wings` for Ardenia's
-## twelve canonical blocs (a design/content boundary, not an omission — see
-## game_factory.gd) — every other country's factions get their generic wings
-## generated here at campaign-build time instead.
 static func generate_default_wings(faction: Faction) -> Array[Wing]:
 	var econ := faction.ideology.economic
 	var soc := faction.ideology.social
@@ -413,8 +395,6 @@ static func from_dict(data: Dictionary) -> Faction:
 	return f
 
 
-## JSON boundary: Godot parses every JSON number as float, so a whole-number
-## float must read back as an int wherever an int field is expected.
 static func _int_field(data: Dictionary, key: String, fallback: int) -> int:
 	var v: Variant = data.get(key, fallback)
 	if typeof(v) == TYPE_INT:

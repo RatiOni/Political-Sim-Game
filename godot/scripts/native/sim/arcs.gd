@@ -1,26 +1,14 @@
 class_name Arcs
 extends RefCounted
 
-## Bespoke consequences for authored story arcs: the effects an ordinary
-## effect bundle cannot express (a minister forced out, a party wing purged).
-## Each handler re-resolves its subject from live state and quietly does
-## nothing if that subject has gone — a schemer who resigned in month 3 is
-## not dismissed again in month 6.
-##
-## EventsSim asks `has_handler` before letting an event fire, so an arc whose
-## handlers are not all written here simply cannot start.
 
 const HANDLERS := [
-	# The schemer arc.
 	"schemer_noted", "schemer_buy_off", "schemer_resign", "schemer_crush",
 	"schemer_expose", "schemer_ascend",
-	# The party leadership challenge it hands off to.
 	"challenge_face_down", "challenge_accommodate", "challenge_purge",
-	# The Vasca question.
 	"vasca_crackdown", "vasca_lead_personally", "vasca_amnesty", "vasca_downplay",
 	"vasca_taken", "vasca_backlash", "vasca_pull_back", "vasca_amnesty_worked",
 	"vasca_grows", "vasca_storm", "vasca_exile", "vasca_unresolved",
-	# Vetrenka, the frozen conflict.
 	"vetrenka_absorb", "vetrenka_protest", "vetrenka_respond", "vetrenka_open_talks",
 	"vetrenka_launch_offensive", "vetrenka_formalise", "vetrenka_settle",
 	"vetrenka_talks_failed", "vetrenka_won", "vetrenka_lost", "vetrenka_partitioned",
@@ -30,11 +18,8 @@ const HANDLERS := [
 const CONDITIONS := ["schemer_plotting", "vasca_stirring", "vetrenka_friction_due",
 	"vetrenka_crossroads_ready"]
 
-## Incidents on the line of contact before anything can shift.
 const FRICTION_BEFORE_CROSSROADS := 3
-## What each Vetrenka ending does to the region itself:
-## [control, defining issue, state reach, pressure]. These are the immediate
-## post-crisis conditions; the ordinary regional pulse moves them from there.
+const OCCUPATION_INSURGENCY := 0.25
 const VETRENKA_REGION_OUTCOMES := {
 	"settled": ["autonomous", "postwar_framework", 0.28, 0.48],
 	"talks_failed": ["separatist", "unsettled_ceasefire", 0.03, 0.94],
@@ -44,14 +29,10 @@ const VETRENKA_REGION_OUTCOMES := {
 	"partitioned_contested": ["separatist", "contested_partition", 0.03, 0.82],
 }
 
-## Vasca never tests a government in its first months.
 const VASCA_MIN_TURN := 8
-## A crackdown's odds of success never quite reach certainty.
 const VASCA_MAX_ODDS := 0.92
-## A former general who goes west himself adds this to the odds.
 const VASCA_GENERAL_BONUS := 0.20
 
-## How dangerous a schemer must be before they act.
 const SCHEMER_THRESHOLD := 0.5
 
 
@@ -59,7 +40,6 @@ static func has_handler(handler_id: String) -> bool:
 	return handler_id in HANDLERS
 
 
-## Runs one handler; returns a line for the record, or "".
 static func run(state: GameState, handler_id: String) -> String:
 	match handler_id:
 		"schemer_noted":
@@ -69,7 +49,6 @@ static func run(state: GameState, handler_id: String) -> String:
 			var m := arc_schemer(state)
 			if m == null:
 				return ""
-			# Bought loyalty; the ambition that made them dangerous is intact.
 			m.loyalty = minf(0.95, m.loyalty + 0.35)
 			return "%s takes the offer and falls into line — for now." % m.name
 		"schemer_resign", "schemer_expose":
@@ -113,8 +92,6 @@ static func run(state: GameState, handler_id: String) -> String:
 		"vasca_lead_personally":
 			return _vasca_operation(state, VASCA_GENERAL_BONUS)
 		"vasca_amnesty":
-			# Terms for the rank and file, nothing for Vasca. It holds when there
-			# is enough goodwill to make surrender look like sense.
 			if state.rng.next_float() < 0.35 + state.player.approval * 0.5:
 				_insurgency(state, -0.15)
 				_schedule(state, "vasca_amnesty_holds", 3)
@@ -151,11 +128,6 @@ static func run(state: GameState, handler_id: String) -> String:
 			_insurgency(state, 0.06)
 			return _vetrenka_incident(state)
 		"vetrenka_open_talks":
-			# Mediation works when the government can sell a compromise at home.
-			# Governments reach this point in a narrow band (approval ~0.49,
-			# stability ~0.48), so the odds read deviation from that ordinary
-			# case: a typical government gets a shade better than a coin flip;
-			# only one that has built real standing gets good odds.
 			var odds := clampf(0.55 + (state.player.approval - 0.49) * 1.4
 				+ (state.stability_value - 0.48) * 0.7, 0.12, 0.90)
 			if state.rng.next_float() < odds:
@@ -164,9 +136,6 @@ static func run(state: GameState, handler_id: String) -> String:
 				_schedule(state, "vetrenka_talks_fail", 3)
 			return "Talks over Vetrenka open under international mediation."
 		"vetrenka_launch_offensive":
-			# A war the army has already lost once, against a separatist force with
-			# a foreign patron: centred on the ~0.25 a typical government reaches,
-			# steep enough that a well-run Interior and Defense is felt.
 			var odds := clampf(0.25 + (security_effectiveness(state) - 0.25) * 1.8, 0.08, 0.70)
 			if state.rng.next_float() < odds:
 				_schedule(state, "vetrenka_retaken", 3)
@@ -177,10 +146,6 @@ static func run(state: GameState, handler_id: String) -> String:
 			_schedule(state, "vetrenka_partition", 2)
 			return "The government stops pretending the line is temporary."
 		"vetrenka_partitioned":
-			# Whether the country wears a hardened line quietly is not about the
-			# nationalists' anger — they will be angry — but about whether this
-			# government has the standing to make an unpopular thing boring,
-			# against a nationalist bench big enough to keep it in the news.
 			_insurgency(state, -0.10)
 			var total := 0
 			var nationalist_seats := 0
@@ -203,7 +168,7 @@ static func run(state: GameState, handler_id: String) -> String:
 			state.stability_value = maxf(0.05, state.stability_value - 0.03)
 			return _vetrenka_end(state, "talks_failed", "The talks collapse. The ceasefire holds, barely.")
 		"vetrenka_won":
-			_insurgency(state, 0.25)   # holding it is its own problem
+			_insurgency(state, OCCUPATION_INSURGENCY)
 			return _vetrenka_end(state, "retaken", "Vetrenka is back under the state's control — and under occupation.")
 		"vetrenka_lost":
 			_insurgency(state, 0.35)
@@ -239,9 +204,6 @@ static func _vetrenka_end(state: GameState, status: String, line: String) -> Str
 	return line
 
 
-## How well the state can actually reach into the west: the Interior and
-## Defense ministers (a vacancy counts for little), steadied or undermined by
-## how much authority the government has left.
 static func security_effectiveness(state: GameState) -> float:
 	var total := 0.0
 	for portfolio in ["Interior", "Defense"]:
@@ -285,7 +247,6 @@ static func condition_met(state: GameState, rule_id: String) -> bool:
 			return vetrenka_open(state) \
 				and int(state.campaign_meta.get("vetrenka_incidents", 0)) >= FRICTION_BEFORE_CROSSROADS
 		"vasca_stirring":
-			# The west tests a government that looks weak enough to be worth it.
 			if state.country.id != "ardenia" or not state.player.in_government:
 				return false
 			if state.turn < VASCA_MIN_TURN or state.campaign_meta.has("vasca_status"):
@@ -299,7 +260,6 @@ static func condition_met(state: GameState, rule_id: String) -> bool:
 	return false
 
 
-## The most dangerous schemer in cabinet, or null.
 static func arc_schemer(state: GameState) -> Minister:
 	var best: Minister = null
 	for m in state.ministers:

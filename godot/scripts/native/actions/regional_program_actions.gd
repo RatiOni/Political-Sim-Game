@@ -1,9 +1,6 @@
 class_name RegionalProgramActions
 extends RefCounted
 
-## Government-only regional programme action. This is the sole rule owner;
-## NativeGame guards mutation and the UI only renders these read models.
-
 
 static func options_for(state: GameState, region_id: String, content: Dictionary) -> Array:
 	var definitions := _definitions(content)

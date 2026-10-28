@@ -1,18 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for EconomySim, the monthly economy.
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_economy_sim.gd
-##
-## Tests intended behaviour, not inherited numbers: capacity stats respond to
-## modifiers; sectors evolve and stay normalised; deficits accumulate into
-## debt and surpluses pay it down (review S1); interest is part of the bill
-## and rises with debt; a stimulus lifts growth only while it is new and cuts
-## contract it (S2); unemployment heals toward a natural rate rather than the
-## floor (S5); inflation is anchored but the anchor slips once prices run
-## away, and the public signal punishes high inflation hard (S3); the new
-## balance-sheet fields survive save/reload.
-
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 const GameFactoryScript = preload("res://scripts/native/state/game_factory.gd")
@@ -41,7 +28,7 @@ static func _add_modifier(state: GameState, target: String, magnitude: float,
 	m.magnitude = magnitude
 	m.onset_delay = 0
 	m.ramp_duration = 1
-	m.hold_duration = -1   # holds forever, so current_value() == magnitude immediately
+	m.hold_duration = -1
 	m.decay_duration = 0
 	m.age = 0
 	m.institutional = institutional
@@ -56,8 +43,6 @@ static func _sum(allocations: Dictionary) -> float:
 		total += float(v)
 	return total
 
-
-# ── Workforce quality / bureaucratic capacity ────────────────────────────
 
 func _test_workforce_quality_responds_to_modifiers(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -96,8 +81,6 @@ func _test_bureaucratic_capacity_responds_to_modifiers(t, content: Dictionary) -
 		"bureaucratic_capacity actually moved from the campaign's authored baseline")
 
 
-# ── Sectors ───────────────────────────────────────────────────────────────
-
 func _test_sectors_evolve_not_fixed(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	t.truth(state != null, "campaign builds")
@@ -123,7 +106,6 @@ func _test_sectors_evolve_not_fixed(t, content: Dictionary) -> void:
 	t.truth(any_share_changed, "at least one sector's gdp_share moved after one pulse")
 	t.truth(not is_nan(econ.structural_growth_rate), "structural_growth_rate is not NaN")
 
-	# growth_rate values themselves are untouched by _update_sectors.
 	for i in range(econ.sectors.size()):
 		t.equal(econ.sectors[i].growth_rate, before_growth[i],
 			"sector growth_rate is read, not mutated, by _update_sectors")
@@ -168,15 +150,13 @@ func _test_sector_growth_shifts_aligned_faction_power(t, content: Dictionary) ->
 	if faction == null:
 		return
 	var before_power := faction.power
-	services.growth_rate = 0.20   # strong positive growth this pulse
+	services.growth_rate = 0.20
 
 	EconomySimScript.update(state)
 
 	t.truth(faction.power > before_power,
 		"a fast-growing sector's aligned faction gains power")
 
-
-# ── Structural fiscal baseline / active_budget sync ──────────────────────
 
 func _test_fiscal_baseline_seeds_active_budget_and_reflects_size(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -203,9 +183,7 @@ func _test_fiscal_baseline_resyncs_active_budget_on_drift(t, content: Dictionary
 	var before_total := _sum(state.active_budget.allocations)
 	t.truth(before_total > 0.0, "seeded active_budget has a positive total")
 
-	# Force a large positive structural growth so the monthly drift is
-	# unmistakable rather than lost in normal small-percentage movement.
-	state.country.economy.structural_growth_rate = 1.20   # +10%/month
+	state.country.economy.structural_growth_rate = 1.20
 	EconomySimScript.update(state)
 
 	var after_total := _sum(state.active_budget.allocations)
@@ -263,8 +241,6 @@ func _test_fiscal_baseline_ignores_relations_without_a_trade_treaty(t, content: 
 		"a relation with only a non-trade treaty contributes no trade revenue")
 
 
-# ── Organic inflation ─────────────────────────────────────────────────────
-
 func _test_inflation_drifts_toward_anchor_from_above(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	t.truth(state != null, "campaign builds")
@@ -273,8 +249,8 @@ func _test_inflation_drifts_toward_anchor_from_above(t, content: Dictionary) -> 
 	var econ := state.country.economy
 	econ.structural_inflation = 0.30
 	econ.budget.revenue = 1000.0
-	econ.budget.expenditure = 1000.0   # balanced budget: no deficit push
-	econ.spending_trend = econ.structural_expenditure   # neutral fiscal stance
+	econ.budget.expenditure = 1000.0
+	econ.spending_trend = econ.structural_expenditure
 
 	EconomySimScript.update(state)
 
@@ -292,13 +268,12 @@ func _test_inflation_pushed_up_by_deficit_and_overheating(t, content: Dictionary
 
 	for s in [calm, hot]:
 		var econ: Economy = s.country.economy
-		econ.structural_inflation = EconomySimScript.INFLATION_ANCHOR   # start exactly at anchor
+		econ.structural_inflation = EconomySimScript.INFLATION_ANCHOR
 		econ.budget.revenue = 1000.0
 		econ.budget.expenditure = 1000.0
 		econ.spending_trend = econ.structural_expenditure
 
-	hot.country.economy.budget.expenditure = 1500.0   # large deficit
-	# A sharp new stimulus: spending well above its recent trend.
+	hot.country.economy.budget.expenditure = 1500.0
 	hot.country.economy.structural_expenditure += hot.country.economy.gdp * 0.05
 
 	EconomySimScript.update(calm)
@@ -316,8 +291,8 @@ func _test_inflation_bounded_at_structural_max(t, content: Dictionary) -> void:
 	var econ := state.country.economy
 	econ.structural_inflation = EconomySimScript.STRUCTURAL_INFLATION_MAX
 	econ.budget.revenue = 100.0
-	econ.budget.expenditure = 1000.0   # enormous deficit ratio (clamped to 1.5 internally)
-	econ.structural_expenditure += econ.gdp   # an enormous stimulus
+	econ.budget.expenditure = 1000.0
+	econ.structural_expenditure += econ.gdp
 
 	for _i in range(3):
 		EconomySimScript.update(state)
@@ -325,8 +300,6 @@ func _test_inflation_bounded_at_structural_max(t, content: Dictionary) -> void:
 	t.truth(econ.structural_inflation <= EconomySimScript.STRUCTURAL_INFLATION_MAX + 0.0000001,
 		"structural_inflation never exceeds STRUCTURAL_INFLATION_MAX")
 
-
-# ── Modifiers apply exactly once per pulse ───────────────────────────────
 
 func _test_modifiers_apply_once_per_pulse_not_accumulated(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -339,11 +312,6 @@ func _test_modifiers_apply_once_per_pulse_not_accumulated(t, content: Dictionary
 	var growth_after_one := state.country.economy.growth_rate
 	var structural_after_one := state.country.economy.structural_growth_rate
 
-	# A second call with the same still-active modifier (simulating a
-	# save/reload replaying this pulse against the same state) must land on
-	# the same effective growth_rate, not a doubled one — current_value() is
-	# recomputed fresh, never accumulated, and _apply_modifiers_to_headline_stats
-	# assigns with `=`, not `+=`.
 	EconomySimScript.update(state)
 	var structural_after_two := state.country.economy.structural_growth_rate
 
@@ -360,19 +328,13 @@ func _test_institutional_modifier_is_dampened_by_capacity_and_stability(t, conte
 	if weak == null or strong == null:
 		return
 
-	# bureaucratic_capacity is itself recomputed fresh from BASE + modifiers
-	# every pulse (_update_bureaucratic_capacity runs before the headline-stat
-	# phase), so driving it to the extremes must go through a
-	# "bureaucratic_capacity" modifier, not a direct field assignment (that
-	# would just be overwritten). stability_value has no such phase in
-	# EconomySim, so it's safe to set directly.
-	_add_modifier(weak, "bureaucratic_capacity", -0.75)     # -> ~0.0 after clamping
+	_add_modifier(weak, "bureaucratic_capacity", -0.75)
 	weak.stability_value = 0.0
-	_add_modifier(strong, "bureaucratic_capacity", 0.25)    # -> 1.0 after clamping
+	_add_modifier(strong, "bureaucratic_capacity", 0.25)
 	strong.stability_value = 1.0
 
 	for s in [weak, strong]:
-		_add_modifier(s, "gdp_growth", 0.10, true, "")   # institutional, no portfolio
+		_add_modifier(s, "gdp_growth", 0.10, true, "")
 
 	EconomySimScript.update(weak)
 	EconomySimScript.update(strong)
@@ -394,7 +356,7 @@ func _test_non_institutional_modifier_ignores_capacity(t, content: Dictionary) -
 	strong.stability_value = 1.0
 
 	for s in [weak, strong]:
-		_add_modifier(s, "gdp_growth", 0.10, false)   # NOT institutional
+		_add_modifier(s, "gdp_growth", 0.10, false)
 
 	EconomySimScript.update(weak)
 	EconomySimScript.update(strong)
@@ -403,28 +365,21 @@ func _test_non_institutional_modifier_ignores_capacity(t, content: Dictionary) -
 		"a non-institutional modifier's effect never depends on capacity/stability")
 
 
-# ── GDP compounding ───────────────────────────────────────────────────────
-
 func _test_gdp_compounds_from_growth_over_several_months(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	t.truth(state != null, "campaign builds")
 	if state == null:
 		return
 	var econ := state.country.economy
-	econ.growth_rate = 0.12   # fixed 12%/yr for a predictable compounding check
+	econ.growth_rate = 0.12
 	econ.structural_growth_rate = 0.12
-	econ.sectors = []   # isolate GDP compounding from sector-driven growth drift
+	econ.sectors = []
 	var gdp0 := econ.gdp
 
 	var expected := gdp0
 	for _i in range(6):
 		expected *= (1.0 + 0.12 / 12.0)
 		EconomySimScript.update(state)
-		# Re-pin growth_rate/structural_growth_rate each pulse since
-		# _apply_modifiers_to_headline_stats recomputes growth_rate from
-		# structural_growth_rate + modifiers (0 here) every call, and with no
-		# sectors, structural_growth_rate never drifts on its own — but pin
-		# explicitly for test clarity/robustness regardless.
 		econ.growth_rate = 0.12
 		econ.structural_growth_rate = 0.12
 
@@ -448,8 +403,6 @@ func _test_gdp_shrinks_under_negative_growth(t, content: Dictionary) -> void:
 	t.truth(econ.gdp < gdp0, "gdp shrinks under sustained negative growth")
 
 
-# ── The balance sheet (review S1) ────────────────────────────────────────
-
 static func _passive_months(state: GameState, months: int) -> void:
 	for _i in range(months):
 		EconomySimScript.update(state)
@@ -458,8 +411,8 @@ static func _passive_months(state: GameState, months: int) -> void:
 func _test_sustained_deficit_raises_debt(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	var econ := state.country.economy
-	econ.structural_expenditure *= 1.25   # a large, lasting deficit
-	econ.spending_trend = econ.structural_expenditure   # a deficit, not a fresh stimulus
+	econ.structural_expenditure *= 1.25
+	econ.spending_trend = econ.structural_expenditure
 	var debt0 := econ.public_debt_pct
 	_passive_months(state, 36)
 	t.truth(econ.public_debt_pct > debt0 + 0.10,
@@ -469,7 +422,7 @@ func _test_sustained_deficit_raises_debt(t, content: Dictionary) -> void:
 func _test_sustained_surplus_lowers_debt(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	var econ := state.country.economy
-	econ.structural_revenue *= 1.30   # a lasting surplus
+	econ.structural_revenue *= 1.30
 	var debt0 := econ.public_debt_pct
 	_passive_months(state, 36)
 	t.truth(econ.public_debt_pct < debt0,
@@ -509,7 +462,7 @@ func _test_effective_rate_reprices_slowly(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	var econ := state.country.economy
 	var paid0 := econ.effective_interest_rate
-	econ.public_debt_pct = 1.50   # the market rate jumps
+	econ.public_debt_pct = 1.50
 	EconomySimScript.update(state)
 	t.truth(econ.effective_interest_rate > paid0, "the rate paid starts moving toward the market rate")
 	t.truth(econ.effective_interest_rate < econ.market_interest_rate(),
@@ -522,8 +475,6 @@ func _test_opening_deficit_matches_authored_figures(t, content: Dictionary) -> v
 	t.near(econ.structural_expenditure + econ.debt_service, econ.budget.expenditure, 0.01,
 		"primary spending plus interest equals the authored opening expenditure")
 
-
-# ── Fiscal stance (review S2) ────────────────────────────────────────────
 
 func _test_stimulus_lifts_growth_then_fades(t, content: Dictionary) -> void:
 	var calm: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -553,13 +504,11 @@ func _test_austerity_contracts_growth_and_raises_unemployment(t, content: Dictio
 		"and cost jobs: austerity is not free")
 
 
-# ── Labour market (review S5) ────────────────────────────────────────────
-
 func _test_unemployment_heals_toward_natural_rate_not_floor(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	var econ := state.country.economy
 	var start := econ.unemployment
-	_passive_months(state, 360)   # thirty years of doing nothing
+	_passive_months(state, 360)
 	t.truth(econ.unemployment < start, "a passive labour market slowly heals (%.3f -> %.3f)" % [start, econ.unemployment])
 	t.truth(absf(econ.unemployment - econ.natural_unemployment) < 0.015,
 		"it settles near its natural rate (%.3f vs %.3f)" % [econ.unemployment, econ.natural_unemployment])
@@ -575,8 +524,6 @@ func _test_better_workforce_lowers_natural_rate(t, content: Dictionary) -> void:
 	t.truth(skilled.country.economy.natural_unemployment < base.country.economy.natural_unemployment,
 		"a better-trained workforce lowers the natural rate of unemployment")
 
-
-# ── Prices and the public signal (review S3) ─────────────────────────────
 
 func _test_anchor_slips_when_inflation_runs_away(t, content: Dictionary) -> void:
 	t.truth(EconomySimScript.anchor_credibility(0.03) > EconomySimScript.anchor_credibility(0.30),

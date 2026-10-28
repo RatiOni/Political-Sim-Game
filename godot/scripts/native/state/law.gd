@@ -1,8 +1,6 @@
 class_name Law
 extends RefCounted
 
-## Native parliamentary proposal and enacted statute. Authored bill content is
-## copied into this typed campaign-owned record when it is tabled.
 
 var id: String = ""
 var name: String = ""

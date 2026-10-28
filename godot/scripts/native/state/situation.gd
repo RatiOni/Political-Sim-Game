@@ -1,16 +1,10 @@
 class_name Situation
 extends RefCounted
 
-## A situation waiting on the government: an authored event that has
-## arrived and not yet been decided. It stays in the "needs you" list until
-## the player chooses or the deadline passes, when the event's default
-## option is taken for them — a government that looks away still decides.
 
 var event_id: String = ""
 var arrived_turn: int = 0
 var deadline_turn: int = 0
-## The foreign relation a diplomatic event is about, fixed on arrival so the
-## choice is made about the same country the briefing described.
 var target_country_id: String = ""
 
 

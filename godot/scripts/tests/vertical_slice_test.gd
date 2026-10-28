@@ -1,11 +1,5 @@
 extends SceneTree
 
-# Post-bridge journey test: drives the real menu/app scenes through the real
-# NativeGame autoload (fixed seed 424242 — no FakeBridge, no Python worker)
-# and asserts the same journey: startup, region selection, time advance,
-# save, quit-equivalent state drop, reload restoration, and a real regional
-# programme from launch through monthly delivery and continued post-load work.
-
 const APP_SLOT := "test_vertical_slice"
 const FIXED_SEED := 424242
 
@@ -69,9 +63,6 @@ func _run() -> void:
 	for required in ["DateLabel", "PlayButton", "SpeedControls", "DecisionQueue", "ArdeniaMap", "RegionBrief", "MonthlyReport", "BudgetButton", "BudgetPanel", "BudgetRows", "BudgetSummary", "BudgetProjection", "LobbyChoice", "LobbyButton", "ProposeBudgetButton", "VoteBudgetButton", "WithdrawBudgetButton", "CloseBudgetButton", "LegislationButton", "LegislationPanel", "BillChoice", "BillTitle", "BillDescription", "BillEffects", "BillProjection", "ProposeBillButton", "VoteBillButton", "WithdrawBillButton", "CloseLegislationButton"]:
 		if not _check(scene.find_child(required, true, false) != null, "Required node: " + required):
 			return
-	# Continue-with-no-save starts fresh (the bridge-era recovery path,
-	# preserved): with no save on disk, a starting load falls back to a
-	# brand new campaign instead of surfacing an error.
 	scene._starting = true
 	scene._do_load()
 	if not _check(scene.snapshot["date"]["day_index"] == 0,
@@ -277,8 +268,6 @@ func _run() -> void:
 				if not _check(root.get_texture().get_image().save_png(path) == OK, "Save screenshot " + path):
 					return
 				print("CAPTURE: " + path)
-	# Native lawmaking journey through the real scene. Preview is read-only;
-	# proposal and vote mutate through NativeGame and survive the save boundary.
 	scene.find_child("LegislationButton", true, false).pressed.emit()
 	await process_frame
 	var real_bill_choice: OptionButton = scene.find_child("BillChoice", true, false)
@@ -309,8 +298,6 @@ func _run() -> void:
 			and float(scene.snapshot["player"]["political_capital"]) < law_pc_before,
 			"Real legislation panel tables a bill and spends engine-owned political capital"):
 		return
-	# Save and reload while a non-first catalogue bill is pending. The disabled
-	# selector, title, projection and vote target must all refer to that motion.
 	scene.find_child("SaveButton", true, false).pressed.emit()
 	await process_frame
 	var pending_replacement: Dictionary = native_game.new_campaign({"country_id": "ardenia", "background_id": "none", "difficulty_id": "normal", "opening_role": "contextual", "seed": FIXED_SEED + 7})
@@ -464,8 +451,6 @@ func _run() -> void:
 			"Programme delivery continues after reload"):
 		return
 	print("PASS: save, load, and continued programme delivery through NativeGame")
-	# Quit-equivalent: drop the displayed state entirely, then reload from
-	# disk — the relaunch restores the saved campaign, not a blank screen.
 	scene.apply_snapshot({})
 	if not _check(brief.find_child("PressureValue").text == "—" and scene.find_child("NextDecision").disabled and map.regions.is_empty(), "Missing data clears stale values and decisions"):
 		return
@@ -482,9 +467,6 @@ func _run() -> void:
 			"Reload after a full state drop restores the saved campaign"):
 		return
 	print("PASS: empty snapshot clears stale state; reload restores the save")
-	# Annual appropriations: drive the real panel through a proposal, one
-	# faction lobby and the vote, then prove the approved settlement survives
-	# save/load and becomes the active budget at the public January rollover.
 	scene.find_child("BudgetButton", true, false).pressed.emit()
 	await process_frame
 	var proposal_model: Dictionary = scene.snapshot.get("budget", {})
@@ -584,15 +566,12 @@ func _run() -> void:
 			"January archives the exact settlement and activates its shares before ordinary monthly rescaling"):
 		return
 	print("PASS: budget preview, proposal, lobby, vote, approved save/load, and January activation")
-	# Fatal native errors surface through the existing blocking-error path.
 	native_game.fatal_error.emit("Journey-test fatal.")
 	if not _check(scene.find_child("FatalError", true, false) != null
 			and scene.find_child("PlayButton", true, false).disabled,
 			"fatal_error shows a blocking error and halts the clock"):
 		return
 	print("PASS: fatal_error display via the blocking-error path")
-	# Menu, last: button presses queue a scene change, so assert
-	# synchronously and quit before it can run.
 	var menu = load("res://scenes/menu.tscn").instantiate()
 	root.add_child(menu)
 	menu.find_child("NewCampaignButton", true, false).pressed.emit()

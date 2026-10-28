@@ -1,17 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for BudgetSim (the fiscal year) and
-## PoliticalCapital (governing bandwidth).
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_budget_and_pc.gd
-##
-## Checks intended behaviour: a fresh campaign gets a seeded budget; an
-## approved plan takes effect on 1 January; a government with no plan runs
-## on an emergency resolution whose costs mount monthly, freezes new
-## programmes, loads every ministry, and can be ended by passing a budget
-## for the current year — and is never better than a settlement (review
-## S2); PC upkeep sums real commitments and regeneration uses a soft limit.
-
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 const GameFactoryScript = preload("res://scripts/native/state/game_factory.gd")
@@ -38,8 +26,6 @@ static func _sum(allocations: Dictionary) -> float:
 	return total
 
 
-# ── BudgetSim: seeding ──────────────────────────────────────────────────
-
 func _test_fresh_campaign_has_no_active_budget(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	t.truth(state != null, "campaign builds")
@@ -56,10 +42,6 @@ func _test_process_fiscal_year_seeds_fresh_budget(t, content: Dictionary) -> voi
 		return
 	t.equal(state.active_budget, null, "no active_budget before the first call")
 
-	# Default campaign opens in March (game_factory.gd: DEFAULT_MONTH), not
-	# January — seeding must happen regardless of month, mirroring Python's
-	# ensure_budget_state() being called unconditionally at the top of
-	# process_fiscal_year every turn, not only in January.
 	t.equal(state.month, 3, "sanity: campaign opens in March, not January")
 	BudgetSimScript.process_fiscal_year(state)
 
@@ -74,9 +56,6 @@ func _test_process_fiscal_year_seeds_fresh_budget(t, content: Dictionary) -> voi
 	t.near(state.active_budget.forecast_revenue, state.country.economy.structural_revenue,
 		0.0001, "seeded forecast_revenue matches the structural revenue baseline")
 
-	# Not January and the freshly-seeded budget's year == state.year, so no
-	# rollover fires on this same call — pending_budget stays untouched and
-	# no history entry is created yet.
 	t.equal(state.pending_budget, null, "no pending_budget exists yet")
 	t.equal(state.budget_history.size(), 0, "seeding alone does not activate/append history")
 
@@ -101,15 +80,13 @@ func _test_default_allocations_matches_envelope_shares(t, content: Dictionary) -
 			"envelope %s allocation matches its authored share" % envelope_id)
 
 
-# ── BudgetSim: January rollover ──────────────────────────────────────────
-
 func _test_approved_pending_becomes_active(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	t.truth(state != null, "campaign builds")
 	if state == null:
 		return
 
-	BudgetSimScript.process_fiscal_year(state)   # seeds active_budget for state.year (1993)
+	BudgetSimScript.process_fiscal_year(state)
 	t.truth(state.active_budget != null, "active_budget seeded before rollover test")
 
 	state.year += 1
@@ -153,9 +130,8 @@ func _test_approved_pending_becomes_active(t, content: Dictionary) -> void:
 		"a second January call does not activate the approved settlement twice")
 
 
-## Starts the next fiscal year with no budget passed: the emergency begins.
 static func _enter_emergency(state: GameState) -> void:
-	BudgetSimScript.process_fiscal_year(state)   # seeds the opening settlement
+	BudgetSimScript.process_fiscal_year(state)
 	state.year += 1
 	state.month = 1
 	state.pending_budget = null
@@ -308,8 +284,6 @@ func _test_opposition_player_gets_government_ai_budget(t, content: Dictionary) -
 		"an opposition player is not punished for a budget they don't control (engine/budget.py process_fiscal_year)")
 
 
-# ── PoliticalCapital: upkeep ─────────────────────────────────────────────
-
 func _test_upkeep_zero_on_a_fresh_campaign(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	t.truth(state != null, "campaign builds")
@@ -362,8 +336,6 @@ func _test_upkeep_counts_sanctions_and_treaties(t, content: Dictionary) -> void:
 	t.near(float(breakdown.get("treaties", -1.0)), 2.0 * PoliticalCapitalScript.PC_UPKEEP_TREATY, 0.0001,
 		"two treaties on one relation cost PC_UPKEEP_TREATY each")
 
-
-# ── PoliticalCapital: regen ──────────────────────────────────────────────
 
 func _test_regen_tracks_mandate_and_commitments(t, content: Dictionary) -> void:
 	var strong: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -426,7 +398,7 @@ func _test_tabled_plan_keeps_pace_but_record_stays_exact(t, content: Dictionary)
 	var voted := plan.allocations.duplicate()
 	var voted_total := _sum(voted)
 	state.pending_budget = plan
-	state.country.economy.structural_revenue *= 1.10   # the economy grew while the plan waited
+	state.country.economy.structural_revenue *= 1.10
 	state.year += 1
 	state.month = 1
 	BudgetSimScript.process_fiscal_year(state)

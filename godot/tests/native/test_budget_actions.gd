@@ -75,7 +75,6 @@ func _test_vote_kernel_boundaries_and_conservation(t) -> void:
 	for wing_row in a_breakdown["wings"]:
 		split_total += int(wing_row["seats"])
 	t.equal(split_total, a.seats, "largest-remainder wing split conserves faction seats")
-	# Stable largest-remainder ties follow authored wing order: 1.36, 1.32, 1.32 -> 2,1,1.
 	t.equal(a_breakdown["wings"][0]["seats"], 2, "largest remainder awards the tied extra seat deterministically")
 
 
@@ -139,8 +138,6 @@ func _test_plan_validation_boundaries(t, content: Dictionary) -> void:
 	t.truth(BudgetActionsScript.validation_error(state, plan) != "", "negative allocation is refused")
 	plan.allocations[key] = INF
 	t.truth(BudgetActionsScript.validation_error(state, plan) != "", "non-finite allocation is refused")
-	# Direct validation guards the 70/130 percent trust boundary even though the authored
-	# adjustment menu cannot normally reach it in one step.
 	var active_total := float(valid_result["preview"]["active_total"])
 	for envelope_id in plan.allocations:
 		plan.allocations[envelope_id] = active_total * 2.0 / plan.allocations.size()

@@ -1,17 +1,10 @@
 class_name StabilitySim
 extends RefCounted
 
-## Deterministic approval and government-stability update for the native
-## monthly pulse. This works over the Phase 2 typed state only: no premature
-## Legislature or Cabinet wrapper is invented here.
 
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 const HouseholdsSimScript = preload("res://scripts/native/sim/households_sim.gd")
 
-## How the public reads the economy. Growth is felt but discounted (people
-## notice prices and jobs before GDP). Mild inflation is tolerated; past a
-## few percent it bites hard, because it eats every household's income at
-## once. A debt burden only registers once it is plainly heavy.
 const SIGNAL_GROWTH_REFERENCE := 0.02
 const SIGNAL_GROWTH_WEIGHT := 2.5
 const SIGNAL_UNEMPLOYMENT_WEIGHT := 0.6
@@ -21,15 +14,9 @@ const SIGNAL_INFLATION_PAIN_WEIGHT := 1.2
 const SIGNAL_DEBT_PAIN_ABOVE := 0.90
 const SIGNAL_DEBT_PAIN_WEIGHT := 0.25
 
-## Public services as people experience them. Ardenians expect roughly the
-## service they had in 1993; noticeably better earns credit, a state that
-## thins out or vanishes costs the government that let it. In opposition the
-## same collapse is the player's opportunity.
 const SERVICES_EXPECTED := 0.58
 const SERVICES_APPROVAL_WEIGHT := 0.40
-## A state whose ministries cannot deliver is a weaker state, whoever runs it.
 const STATE_PRESENCE_WEIGHT := 0.15
-## How much of an active insurgency registers as national unrest.
 const INSURGENCY_UNREST_WEIGHT := 0.40
 
 static func economic_signal(state: GameState) -> float:
@@ -128,7 +115,6 @@ static func stability_breakdown(state: GameState) -> Dictionary:
 	}
 
 
-## Average delivery across the core ministries (1.0 before any are tracked).
 static func _mean_delivery(state: GameState) -> float:
 	if state.ministries.is_empty():
 		return 1.0
@@ -173,7 +159,6 @@ static func _unrest(state: GameState) -> float:
 	var unemployment := maxf(0.0, state.country.economy.unemployment - 0.10) * 3.0
 	var region := maxf(0.0, national_pressure(state) - 0.45) * 0.50
 	var household := maxf(0.0, HouseholdsSimScript.national_hardship(state) - 0.35) * 0.35
-	# An armed movement inside the country is unrest on its own terms.
 	var insurgency := state.insurgency_pressure * INSURGENCY_UNREST_WEIGHT
 	return clampf(grievance * 0.60 + unemployment + region + household + insurgency, 0.0, 1.0)
 

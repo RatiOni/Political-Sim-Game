@@ -1,37 +1,11 @@
 class_name MinistriesSim
 extends RefCounted
 
-## Ministry capacity, workload, delivery and accumulated backlog for each
-## core portfolio: the gap between approving money and a service reaching
-## people.
-##
-## Design intent (docs/godot/SIM_REDESIGN.md; review S4): funding is a real
-## decision. A ministry's funding is judged against what its job costs NOW —
-## the baseline grows with the economy — on a curve with three readable
-## zones: starved (below about 60% the department cannot function and
-## delivery collapses), credible operation (60–100%, roughly linear), and
-## diminishing returns (extra money above 100% helps less and less, never
-## more than a quarter). A good minister improves conversion; no minister
-## rescues a starved department.
-##
-## `state.ministries` is seeded lazily by `ensure_ministries`; NativeGame calls
-## `simulate()` once per monthly pulse, while preview callers can seed it on
-## demand without a second construction path.
-##
-## Workload sources reflect the native systems available in Phase 2:
-## active legislation and unresolved situations remain zero until their later
-## systems land; regional programmes use their exported portfolio and add 0.48
-## each; treaties, sanctions, loans, civil war, and population-weighted regional
-## pressure use live persisted state.
 const CORE_PORTFOLIOS: Array[String] = ["Finance", "Interior", "Foreign Affairs", "Defense", "Economy", "Justice"]
 
 const BASE_WORKLOAD := 0.65
-## Funding ratio below which a department is starved.
 const OPERATING_MINIMUM := 0.60
-## Share of normal capacity a department keeps at exactly its operating minimum.
 const CAPACITY_AT_MINIMUM := 0.55
-## Most extra capacity money can buy above full funding, and how quickly it
-## saturates (in units of funding ratio).
 const MAX_FUNDING_BONUS := 0.25
 const FUNDING_BONUS_SCALE := 0.40
 const MAX_BACKLOG := 6.0
@@ -39,14 +13,12 @@ const BACKLOG_RECOVERY_SHARE := 0.22
 
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 
-## Portfolio-tagged civil-war crisis load, in workload units.
 const CIVIL_WAR_CRISIS_LOAD := {
 	"Defense": 1.00, "Interior": 0.85, "Justice": 0.45,
 	"Economy": 0.35, "Finance": 0.30, "Foreign Affairs": 0.20,
 }
 
 
-## The budget envelope catalog (shared, read-only content).
 static func _envelopes() -> Array:
 	var content: Dictionary = ContentRepositoryScript.load_all()
 	var catalogs: Dictionary = content.get("catalogs", {})
@@ -63,8 +35,6 @@ static func envelope_ids(portfolio: String) -> Array[String]:
 	return out
 
 
-## This portfolio's spending power for the CURRENT year — voted envelopes
-## plus any mid-year supplementary appropriation.
 static func portfolio_funding(state: GameState, portfolio: String) -> float:
 	if state.active_budget == null:
 		return 0.0
@@ -91,9 +61,6 @@ static func initial_ministry_states(state: GameState) -> Dictionary:
 	return out
 
 
-## Seeds `state.ministries` (one `MinistryState` per `CORE_PORTFOLIO`) if
-## empty, then backfills any portfolio still missing. Seeding is lazy (it
-## needs the opening budget), not done at `GameFactory.new_campaign`.
 static func ensure_ministries(state: GameState) -> Dictionary:
 	if state.ministries.is_empty():
 		state.ministries = initial_ministry_states(state)
@@ -103,7 +70,6 @@ static func ensure_ministries(state: GameState) -> Dictionary:
 	return state.ministries
 
 
-## Population-weighted, so a troubled capital outweighs a troubled hamlet.
 static func _national_pressure(state: GameState) -> float:
 	if state.regions.is_empty():
 		return 0.0
@@ -141,13 +107,9 @@ static func _programme_workload(state: GameState, portfolio: String) -> float:
 			matching += 1
 	return float(matching) * 0.48
 
-## This portfolio's current workload, broken down by source. Only sources
-## that are non-zero appear, so the Cabinet view lists real work only.
 static func workload_breakdown(state: GameState, portfolio: String) -> Dictionary:
 	var breakdown := {"ordinary administration": BASE_WORKLOAD}
 
-	# Active legislation and unresolved situations are not native yet, so their
-	# zero-value keys remain absent (matching Python's non-zero-only breakdown).
 
 	if BudgetSim.is_emergency(state):
 		breakdown["emergency budget rules"] = BudgetSim.emergency_workload(state)
@@ -191,16 +153,11 @@ static func _minister_for_portfolio(state: GameState, portfolio: String) -> Mini
 	return null
 
 
-## Uses whichever minister is actually assigned to this portfolio, if any —
-## including a minister whose faction no longer holds power (the parked
-## Phase 1 finding on opposition-cabinet staleness): the officeholder runs the
-## department, whatever their party.
 static func _minister_quality(state: GameState, portfolio: String) -> float:
 	var minister := _minister_for_portfolio(state, portfolio)
 	return 0.35 if minister == null else minister.implementation_quality()
 
 
-## How much of normal capacity a department has at a given funding ratio.
 static func funding_factor(funding_ratio: float) -> float:
 	var ratio := maxf(0.0, funding_ratio)
 	if ratio < OPERATING_MINIMUM:
@@ -210,7 +167,6 @@ static func funding_factor(funding_ratio: float) -> float:
 	return 1.0 + MAX_FUNDING_BONUS * (1.0 - exp(-(ratio - 1.0) / FUNDING_BONUS_SCALE))
 
 
-## [capacity, funding, funding_ratio].
 static func operating_capacity(state: GameState, ministry: MinistryState) -> Array:
 	var funding := portfolio_funding(state, ministry.portfolio)
 	var baseline := maxf(1.0, ministry.baseline_funding)
@@ -223,7 +179,6 @@ static func operating_capacity(state: GameState, ministry: MinistryState) -> Arr
 	return [capacity, funding, funding_ratio]
 
 
-## A read-only snapshot of what `simulate()` would commit for one portfolio.
 static func preview(state: GameState, portfolio: String) -> Dictionary:
 	var ministry: MinistryState = ensure_ministries(state)[portfolio]
 	var breakdown := workload_breakdown(state, portfolio)
@@ -247,11 +202,6 @@ static func preview(state: GameState, portfolio: String) -> Dictionary:
 	}
 
 
-## Recalculates every ministry for the current month — run before policy
-## effects so this month's load constrains delivery. Backlog only clears by
-## a bounded share of spare capacity (never instantly), and grows by the full
-## shortfall when capacity falls short of workload. What the job costs grows
-## with the economy, so standing still in money is falling behind in need.
 static func simulate(state: GameState) -> void:
 	var ministries := ensure_ministries(state)
 	var monthly_growth := state.country.economy.structural_growth_rate / 12.0

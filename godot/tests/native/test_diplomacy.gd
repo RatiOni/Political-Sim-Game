@@ -1,19 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for statecraft: DiplomacyActions (the player's
-## verbs) and DiplomacySim (the monthly drift of relations and trade).
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_diplomacy.gd
-##
-## Intended behaviour: both sides of a relationship always agree; each verb
-## does what it says, costs what it says, and refuses — changing nothing —
-## with a plain reason when it cannot be done; trust gates the deep
-## commitments; a foreign loan refinances debt at a patron's concessional
-## rate, which pays exactly when markets charge a premium, at a political
-## price; trade grows toward a ceiling set by the warmth of the relationship
-## and decays when it cools; sanctions bleed their target; foreign policy
-## belongs to the government; everything survives save and reload.
-
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const KRASOVA := "krasova"
 
@@ -54,8 +40,6 @@ static func _do(state: GameState, verb: String, id: String, extra := "") -> Dict
 	return DiplomacyActions.act(state, verb, id, extra)
 
 
-# ── Both sides agree ─────────────────────────────────────────────────────
-
 func _test_both_sides_of_a_relationship_always_agree(t) -> void:
 	var state := _state()
 	var id := _friend(state)
@@ -65,8 +49,6 @@ func _test_both_sides_of_a_relationship_always_agree(t) -> void:
 	t.equal(_rel(state, id).treaties.size(), _mirror(state, id).treaties.size(), "and so is the list of treaties")
 	t.near(_rel(state, id).trade_volume, _mirror(state, id).trade_volume, 1e-9, "and the trade between them")
 
-
-# ── The verbs ────────────────────────────────────────────────────────────
 
 func _test_outreach_warms_relations_and_a_good_minister_helps(t) -> void:
 	var a := _state()
@@ -162,8 +144,6 @@ func _test_condemnation_pleases_nationalists(t) -> void:
 	t.truth(nat.loyalty > l0, "publicly condemning a rival pleases the nationalist right")
 
 
-# ── The loan ─────────────────────────────────────────────────────────────
-
 func _test_a_patron_loan_pays_when_markets_charge_a_premium(t) -> void:
 	var calm := _state()
 	var heavy := _state()
@@ -198,8 +178,6 @@ func _test_loans_run_their_term_and_end(t) -> void:
 	t.equal(state.country.economy.loans.size(), 0, "a loan is retired at the end of its term")
 
 
-# ── Refusals ─────────────────────────────────────────────────────────────
-
 func _test_refusals_change_nothing(t) -> void:
 	var state := _state()
 	state.player.political_capital = 2.0
@@ -217,8 +195,6 @@ func _test_foreign_policy_belongs_to_the_government(t) -> void:
 	var r := _do(state, "improve_relations", _friend(state))
 	t.truth(not r.get("ok", true) and String(r["error"]).contains("government"), "an opposition leader cannot conduct foreign policy")
 
-
-# ── The monthly drift ────────────────────────────────────────────────────
 
 func _test_trade_grows_toward_a_ceiling_set_by_warmth(t) -> void:
 	var state := _state()

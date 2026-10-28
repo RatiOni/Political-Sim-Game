@@ -1,44 +1,6 @@
 class_name GameFactory
 extends RefCounted
 
-## Builds a fresh campaign GameState from ContentRepository content, mirroring
-## content/loader.py: build_state_for plus the opening-role slice of
-## engine/campaign.py: generate_campaign (Priority 4/5 nudges from
-## traits/difficulty/background numeric deltas are NOT applied — see the
-## "Deviations" note below; opening-role government assembly IS ported,
-## because the brief's test explicitly checks it for all three roles).
-##
-## Wing generation (carried-forward finding from Task 1's review): Task 1's
-## exported country JSON only carries authored `wings` for Ardenia's twelve
-## canonical blocs, because `content/loader.py` only ever writes those wings
-## for Ardenia — every other country's factions get GENERIC wings from
-## `engine/parties.py: generate_default_wings`, which is simulation logic,
-## not static content, and so was correctly left out of the export. This
-## factory ports that function (see faction.gd) and calls it for every
-## faction of every non-Ardenia country. This deviates from
-## `loader.build_state_for`, which only ever generates default wings for the
-## PLAYER country's own factions (never the world countries') — but Ardenia
-## is this build's only playable country, so "every non-Ardenia faction" and
-## "every world-country faction" are the same set here, and the brief asks
-## for the former explicitly.
-##
-## Deviations from the Python reference (documented, not oversights):
-##   - No difficulty/background/national-trait numeric nudges
-##     (engine/campaign.py: _apply_traits/_apply_difficulty/_apply_character).
-##     Those are one-time cosmetic adjustments to the opening position, not
-##     needed for the brief's checklist (player/party/government per opening
-##     role, world countries + relations, StateValidator). config's
-##     background_id/difficulty_id are still recorded in campaign_meta so a
-##     later task can add the nudges without an interface change.
-##   - Opening-role government assembly (_configure_government /
-##     _build_coalition_around, ported from engine/elections.py) does NOT
-##     rebuild the cabinet the way `elections.configure_government` does —
-##     that requires `cabinet_ops.generate_candidate` (name generation etc.),
-##     which is out of scope. The authored cabinet from content stays as-is.
-##   - regions are seeded here (Task 8: `RegionsSim.ensure_region_states`
-##     post-assembly, additive so old saves keep live values); households /
-##     ministries / active_budget are still left at their empty defaults — see
-##     game_state.gd's header note.
 
 const PLAYABLE_COUNTRY_IDS: Array[String] = ["ardenia"]
 
@@ -46,13 +8,6 @@ const DEFAULT_YEAR := 1993
 const DEFAULT_MONTH := 3
 
 
-## `content` is a ContentRepository.load_all() result. `config` carries:
-##   country_id (String, must be in PLAYABLE_COUNTRY_IDS)
-##   background_id (String, default "none")
-##   difficulty_id (String, default "normal")
-##   opening_role (String: "contextual" | "government" | "opposition")
-##   seed (int, explicit — required by the brief, no hash-derived fallback)
-## Returns null (and push_error()s) on any rejection.
 static func new_campaign(content: Dictionary, config: Dictionary) -> GameState:
 	var country_id: String = String(config.get("country_id", ""))
 	if not PLAYABLE_COUNTRY_IDS.has(country_id):
@@ -108,8 +63,6 @@ static func new_campaign(content: Dictionary, config: Dictionary) -> GameState:
 	if player_country == null:
 		push_error("GameFactory: could not parse country '%s'" % country_id)
 		return null
-	# Ardenia's factions keep the bloc wings that already arrived from
-	# content (kind == "bloc") — never regenerate those.
 
 	var other_ids: Array[String] = []
 	for cid in countries_data.keys():
@@ -117,8 +70,6 @@ static func new_campaign(content: Dictionary, config: Dictionary) -> GameState:
 			other_ids.append(String(cid))
 	other_ids.sort()
 
-	# Neighbours listed in the player's file come first (matching
-	# content/loader.py's ordering), any other defined country follows.
 	var neighbour_raw: Variant = player_data.get("neighbours", [])
 	if not (neighbour_raw is Array):
 		push_error("GameFactory: country '%s' neighbours is not an Array" % country_id)
@@ -224,8 +175,6 @@ static func _build_player(player_data: Dictionary, player_country: Country) -> G
 	return p
 
 
-## Fallback personalities for authored cabinets whose JSON predates traits —
-## ported from content/loader.py: _build_cabinet / _FALLBACK_TRAITS.
 static func _build_cabinet(player_data: Dictionary) -> Variant:
 	var out: Array[Minister] = []
 	var cabinet_raw: Variant = player_data.get("cabinet", [])
@@ -253,8 +202,6 @@ static func _build_cabinet(player_data: Dictionary) -> Variant:
 	return out
 
 
-## The (score, trade_volume) for a country pair — ported from
-## content/loader.py: _pair_relation.
 static func _pair_relation(data_by_id: Dictionary, a_id: String, b_id: String) -> Array:
 	var a_raw: Variant = data_by_id.get(a_id, {})
 	var a_data: Dictionary = a_raw if a_raw is Dictionary else {}
@@ -274,8 +221,6 @@ static func _pair_relation(data_by_id: Dictionary, a_id: String, b_id: String) -
 	return [float(src.get("score", 0.0)), float(src.get("trade_volume", 0.0))]
 
 
-## Bilateral relation objects for EVERY country pair, both ways — ported from
-## content/loader.py: _wire_all_relations.
 static func _wire_all_relations(countries_by_id: Dictionary, data_by_id: Dictionary) -> void:
 	var ids: Array = countries_by_id.keys()
 	ids.sort()
@@ -300,9 +245,6 @@ static func _wire_all_relations(countries_by_id: Dictionary, data_by_id: Diction
 			countries_by_id[b_id].relations[a_id] = rel_ba
 
 
-## Ported from engine/campaign.py: _apply_opening_position. Turns the party +
-## opening-role config into a coherent government (no cabinet rebuild — see
-## the file header's "Deviations" note).
 static func _apply_opening_position(state: GameState, opening_role_cfg: String) -> void:
 	var own: Faction = null
 	for f in state.country.factions:
@@ -324,8 +266,6 @@ static func _apply_opening_position(state: GameState, opening_role_cfg: String) 
 		else:
 			state.player.in_government = true
 	else:
-		# Preserve the authored cabinet when it already excludes this party;
-		# otherwise build an alternative around the strongest rival.
 		if own.in_coalition:
 			var rivals: Array[Faction] = []
 			for f in state.country.factions:
@@ -343,7 +283,6 @@ static func _apply_opening_position(state: GameState, opening_role_cfg: String) 
 		state.player.title = "Opposition Leader"
 
 
-## Ported from engine/elections.py: configure_government.
 static func _configure_government(state: GameState, ruling_faction_id: String,
 		excluded_ids: Array) -> Array[Faction]:
 	var factions: Array[Faction] = []
@@ -375,11 +314,6 @@ static func _configure_government(state: GameState, ruling_faction_id: String,
 	return coalition
 
 
-## Ported from engine/elections.py: _build_coalition_around. Greedily adds the
-## seed's ideologically nearest partners, in order, until a majority is
-## reached. Returns [] if even every willing partner can't get there (Python
-## returns None for this; [] is used instead since GDScript typed arrays
-## can't be null, and the seed alone always makes a non-empty success).
 static func _build_coalition_around(seed_faction: Faction, factions: Array[Faction],
 		threshold: int) -> Array[Faction]:
 	var coalition: Array[Faction] = [seed_faction]

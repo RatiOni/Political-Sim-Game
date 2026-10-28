@@ -1,8 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for Task 1: the native content export +
-## ContentRepository. Run via:
-##   Godot --headless --path godot --script res://tests/native/test_content_repository.gd
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
@@ -46,7 +43,6 @@ func _test_duplicate_rejection(t) -> void:
 	var result: Dictionary = ContentRepositoryScript.load_all(root)
 	t.truth(result.has("error"), "duplicate id within a catalog is rejected")
 
-	# Clean up so re-runs start fresh.
 	DirAccess.remove_absolute(root.path_join("catalog_manifest.json"))
 	DirAccess.remove_absolute(root.path_join("catalogs/dup.json"))
 	DirAccess.remove_absolute(root.path_join("catalogs"))
@@ -82,8 +78,6 @@ func _initialize() -> void:
 			var factions: Array = country.get("factions", [])
 			t.truth(not factions.is_empty(), "%s has at least one faction" % country_id)
 
-		# The Ardenian bloc set: twelve currents, spread across the five
-		# parties' `wings`, each wing carrying kind == "bloc".
 		var ardenia: Dictionary = countries.get("ardenia", {})
 		var bloc_ids: Array = []
 		for faction in ardenia.get("factions", []):
@@ -93,7 +87,6 @@ func _initialize() -> void:
 		bloc_ids.sort()
 		t.equal(bloc_ids, EXPECTED_ARDENIA_BLOC_IDS, "all twelve Ardenian blocs load, one per faction's wings")
 
-		# Every catalog and lore file the manifest lists must be non-empty.
 		var manifest: Dictionary = repo.get("manifest", {})
 		for rel_path in manifest.get("files", []):
 			var parts: PackedStringArray = String(rel_path).split("/")

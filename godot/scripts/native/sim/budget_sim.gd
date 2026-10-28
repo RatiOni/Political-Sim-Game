@@ -1,37 +1,16 @@
 class_name BudgetSim
 extends RefCounted
 
-## The fiscal year: seeding a campaign's first settlement, putting a voted
-## plan into force on 1 January, and what happens when there is no plan.
-##
-## Design intent (docs/godot/SIM_REDESIGN.md; review S2): failing to govern
-## must never be the clever move. A government that reaches January without
-## a budget runs on an emergency continuing resolution — spending continues
-## at last year's levels so the state does not stop, but no new programme can
-## start, every ministry carries the extra work of operating under emergency
-## rules, and the political cost mounts each month it lasts. It is survivable
-## and always worse than a settlement. The player ends it by passing a budget
-## for the current year, which takes effect at once.
-##
-## Player-authored preview/proposal/lobby/vote/withdraw lives in
-## actions/budget_actions.gd; the parliamentary projection lives in
-## sim/parliamentary_vote.gd.
 
-## Total appropriations may move at most this far from the current year.
 const MIN_TOTAL_FACTOR := 0.70
 const MAX_TOTAL_FACTOR := 1.30
 
-## The day the resolution starts: a visible failure, not a catastrophe.
 const EMERGENCY_START_APPROVAL_COST := 0.02
 const EMERGENCY_START_STABILITY_COST := 0.02
-## Every month it lasts, it costs this much, growing as it drags on
-## (doubling after EMERGENCY_ESCALATION_MONTHS).
 const EMERGENCY_MONTHLY_APPROVAL_COST := 0.003
 const EMERGENCY_MONTHLY_STABILITY_COST := 0.004
 const EMERGENCY_ESCALATION_MONTHS := 6.0
 const EMERGENCY_MAX_ESCALATION := 3.0
-## Extra workload every ministry carries while running on emergency rules,
-## and the most it can grow to.
 const EMERGENCY_BASE_WORKLOAD := 0.06
 const EMERGENCY_WORKLOAD_PER_MONTH := 0.01
 const EMERGENCY_MAX_WORKLOAD := 0.18
@@ -39,8 +18,6 @@ const EMERGENCY_MAX_WORKLOAD := 0.18
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 
 
-## Splits `expenditure` across the authored envelope shares, giving the last
-## envelope the exact remainder so the total is exact despite rounding.
 static func default_allocations(envelopes: Array, expenditure: float) -> Dictionary:
 	var total := maxf(0.0, expenditure)
 	var out := {}
@@ -64,8 +41,6 @@ static func _envelopes() -> Array:
 	return envelopes if envelopes is Array else []
 
 
-## Seeds the campaign's first settlement from primary spending, then returns
-## the active budget.
 static func ensure_budget_state(state: GameState) -> AnnualBudget:
 	if state.active_budget == null:
 		var budget := AnnualBudget.new()
@@ -78,13 +53,11 @@ static func ensure_budget_state(state: GameState) -> AnnualBudget:
 	return state.active_budget
 
 
-## True while the state runs on an emergency continuing resolution.
 static func is_emergency(state: GameState) -> bool:
 	return state != null and state.active_budget != null \
 		and state.active_budget.source == "continuing"
 
 
-## Extra work each ministry carries under emergency rules right now.
 static func emergency_workload(state: GameState) -> float:
 	if not is_emergency(state):
 		return 0.0
@@ -92,9 +65,6 @@ static func emergency_workload(state: GameState) -> float:
 		EMERGENCY_BASE_WORKLOAD + EMERGENCY_WORKLOAD_PER_MONTH * state.active_budget.emergency_months)
 
 
-## Puts `plan` into force. The history records exactly what was voted; the
-## active budget carries the same shares, grown by the economy since the plan
-## was tabled, and primary spending moves to match it.
 static func activate(state: GameState, plan: AnnualBudget) -> AnnualBudget:
 	var activated := AnnualBudget.from_dict(plan.to_dict())
 	activated.status = "active"
@@ -113,7 +83,6 @@ static func activate(state: GameState, plan: AnnualBudget) -> AnnualBudget:
 	return activated
 
 
-## Last year's appropriations carried forward unchanged, under emergency rules.
 static func _emergency_resolution(state: GameState) -> AnnualBudget:
 	var active := ensure_budget_state(state)
 	var b := AnnualBudget.new()
@@ -126,8 +95,6 @@ static func _emergency_resolution(state: GameState) -> AnnualBudget:
 	return b
 
 
-## A restrained plan written from the ruling party's own ideology. An
-## opposition player is never punished for a budget they do not control.
 static func _government_ai_budget(state: GameState) -> AnnualBudget:
 	var active := ensure_budget_state(state)
 	var ruling: Faction = null
@@ -180,10 +147,6 @@ static func _government_ai_budget(state: GameState) -> AnnualBudget:
 	return b
 
 
-## Monthly fiscal close. On 1 January a voted plan takes effect, an
-## opposition player's government enacts its own, or an emergency
-## resolution begins. Every month an emergency resolution lasts, its
-## political cost is paid.
 static func process_fiscal_year(state: GameState) -> void:
 	var active := ensure_budget_state(state)
 	if state.month == 1 and active.year < state.year:
@@ -219,7 +182,6 @@ static func _emergency_month(state: GameState) -> void:
 	var active := state.active_budget
 	active.emergency_months += 1
 	var escalation := minf(EMERGENCY_MAX_ESCALATION, 1.0 + float(active.emergency_months) / EMERGENCY_ESCALATION_MONTHS)
-	# Only a government is blamed for having no budget.
 	if state.player.in_government:
 		state.player.approval = maxf(0.0, state.player.approval - EMERGENCY_MONTHLY_APPROVAL_COST * escalation)
 	state.stability_value = maxf(0.0, state.stability_value - EMERGENCY_MONTHLY_STABILITY_COST * escalation)

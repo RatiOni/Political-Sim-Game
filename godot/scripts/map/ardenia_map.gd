@@ -3,8 +3,8 @@ class_name ArdeniaMap
 
 signal region_selected(region_id: String)
 
-# Matches ui/widgets_ardenia_map.py: normalized authoring space is not square geography.
 const MAP_ASPECT := 1.68
+const ROOMY_LABEL_HEIGHT := 480
 
 var geography: Dictionary = {}
 var regions: Dictionary = {}
@@ -46,7 +46,6 @@ func select_region(region_id: String) -> void:
 	region_selected.emit(region_id)
 
 func _rebuild_geometry() -> void:
-	# One canonical projection for drawing AND pointer hit tests; no geometry changes.
 	var width := maxf(1.0, minf(size.x - 48.0, (size.y - 36.0) * MAP_ASPECT))
 	var extent := Vector2(width, width / MAP_ASPECT)
 	_transform = Transform2D(Vector2(extent.x / 100.0, 0), Vector2(0, extent.y / 100.0), (size - extent) / 2.0)
@@ -105,7 +104,6 @@ func _draw() -> void:
 	for neighbor in geography.get("neighbors", []):
 		draw_colored_polygon(_points(neighbor["points"]), _color("neighbor"))
 	for id in polygons:
-		# Pressure is already calculated in Python; only colour interpolation lives here.
 		var fill := _color("neighbor")
 		if regions.has(id) and regions[id].has("pressure"):
 			fill = _color("low_pressure").lerp(_color("high_pressure"), clampf(float(regions[id]["pressure"]), 0.0, 1.0))
@@ -134,8 +132,7 @@ func _draw() -> void:
 		draw_circle(point, 4.0 if capital else 2.6, _color("selection" if capital else "ink"))
 		if capital:
 			draw_arc(point, 7.0, 0, TAU, 24, _color("selection"), 1.2, true)
-		# National cities always labelled; regional city names disclosed at roomy sizes.
-		if city.get("importance") == "national" or size.y >= 480:
+		if city.get("importance") == "national" or size.y >= ROOMY_LABEL_HEIGHT:
 			for offset in [Vector2(0, 22), Vector2(0, -12), Vector2(44, 14), Vector2(-44, 14)]:
 				if _draw_label(font, str(city["name"]), point + offset, 14, _color("ink"), true):
 					break

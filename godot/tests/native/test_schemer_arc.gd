@@ -1,17 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for the schemer arc and the party leadership
-## challenge it hands off to, plus the monthly cabinet drift that arms it.
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_schemer_arc.gd
-##
-## Intended behaviour: a schemer grows more dangerous each month while a
-## loyalist holds steady; the arc opens only once that danger is real and
-## only for a government; every branch does what it says (buy off, force a
-## resignation, expose, crush, or let them rise); a schemer who has already
-## left makes later steps quiet no-ops; and the chain hands off to a formal
-## leadership challenge whose three answers move the party differently.
-
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 
 const ARC := ["a_schemer_stirs", "a_schemer_confronted", "a_schemer_moves",
@@ -68,8 +56,6 @@ static func _own_dominant_wing(state: GameState) -> Faction.Wing:
 	return null
 
 
-# ── The fuse ─────────────────────────────────────────────────────────────
-
 func _test_a_schemer_grows_more_dangerous_each_month(t) -> void:
 	var state := _state()
 	var m := _schemer(state)
@@ -113,8 +99,6 @@ func _test_the_whole_arc_is_playable(t) -> void:
 	t.equal(missing, [], "every step of the schemer arc and the challenge can now fire")
 
 
-# ── Confronting early ────────────────────────────────────────────────────
-
 func _test_confronting_early_leads_to_a_reckoning(t) -> void:
 	var state := _state()
 	_arm(state)
@@ -142,8 +126,6 @@ func _test_demanding_resignation_removes_them(t) -> void:
 	t.truth(not state.ministers.has(m), "the schemer leaves the cabinet")
 	t.equal(_schemer(state), null, "and no schemer remains")
 
-
-# ── Waiting ──────────────────────────────────────────────────────────────
 
 func _test_waiting_lets_them_move(t) -> void:
 	var state := _state()
@@ -198,8 +180,6 @@ func _test_a_departed_schemer_makes_later_steps_quiet(t) -> void:
 	t.equal(state.ministers.size(), count, "and touches nobody else")
 
 
-# ── The challenge ────────────────────────────────────────────────────────
-
 func _test_facing_down_cows_the_wing(t) -> void:
 	var state := _state()
 	var wing := _own_dominant_wing(state)
@@ -241,8 +221,6 @@ func _test_purging_weakens_the_wing_and_the_party(t) -> void:
 	t.truth(all_down, "every wing of the party loses loyalty")
 	t.near(state.stability_value, maxf(0.05, stab0 - 0.05), 1e-9, "and the government is shaken")
 
-
-# ── End to end ───────────────────────────────────────────────────────────
 
 func _test_a_government_that_never_engages_ends_up_challenged(t) -> void:
 	var state := _state()

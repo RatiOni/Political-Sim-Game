@@ -1,17 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for Vetrenka, the frozen conflict.
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_vetrenka_arc.gd
-##
-## Intended behaviour: the line of contact produces recurring friction that
-## resolves nothing but is counted; only after enough incidents does the
-## once-only crossroads open, with three roads — peace talks, an offensive,
-## or letting the line harden. Talks succeed for a government with standing,
-## an offensive for one with a real army; the hardened line is worn quietly
-## only by a secure government. Six endings, each recorded and each changing
-## the region itself; and once ended, nothing reopens.
-
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 
 const ARC := ["vetrenka_friction", "vetrenka_crossroads", "vetrenka_settled", "vetrenka_talks_fail",
@@ -44,8 +32,6 @@ static func _scheduled(state: GameState, event_id: String) -> Dictionary:
 	return {}
 
 
-## Share of 60 seeded campaigns, each first adjusted by `configure`, in which
-## choosing `option_id` sets `success_id` in motion.
 static func _rate(configure: Callable, event_id: String, option_id: String, success_id: String) -> float:
 	var wins := 0
 	for seed in range(60):
@@ -65,8 +51,6 @@ static func _set_security(state: GameState, quality: float, stability: float) ->
 			m.trait_id = ""
 	state.stability_value = stability
 
-
-# ── Friction ─────────────────────────────────────────────────────────────
 
 func _test_the_whole_arc_is_playable(t) -> void:
 	var held := EventsSim.unplayable_events()
@@ -102,8 +86,6 @@ func _test_the_crossroads_waits_for_enough_incidents(t) -> void:
 	opp.campaign_meta["vetrenka_incidents"] = 9
 	t.truth(not EventsSim.condition_met(opp, "vetrenka_friction_due"), "an opposition leader holds no line")
 
-
-# ── The three roads ──────────────────────────────────────────────────────
 
 static func _standing_high(s: GameState) -> void:
 	s.player.approval = 0.70
@@ -165,8 +147,6 @@ func _test_only_a_secure_government_wears_partition_quietly(t) -> void:
 	t.truth(not _scheduled(shaky, "vetrenka_backlash").is_empty(), "a shaky one faces a backlash")
 
 
-# ── Endings ──────────────────────────────────────────────────────────────
-
 func _test_each_ending_is_recorded_and_redraws_the_region(t) -> void:
 	var cases := [
 		["vetrenka_settled", "sign_it", "settled", "autonomous"],
@@ -215,8 +195,6 @@ func _test_the_line_hardens_by_inattention(t) -> void:
 	s.arrived_turn = state.turn
 	s.deadline_turn = state.turn + EventsSim.DECISION_WINDOW_MONTHS
 	state.pending_situations.append(s)
-	# Three decision windows lapse in turn (crossroads, partition, the
-	# verdict), with the 2- and 4-or-5-month delays between: about 15 months.
 	for _i in range(20):
 		state.turn += 1
 		EventsSim.monthly(state)

@@ -1,19 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for Phase 2 Task 6: MinistriesSim (ministry
-## capacity, workload, delivery, backlog).
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_ministries_sim.gd
-##
-## Checks the ported logic on its own terms (task-6-brief.md: no
-## oracle/parity comparison against Python is required or wanted) — capacity
-## responds to funding ratio / minister quality / bureaucratic capacity /
-## stability; a missing or "wrong-party" minister degrades gracefully instead
-## of crashing; workload accumulates only from sources that genuinely exist
-## natively today; backlog clears only with spare capacity, never instantly,
-## and is bounded at MAX_BACKLOG; months_overloaded increments/decrements
-## correctly; every CORE_PORTFOLIO gets seeded into state.ministries.
-
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 const GameFactoryScript = preload("res://scripts/native/state/game_factory.gd")
@@ -33,21 +19,19 @@ static func _base_config() -> Dictionary:
 	}
 
 
-## A synthetic, fully-known budget so funding math is exactly predictable
-## instead of depending on Ardenia's real authored economy numbers.
 static func _synthetic_budget(year: int) -> AnnualBudget:
 	var b := AnnualBudget.new()
 	b.year = year
 	b.status = "active"
 	b.allocations = {
-		"state_administration": 100.0,   # -> Interior
-		"foreign_affairs": 50.0,         # -> Foreign Affairs
-		"justice_and_policing": 80.0,    # -> Justice
-		"national_defense": 120.0,       # -> Defense
-		"infrastructure": 90.0,          # -> Economy
-		"industry_and_jobs": 60.0,       # -> Economy (150 total)
-		"education": 100.0,              # -> Finance
-		"health_and_welfare": 200.0,     # -> Finance (300 total)
+		"state_administration": 100.0,
+		"foreign_affairs": 50.0,
+		"justice_and_policing": 80.0,
+		"national_defense": 120.0,
+		"infrastructure": 90.0,
+		"industry_and_jobs": 60.0,
+		"education": 100.0,
+		"health_and_welfare": 200.0,
 	}
 	return b
 
@@ -82,7 +66,6 @@ static func _population_pressure(state: GameState, content: Dictionary) -> float
 		total += weight
 	return weighted / total if total > 0.0 else 0.0
 
-# ── Seeding ───────────────────────────────────────────────────────────────
 
 func _test_ensure_ministries_seeds_every_core_portfolio(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -103,8 +86,6 @@ func _test_ensure_ministries_seeds_every_core_portfolio(t, content: Dictionary) 
 		t.equal(ministry.delivery, 1.0, "%s seeds at full delivery" % portfolio)
 		t.equal(ministry.backlog, 0.0, "%s seeds with no backlog" % portfolio)
 		t.equal(ministry.months_overloaded, 0, "%s seeds with no overload history" % portfolio)
-		# No active_budget exists yet on a fresh campaign (Task 5's own
-		# documented scope), so seeded funding is honestly zero.
 		t.equal(ministry.baseline_funding, 0.0, "%s baseline_funding is 0 with no active_budget" % portfolio)
 	t.truth(ministries is Dictionary and ministries == state.ministries,
 		"ensure_ministries returns the state's own dict")
@@ -135,7 +116,7 @@ func _test_ensure_ministries_backfills_without_clobbering_existing(t, content: D
 	MinistriesSimScript.ensure_ministries(state)
 
 	var interior: MinistryState = state.ministries["Interior"]
-	interior.backlog = 2.0   # a hand-made mutation that must survive a backfill pass
+	interior.backlog = 2.0
 	state.ministries.erase("Justice")
 	t.truth(not state.ministries.has("Justice"), "sanity: Justice removed")
 
@@ -144,8 +125,6 @@ func _test_ensure_ministries_backfills_without_clobbering_existing(t, content: D
 	t.equal(state.ministries["Interior"].backlog, 2.0, "backfill does not touch an existing ministry's state")
 
 
-# ── Capacity: funding ratio ───────────────────────────────────────────────
-
 func _test_capacity_responds_to_funding_ratio(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	t.truth(state != null, "campaign builds")
@@ -153,23 +132,21 @@ func _test_capacity_responds_to_funding_ratio(t, content: Dictionary) -> void:
 		return
 	state.active_budget = _synthetic_budget(state.year)
 	var ministries: Dictionary = MinistriesSimScript.ensure_ministries(state)
-	var interior: MinistryState = ministries["Interior"]   # baseline_funding == 100.0
+	var interior: MinistryState = ministries["Interior"]
 
 	var at_baseline: Array = MinistriesSimScript.operating_capacity(state, interior)
 	t.near(float(at_baseline[2]), 1.0, 0.001, "funding_ratio is 1.0 at baseline")
 
-	state.active_budget.allocations["state_administration"] = 150.0   # ratio 1.5 (clamp ceiling)
+	state.active_budget.allocations["state_administration"] = 150.0
 	var above: Array = MinistriesSimScript.operating_capacity(state, interior)
 	t.near(float(above[2]), 1.5, 0.001, "funding_ratio reflects the raised allocation")
 	t.truth(float(above[0]) > float(at_baseline[0]), "capacity rises with a higher funding ratio")
 
-	state.active_budget.allocations["state_administration"] = 50.0    # ratio 0.5 (clamp floor)
+	state.active_budget.allocations["state_administration"] = 50.0
 	var below: Array = MinistriesSimScript.operating_capacity(state, interior)
 	t.near(float(below[2]), 0.5, 0.001, "funding_ratio reflects the lowered allocation")
 	t.truth(float(below[0]) < float(at_baseline[0]), "capacity falls with a lower funding ratio")
 
-
-# ── Capacity: minister competence/loyalty, missing minister ──────────────
 
 func _test_capacity_responds_to_minister_quality_and_handles_absence(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -192,9 +169,6 @@ func _test_capacity_responds_to_minister_quality_and_handles_absence(t, content:
 	_assign_minister(state, "Interior", 1.0, 1.0)
 	var good_minister: Array = MinistriesSimScript.operating_capacity(state, interior)
 
-	# _minister_quality fallback (no minister) is 0.35, strictly between a
-	# competence=0/loyalty=0 minister (quality 0.0) and a competence=1/
-	# loyalty=1 minister (quality 1.0) — mirrors engine/ministries.py exactly.
 	t.truth(float(bad_minister[0]) < float(no_minister[0]),
 		"a bad minister gives less capacity than no minister at all (fallback quality 0.35 beats 0.0)")
 	t.truth(float(no_minister[0]) < float(good_minister[0]),
@@ -210,10 +184,6 @@ func _test_minister_quality_ignores_faction_affiliation(t, content: Dictionary) 
 	var ministries: Dictionary = MinistriesSimScript.ensure_ministries(state)
 	var interior: MinistryState = ministries["Interior"]
 
-	# Same competence/loyalty, two different (one fictitious, one the
-	# player's own) faction_ids — capacity must be identical either way,
-	# proving the calculation reads the minister's own stats, never their
-	# party (the parked Phase 1 opposition-cabinet-staleness finding).
 	_clear_ministers(state)
 	_assign_minister(state, "Interior", 0.7, 0.6, "totally-made-up-faction-id")
 	var capacity_a: Array = MinistriesSimScript.operating_capacity(state, interior)
@@ -225,8 +195,6 @@ func _test_minister_quality_ignores_faction_affiliation(t, content: Dictionary) 
 	t.near(float(capacity_a[0]), float(capacity_b[0]), 0.0001,
 		"capacity depends only on the assigned minister's own competence/loyalty, not their faction")
 
-
-# ── Capacity: bureaucratic capacity, stability ────────────────────────────
 
 func _test_capacity_responds_to_bureaucratic_capacity(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -266,17 +234,11 @@ func _test_capacity_responds_to_stability(t, content: Dictionary) -> void:
 	t.truth(float(low[0]) < float(high[0]), "capacity rises with government stability")
 
 
-# ── Workload sources ──────────────────────────────────────────────────────
-
 func _test_workload_sources_on_a_fresh_campaign(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	t.truth(state != null, "campaign builds")
 	if state == null:
 		return
-	# Task 8 seeds regions at factory time, so a fresh campaign's Interior
-	# legitimately carries a regional-pressure source on top of ordinary
-	# administration (mean seeded pressure 0.602 > the 0.45 threshold).
-	# Every other portfolio still has exactly one source.
 	var expected_rp := (_population_pressure(state, content) - 0.45) * 0.90
 	for portfolio in ALL_PORTFOLIOS:
 		var breakdown: Dictionary = MinistriesSimScript.workload_breakdown(state, portfolio)
@@ -351,7 +313,7 @@ func _test_workload_counts_regional_pressure_for_interior_above_threshold(t, con
 	var r2 := RegionState.new()
 	r2.id = "r2"
 	r2.pressure = 0.8
-	state.regions = {"r1": r1, "r2": r2}   # unweighted mean 0.70 (see ministries_sim.gd header note)
+	state.regions = {"r1": r1, "r2": r2}
 
 	var interior_breakdown: Dictionary = MinistriesSimScript.workload_breakdown(state, "Interior")
 	t.near(float(interior_breakdown.get("regional pressure", -1.0)), (0.70 - 0.45) * 0.90, 0.0001,
@@ -397,8 +359,6 @@ func _test_workload_ignores_regional_pressure_below_threshold(t, content: Dictio
 	t.truth(not interior_breakdown.has("regional pressure"), "pressure at/under 0.45 adds no workload")
 
 
-# ── simulate(): backlog and months_overloaded ─────────────────────────────
-
 func _test_simulate_recovers_backlog_gradually_when_capacity_exceeds_workload(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
 	t.truth(state != null, "campaign builds")
@@ -407,22 +367,17 @@ func _test_simulate_recovers_backlog_gradually_when_capacity_exceeds_workload(t,
 	state.country.bureaucratic_capacity = 1.0
 	state.stability_value = 1.0
 	_clear_ministers(state)
-	_assign_minister(state, "Interior", 1.0, 1.0)   # quality 1.0 -> leadership_factor 1.0
+	_assign_minister(state, "Interior", 1.0, 1.0)
 	state.active_budget = _synthetic_budget(state.year)
-	state.active_budget.allocations["state_administration"] = 100.0   # ratio exactly 1.0
+	state.active_budget.allocations["state_administration"] = 100.0
 	var ministries: Dictionary = MinistriesSimScript.ensure_ministries(state)
 	var interior: MinistryState = ministries["Interior"]
-	# capacity = 1.45 * 1.0 * 1.0 * 1.0 * 1.0 = 1.45; workload = 0.65 ordinary
-	# administration + the seeded regional-pressure source (Task 8 seeds
-	# regions at factory time; mean seeded pressure 0.602 clears the 0.45
-	# threshold) -> still ample spare capacity.
 	var workload := 0.65 + (_population_pressure(state, content) - 0.45) * 0.90
 	interior.backlog = 3.0
 	interior.months_overloaded = 2
 
 	MinistriesSimScript.simulate(state)
 
-	# recovered = min(3.0, (1.45-workload)*0.22) -> new backlog 3.0-recovered.
 	var recovered: float = minf(3.0, (1.45 - workload) * 0.22)
 	t.near(interior.capacity, 1.45, 0.01, "capacity matches the hand-computed value")
 	t.near(interior.workload, workload, 0.0001, "workload is ordinary administration plus seeded regional pressure")
@@ -443,12 +398,10 @@ func _test_simulate_grows_backlog_and_months_overloaded_when_capacity_falls_shor
 	_clear_ministers(state)
 	_assign_minister(state, "Defense", 1.0, 1.0)
 	state.active_budget = _synthetic_budget(state.year)
-	state.active_budget.allocations["national_defense"] = 120.0   # ratio exactly 1.0
-	state.civil_war = true   # Defense crisis load 1.00 -> workload 0.65+1.00 = 1.65
+	state.active_budget.allocations["national_defense"] = 120.0
+	state.civil_war = true
 	var ministries: Dictionary = MinistriesSimScript.ensure_ministries(state)
 	var defense: MinistryState = ministries["Defense"]
-	# capacity = 1.45 (same derivation as the spare-capacity test above),
-	# workload = 1.65 -> capacity falls short by 0.20.
 	defense.backlog = 1.0
 	defense.months_overloaded = 0
 
@@ -475,7 +428,7 @@ func _test_simulate_clamps_backlog_at_max(t, content: Dictionary) -> void:
 	state.civil_war = true
 	var ministries: Dictionary = MinistriesSimScript.ensure_ministries(state)
 	var defense: MinistryState = ministries["Defense"]
-	defense.backlog = MinistriesSimScript.MAX_BACKLOG - 0.1   # would overshoot past MAX_BACKLOG this turn
+	defense.backlog = MinistriesSimScript.MAX_BACKLOG - 0.1
 
 	MinistriesSimScript.simulate(state)
 
@@ -494,7 +447,6 @@ func _test_simulate_updates_workload_breakdown_snapshot(t, content: Dictionary) 
 	t.near(float(defense.workload_breakdown.get("civil war", -1.0)), 1.00, 0.0001,
 		"persisted breakdown matches Defense's crisis load")
 
-# ── Funding is a real decision (review S4) ───────────────────────────────
 
 func _test_funding_curve_has_three_zones(t, _content: Dictionary) -> void:
 	var f := func(r: float) -> float: return MinistriesSimScript.funding_factor(r)
@@ -551,7 +503,7 @@ func _test_flat_money_falls_behind_a_growing_economy(t, content: Dictionary) -> 
 	MinistriesSimScript.simulate(state)
 	var ratio0: float = (state.ministries["Finance"] as MinistryState).funding_ratio
 	for _i in range(60):
-		state.active_budget.allocations = frozen.duplicate()   # the same money, five years running
+		state.active_budget.allocations = frozen.duplicate()
 		MinistriesSimScript.simulate(state)
 	var ratio5: float = (state.ministries["Finance"] as MinistryState).funding_ratio
 	t.truth(ratio5 < ratio0 - 0.05,

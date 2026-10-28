@@ -1,28 +1,25 @@
 class_name Modifier
 extends RefCounted
 
-## Typed mirror of models/modifiers.py: the core primitive for long-term
-## consequences (laws, loans, treaties, events attach one of these instead of
-## mutating a stat directly). Task 3's calendar/modifier aging logic reads and
-## mutates `age` on these; `current_value()` is recomputed fresh every turn,
-## never accumulated, so effects stay bounded however long they run.
-##
-## Python's `hold_duration: Optional[int]` (None = holds forever) becomes a
-## negative sentinel here (`hold_duration < 0` = holds forever), since typed
-## GDScript ints can't be null.
 
 var id: String
-var source: String            # human-readable origin, for logs/UI
-var target: String            # stat key the turn engine reads
-var magnitude: float          # full-strength delta once ramped in
+var source: String
+var target: String
+var magnitude: float
 var onset_delay: int = 0
 var ramp_duration: int = 1
-var hold_duration: int = -1   # -1 == Python's None: holds at full strength forever
+const HOLDS_FOREVER: int = -1
+
+var hold_duration: int = HOLDS_FOREVER
 var decay_duration: int = 0
 var age: int = 0
-var source_id: String = ""    # law/loan/treaty id; "" == Python's None
-var portfolio: String = ""    # "" == Python's None
+var source_id: String = ""
+var portfolio: String = ""
 var institutional: bool = true
+
+
+func holds_forever() -> bool:
+	return hold_duration < 0
 
 
 func current_value() -> float:
@@ -36,7 +33,7 @@ func current_value() -> float:
 		return magnitude * minf(1.0, frac)
 	t -= ramp_duration
 
-	if hold_duration < 0:
+	if holds_forever():
 		return magnitude
 	if t < hold_duration:
 		return magnitude
@@ -51,8 +48,7 @@ func current_value() -> float:
 
 
 func is_expired() -> bool:
-	## Indefinite modifiers (hold_duration < 0) never auto-expire.
-	if hold_duration < 0:
+	if holds_forever():
 		return false
 	var total_life := onset_delay + ramp_duration + hold_duration + decay_duration
 	return age >= total_life
@@ -69,7 +65,7 @@ func phase_label() -> String:
 			return "phasing in (%d/%dmo)" % [t + 1, ramp_duration]
 		t -= ramp_duration
 
-	if hold_duration < 0:
+	if holds_forever():
 		return "active"
 	if t < hold_duration:
 		return "active"
@@ -108,7 +104,7 @@ static func from_dict(data: Dictionary) -> Modifier:
 	m.magnitude = float(data.get("magnitude", 0.0))
 	m.onset_delay = _int_field(data, "onset_delay", 0)
 	m.ramp_duration = _int_field(data, "ramp_duration", 1)
-	m.hold_duration = _int_field(data, "hold_duration", -1)
+	m.hold_duration = _int_field(data, "hold_duration", HOLDS_FOREVER)
 	m.decay_duration = _int_field(data, "decay_duration", 0)
 	m.age = _int_field(data, "age", 0)
 	m.source_id = String(data.get("source_id", ""))
@@ -117,8 +113,6 @@ static func from_dict(data: Dictionary) -> Modifier:
 	return m
 
 
-## JSON boundary: Godot parses every JSON number as float, so a whole-number
-## float must read back as an int wherever an int field is expected.
 static func _int_field(data: Dictionary, key: String, fallback: int) -> int:
 	var v: Variant = data.get(key, fallback)
 	if typeof(v) == TYPE_INT:

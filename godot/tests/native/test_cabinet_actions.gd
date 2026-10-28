@@ -1,7 +1,5 @@
 extends SceneTree
 
-## Task 14 red test: cabinet appointments must become a native, save-safe
-## player action. This file intentionally precedes CabinetActions.
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")

@@ -1,89 +1,37 @@
 class_name EconomySim
 extends RefCounted
 
-## The monthly economy: what the country produces, what things cost, who has
-## work, and what the state owes.
-##
-## Design intent (docs/godot/SIM_REDESIGN.md, docs/economy-review.md):
-## - Spending has a balance-sheet consequence. Every month's overall deficit
-##   is added to the public debt, and the debt charges interest that is itself
-##   part of next month's bill. A surplus pays debt down. (Review S1.)
-## - Interest is priced by the market: high debt or high inflation raise the
-##   rate, and the rate the state actually pays only reprices gradually as old
-##   debt rolls over. Debt problems arrive slowly and leave slowly.
-## - Fiscal policy moves demand, but only while it is new. Spending above its
-##   recent trend lifts growth and jobs; cutting below it contracts them. The
-##   economy then adapts, so a stimulus is a loan against the future, not a
-##   permanent engine. (Review S2: austerity is no longer free.)
-## - Unemployment settles toward a natural rate set by workforce quality and
-##   state capacity, not toward the floor. Extra demand pushes it lower for a
-##   while and pays for that in inflation. (Review S5.)
-## - Inflation has three pressures — the deficit, demand running ahead of what
-##   the economy can supply, and debt so large it invites monetisation — and an
-##   anchor that loses its grip once inflation is already high. (Review S3.)
-##
-## Order inside one month: capacity stats -> sectors -> fiscal baseline ->
-## fiscal stance -> labour market and prices -> headline stats (modifiers
-## layered on) -> output -> balance sheet. Each step reads the steps before it.
 
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 
-## Workforce quality and state capacity before any long-term reform.
 const BASE_WORKFORCE_QUALITY := 0.5
 const BASE_BUREAUCRATIC_CAPACITY := 0.75
-## Growth bonus/penalty from workforce quality at its extremes.
 const WORKFORCE_GROWTH_FACTOR := 0.03
-## Annual customs revenue per unit of trade volume under a trade treaty.
 const TRADE_CUSTOMS_RATE := 0.05
 
-# Fiscal stance.
-## How strongly new spending (relative to its trend, as a share of GDP) moves
-## growth. Below 1: some of every kron leaks into imports and savings.
 const FISCAL_MULTIPLIER := 0.8
-## Ceiling on how much growth fiscal stance alone can add or remove.
 const MAX_FISCAL_IMPULSE := 0.04
-## Monthly speed at which the economy adapts to a new spending level
-## (~2 years for most of a stimulus to wear off).
 const SPENDING_TREND_ADAPTATION := 1.0 / 24.0
 
-# Labour market.
-## Natural unemployment for an average workforce and a capable state.
 const NATURAL_UNEMPLOYMENT_BASE := 0.10
-## A fully skilled workforce lowers the natural rate by this much (and an
-## unskilled one raises it by the same).
 const WORKFORCE_NATURAL_RATE_EFFECT := 0.12
-## A state that can actually run job centres and training helps at the margin.
 const CAPACITY_NATURAL_RATE_EFFECT := 0.04
 const NATURAL_UNEMPLOYMENT_MIN := 0.03
 const NATURAL_UNEMPLOYMENT_MAX := 0.20
-## Monthly pull of unemployment toward the natural rate (half-life ~3 years:
-## a labour market heals, but on a political timescale it heals slowly).
 const UNEMPLOYMENT_REVERSION := 0.02
-## Okun's link: one point of growth above what the economy can sustain, held
-## for a year, takes roughly half a point off unemployment.
 const OKUN_COEFFICIENT := 0.5
 
-# Prices.
 const INFLATION_ANCHOR := 0.02
-## Monthly pull toward the anchor while the anchor is credible.
 const INFLATION_REVERSION := 0.008
-## Inflation above this starts to unmoor expectations...
 const ANCHOR_SLIPS_ABOVE := 0.08
-## ...and by this much above it the anchor has lost most of its grip.
 const ANCHOR_SLIP_RANGE := 0.25
 const ANCHOR_MIN_CREDIBILITY := 0.25
-## Monthly push per unit of deficit-to-GDP.
 const DEFICIT_INFLATION_FACTOR := 0.006
-## Monthly push per unit of demand running ahead of supply.
 const DEMAND_INFLATION_FACTOR := 0.04
-## Debt beyond this share of GDP invites printing money to service it.
 const MONETISATION_THRESHOLD := 1.0
 const MONETISATION_INFLATION_FACTOR := 0.002
 const STRUCTURAL_INFLATION_MAX := 0.60
 
-# Balance sheet.
-## Share of the gap between the market rate and the rate actually paid that
-## closes each month (old debt rolls over across about three years).
 const INTEREST_REPRICING := 1.0 / 36.0
 const MAX_DEBT_PCT := 4.0
 
@@ -102,7 +50,6 @@ static func update(state: GameState) -> void:
 	_update_balance_sheet(state)
 
 
-## Slow-moving stat driven only by long-term modifiers (e.g. education reform).
 static func _update_workforce_quality(state: GameState) -> void:
 	var econ := state.country.economy
 	econ.workforce_quality = clampf(
@@ -114,9 +61,6 @@ static func _update_bureaucratic_capacity(state: GameState) -> void:
 		BASE_BUREAUCRATIC_CAPACITY + _modifiers_sum(state, "bureaucratic_capacity"), 0.0, 1.0)
 
 
-## Sectors and workforce quality set what the economy can sustain (structural
-## growth). Growing sectors gain share of output and jobs, and lend political
-## weight to the factions aligned with them.
 static func _update_sectors(state: GameState) -> void:
 	var econ := state.country.economy
 	if econ.sectors.is_empty():
@@ -161,9 +105,6 @@ static func _faction_by_id(state: GameState, faction_id: String) -> Faction:
 	return null
 
 
-## The tax base and the cost of running the state both grow with the economy
-## (public pay and prices track it). Customs revenue is recomputed fresh from
-## current trade, so it follows relationships rather than ratcheting.
 static func _update_fiscal_baseline(state: GameState) -> void:
 	var econ := state.country.economy
 	var monthly_structural_growth := econ.structural_growth_rate / 12.0
@@ -185,8 +126,6 @@ static func _update_fiscal_baseline(state: GameState) -> void:
 	econ.trade_revenue_contribution = total_trade_revenue
 
 
-## Keeps the displayed envelope ledger summing to the drifting baseline, so
-## the budget the player reads is the budget being spent.
 static func _sync_active_total(state: GameState, expenditure: float) -> void:
 	var active := BudgetSim.ensure_budget_state(state)
 	var keys: Array = []
@@ -222,8 +161,6 @@ static func _round1(value: float) -> float:
 	return roundf(value * 10.0) / 10.0
 
 
-## Primary spending above its recent trend lifts demand; below it, demand
-## contracts. The trend then follows the new level, so the effect fades.
 static func _update_fiscal_stance(state: GameState) -> void:
 	var econ := state.country.economy
 	var primary := econ.structural_expenditure + _modifiers_sum(state, "budget_expenditure")
@@ -234,8 +171,6 @@ static func _update_fiscal_stance(state: GameState) -> void:
 	econ.spending_trend += (primary - econ.spending_trend) * SPENDING_TREND_ADAPTATION
 
 
-## How far demand is running ahead of (positive) or behind (negative) what
-## the economy can supply: fiscal stance plus any policy growth effects.
 static func demand_gap(state: GameState) -> float:
 	var econ := state.country.economy
 	return econ.fiscal_impulse + _modifiers_sum(state, "gdp_growth")
@@ -249,8 +184,6 @@ static func natural_unemployment_for(state: GameState) -> float:
 		NATURAL_UNEMPLOYMENT_MIN, NATURAL_UNEMPLOYMENT_MAX)
 
 
-## Unemployment heals toward the natural rate and is pushed below it only by
-## demand the economy cannot sustain.
 static func _update_labour_market(state: GameState) -> void:
 	var econ := state.country.economy
 	econ.natural_unemployment = natural_unemployment_for(state)
@@ -260,8 +193,6 @@ static func _update_labour_market(state: GameState) -> void:
 		econ.structural_unemployment + reversion - demand_effect, 0.01, 0.50)
 
 
-## 1.0 while inflation is near target; falls as inflation runs away, so a
-## country that lets prices go finds them harder to bring back.
 static func anchor_credibility(inflation: float) -> float:
 	var slip := clampf((inflation - ANCHOR_SLIPS_ABOVE) / ANCHOR_SLIP_RANGE, 0.0, 1.0)
 	return lerpf(1.0, ANCHOR_MIN_CREDIBILITY, slip)
@@ -279,8 +210,6 @@ static func _update_prices(state: GameState) -> void:
 	econ.structural_inflation = clampf(econ.structural_inflation + drift, 0.0, STRUCTURAL_INFLATION_MAX)
 
 
-## Effective stats = structural baseline + active modifiers, assigned fresh
-## (`=`, never `+=`) so long-lived laws can't compound on themselves.
 static func _apply_headline_stats(state: GameState) -> void:
 	var econ := state.country.economy
 
@@ -309,8 +238,6 @@ static func _compound_gdp(state: GameState) -> void:
 	econ.gdp *= (1.0 + econ.growth_rate / 12.0)
 
 
-## One month of the overall balance is added to the debt stock, and the rate
-## the state pays drifts toward what the market now demands.
 static func _update_balance_sheet(state: GameState) -> void:
 	var econ := state.country.economy
 	if econ.gdp <= 0.0:
@@ -320,8 +247,6 @@ static func _update_balance_sheet(state: GameState) -> void:
 	econ.effective_interest_rate += (econ.market_interest_rate() - econ.effective_interest_rate) * INTEREST_REPRICING
 
 
-## Fresh sum of every active modifier's current contribution to a stat —
-## recomputed each turn, never accumulated, so effects stay bounded.
 static func _modifiers_sum(state: GameState, target: String) -> float:
 	var total := 0.0
 	for m in state.modifiers:
@@ -334,10 +259,6 @@ static func _modifiers_sum(state: GameState, target: String) -> float:
 	return total
 
 
-## How much of an institutional policy effect actually lands: the responsible
-## minister (a vacancy delivers a third), dampened by the general health of
-## the state, then by the ministry's ability to carry its load. "" means the
-## effect belongs to no portfolio.
 static func _implementation_quality_for(state: GameState, portfolio: String) -> float:
 	var minister_component := 1.0
 	if portfolio != "":
@@ -360,7 +281,6 @@ static func _minister_for_portfolio(state: GameState, portfolio: String) -> Mini
 	return null
 
 
-## Share of the cabinet that is currently a latent threat.
 static func _cabinet_risk_fraction(state: GameState) -> float:
 	if state.ministers.is_empty():
 		return 0.0
@@ -371,8 +291,6 @@ static func _cabinet_risk_fraction(state: GameState) -> float:
 	return float(threats) / float(state.ministers.size())
 
 
-## An overloaded ministry weakens delivery without cancelling it. A portfolio
-## not yet tracked delivers as a fresh ministry would.
 static func _policy_delivery_factor(state: GameState, portfolio: String) -> float:
 	if portfolio == "":
 		return 1.0

@@ -1,8 +1,6 @@
 class_name CabinetActions
 extends RefCounted
 
-## Task 14's native cabinet decision boundary. Candidate lists are persisted on
-## GameState so no UI refresh or save/load can quietly redraw the choice.
 
 const CORE_PORTFOLIOS: Array[String] = ["Finance", "Interior", "Foreign Affairs", "Defense", "Economy", "Justice"]
 const SHORTLIST_COST := 15.0

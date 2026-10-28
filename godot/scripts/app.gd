@@ -1,11 +1,11 @@
 extends PanelContainer
 
-# This client formats a read model; it never advances or derives simulation state.
-# Native build: the campaign lives in the NativeGame autoload (in-process), so
-# every control below calls it directly and renders the returned snapshot —
-# there is no request/response round trip and no worker process to recover.
 const SAVE_SLOT := "godot_slice"
 const SPEED_DELAYS := [1.5, 1.0, 0.65, 0.4, 0.2]
+const COMPACT_MAX_WIDTH := 1500
+const COMPACT_MAX_HEIGHT := 850
+const DATE_WIDTH_COMPACT := 120
+const DATE_WIDTH_WIDE := 192
 
 
 var snapshot: Dictionary = {}
@@ -33,7 +33,6 @@ var _situation_open := false
 var _diplomacy_open := false
 var _selected_country_id := ""
 var _selected_event_id := ""
-## Situations already seen, so only a genuinely new one pauses the clock.
 var _known_situations := {}
 var _selected_bill_id := ""
 var _bill_preview: Dictionary = {}
@@ -80,9 +79,6 @@ func _ready() -> void:
 	find_child("SaveButton").pressed.connect(_do_save)
 	find_child("LoadButton").pressed.connect(_do_load)
 	if GameFlow.start_mode == "continue":
-		# Continue-with-no-save starts a fresh campaign: if this client has
-		# no save under SAVE_SLOT, the load fails and _do_load falls back
-		# to new_campaign instead of surfacing an error.
 		_starting = true
 		_do_load()
 	else:
@@ -105,14 +101,11 @@ func _process(delta: float) -> void:
 		_refresh_controls()
 
 func _resize_layout() -> void:
-	# Native-size UI keeps 44 px targets and readable type at both acceptance sizes.
 	get_window().content_scale_size = get_window().size
-	var compact := get_window().size.x < 1500 or get_window().size.y < 850
+	var compact := get_window().size.x < COMPACT_MAX_WIDTH or get_window().size.y < COMPACT_MAX_HEIGHT
 	find_child("OfficeLabel").visible = not compact
 	find_child("PreviewStatus").visible = not compact
-	# A date needs ~110 px; the wide reserve is a luxury the compact header
-	# cannot afford once every desk has its header button.
-	%DateLabel.custom_minimum_size.x = 120 if compact else 192
+	%DateLabel.custom_minimum_size.x = DATE_WIDTH_COMPACT if compact else DATE_WIDTH_WIDE
 	find_child("NationalPanel").visible = not compact and not _desk_open()
 	find_child("MapPanel").visible = not _desk_open()
 	%RegionBrief.visible = not _desk_open()
@@ -569,14 +562,11 @@ func _desk_open() -> bool:
 	return _budget_open or _legislation_open or _situation_open or _diplomacy_open
 
 
-## A situation the player has not yet seen pauses the clock and is
-## announced, so it cannot slip past at high speed and lapse unseen.
 func _notice_new_situations() -> void:
 	var fresh := false
 	var live := {}
 	for row in snapshot.get("situations", []):
-		# Keyed by arrival too: the same event returning later is news again.
-		var id := "%s@%s" % [row.get("event_id", ""), row.get("arrived_turn", 0)]
+		var id := _situation_arrival_key(row)
 		live[id] = true
 		if not _known_situations.has(id):
 			fresh = true
@@ -584,6 +574,10 @@ func _notice_new_situations() -> void:
 	if fresh:
 		_paused = true
 		_sfx_cue("alert")
+
+
+func _situation_arrival_key(row: Dictionary) -> String:
+	return "%s@%s" % [row.get("event_id", ""), row.get("arrived_turn", 0)]
 
 
 func _open_situation(event_id: String) -> void:
@@ -1015,10 +1009,6 @@ func _do_load() -> void:
 	_flush_snapshot()
 	if not result.get("ok", false):
 		if was_starting:
-			# The last known save could not be loaded (most likely: this
-			# client never saved one). Fall back to a fresh campaign —
-			# a second, different known state — rather than retrying the
-			# same failing load or falling through to a stale snapshot.
 			_starting = false
 			_do_new_campaign()
 			return

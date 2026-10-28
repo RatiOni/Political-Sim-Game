@@ -59,8 +59,6 @@ func _test_guards_lobby_and_withdraw(t, content: Dictionary) -> void:
 
 func _test_passage_effects_exactly_once_and_round_trip(t, content: Dictionary) -> void:
 	var state := _state(content)
-	# Make this mechanics test a unanimous chamber; it tests lifecycle/effects,
-	# not the authored opening coalition.
 	for faction in state.country.factions:
 		faction.loyalty = 1.0
 		faction.ideology.economic = 0.0
@@ -142,8 +140,6 @@ func _test_malformed_save_payloads_rejected_and_never_executed(t, content: Dicti
 		t.equal(tampered_preview["preview"]["votes_for"], honest_preview["preview"]["votes_for"],
 			"vote projection derives sponsor from the trusted live player")
 		poisoned.pending_law.proposed_by = poisoned.player.faction_id
-		# Defense in depth: even bypassing NativeGame validation, vote reconstructs
-		# the canonical effect bundle rather than executing save-file data.
 		for faction in poisoned.country.factions:
 			faction.loyalty = 1.0
 			faction.ideology.economic = 0.0

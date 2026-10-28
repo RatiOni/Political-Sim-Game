@@ -46,7 +46,6 @@ static func propose(state: GameState, adjustments: Dictionary) -> Dictionary:
 	var cost := proposal_cost(state, plan)
 	if not is_finite(state.player.political_capital) or state.player.political_capital < cost:
 		return _error("Not enough political capital (need %.0f)." % cost)
-	# All checks have passed: this is the mutation boundary.
 	BudgetSimScript.ensure_budget_state(state)
 	state.player.political_capital -= cost
 	plan.status = "proposed"
@@ -93,7 +92,6 @@ static func vote(state: GameState) -> Dictionary:
 	if passed:
 		plan.status = "approved"
 		if plan.year == state.year:
-			# An in-year settlement ends the emergency resolution at once.
 			state.pending_budget = null
 			BudgetSimScript.activate(state, plan)
 	else:
@@ -237,8 +235,6 @@ static func validation_error(state: GameState, plan: AnnualBudget) -> String:
 	return ""
 
 
-## The fiscal year a new plan is for. Normally next year; while the state is
-## on an emergency resolution, a plan for THIS year ends the emergency.
 static func target_year(state: GameState, active: AnnualBudget) -> int:
 	if BudgetSimScript.is_emergency(state) and active.year == state.year:
 		return state.year

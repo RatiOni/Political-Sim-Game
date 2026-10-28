@@ -1,11 +1,6 @@
 class_name CabinetSim
 extends RefCounted
 
-## Ministers are people with their own trajectories. Each month a schemer
-## grows abler and more ambitious while their loyalty wears thin — the fuse
-## of the schemer arc — and a loyalist never sinks below their floor. Other
-## personalities hold steady unless events move them.
-
 
 static func monthly(state: GameState) -> void:
 	for m in state.ministers:

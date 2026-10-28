@@ -1,33 +1,13 @@
 class_name CrisisSim
 extends RefCounted
 
-## The civil-war gauge: how close a state is to breaking.
-##
-## Design intent (docs/godot/LIVING_WORLD.md):
-## - Never rolled. Risk is a deterministic reading of the state's condition —
-##   collapsing authority, factions turned to open hostility, unrest, no
-##   governing majority, an unhealed grievance, men under arms — so a player
-##   can always see it coming and see why.
-## - The gauge chases that reading faster than ordinary politics move: a
-##   crisis escalates faster than a government's standing drifts.
-## - Hysteresis. War breaks out past WAR_THRESHOLD and ends only below
-##   PEACE_THRESHOLD, because the war itself depresses everything that would
-##   end it. Ending one is a climb.
-## - A war is a catastrophe that costs every month, never a game over.
-## - An insurgency raises the temperature but cannot start a war on its own,
-##   and fades each month unless an arc keeps feeding it — no story leaves a
-##   permanent flat drag behind it.
-## - The eight world countries live under the same dynamics, from coarser
-##   readings of their own condition, and the player hears when one falls.
 
 const WAR_THRESHOLD := 0.75
 const PEACE_THRESHOLD := 0.40
-## Monthly share of the gap between gauge and reading that closes.
 const RISK_CATCH_UP := 0.12
 const INSURGENCY_WEIGHT := 0.12
 const INSURGENCY_DECAY := 0.03
 
-# What a month of war costs the player's government.
 const WAR_STABILITY_COST := 0.03
 const WAR_APPROVAL_COST := 0.02
 const WAR_PC_COST := 5.0
@@ -35,7 +15,6 @@ const WAR_OUTPUT_LOSS := 0.01
 const WAR_STABILITY_FLOOR := 0.03
 
 
-## The named components of the player's country's risk reading.
 static func breakdown(state: GameState) -> Dictionary:
 	var factions := state.country.factions
 	var coalition_seats := 0
@@ -64,7 +43,6 @@ static func target_risk(state: GameState) -> float:
 	return minf(1.0, total)
 
 
-## A coarser reading for a world country from its own condition.
 static func country_target_risk(c: Country) -> float:
 	var econ_pressure := 0.0
 	if c.economy != null:
@@ -75,8 +53,6 @@ static func country_target_risk(c: Country) -> float:
 		+ econ_pressure * 0.10)
 
 
-## One month for the player's country and every world country. Returns
-## lines for the monthly report.
 static func monthly(state: GameState) -> Array[String]:
 	var notes: Array[String] = []
 	_player_month(state, notes)
@@ -124,7 +100,6 @@ static func _world_month(c: Country, notes: Array[String]) -> void:
 		c.economy.gdp *= (1.0 - WAR_OUTPUT_LOSS)
 
 
-## 0..1 from the combined strength of factions in open hostility.
 static func _hostile_pressure(factions: Array) -> float:
 	var total := 0.0
 	for f in factions:
@@ -132,7 +107,6 @@ static func _hostile_pressure(factions: Array) -> float:
 	return minf(1.0, total)
 
 
-## The single sharpest grievance anywhere: a crisis is defined by its worst wound.
 static func _worst_grievance(factions: Array) -> float:
 	var worst := 0.0
 	for f in factions:

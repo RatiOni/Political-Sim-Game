@@ -1,18 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for situations: EventsSim, EventActions and the
-## shared EffectBundle.
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_events.gd
-##
-## Checks intended behaviour: content integrity (every event has an ungated
-## default; arcs without handlers never fire); pacing (quiet opening, one
-## unprompted arrival a month, a capped queue); determinism and reload
-## continuation; choices apply once with atomic refusals; looking away
-## decides by default; follow-ups arrive on schedule even into a full queue;
-## roles resolve to the plainest voice; diplomatic events stay about the
-## country they named; persistence and validation.
-
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const NativeGameScript = preload("res://scripts/native/native_game.gd")
 
@@ -28,7 +15,6 @@ static func _state(seed: int = 424242, role: String = "contextual") -> GameState
 	return state
 
 
-## Advances only the situation clock: one monthly close of EventsSim.
 static func _month(state: GameState) -> Array[String]:
 	state.turn += 1
 	return EventsSim.monthly(state)
@@ -59,8 +45,6 @@ static func _faction(state: GameState, id: String) -> Faction:
 	return null
 
 
-# ── Content ──────────────────────────────────────────────────────────────
-
 func _test_catalog_integrity(t) -> void:
 	var events := EventsSim.catalog()
 	t.equal(events.size(), 46, "all 46 authored events load")
@@ -90,8 +74,6 @@ func _test_no_unnamed_rules_remain(t) -> void:
 				bad.append("%s/%s" % [e["id"], o["id"]])
 	t.equal(bad, [], "no condition or gate is an unnamed placeholder")
 
-
-# ── Pacing ───────────────────────────────────────────────────────────────
 
 func _test_quiet_opening(t) -> void:
 	var state := _state()
@@ -129,8 +111,6 @@ func _test_opposition_never_receives_government_business(t) -> void:
 	t.equal(wrong, "", "an opposition leader is never handed a government decision")
 
 
-# ── Determinism ──────────────────────────────────────────────────────────
-
 func _test_same_seed_same_story_and_reload_continues_it(t) -> void:
 	var a := _state(99)
 	var b := _state(99)
@@ -148,8 +128,6 @@ func _test_same_seed_same_story_and_reload_continues_it(t) -> void:
 		cont_r.append(_month(reloaded))
 	t.equal(cont_r, cont_a, "a reloaded campaign continues exactly as it would have")
 
-
-# ── Choosing ─────────────────────────────────────────────────────────────
 
 func _test_choice_applies_once_and_is_paid_for(t) -> void:
 	var state := _state()
@@ -196,8 +174,6 @@ func _test_background_gates_name_the_requirement(t) -> void:
 	t.equal(EventActions.option_reason(state, option), "", "and opens for that leader")
 
 
-# ── Looking away ─────────────────────────────────────────────────────────
-
 func _test_an_ignored_situation_decides_itself(t) -> void:
 	var state := _state()
 	state.turn = 10
@@ -217,8 +193,6 @@ func _test_an_ignored_situation_decides_itself(t) -> void:
 			told = true
 	t.truth(told, "the monthly report tells the player it happened")
 
-
-# ── Follow-ups ───────────────────────────────────────────────────────────
 
 func _test_follow_up_arrives_on_schedule_even_into_a_full_queue(t) -> void:
 	var state := _state()
@@ -245,8 +219,6 @@ func _test_follow_up_arrives_on_schedule_even_into_a_full_queue(t) -> void:
 	t.truth(arrived, "and arrives when due, even though the queue was full")
 	t.truth(reported, "reported as the consequence of an earlier decision, not a fresh surprise")
 
-
-# ── Roles and targets ────────────────────────────────────────────────────
 
 func _test_roles_resolve_to_the_plainest_voice(t) -> void:
 	var state := _state()
@@ -282,8 +254,6 @@ func _test_diplomatic_event_stays_about_its_country(t) -> void:
 	t.near(rel.score, clampf(before - 0.04, -1.0, 1.0), 1e-9, "and the protest lands on that same country")
 
 
-# ── Persistence and validation ───────────────────────────────────────────
-
 func _test_situations_survive_save_and_reload(t) -> void:
 	var state := _state()
 	state.turn = 5
@@ -309,8 +279,6 @@ func _test_validator_rejects_impossible_situations(t) -> void:
 	_force(state, "bank_run")
 	t.truth(StateValidator.validate(state).size() > 0, "so is the same situation waiting twice")
 
-
-# ── Through the real game ────────────────────────────────────────────────
 
 func _test_situations_reach_the_player_through_the_game(t) -> void:
 	var game = NativeGameScript.new()
@@ -341,8 +309,6 @@ func _test_situations_reach_the_player_through_the_game(t) -> void:
 		t.truth(done.get("ok", false), "and the player can decide it through the game (%s)" % done.get("error", ""))
 	game.queue_free()
 
-
-# ── Review fixes: power changes, lapse costs, tie-breaks ─────────────────
 
 func _test_a_follow_up_waits_for_a_government_to_receive_it(t) -> void:
 	var state := _state()

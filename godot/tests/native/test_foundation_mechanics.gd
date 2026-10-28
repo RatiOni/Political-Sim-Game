@@ -1,21 +1,11 @@
 extends SceneTree
 
-## Standalone headless test for Task 3: calendar, modifiers, and the
-## serializable RNG.
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_foundation_mechanics.gd
-##
-## These tests check the ported logic on its own terms (leap years are leap
-## years, a modifier mid-ramp is at the right fraction of its magnitude, a
-## restored RNG continues its own sequence) — no comparison against Python is
-## made or needed (PLAN.md / task-3-brief.md: no oracle/parity requirement).
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const CalendarScript = preload("res://scripts/native/sim/calendar.gd")
 const ModifiersScript = preload("res://scripts/native/sim/modifiers.gd")
 
 
-# ── Calendar ─────────────────────────────────────────────────────────────
 
 func _test_leap_years(t) -> void:
 	t.truth(CalendarScript.is_leap_year(2000), "2000 is a leap year (divisible by 400)")
@@ -101,9 +91,6 @@ func _test_day_index_continuity(t) -> void:
 	state.day = 1
 	state.day_index = 0
 
-	# Walk a full non-leap year plus a few days of the next one; day_index
-	# must land exactly on "days walked", one step at a time, with no gaps
-	# or double-counts across any month/year boundary crossed along the way.
 	var days_to_walk := 370
 	for i in range(days_to_walk):
 		CalendarScript.advance_day(state)
@@ -113,7 +100,6 @@ func _test_day_index_continuity(t) -> void:
 	t.equal(state.year, 2024, "walking 370 days from 2023-01-01 reaches 2024")
 
 
-# ── Modifiers ────────────────────────────────────────────────────────────
 
 func _make_modifier(magnitude: float, onset_delay: int, ramp_duration: int,
 		hold_duration: int, decay_duration: int, institutional: bool = true) -> Modifier:
@@ -132,8 +118,6 @@ func _make_modifier(magnitude: float, onset_delay: int, ramp_duration: int,
 
 
 func _test_modifier_lifecycle(t) -> void:
-	# onset=2, ramp=4, hold=3, decay=5, magnitude=10 — hand-computed against
-	# the documented onset -> ramp -> hold -> decay -> gone phases.
 	var m := _make_modifier(10.0, 2, 4, 3, 5)
 
 	var expected := {
@@ -155,8 +139,6 @@ func _test_modifier_lifecycle(t) -> void:
 
 
 func _test_modifier_indefinite_hold(t) -> void:
-	# hold_duration = -1 is this port's sentinel for Python's hold_duration=None:
-	# holds at full magnitude forever, never auto-expires.
 	var m := _make_modifier(5.0, 1, 2, -1, 0)
 
 	t.near(ModifiersScript.current_value(m), 0.0, 0.0001, "age 0: before onset")
@@ -176,13 +158,6 @@ func _test_modifier_indefinite_hold(t) -> void:
 
 
 func _test_modifier_institutional_flag_not_discounted_here(t) -> void:
-	# `institutional=False` is reserved for effects (loan interest) that no
-	# minister/crisis discount can touch — but that discount is applied by
-	# the turn engine reading `current_value()` from the outside (Python:
-	# `_modifiers_sum`), not inside current_value() itself. So at this layer
-	# an institutional=False modifier's lifecycle math must be byte-for-byte
-	# identical to an otherwise-identical institutional=True one — this test
-	# pins that current_value()/is_expired() never apply a hidden discount.
 	var institutional := _make_modifier(8.0, 1, 3, 2, 2, true)
 	var contractual := _make_modifier(8.0, 1, 3, 2, 2, false)
 
@@ -199,13 +174,10 @@ func _test_age_all(t) -> void:
 	var state := GameState.new()
 	state.modifiers = []
 
-	# About to expire on this exact age-up (total life 2+0+0+0 = 2, currently
-	# at age 1 -> becomes age 2 -> expired -> dropped).
 	var about_to_expire := _make_modifier(3.0, 2, 0, 0, 0)
 	about_to_expire.age = 1
 	about_to_expire.id = "expiring"
 
-	# Indefinite: never dropped no matter how many times it's aged.
 	var indefinite := _make_modifier(4.0, 0, 1, -1, 0)
 	indefinite.age = 5
 	indefinite.id = "indefinite"
@@ -220,30 +192,14 @@ func _test_age_all(t) -> void:
 		t.equal(state.modifiers[0].id, "indefinite", "the surviving modifier is the indefinite one")
 		t.equal(state.modifiers[0].age, 6, "the surviving modifier's age was incremented")
 
-	# Age it many more times — still never dropped.
 	for i in range(50):
 		ModifiersScript.age_all(state)
 	t.equal(state.modifiers.size(), 1, "indefinite modifier survives repeated aging")
 	t.equal(state.modifiers[0].age, 56, "indefinite modifier's age keeps accumulating")
 
 
-# ── SimRng ───────────────────────────────────────────────────────────────
 
 func _test_rng_matches_published_reference_vector(t) -> void:
-	# Pins the actual PCG32 algorithm (shift amounts, rotate direction, LCG
-	# constant) against the generator's own published reference vector, so a
-	# future accidental edit to _step()/_ushr64()/_rotr32() that broke
-	# correctness while still passing every self-consistency test above
-	# (determinism, round-trip, output ranges) would be caught here.
-	#
-	# Reference: the official pcg32 demo seeds via
-	# `pcg32_srandom_r(&rng, 42u, 54u)` (see pcg_basic.c / pcg-random.org)
-	# and its first output words, in hex, are:
-	#   a15c02b7 7b47f409 ba1d3330 83d2f293 bfa4784b cbed606e ...
-	# `from_state_seq` seeds PCG32 directly with that same (initstate,
-	# initseq) pair, bypassing from_seed's SplitMix64 mixing, so this
-	# reproduces the reference sequence exactly rather than some mixed
-	# derivative of it.
 	var rng := SimRng.from_state_seq(42, 54)
 	var expected_hex := [
 		"a15c02b7", "7b47f409", "ba1d3330", "83d2f293", "bfa4784b", "cbed606e",
@@ -276,14 +232,11 @@ func _test_rng_determinism(t) -> void:
 
 func _test_rng_round_trip(t) -> void:
 	var original := SimRng.from_seed(777)
-	# Burn some draws so we're not testing the trivial just-seeded state.
 	for i in range(10):
 		original.next_u32()
 
 	var saved_dict := original.to_dict()
 
-	# Continue drawing from the original — this is the "truth" the restored
-	# copy must reproduce exactly.
 	var expected: Array = []
 	for i in range(25):
 		expected.append(original.next_u32())
@@ -299,7 +252,6 @@ func _test_rng_round_trip(t) -> void:
 
 	t.equal(actual, expected, "a restored SimRng continues exactly where to_dict() snapshotted it")
 
-	# The dict itself round-trips as plain data (the save-file boundary).
 	t.truth(saved_dict.has("state") and saved_dict.has("inc"), "to_dict exposes state/inc")
 
 

@@ -1,58 +1,17 @@
 class_name RegionsSim
 extends RefCounted
 
-## Typed port of engine/regions.py: simulate_regions, _advance_programs and
-## program_delivery_quality — Ardenia's monthly regional conditions (local
-## unemployment, state reach, political pressure) plus single-month delivery
-## of any active RegionalProgram.
-##
-## Only Ardenia has an authored regional layer; every other country keeps an
-## empty `state.regions` (same as the Python reference). Regions live on
-## `GameState.regions` only — never `Country.regions`, no per-tick
-## reallocation. Call convention is static, matching `ministries_sim.gd`
-## (`RegionsSim.ensure_region_states` / `RegionsSim.simulate`).
-##
-## NativeGame calls `simulate()` once per monthly pulse. Electoral dynamics
-## (`update_party_support` / projection / judgment, `campaign_in_region`) and
-## programme start verbs remain later-phase work; tests construct active
-## `RegionalProgram` objects directly.
-##
-## Documented deviations from the Python reference (deliberate, not drift):
-##   - Separatist delivery freeze: Python gates only programme *start* on
-##     control, but a state that cannot reach a territory cannot progress work
-##     there either — so a separatist-control region gets no delivered effects
-##     AND no `months_active` increment that month. The programme stays
-##     active, frozen. Each frozen month extends the matching finite treasury
-##     Modifier hold once, so the booked funding remains aligned with delivery.
-##   - Completion notice goes through `print()`, not `state.log()`: no native
-##     `turn_log` / `event_history` store exists yet, and adding one would be
-##     a save-schema change (an explicit non-goal). The wording matches
-##     Python's log line.
-##   - The departmental delivery multiplier reads `state.ministries` directly
-##     without seeding (default `delivery == 1.0` for a missing portfolio, the
-##     same value a freshly-seeded MinistryState carries) instead of calling
-##     into `MinistriesSim`'s seeding path — the same no-surprising-coupling
-##     precedent `economy_sim.gd` documents for its own delivery factor.
-##     `MinistriesSim` exposes no public `policy_delivery_factor` (only the
-##     minister-side `Minister.implementation_quality()` is real and public),
-##     so this file duplicates that two-line multiplier locally rather than
-##     reaching into another sim's privates.
-##   - Control NEVER flips in the passive tick — carried over exactly as the
-##     Python design holdover documents it.
 
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 
-## Pressure-target weights (engine/regions.py module constants).
 const PRESSURE_JOBS_WEIGHT := 0.40
 const PRESSURE_CAPACITY_WEIGHT := 0.30
 const PRESSURE_NATIONAL_WEIGHT := 0.16
 
-## Monthly convergence rates toward each target.
 const UNEMPLOYMENT_CONVERGENCE := 0.14
 const REACH_CONVERGENCE := 0.05
 const PRESSURE_CONVERGENCE := 0.12
 
-## State-reach target caps by control (engine/regions.py: simulate_regions).
 const CONTROL_LIMITED_MAX := 0.48
 const CONTROL_AUTONOMOUS_MIN := 0.24
 const CONTROL_AUTONOMOUS_CAPACITY_BONUS := 0.12
@@ -62,8 +21,6 @@ const CONTROL_VETRENKA_STATE_CAPACITY_BONUS := 0.32
 const CONTROL_VETRENKA_STATE_MAX := 0.58
 const CONTROL_SEPARATIST_MAX := 0.08
 
-## Delivery quality bounds and composition (engine/regions.py:
-## program_delivery_quality; missing minister reads as 0.35 there).
 const DELIVERY_BASE := 0.45
 const DELIVERY_INSTITUTIONAL_WEIGHT := 0.55
 const DELIVERY_MIN := 0.30
@@ -74,9 +31,6 @@ const DELIVERY_STATE_CAPACITY_SHARE := 0.35
 const DEPARTMENT_BASE := 0.55
 const DEPARTMENT_DELIVERY_SHARE := 0.45
 
-## Vetrenka pressure-bias overrides by campaign outcome
-## (engine/regions.py: simulate_regions); any unknown status keeps the
-## profile's authored bias.
 const VETRENKA_PRESSURE_BIAS := {
 	"settled": 0.07,
 	"retaken": 0.17,
@@ -87,8 +41,6 @@ const VETRENKA_PRESSURE_BIAS := {
 }
 
 
-## The authored region profiles from the exported content catalogue — the
-## JSON I/O boundary (dictionaries only here, never as state).
 static func _region_profiles() -> Dictionary:
 	var content: Dictionary = ContentRepositoryScript.load_all()
 	var catalogs_raw: Variant = content.get("catalogs", {})
@@ -103,7 +55,6 @@ static func _region_profiles() -> Dictionary:
 	return profiles_raw as Dictionary
 
 
-## The authored programme definitions from the same catalogue.
 static func _program_definitions() -> Dictionary:
 	var content: Dictionary = ContentRepositoryScript.load_all()
 	var catalogs_raw: Variant = content.get("catalogs", {})
@@ -118,9 +69,6 @@ static func _program_definitions() -> Dictionary:
 	return programs_raw as Dictionary
 
 
-## Seed only missing authored region ids; never clobber live values
-## (additive setdefault semantics — engine/regions.py: ensure_region_states).
-## Loads profiles itself, same pattern as `BudgetSim.ensure_budget_state`.
 static func ensure_region_states(state: GameState) -> void:
 	if state.country == null:
 		return
@@ -156,9 +104,6 @@ static func ensure_region_states(state: GameState) -> void:
 		state.regions[rid] = region
 
 
-## Full monthly tick: ensure-seed first (Ardenia seeds, then proceeds;
-## non-Ardenia stays empty and returns), then unemployment/reach/pressure per
-## region, then exactly one programme-advancement pass.
 static func simulate(state: GameState) -> void:
 	ensure_region_states(state)
 	if state.regions.is_empty():
@@ -178,9 +123,6 @@ static func simulate(state: GameState) -> void:
 	_advance_programs(state, profiles, definitions)
 
 
-## One region's unemployment/reach/pressure convergence for the month —
-## engine/regions.py: simulate_regions, same order (pressure reads the
-## just-updated local unemployment and reach).
 static func _tick_region(state: GameState, region: RegionState, region_id: String,
 		profile: Dictionary) -> void:
 	var national_unemployment: float = state.country.economy.unemployment
@@ -227,10 +169,6 @@ static func _tick_region(state: GameState, region: RegionState, region_id: Strin
 		region.pressure + (pressure_target - region.pressure) * PRESSURE_CONVERGENCE, 0.0, 1.0)
 
 
-## One month of delivery for every active programme — engine/regions.py:
-## _advance_programs. Increment-then-test `>= duration`: completion removes
-## the programme exactly once with its modifier cleanup. Unknown programme or
-## region ids strip their modifiers and drop silently.
 static func _advance_programs(state: GameState, profiles: Dictionary,
 		definitions: Dictionary) -> void:
 	if state.regional_programs.is_empty():
@@ -283,17 +221,11 @@ static func _advance_programs(state: GameState, profiles: Dictionary,
 	state.regional_programs = still_active
 
 
-## A separatist freeze preserves only the programme’s own finite treasury
-## window. This runs before Modifiers.age_all in NativeGame, so the final
-## booked payable month is retained while delivery is inaccessible.
 static func _extend_frozen_programme_funding(state: GameState, program: RegionState.RegionalProgram) -> void:
 	for modifier in state.modifiers:
 		if modifier.source_id == program.id and modifier.target == "budget_expenditure" and modifier.hold_duration >= 0:
 			modifier.hold_duration += 1
 
-## Cabinet and state capacity determine how much of a budget reaches dirt —
-## engine/regions.py: program_delivery_quality. Missing minister reads as
-## 0.35; the result clamps to 0.30-1.0.
 static func _delivery_quality(state: GameState, portfolio: String) -> float:
 	var minister_component: float = MISSING_MINISTER_DELIVERY
 	for m in state.ministers:
@@ -307,9 +239,6 @@ static func _delivery_quality(state: GameState, portfolio: String) -> float:
 		DELIVERY_MIN, DELIVERY_MAX)
 
 
-## Moderate multiplier: workload compounds existing implementation, not
-## replaces it — mirrors engine/ministries.py: policy_delivery_factor, except
-## it never seeds a missing portfolio (see this file's header note).
 static func _department_factor(state: GameState, portfolio: String) -> float:
 	if portfolio == "":
 		return 1.0
@@ -318,7 +247,6 @@ static func _department_factor(state: GameState, portfolio: String) -> float:
 	return DEPARTMENT_BASE + DEPARTMENT_DELIVERY_SHARE * delivery
 
 
-## Drop every modifier booked against a finished (or orphaned) programme.
 static func _strip_program_modifiers(state: GameState, source_id: String) -> void:
 	var kept: Array[Modifier] = []
 	for m in state.modifiers:

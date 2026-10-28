@@ -1,20 +1,5 @@
 extends Node
 
-## The in-process owner of the live campaign (Phase 1 Task 4 unit B). One
-## private GameState, one single-operation in-flight guard, synchronous
-## return-dict calls — the UI reads snapshots and acts through these methods
-## directly, with no request/response round trip. Snapshots are plain
-## Dictionaries, but only as the UI boundary: the campaign itself is always
-## the typed GameState, never a Dictionary.
-##
-## _ready() is deliberately side-effect free: it starts no campaign, so
-## headless tests can load the autoload tree without doing any work.
-##
-## No `class_name` here, deliberately: this script IS the NativeGame
-## autoload, and Godot 4.7 rejects a global class that hides an autoload
-## singleton (hard parse error, not a warning). Reach the singleton via
-## get_node("/root/NativeGame"); preload this script path for isolated
-## test instances. (Same shape as game_flow.gd, the other autoload.)
 
 signal state_changed(snapshot: Dictionary)
 signal fatal_error(message: String)
@@ -22,9 +7,6 @@ signal fatal_error(message: String)
 const _MONTH_NAMES := ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
 	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
-# Preloaded (not a bare class_name reference): SaveStore is new enough that
-# headless runs may not have it in the editor's global class cache yet —
-# the same reason the persistence suite preloads it.
 const SaveStoreScript = preload("res://scripts/native/state/save_store.gd")
 const BudgetSimScript = preload("res://scripts/native/sim/budget_sim.gd")
 const PoliticalCapitalScript = preload("res://scripts/native/sim/political_capital.gd")
@@ -47,22 +29,11 @@ func _ready() -> void:
 	pass
 
 
-## Starts a fresh Ardenia campaign from `config` (GameFactory's keys:
-## country_id, background_id, difficulty_id, opening_role, plus an explicit
-## int seed). The factory-built RNG is reseeded from the config seed, then
-## the state is validated; a rejection keeps the OLD state and reports
-## {ok:false} through the return dict. fatal_error is emitted ONLY when there
-## is no valid live campaign to show (_state == null) — a recoverable failure
-## behind a live campaign must never brick the UI behind the blocker.
 func new_campaign(config: Dictionary) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
 	_busy = true
 	var result := _do_new_campaign(config)
-	# Emits happen while _busy is held, deliberately: a subscriber that calls
-	# back into NativeGame mid-notification is refused by the guard instead
-	# of recursing into a half-observed operation (reentrant emission was
-	# observed to recurse ~1000 deep and spew engine stack errors).
 	if result.get("ok", false):
 		state_changed.emit(result.get("snapshot", {}))
 	elif _state == null:
@@ -71,9 +42,6 @@ func new_campaign(config: Dictionary) -> Dictionary:
 	return result
 
 
-## Advances the calendar by exactly one day. On a month boundary it runs the
-## complete Phase 2 pulse once, then ages modifiers and stores the completed
-## monthly digest. Ordinary days change only the calendar.
 func advance_day() -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -106,8 +74,6 @@ func advance_day() -> Dictionary:
 	return {"ok": true, "snapshot": snap, "month_rolled": month_rolled}
 
 
-## Launches one authored regional programme. The action service owns every
-## rule and effect; this method owns the operation guard and notification.
 func start_regional_program(region_id: String, program_id: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -127,8 +93,6 @@ func start_regional_program(region_id: String, program_id: String) -> Dictionary
 	return result
 
 
-## Returns a detached fiscal/parliamentary preview without mutating or
-## notifying observers. The action service owns validation and arithmetic.
 func preview_budget(adjustments: Dictionary) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -197,10 +161,6 @@ func withdraw_budget() -> Dictionary:
 	return result
 
 
-## Native lawmaking boundary. Preview is pure; every successful mutation
-## emits one detached snapshot while the re-entrancy guard is held.
-## One diplomatic action. DiplomacyActions owns every rule; this method owns
-## the operation guard and notification.
 func diplomacy_act(verb: String, country_id: String, treaty_id: String = "") -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -216,8 +176,6 @@ func diplomacy_act(verb: String, country_id: String, treaty_id: String = "") -> 
 	return result
 
 
-## Decides a waiting situation. EventActions owns the rules; this method
-## owns the operation guard and notification.
 func resolve_situation(event_id: String, option_id: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -300,8 +258,6 @@ func withdraw_law() -> Dictionary:
 	_busy = false
 	return result
 
-## Native cabinet appointment boundary. Shortlists and appointments are
-## engine-owned; callers receive detached snapshots only after mutations.
 func issue_cabinet_shortlist(portfolio: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -327,8 +283,6 @@ func appoint_minister(portfolio: String, candidate_id: String) -> Dictionary:
 		state_changed.emit(result["snapshot"])
 	_busy = false
 	return result
-## Persists the live campaign under the requested save slot. SaveStore's result
-## passes straight through; saves never mutate or emit.
 func save(slot: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -340,9 +294,6 @@ func save(slot: String) -> Dictionary:
 	return result
 
 
-## Replaces the live campaign with the contents of `slot`, then validates.
-## A rejection keeps the OLD state and reports {ok:false} — never through
-## fatal_error (the caller shows LOAD FAILED and keeps playing).
 func load(slot: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -365,11 +316,6 @@ func load(slot: String) -> Dictionary:
 	return {"ok": true, "snapshot": snap}
 
 
-## A deep-duplicated, read-only view of the live campaign in exactly the
-## shape app.gd's apply_snapshot reads (date.text, player, headline,
-## economy, factions, regions, decisions, digest, dispatches, reform).
-## Mutating the returned Dictionary never touches live state. Empty when
-## no campaign is active.
 func snapshot() -> Dictionary:
 	if _state == null:
 		return {}
@@ -377,11 +323,6 @@ func snapshot() -> Dictionary:
 
 
 func _do_new_campaign(config: Dictionary) -> Dictionary:
-	# Never emits: the caller emits state_changed / fatal_error while still
-	# holding _busy, so a reentrant subscriber calling back in is refused by
-	# the in-flight guard instead of recursing into a half-observed
-	# operation. Emitting here would be equivalent, but a single emit site
-	# per public method keeps the guard coverage obvious.
 	var content := ContentRepository.load_all()
 	if content.has("error"):
 		var content_message := "Could not load campaign content: %s" % [content["error"]]
@@ -401,10 +342,6 @@ func _do_new_campaign(config: Dictionary) -> Dictionary:
 	return {"ok": true, "snapshot": snap}
 
 
-## The UI read model: only observational data, with every nested container
-## detached by snapshot(). Phase 2 exposes live regions, budget, ministries,
-## households and the completed monthly digest; later systems retain their
-## explicit empty placeholders.
 static func _build_snapshot(state: GameState) -> Dictionary:
 	var content := ContentRepository.load_all()
 	var regional_catalog: Dictionary = content.get("catalogs", {}).get("regions_and_programs", {}) if not content.has("error") else {}
@@ -506,7 +443,6 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 	}
 
 
-## The "needs you" queue: every waiting situation, soonest deadline first.
 static func _decisions(state: GameState) -> Array:
 	var rows: Array = []
 	for situation in state.pending_situations:
@@ -559,8 +495,6 @@ static func _household_snapshot(state: GameState) -> Dictionary:
 		"national_service_access": HouseholdsSimScript.national_service_access(state),
 	}
 
-## Same abbreviated form as game_state.py: GameState.date_string
-## ("1 Mar 1993") — the UI only displays this string.
 static func _date_text(state: GameState) -> String:
 	var month_name := str(state.month)
 	if state.month >= 1 and state.month <= 12:
@@ -568,8 +502,6 @@ static func _date_text(state: GameState) -> String:
 	return "%d %s %d" % [state.day, month_name, state.year]
 
 
-## Same thresholds as models/stability.py: GovernmentStability.label —
-## the UI only displays this string.
 static func _stability_label(value: float) -> String:
 	if value >= 0.75:
 		return "Solid"

@@ -1,20 +1,7 @@
 class_name EffectBundle
 extends RefCounted
 
-## The one consequence pipeline shared by laws and situations: direct
-## economic deltas, faction loyalty and power, lingering modifiers and
-## one-off debt. Anything that "happens" to the country goes through here,
-## so a law and an event with the same effect land identically.
-##
-## Factions may be named directly ("social_democrats") or by role
-## ("@labour"). Content written against roles works in any country: a role
-## resolves to the faction most plainly on that side of politics — the one
-## furthest out on the role's defining axis. Two Ardenian parties are labour
-## parties; labour's anger lands on the Workers' Front, not the Social
-## Democrats, because the Workers' Front is labour's furthest voice.
 
-## role -> [ideology axis, direction]. Roles without an axis resolve only to
-## a faction actually classified into them.
 const ROLE_AXIS := {
 	"@labour": ["economic", -1.0],
 	"@business": ["economic", 1.0],
@@ -25,7 +12,6 @@ const ROLE_AXIS := {
 }
 
 
-## The concrete faction a key refers to in this country, or null.
 static func resolve_faction(state: GameState, key: String) -> Faction:
 	if not key.begins_with("@"):
 		for f in state.country.factions:
@@ -44,8 +30,6 @@ static func resolve_faction(state: GameState, key: String) -> Faction:
 			best_score = score
 	if best != null or axis.is_empty():
 		return best
-	# Nobody is classified into the role: whoever leans hardest that way
-	# speaks for it, provided they lean that way at all.
 	for f in state.country.factions:
 		var score := _axis_score(f, axis)
 		if score > 0.0 and score > best_score:
@@ -61,9 +45,6 @@ static func _axis_score(f: Faction, axis: Array) -> float:
 	return value * float(axis[1])
 
 
-## Applies `effects` once. `source` names it in modifiers ("Telecom
-## Privatization Act", "Labour Unrest Spreads"); `source_id` lets a later
-## system find and end those modifiers.
 static func apply(state: GameState, effects: Dictionary, source: String, source_id: String, lasting := true) -> void:
 	var economy := state.country.economy
 	var growth := float(effects.get("gdp_growth_delta", 0.0))

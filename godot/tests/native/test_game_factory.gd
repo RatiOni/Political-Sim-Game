@@ -1,8 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for Task 2: typed campaign state + GameFactory.
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_game_factory.gd
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
@@ -50,8 +47,6 @@ func _test_world_and_relations(t, content: Dictionary) -> void:
 		t.truth(not c.factions.is_empty(), "world country %s has factions" % c.id)
 		t.truth(not c.is_player, "world country %s is not flagged as player" % c.id)
 
-	# Every country pair (player + world) has a wired, symmetric relation —
-	# C(9,2) = 36 pairs.
 	var all_ids: Array = [state.country.id]
 	all_ids.append_array(world_ids)
 	var pair_count := 0
@@ -72,8 +67,6 @@ func _test_world_and_relations(t, content: Dictionary) -> void:
 			pair_count += 1
 	t.equal(pair_count, 36, "36 unique country pairs among nine countries")
 
-	# Spot-check one authored relation survives (Ardenia/Veldoria from the
-	# JSON's default_relations).
 	var ardenia_veldoria = state.country.relations.get("veldoria")
 	t.truth(ardenia_veldoria != null, "ardenia/veldoria relation exists")
 	if ardenia_veldoria != null:
@@ -92,7 +85,6 @@ func _test_non_ardenia_wings_generated(t, content: Dictionary) -> void:
 			for w in f.wings:
 				t.equal(w.kind, "wing", "%s/%s wing %s is generic (kind == wing)" % [c.id, f.id, w.id])
 
-	# Ardenia keeps its authored bloc wings untouched.
 	for f in state.country.factions:
 		for w in f.wings:
 			t.equal(w.kind, "bloc", "ardenia/%s wing %s stays a bloc" % [f.id, w.id])
@@ -146,17 +138,9 @@ func _initialize() -> void:
 		_test_world_and_relations(t, content)
 		_test_non_ardenia_wings_generated(t, content)
 
-		# Ardenia's default player sits in an authored coalition (Liberal
-		# Democrats + Social Democrats), so "contextual" resolves to
-		# "government" and the ruling party stays the player's own.
 		_test_opening_role(t, content, "contextual", true, "liberal_democrats", true)
 		_test_opening_role(t, content, "government", true, "liberal_democrats", true)
 
-		# Forced opposition: the player's own party (38 seats) steps down and
-		# a government forms around the strongest rival, National
-		# Conservatives (32 seats), plus its ideologically nearest partners
-		# among the remaining factions (Agrarian Union then Social Democrats)
-		# until it reaches the 51-seat majority of the 100-seat chamber.
 		_test_opening_role(t, content, "opposition", false, "national_conservatives", false)
 
 	quit(t.finish())

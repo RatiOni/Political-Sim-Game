@@ -1,11 +1,5 @@
 extends Node
 
-## A deliberately small procedural sound layer for the Ministerial Wire UI.
-##
-## The game has no sound-asset dependency: each cue is an original, short WAV
-## generated in memory. Keeping this outside NativeGame means UI feedback never
-## affects simulation state, RNG, saves, or headless mechanics tests.
-
 const MIX_RATE := 22050
 const VOICE_COUNT := 4
 const VOLUME_DB := -20.0
@@ -56,8 +50,6 @@ func month_rollover() -> void:
 	_play(PackedFloat32Array([262.0, 392.0]), 0.17, 0.15, 12.0)
 
 
-## A situation has arrived and the clock has stopped for it: a rising
-## two-step that reads as "attention", distinct from confirm and deny.
 func alert() -> void:
 	_play(PackedFloat32Array([523.0, 784.0, 523.0, 784.0]), 0.20, 0.17, 8.0)
 

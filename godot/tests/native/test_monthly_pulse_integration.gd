@@ -1,7 +1,5 @@
 extends SceneTree
 
-## End-to-end proof that NativeGame runs the real Phase 2 sequence exactly
-## once at a calendar month rollover, including save/load continuation.
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const NativeGameScript = preload("res://scripts/native/native_game.gd")
 const BudgetSimScript = preload("res://scripts/native/sim/budget_sim.gd")

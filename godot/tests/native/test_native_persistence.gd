@@ -1,18 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for Task 4 unit A: native persistence.
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_native_persistence.gd
-##
-## Covers exactly the brief's cases: exact save/load round trip including RNG
-## continuity, corrupt-JSON rejection, unsupported-version rejection, slot-regex
-## rejection (traversal + overlong names), and interrupted-write survival via
-## the .tmp-ignore / .bak-recovery protocol. Unit A adds: required-subtree
-## rejection (empty state, country:null, wrong-typed containers, missing rng),
-## missing-main .bak recovery, dual-corruption reporting, and validator range
-## checks (dates, ministers, civil-war risk, relation bounds) asserted both
-## directly and through a save→load→validate chain. Test states come from
-## GameFactory.new_campaign, mirroring test_game_factory.gd's setup.
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
@@ -53,12 +40,6 @@ static func _write_text(path: String, text: String) -> void:
 	f.close()
 
 
-## Deep save/load comparison. Ints, strings, bools, nulls, array order, and
-## dict key sets must match bit-exactly; ints and whole floats compare
-## numerically (the JSON boundary erases the int/float distinction inside
-## schemaless Dictionaries like campaign_meta); float pairs must agree within
-## tight repr noise (see the deviation note in the report — Godot's JSON
-## float printing is not bit-exact for arbitrary doubles).
 static func _values_match(a: Variant, b: Variant) -> bool:
 	var a_num := typeof(a) == TYPE_INT or typeof(a) == TYPE_FLOAT
 	var b_num := typeof(b) == TYPE_INT or typeof(b) == TYPE_FLOAT
@@ -103,7 +84,6 @@ func _test_round_trip(t, content: Dictionary) -> void:
 	if state == null:
 		return
 
-	# Advance the RNG before saving so continuity has a non-trivial stream.
 	for i in range(10):
 		state.rng.next_u32()
 	var before: Dictionary = state.to_dict()
@@ -138,7 +118,6 @@ func _test_round_trip(t, content: Dictionary) -> void:
 	var errors := StateValidatorScript.validate(loaded)
 	t.equal(errors.size(), 0, "roundtrip: loaded state validates (%s)" % [errors])
 
-	# RNG continuity: the restored stream must continue identically.
 	var expected: Array = []
 	for i in range(25):
 		expected.append(state.rng.next_u32())
@@ -175,7 +154,6 @@ func _test_unsupported_version_rejected(t, content: Dictionary) -> void:
 func _test_required_subtrees_rejected(t, content: Dictionary) -> void:
 	DirAccess.make_dir_recursive_absolute(SAVES_DIR)
 
-	# An empty state object: player/country are REQUIRED, so this must fail.
 	var empty_slot := SLOT_PREFIX + "empty-state"
 	_wipe_slot(empty_slot)
 	_write_text(_slot_path(empty_slot, ""), JSON.stringify({"version": 1, "state": {}}))
@@ -183,7 +161,6 @@ func _test_required_subtrees_rejected(t, content: Dictionary) -> void:
 	t.truth(not empty_result.get("ok", true), "required: {'state':{}} is rejected (player/country required)")
 	t.truth(empty_result.has("error"), "required: rejection carries an error message")
 
-	# country:null on an otherwise valid state.
 	var null_slot := SLOT_PREFIX + "null-country"
 	_wipe_slot(null_slot)
 	var null_state: GameState = _new_test_state(content)
@@ -194,7 +171,6 @@ func _test_required_subtrees_rejected(t, content: Dictionary) -> void:
 	t.truth(not null_result.get("ok", true), "required: country:null is rejected")
 	t.truth(null_result.has("error"), "required: country:null rejection carries an error message")
 
-	# A present-but-wrongly-typed container must reject, not load empty.
 	var type_slot := SLOT_PREFIX + "world-type"
 	_wipe_slot(type_slot)
 	var type_state: GameState = _new_test_state(content)
@@ -205,9 +181,6 @@ func _test_required_subtrees_rejected(t, content: Dictionary) -> void:
 	t.truth(not type_result.get("ok", true), "required: 'world':{} is rejected (wrong container type)")
 	t.truth(type_result.has("error"), "required: wrong-type rejection carries an error message")
 
-	# A save without the rng key is corruption, not an old schema: every
-	# writer includes it, so loading must fail rather than fork a seed-0
-	# stream.
 	var rng_slot := SLOT_PREFIX + "no-rng"
 	_wipe_slot(rng_slot)
 	var rng_state: GameState = _new_test_state(content)
@@ -228,7 +201,6 @@ func _test_missing_main_recovers_bak(t, content: Dictionary) -> void:
 	t.truth(str(empty.get("error", "")).contains("no save found"),
 		"missing: empty slot still reports 'no save found'")
 
-	# Revision A, then revision B (which archives A as .bak).
 	var state_a: GameState = _new_test_state(content)
 	state_a.turn = 2
 	t.truth(SaveStoreScript.save_slot(slot, state_a).get("ok", false),
@@ -238,8 +210,6 @@ func _test_missing_main_recovers_bak(t, content: Dictionary) -> void:
 	t.truth(SaveStoreScript.save_slot(slot, state_b).get("ok", false),
 		"missing: revision B saves (A archived as .bak)")
 
-	# Crash between the two publish renames: the live path is absent while
-	# the previous revision waits in .bak.
 	DirAccess.remove_absolute(_slot_path(slot, ""))
 	t.truth(not FileAccess.file_exists(_slot_path(slot, "")),
 		"missing: precondition holds (main deleted)")
@@ -290,9 +260,6 @@ func _test_validator_date_ranges(t, content: Dictionary) -> void:
 	t.truth(StateValidatorScript.validate(bad_turn).size() > 0,
 		"dates: validator flags a negative turn")
 
-	# Full save→load→validate chain: SaveStore itself does not validate, so
-	# the load succeeds and the chain rejection lands at the validate step
-	# (the same step NativeGame.load enforces).
 	var slot := SLOT_PREFIX + "bad-date"
 	_wipe_slot(slot)
 	var chained: GameState = _new_test_state(content)
@@ -359,7 +326,6 @@ func _test_interrupted_write_survival(t, content: Dictionary) -> void:
 	var slot := SLOT_PREFIX + "interrupted"
 	_wipe_slot(slot)
 
-	# Revision A, then revision B (which archives A as .bak).
 	var state_a: GameState = _new_test_state(content)
 	t.truth(SaveStoreScript.save_slot(slot, state_a).get("ok", false),
 		"interrupted: revision A saves")
@@ -371,7 +337,6 @@ func _test_interrupted_write_survival(t, content: Dictionary) -> void:
 	t.truth(FileAccess.file_exists(_slot_path(slot, ".bak")),
 		"interrupted: precondition holds (.bak exists after second save)")
 
-	# Case 1: a leftover .tmp from a crashed write must be ignored.
 	_write_text(_slot_path(slot, ".tmp"), "{{{ partial write")
 	var recovered: Dictionary = SaveStoreScript.load_slot(slot)
 	t.truth(recovered.get("ok", false), "interrupted: load succeeds despite a leftover .tmp")
@@ -379,7 +344,6 @@ func _test_interrupted_write_survival(t, content: Dictionary) -> void:
 		var recovered_state: GameState = recovered.get("state")
 		t.equal(recovered_state.turn, 7, "interrupted: .tmp ignored, main revision B loads")
 
-	# Case 2: a corrupt main file falls back to the .bak revision.
 	_write_text(_slot_path(slot, ""), "garbage{{{")
 	DirAccess.remove_absolute(_slot_path(slot, ".tmp"))
 	var fallback: Dictionary = SaveStoreScript.load_slot(slot)
@@ -389,7 +353,6 @@ func _test_interrupted_write_survival(t, content: Dictionary) -> void:
 		t.equal(fallback_state.turn, state_a.turn,
 			"interrupted: .bak recovery restores revision A (turn %d)" % state_a.turn)
 
-	# Case 3: a version-mismatched main file falls back to the .bak revision.
 	var mismatch := {"version": 999, "state": state_b.to_dict()}
 	_write_text(_slot_path(slot, ""), JSON.stringify(mismatch))
 	var versioned: Dictionary = SaveStoreScript.load_slot(slot)
@@ -515,8 +478,6 @@ func _test_task12_budget_validation_boundary(t, content: Dictionary) -> void:
 	t.truth(not StateValidatorScript.validate(bad_shape).is_empty(),
 		"task12: validator rejects a budget missing an authored envelope")
 
-	# Allocation Dictionary values remain untyped at the save boundary; the
-	# validator must reject them before NativeGame can adopt the loaded state.
 	var malformed_dict: Dictionary = _new_test_state(content).to_dict()
 	var source_state: GameState = _new_test_state(content)
 	var budget := BudgetSimScript.ensure_budget_state(source_state).to_dict()

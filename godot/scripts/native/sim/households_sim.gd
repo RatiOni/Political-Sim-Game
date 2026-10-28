@@ -1,11 +1,6 @@
 class_name HouseholdsSim
 extends RefCounted
 
-## How national conditions land on people: six social groups in each region,
-## each exposed differently to jobs, prices, public services and welfare.
-## Runs after regions and before approval/stability. Seeding is additive and
-## requires existing Ardenian regions. Readers are deliberately pure: they
-## never seed; the caller seeds explicitly or calls simulate.
 
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 
@@ -48,7 +43,6 @@ static func _seed_missing(state: GameState, catalogs: Dictionary, definitions: D
 			state.households[key] = h
 
 
-## Adds missing canonical records only; retained objects keep all history.
 static func ensure_households(state: GameState) -> Dictionary:
 	if state.country == null or state.country.id != "ardenia" or state.regions.is_empty():
 		return state.households
@@ -76,10 +70,6 @@ static func _hardship_target(region: RegionState, h: HouseholdGroupState, defini
 		+ region.pressure * 0.15, 0.0, 1.0)
 
 
-## How well funded one service is, against what a normal state of this
-## economy's size spends on it (not against today's total, which would make
-## an across-the-board cut invisible). A deeply starved service reads as
-## deeply starved rather than flooring at half.
 const ENVELOPE_RATIO_MIN := 0.10
 const ENVELOPE_RATIO_MAX := 1.50
 
@@ -118,8 +108,6 @@ static func education_delivery(state: GameState) -> float:
 	return _delivery(state, "education", _catalogs())
 
 
-## One monthly pulse. All catalog reads are shared for this call; no global
-## RNG, synthetic ministries/budget, or separate national economy is created.
 static func simulate(state: GameState) -> void:
 	if state.country == null:
 		return
@@ -173,8 +161,6 @@ static func simulate(state: GameState) -> void:
 		h.confidence = clampf(h.confidence + (confidence_target - h.confidence) * 0.12, 0.0, 1.0)
 
 
-## National weights = authored regional population x local household share.
-## For a regional reader the regional factor cancels in normalization.
 static func _weighted(state: GameState, attr: String, region_id: String = "") -> float:
 	if state.households.is_empty():
 		return 0.0
@@ -223,7 +209,6 @@ static func regional_service_access(state: GameState, region_id: String) -> floa
 	return _weighted(state, "service_access", region_id)
 
 
-## New array, existing records; sorting never changes ledger insertion order.
 static func hardest_hit(state: GameState, limit: int = 5) -> Array:
 	var ranked := state.households.values()
 	ranked.sort_custom(func(a: HouseholdGroupState, b: HouseholdGroupState) -> bool:

@@ -1,13 +1,5 @@
 extends SceneTree
 
-## Balance probe (not a pass/fail test): plays five 20-year fiscal policies
-## through the real monthly close and prints where each ends up. Use it to
-## check any retune of the economy, budget, ministries or approval:
-##   Godot --headless --path godot --script res://tests/native/balance_probe.gd
-## The intended ordering (Oct 2026): a government that trims the opening gap
-## once and then governs steadily ends best; steady-but-unfixed next; heavy
-## austerity, no budget at all, and runaway spending all end clearly worse.
-
 const NativeGameScript = preload("res://scripts/native/native_game.gd")
 const ENVELOPES := ["state_administration", "foreign_affairs", "justice_and_policing", "national_defense",
 	"infrastructure", "industry_and_jobs", "education", "health_and_welfare"]
@@ -59,8 +51,6 @@ func _run(label: String, step: float, pass_budget: bool, trace := false) -> void
 	game.queue_free()
 
 
-## The same monthly close NativeGame runs, without building a UI snapshot
-## every simulated day.
 func _tick(s: GameState) -> void:
 	if Calendar.advance_day(s):
 		s.turn += 1

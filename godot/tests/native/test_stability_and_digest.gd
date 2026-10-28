@@ -1,7 +1,5 @@
 extends SceneTree
 
-## Task 10 contract tests. Production scripts do not exist yet: this file is
-## deliberately written before them to pin the native monthly behaviour.
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 const GameFactoryScript = preload("res://scripts/native/state/game_factory.gd")

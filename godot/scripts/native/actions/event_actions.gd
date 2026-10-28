@@ -1,9 +1,6 @@
 class_name EventActions
 extends RefCounted
 
-## The player deciding a waiting situation. Every rule lives in EventsSim;
-## this boundary checks the choice is open and pays for it.
-
 
 static func resolve(state: GameState, event_id: String, option_id: String) -> Dictionary:
 	if state == null or state.player == null:
@@ -29,7 +26,6 @@ static func resolve(state: GameState, event_id: String, option_id: String) -> Di
 	return {"ok": true, "message": message}
 
 
-## Why the player cannot take this option now, or "".
 static func option_reason(state: GameState, option: Dictionary) -> String:
 	var gate := EventsSim.gate_reason(state, option)
 	if gate != "":
@@ -40,7 +36,6 @@ static func option_reason(state: GameState, option: Dictionary) -> String:
 	return ""
 
 
-## Everything a situations panel needs, detached from live state.
 static func read_model(state: GameState) -> Array:
 	var rows: Array = []
 	if state == null:

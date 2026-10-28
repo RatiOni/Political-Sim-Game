@@ -1,10 +1,6 @@
 class_name Economy
 extends RefCounted
 
-## A country's economy: output, prices, jobs, the public balance sheet and
-## its sectors. All money figures are in real terms (millions of kron at
-## campaign-start prices). `loans` is reserved for the foreign-lending verb,
-## which arrives with diplomacy.
 
 class Sector extends RefCounted:
 	var id: String
@@ -99,9 +95,6 @@ var structural_growth_offset: float = 0.0
 var budget: Budget
 var sectors: Array[Sector] = []
 
-## Structural baselines — seeded from the headline values on construction.
-## `structural_expenditure` is PRIMARY spending (the budget envelopes);
-## interest on the public debt is a separate, mandatory line.
 var structural_growth_rate: float
 var structural_unemployment: float
 var structural_inflation: float
@@ -112,34 +105,16 @@ var workforce_quality: float = 0.5
 var trade_revenue_contribution: float = 0.0
 var loans: Array = []
 
-## The public balance sheet. Interest is owed on the whole debt stock; the
-## effective rate only slowly reprices toward the market rate, because debt
-## rolls over across years rather than all at once.
 var effective_interest_rate: float = 0.0
 var debt_service: float = 0.0
-## Slow-moving memory of primary spending. Spending above it is a fiscal
-## stimulus; spending below it is a contraction. The economy adapts, so a
-## stimulus buys activity only while it is new.
 var spending_trend: float = 0.0
 var fiscal_impulse: float = 0.0
-## The unemployment rate the labour market settles toward without extra
-## demand: set by workforce quality and the reach of the state.
 var natural_unemployment: float = 0.10
-## What a normal state of this country spends on public services, as a share
-## of GDP — the yardstick households judge services by. Fixed at the start of
-## a campaign: a government that cuts everything equally has still cut.
 var service_norm: float = 0.0
 
-## Primary spending the service yardstick expects for the economy's current size.
 func expected_primary_spending() -> float:
 	return service_norm * gdp
 
-## Interest rate the market charges a country with this debt and inflation.
-## Ardenia's post-transition debt is largely concessional, so the base real
-## rate sits below trend growth: an ordinary government's debt drifts slowly
-## rather than spiralling. Debt above ~80% of GDP and inflation above ~6%
-## each add a risk premium, and past roughly 150% of GDP interest outgrows
-## the economy — the spiral is real, but only for a government that earns it.
 const BASE_INTEREST_RATE := 0.015
 const DEBT_PREMIUM_THRESHOLD := 0.80
 const DEBT_PREMIUM_SLOPE := 0.06
@@ -152,11 +127,9 @@ func market_interest_rate() -> float:
 		+ maxf(0.0, inflation - INFLATION_PREMIUM_THRESHOLD) * INFLATION_PREMIUM_SLOPE,
 		0.01, 0.20)
 
-## Annual interest owed at the current effective rate.
 func interest_bill() -> float:
 	return public_debt_pct * gdp * effective_interest_rate
 
-## Overall deficit (positive) as a share of GDP, interest included.
 func deficit_share_of_gdp() -> float:
 	if budget == null or gdp <= 0.0:
 		return 0.0
@@ -195,8 +168,6 @@ static func from_json(data: Dictionary) -> Economy:
 	e.structural_unemployment = e.unemployment
 	e.structural_inflation = e.inflation
 	e.structural_revenue = e.budget.revenue
-	# The authored expenditure is the whole bill. Interest is its own line, so
-	# primary spending is what remains; the opening deficit is unchanged.
 	e.effective_interest_rate = e.market_interest_rate()
 	e.debt_service = e.interest_bill()
 	e.structural_expenditure = maxf(0.0, e.budget.expenditure - e.debt_service)

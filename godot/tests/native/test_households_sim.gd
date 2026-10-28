@@ -1,6 +1,5 @@
 extends SceneTree
 
-## Task 9: real production API tests; no subsystem mocks or Python oracle.
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 const GameFactoryScript = preload("res://scripts/native/state/game_factory.gd")
@@ -14,8 +13,6 @@ func _campaign(content: Dictionary, country_id: String = "ardenia") -> GameState
 		"country_id": "ardenia", "background_id": "none", "difficulty_id": "normal",
 		"opening_role": "contextual", "seed": 424242,
 	})
-	# Factory intentionally permits only Ardenia campaigns. Exercise foreign
-	# simulation state with its real, factory-built world actor instead.
 	if country_id != "ardenia":
 		for actor in state.world:
 			if actor.id == country_id:
@@ -189,7 +186,6 @@ func _test_aggregates(t, content: Dictionary) -> void:
 		for h in state.households.values():
 			h.set(attr, 0.0)
 		state.households["vashtera:urban_workers"].set(attr, 1.0)
-		# One-hot weighted oracle: Vashtera is 22% nationally; workers 25% locally.
 		t.near(sim.call(readers[attr], state), 0.055, 0.000001,
 			"authored population and group-share weighting: " + attr)
 	t.near(HouseholdsSimScript.regional_hardship(state, "vashtera"), 0.25, 0.000001, "regional hardship uses group shares")
@@ -217,7 +213,6 @@ func _assert_household_roundtrip(t, actual: HouseholdGroupState, expected: House
 	var fields := expected.to_dict()
 	for field in fields:
 		if fields[field] is float:
-			# JSON's ordinary numeric encoding may round the final binary digits.
 			t.near(float(actual.get(field)), float(fields[field]), 0.0000000001, label + ":" + field)
 		else:
 			t.equal(actual.get(field), fields[field], label + ":" + field)

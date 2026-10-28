@@ -1,34 +1,15 @@
 class_name DiplomacySim
 extends RefCounted
 
-## The slow life of Ardenia's relationships, month by month, and the one
-## place either side of a relationship is changed.
-##
-## Each relationship is two records — Ardenia's view and the partner's — and
-## every change here updates both, so the two capitals can never disagree.
-##
-## Design intent (docs/godot/LIVING_WORLD.md):
-## - Like drifts toward like: democracies warm slowly to democracies and
-##   cool slowly toward autocracies. Diplomacy works against or with that
-##   current; it never stands still.
-## - Trade under a pact saturates. A partner economy is finite, so volume
-##   approaches a ceiling set by how warm the relationship is rather than
-##   compounding for ever; the same approach runs in reverse when relations
-##   cool, so trade decays without a separate rule.
-## - Sanctions bite their target every month they stand.
-## - A foreign loan runs its term and is retired.
 
 const TRADE_CEILING := 4000.0
-## Share of the gap to the ceiling closed each month.
 const TRADE_APPROACH := 0.04
 const NO_PACT_CEILING_SHARE := 0.5
 const SAME_CAMP_DRIFT := 0.0015
 const OTHER_CAMP_DRIFT := -0.0008
-## What a month under sanctions costs the target.
 const SANCTION_STABILITY_COST := 0.01
 const SANCTION_OUTPUT_LOSS := 0.003
 
-## Regime families for the slow pull of like toward like.
 const REGIME_FAMILY := {
 	"parliamentary_democracy": "democratic",
 	"presidential_democracy": "democratic",
@@ -44,7 +25,6 @@ static func world_country(state: GameState, country_id: String) -> Country:
 	return null
 
 
-## Ardenia's side and the partner's side, or [] if no such relationship.
 static func pair(state: GameState, country_id: String) -> Array:
 	var other := world_country(state, country_id)
 	if other == null or not state.country.relations.has(country_id) \
@@ -53,7 +33,6 @@ static func pair(state: GameState, country_id: String) -> Array:
 	return [state.country.relations[country_id], other.relations[state.country.id]]
 
 
-## Moves the relationship by `delta` on both sides.
 static func shift(state: GameState, country_id: String, delta: float, note := "") -> void:
 	var p := pair(state, country_id)
 	if p.is_empty():

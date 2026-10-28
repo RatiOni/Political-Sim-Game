@@ -1,16 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for Task 4 unit B: the NativeGame state owner.
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_native_game.gd
-##
-## Covers exactly the brief's case: start seed 424242, advance one day, save,
-## replace in-memory state with a second campaign, load, assert full
-## restoration including RNG state (a fixed number of rng draws before save
-## continues identically after load). Plus the surrounding contract:
-## side-effect-free _ready, snapshot shape/deep-copy semantics, the
-## single-operation in-flight guard, invalid-campaign keeps-old-state, and
-## self-cleaning test slots (never the real slot names).
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const NativeGameScript = preload("res://scripts/native/native_game.gd")
@@ -125,17 +114,14 @@ func _test_round_trip_with_rng_continuity(t) -> void:
 	t.equal(game.snapshot()["date"]["day_index"], 1,
 		"roundtrip: day_index is 1 after one advance")
 
-	# Move the stream to a non-trivial point, then save.
 	for i in range(5):
 		game._state.rng.next_u32()
 	t.truth(game.save(slot).get("ok", false), "roundtrip: save reports ok")
 	var before: Dictionary = game.snapshot()
-	# The continuation the restored stream must replay exactly.
 	var expected: Array = []
 	for i in range(10):
 		expected.append(game._state.rng.next_u32())
 
-	# Replace the in-memory state with a second, different campaign.
 	t.truth(game.new_campaign(_base_config(777)).get("ok", false),
 		"roundtrip: a second campaign replaces in-memory state")
 	t.equal(game.snapshot()["date"]["day_index"], 0,
@@ -190,14 +176,8 @@ func _test_invalid_campaign_keeps_old_state(t) -> void:
 func _test_in_flight_guard(t) -> void:
 	var game = NativeGameScript.new()
 	game.new_campaign(_base_config())
-	# Containers, not rebound locals: lambdas capture locals by value, so
-	# only in-place mutation (append / key-set) is visible outside.
 	var emissions: Array = []
 	var inner: Dictionary = {}
-	# A pre-set flag (not is_empty-after-assignment): the nested call below
-	# runs DURING the outer emit, so any flag set by the nested result is
-	# still unset when the nested handler runs — checking it there would
-	# recurse without bound.
 	var nested_done := [false]
 	game.state_changed.connect(func(_snap: Dictionary) -> void:
 		emissions.append(1)
@@ -208,9 +188,6 @@ func _test_in_flight_guard(t) -> void:
 	var day_before: int = (game.snapshot()["date"] as Dictionary)["day_index"]
 	var outer: Dictionary = game.advance_day()
 	t.truth(outer.get("ok", false), "guard: the outer advance_day succeeds")
-	# The guard covers the emit itself: a subscriber that calls back in is
-	# refused with ok=false (no second emission, no state change) instead of
-	# recursing into the half-observed outer operation.
 	t.equal(emissions.size(), 1, "guard: one emission total; the refused nested call emits nothing")
 	var inner_result: Dictionary = inner.get("result", {})
 	t.truth(not inner_result.get("ok", true),
@@ -219,8 +196,6 @@ func _test_in_flight_guard(t) -> void:
 		"guard: the reentrant refusal carries an error")
 	t.equal((game.snapshot()["date"] as Dictionary)["day_index"], day_before + 1,
 		"guard: exactly one day advanced (outer only; nested call changed nothing)")
-	# The guard itself still rejects true overlap: with _busy held, any op
-	# is refused without touching state.
 	game._busy = true
 	var before: Dictionary = game.snapshot()
 	var refused: Dictionary = game.advance_day()
@@ -279,8 +254,6 @@ func _test_failed_validation_load_keeps_state_no_fatal(t) -> void:
 	game.advance_day()
 	var before: Dictionary = game.snapshot()
 	t.truth(game.save(slot).get("ok", false), "badworld: the valid campaign saves")
-	# Craft a validator-failing save: an otherwise-valid payload whose world
-	# is empty (StateValidator requires a non-empty world).
 	var path := _slot_path(slot, "")
 	var reader := FileAccess.open(path, FileAccess.READ)
 	var payload = JSON.parse_string(reader.get_as_text())
@@ -519,7 +492,6 @@ static func _write_repo_file(path: String, content: String) -> void:
 
 
 static func _wipe_repo_tree(root: String) -> void:
-	# Best-effort recursive wipe of a temp user:// tree (self-cleaning).
 	var dir := DirAccess.open(root)
 	if dir == null:
 		return
@@ -538,13 +510,11 @@ func _test_country_inner_id_consistency(t) -> void:
 		'{"schema_version": 1, "files": ["countries/ardenia.json", "countries/krasova.json"]}')
 	_write_repo_file(root.path_join("countries/ardenia.json"),
 		'{"id": "ardenia", "name": "Ardenia"}')
-	# Inner id does not match the filename stem.
 	_write_repo_file(root.path_join("countries/krasova.json"),
 		'{"id": "not_krasova", "name": "Krasova"}')
 	var mismatched: Dictionary = ContentRepositoryScript.load_all(root)
 	t.truth(mismatched.has("error"),
 		"country-id: a countries/ file whose inner id mismatches its stem is rejected")
-	# The same stem listed twice must error, not silently overwrite.
 	_write_repo_file(root.path_join("countries/krasova.json"),
 		'{"id": "krasova", "name": "Krasova"}')
 	_write_repo_file(root.path_join("catalog_manifest.json"),

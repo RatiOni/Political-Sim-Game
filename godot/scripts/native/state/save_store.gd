@@ -1,20 +1,6 @@
 class_name SaveStore
 extends RefCounted
 
-## Native-only campaign persistence: GameState <-> JSON files under
-## user://saves/. No Python save compatibility (PLAN.md global constraint: no
-## existing players).
-##
-## Atomic replace protocol: each save serializes to <slot>.json.tmp first;
-## the previous live revision (if any) then moves aside to <slot>.json.bak,
-## and only then does the .tmp take the .json name. A crash between the two
-## renames leaves the live path ABSENT (the old revision waits in .bak, the
-## new one stranded in .tmp), so loads consult .bak whenever the live path
-## is missing or unreadable. Guarantee: the store always holds the old or
-## the previous revision — never a half-written file — but the newest
-## revision can still be lost to a crash mid-publish. Loads never consult
-## .tmp; a corrupt or version-mismatched main file falls back to .bak when
-## it parses and its version matches.
 
 const SAVE_FORMAT_VERSION := 1
 const SAVES_DIR := "user://saves"
@@ -31,8 +17,6 @@ static func is_valid_slot(slot: String) -> bool:
 
 
 static func save_slot(slot: String, state: GameState) -> Dictionary:
-	# Reject, never sanitize-and-proceed: anything outside the charset could
-	# be a path traversal attempt.
 	if not is_valid_slot(slot):
 		return {"ok": false, "error": "invalid slot name '%s' (must match %s)" % [slot, SLOT_PATTERN]}
 	if state == null:
@@ -64,8 +48,6 @@ static func load_slot(slot: String) -> Dictionary:
 	var main_path := _path_for(slot, "")
 	var bak_path := _path_for(slot, ".bak")
 	if not FileAccess.file_exists(main_path):
-		# Crash mid-publish (main->.bak done, .tmp->main not yet) leaves the
-		# live path absent while the previous revision waits in .bak.
 		if FileAccess.file_exists(bak_path):
 			var bak_only := _load_file(bak_path)
 			if bak_only.get("ok", false):
@@ -92,8 +74,6 @@ static func _load_file(path: String) -> Dictionary:
 	file.close()
 	if not (parsed is Dictionary):
 		return {"ok": false, "error": "corrupt JSON in '%s'" % path}
-	# Godot parses every JSON number as float, so version 1 arrives as 1.0 —
-	# accept any whole-number form, reject anything else (never guess).
 	if not _version_matches(parsed.get("version")):
 		return {"ok": false, "error": "unsupported save version in '%s'" % path}
 	var state_data: Variant = parsed.get("state")

@@ -1,10 +1,6 @@
 class_name HouseholdGroupState
 extends RefCounted
 
-## Typed mirror of models/household.py: one social group's lived economic
-## condition inside one region. GameFactory does not populate these yet
-## (see game_factory.gd header note) — the seeding logic lives in
-## engine/households.py, which is out of Task 2's scope.
 
 var id: String
 var group_id: String

@@ -1,9 +1,5 @@
 extends SceneTree
 
-## Regression tests for defects found in the October 2026 code reviews.
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_regressions.gd
-
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 
 
@@ -21,8 +17,6 @@ static func _balanced(state: GameState) -> void:
 	econ.structural_revenue = econ.structural_expenditure + econ.interest_bill()
 	econ.spending_trend = econ.structural_expenditure
 
-
-# ── Economy ──────────────────────────────────────────────────────────────
 
 func _test_growth_wears_down_the_debt_ratio(t) -> void:
 	var state := _state()
@@ -79,8 +73,6 @@ func _test_unknown_envelopes_cannot_inflate_spending(t) -> void:
 		"the ledger still sums to the spending baseline when a save carries an unknown envelope")
 
 
-# ── Budget ───────────────────────────────────────────────────────────────
-
 func _test_an_emergency_keeps_escalating_across_january(t) -> void:
 	var state := _state()
 	state.year += 1
@@ -102,8 +94,6 @@ func _test_an_emergency_keeps_escalating_across_january(t) -> void:
 		"January of year two costs the escalated monthly price, not a fresh start")
 
 
-# ── Ministries ───────────────────────────────────────────────────────────
-
 func _test_a_ministry_seeded_before_the_budget_gets_a_real_baseline(t) -> void:
 	var state: GameState = GameFactory.new_campaign(ContentRepository.load_all(), {
 		"country_id": "ardenia", "background_id": "none", "difficulty_id": "normal",
@@ -114,8 +104,6 @@ func _test_a_ministry_seeded_before_the_budget_gets_a_real_baseline(t) -> void:
 	var finance: MinistryState = state.ministries["Finance"]
 	t.truth(finance.funding_ratio < 1.5, "a ministry checked before the first budget is not read as lavishly funded (%.2f)" % finance.funding_ratio)
 
-
-# ── Diplomacy ────────────────────────────────────────────────────────────
 
 func _test_trade_decays_once_a_pact_is_gone(t) -> void:
 	var state := _state()
@@ -138,8 +126,6 @@ func _test_sanctions_keep_trade_at_zero(t) -> void:
 	t.truth((state.country.relations[id] as Country.BilateralRelation).trade_volume < 800.0 * 0.85,
 		"trade under sanctions collapses")
 
-
-# ── Cabinet ──────────────────────────────────────────────────────────────
 
 func _test_appointments_cost_capital_and_are_rationed(t) -> void:
 	var state := _state()

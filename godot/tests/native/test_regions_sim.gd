@@ -1,27 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for Phase 2 Task 8: RegionsSim (regional
-## conditions — seeding, the monthly unemployment/reach/pressure tick, and
-## single-month programme advancement).
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_regions_sim.gd
-##
-## Checks the ported logic on its own terms (task-8-brief.md: no
-## oracle/parity comparison against Python is required or wanted) — the seed
-## matches the exported `regions_and_programs` catalogue (compared against the
-## catalogue JSON itself, never a second hard-coded copy); re-ensuring never
-## clobbers live values; empty Ardenia seeds-then-ticks while non-Ardenia
-## stays empty without crashing; national conditions move local values in the
-## documented directions (direction only, never constants); control never
-## flips passively; a separatist-control region freezes its programme
-## (documented deviation); exactly one month passes per simulate() call;
-## duration boundaries complete exactly on time; unknown ids clean up their
-## modifiers and drop silently; vetrenka_status overrides apply to Vetrenka
-## only with unknown-status fallback; live values survive a save/reload round
-## trip. Constructs every state via GameFactory and calls production
-## RegionsSim throughout; RegionalProgram objects are constructed directly
-## (typed construction, not a fake implementation). Self-cleaning: no save
-## slots are touched (the round trip is in-memory to_dict/from_dict only).
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
@@ -42,8 +20,6 @@ static func _base_config() -> Dictionary:
 	}
 
 
-## The authored catalogue this task seeds from — the JSON boundary, read
-## fresh here so the test compares against content, never a copied table.
 static func _catalogue_region_profiles(content: Dictionary) -> Dictionary:
 	var catalogs_raw: Variant = content.get("catalogs", {})
 	if not (catalogs_raw is Dictionary):
@@ -143,7 +119,6 @@ static func _assign_minister(state: GameState, portfolio: String, competence: fl
 	state.ministers.append(m)
 
 
-# ── Seeding ───────────────────────────────────────────────────────────────
 
 func _test_seed_matches_catalogue(t: TestSupport, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -292,7 +267,6 @@ func _test_missing_minister_and_ministry_fallback(t: TestSupport, content: Dicti
 	t.equal(_active_program_ids(state).count(program.id), 1, "active programme occurs exactly once")
 
 
-# ── Single-month advancement ──────────────────────────────────────────────
 
 func _test_single_month_advancement(t: TestSupport, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -326,7 +300,6 @@ func _test_control_never_flips(t: TestSupport, content: Dictionary) -> void:
 			"control never flips in the passive tick (%s)" % String(region_id))
 
 
-# ── Direction tests (vary inputs, assert movement, never constants) ───────
 
 func _test_unemployment_follows_national(t: TestSupport, content: Dictionary) -> void:
 	var slack: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -396,7 +369,6 @@ func _test_delivery_follows_minister_quality(t: TestSupport, content: Dictionary
 		"a competent loyal minister delivers a larger unemployment reduction")
 
 
-# ── Programme lifecycle ───────────────────────────────────────────────────
 
 func _test_unknown_ids_clean_up_modifiers_and_drop(t: TestSupport, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -546,7 +518,6 @@ func _test_duration_boundaries(t: TestSupport, content: Dictionary) -> void:
 		"single-tick programme's modifiers are cleaned up")
 
 
-# ── Vetrenka overrides ────────────────────────────────────────────────────
 
 func _test_vetrenka_status_overrides(t: TestSupport, content: Dictionary) -> void:
 	var authored: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -576,7 +547,6 @@ func _test_vetrenka_status_overrides(t: TestSupport, content: Dictionary) -> voi
 		"vetrenka_status never leaks into other regions (unknown)")
 
 
-# ── Persistence ───────────────────────────────────────────────────────────
 
 func _test_save_reload_round_trip(t: TestSupport, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
@@ -614,16 +584,12 @@ func _test_save_reload_round_trip(t: TestSupport, content: Dictionary) -> void:
 		"programme modifiers survive the round trip")
 
 
-# ── Structural guard ──────────────────────────────────────────────────────
 
 func _test_no_formula_constants_in_test_source(t: TestSupport) -> void:
 	var text: String = FileAccess.get_file_as_string(SELF_PATH)
 	t.truth(text != "", "own test source is readable for the structural check")
 	if text == "":
 		return
-	# Each token is built from parts so the full production identifier never
-	# appears literally in this file outside this very check — otherwise the
-	# check would trip over its own list.
 	var forbidden: Array[String] = [
 		"PRESSURE_" + "JOBS_WEIGHT",
 		"PRESSURE_" + "CAPACITY_WEIGHT",

@@ -1,35 +1,22 @@
 class_name AnnualBudget
 extends RefCounted
 
-## Typed mirror of models/budget.py: one fiscal year's voted structural
-## appropriations. GameFactory does not populate `active_budget` yet (see
-## game_factory.gd header note) — the seeding/voting logic lives in
-## engine/budget.py, which is out of Task 2's scope.
 
 var year: int
-var allocations: Dictionary = {}   # String portfolio -> float
-var status: String = "draft"       # draft | proposed | approved | active | rejected | continuing
-var source: String = "inherited"   # inherited | player | government_ai | continuing
+var allocations: Dictionary = {}
+var status: String = "draft"
+var source: String = "inherited"
 var proposed_by: String = ""
 var proposed_turn: int = -1
 var forecast_revenue: float = 0.0
 var votes_for: int = 0
 var votes_against: int = 0
-var lobbying_bonus: Dictionary = {}   # String faction_id -> float
-## Mid-year supplementary appropriations, kept separate from `allocations` on
-## purpose — see models/budget.py's docstring for why.
-var supplements: Dictionary = {}      # String portfolio -> float
-## Months this settlement has run as an emergency continuing resolution.
+var lobbying_bonus: Dictionary = {}
+var supplements: Dictionary = {}
 var emergency_months: int = 0
-## The size of the economy (structural revenue) when the plan was tabled. A
-## plan is written in that month's money; when it takes effect it keeps pace
-## with growth since, so a "no change" budget does not arrive quietly cut.
 var economy_basis: float = 0.0
 
 
-## Summed in sorted key order: a float sum depends on the order it is added
-## in, and a save stores keys sorted, so any other order would let a reload
-## change the total in its last bits.
 func expenditure() -> float:
 	var keys := allocations.keys()
 	keys.sort()
@@ -92,8 +79,6 @@ static func from_dict(data: Dictionary) -> AnnualBudget:
 	return b
 
 
-## JSON boundary: Godot parses every JSON number as float, so a whole-number
-## float must read back as an int wherever an int field is expected.
 static func _int_field(data: Dictionary, key: String, fallback: int) -> int:
 	var v: Variant = data.get(key, fallback)
 	if typeof(v) == TYPE_INT:

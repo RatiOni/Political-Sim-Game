@@ -1,16 +1,5 @@
 extends SceneTree
 
-## Standalone headless test for the Vasca question.
-## Run via:
-##   Godot --headless --path godot --script res://tests/native/test_vasca_arc.gd
-##
-## Intended behaviour: the west stirs only for a government that looks
-## weak, never in the opening months and never twice; whether a crackdown
-## works depends on how effective the security services really are, and
-## whether an amnesty holds depends on public goodwill; every road raises or
-## lowers insurgency pressure, which feeds unrest; the arc ends in one of
-## five recorded outcomes and, once ended, never reopens.
-
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 
 const ARC := ["vasca_stirs", "vasca_crackdown_works", "vasca_crackdown_fails",
@@ -74,8 +63,6 @@ static func _amnesty_hold_rate(approval: float) -> float:
 	return holds / 40.0
 
 
-# ── When the west stirs ──────────────────────────────────────────────────
-
 func _test_the_west_stirs_only_for_a_weak_government(t) -> void:
 	var state := _state()
 	state.stability_value = 0.80
@@ -99,8 +86,6 @@ func _test_the_whole_arc_is_playable(t) -> void:
 			missing.append(id)
 	t.equal(missing, [], "every step of the Vasca arc can now fire")
 
-
-# ── Crackdown ────────────────────────────────────────────────────────────
 
 func _test_crackdown_success_depends_on_real_security(t) -> void:
 	var strong := _crackdown_success_rate(0.95, 0.85)
@@ -139,8 +124,6 @@ func _test_a_general_leading_in_person_does_better(t) -> void:
 	t.truth(led > plain, "a former general who goes west himself succeeds more often (%d vs %d of 40)" % [led, plain])
 
 
-# ── Amnesty and neglect ──────────────────────────────────────────────────
-
 func _test_amnesty_holds_more_often_for_a_popular_government(t) -> void:
 	var popular := _amnesty_hold_rate(0.80)
 	var disliked := _amnesty_hold_rate(0.15)
@@ -155,8 +138,6 @@ func _test_downplaying_emboldens_the_west(t) -> void:
 	t.near(state.insurgency_pressure, minf(1.0, p0 + 0.15), 1e-9, "looking away adds pressure")
 	t.equal(int(_scheduled(state, "vasca_emboldened").get("due_turn", -1)), state.turn + 4, "and Vasca grows bolder in four months")
 
-
-# ── Endings ──────────────────────────────────────────────────────────────
 
 func _test_each_ending_is_recorded_and_moves_pressure(t) -> void:
 	var cases := [
@@ -182,8 +163,6 @@ func _test_an_ended_arc_never_reopens(t) -> void:
 	_decide(state, "vasca_last_stand", "negotiate_exit")
 	t.truth(not EventsSim.condition_met(state, "vasca_stirring"), "once Vasca's fate is settled the west does not stir again")
 
-
-# ── Pressure, determinism, persistence ───────────────────────────────────
 
 func _test_insurgency_feeds_unrest(t) -> void:
 	var calm := _state()

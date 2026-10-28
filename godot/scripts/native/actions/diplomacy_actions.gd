@@ -1,17 +1,6 @@
 class_name DiplomacyActions
 extends RefCounted
 
-## The player's statecraft. One entry point, `act(state, verb, country_id,
-## treaty_id)`, so every verb shares the same guards: a government in office,
-## a real country, enough political capital, and a refusal that changes
-## nothing and says why.
-##
-## The foreign loan is a native design: with real debt and market-priced
-## interest, a loan that merely added cash and debt would be meaningless.
-## Instead a patron refinances part of the public debt at a concessional
-## rate for a fixed term. It saves money exactly when markets charge a debt
-## premium, and costs a little when they do not — and in every case it
-## carries a political price at home.
 
 const COSTS := {
 	"improve_relations": 10.0, "trade_agreement": 15.0, "foreign_loan": 8.0,
@@ -26,12 +15,9 @@ const LABELS := {
 	"break_treaty": "Tear up a treaty",
 }
 
-## Trust a partner needs before committing to mutual defence.
 const PACT_TRUST := 0.45
-## Relations at or above this make sanctions diplomatic self-harm.
 const SANCTION_FRIEND_LIMIT := 0.20
 const SUMMIT_COOLDOWN := 8
-## A patron refinances this share of GDP, for this many months.
 const LOAN_SHARE_OF_GDP := 0.05
 const LOAN_TERM_MONTHS := 48
 
@@ -58,7 +44,6 @@ static func act(state: GameState, verb: String, country_id: String, treaty_id :=
 	return {"ok": true, "message": message}
 
 
-## Why `verb` cannot be done now, or "".
 static func reason_for(state: GameState, verb: String, country_id: String, treaty_id := "") -> String:
 	if state == null or state.player == null:
 		return "No campaign is active."
@@ -102,8 +87,6 @@ static func reason_for(state: GameState, verb: String, country_id: String, treat
 	return ""
 
 
-# ── The verbs ────────────────────────────────────────────────────────────
-
 static func improve_relations(state: GameState, other: Country, _t: String) -> String:
 	var minister: Minister = null
 	for m in state.ministers:
@@ -127,7 +110,7 @@ static func trade_agreement(state: GameState, other: Country, _t: String) -> Str
 	growth.magnitude = 0.0015
 	growth.onset_delay = 3
 	growth.ramp_duration = 24
-	growth.hold_duration = -1
+	growth.hold_duration = Modifier.HOLDS_FOREVER
 	growth.source_id = treaty["id"]
 	growth.portfolio = "Foreign Affairs"
 	state.modifiers.append(growth)
@@ -138,14 +121,12 @@ static func foreign_loan(state: GameState, other: Country, _t: String) -> String
 	var econ := state.country.economy
 	var p := DiplomacySim.pair(state, other.id)
 	var warmth := (p[0] as Country.BilateralRelation).score
-	# A patron ignores your debt premium but prices its own politics in.
 	var rate := clampf(0.02 + (0.01 if other.regime_type == "authoritarian" else 0.0) - warmth * 0.02, 0.01, 0.08)
 	var amount := minf(econ.gdp * LOAN_SHARE_OF_GDP, econ.public_debt_pct * econ.gdp)
 	var saving := (econ.effective_interest_rate - rate) * amount
 	var loan_id := "loan_%s_%d" % [other.id, state.turn]
 	econ.loans.append({"id": loan_id, "lender_id": other.id, "principal": amount,
 		"rate": rate, "months_left": LOAN_TERM_MONTHS})
-	# Contractual: no minister or crisis changes what is owed.
 	var interest := Modifier.new()
 	interest.id = loan_id
 	interest.source = "Loan from %s" % other.name
@@ -236,8 +217,6 @@ static func break_treaty(state: GameState, other: Country, treaty_id: String) ->
 		state.modifiers = state.modifiers.filter(func(m): return m.source_id != treaty_id)
 	return "You tear up the %s. %s will not forget it." % [String(treaty.get("name", "treaty")), other.name]
 
-
-# ── Read model ───────────────────────────────────────────────────────────
 
 static func read_model(state: GameState) -> Array:
 	var rows: Array = []
