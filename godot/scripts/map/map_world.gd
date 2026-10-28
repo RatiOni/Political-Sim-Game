@@ -4,9 +4,9 @@ extends Node3D
 const BAKED_DIR := "res://data/map/baked/"
 const TEXTURE_UV_SCALE := 0.08
 const TINTS := {
-	"grass": Color(0.7, 1.35, 0.75),
-	"forest": Color(0.45, 0.8, 0.5),
-	"farmland": Color(1.15, 1.1, 0.7),
+	"grass": Color(1.0, 1.08, 0.95),
+	"forest": Color(0.6, 0.78, 0.6),
+	"farmland": Color(1.2, 1.2, 0.85),
 }
 const SEA_LEVEL_Y := -2.0
 const SEA_FLOOR_M := -10.0

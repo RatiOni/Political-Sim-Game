@@ -42,6 +42,19 @@ func _initialize() -> void:
 	t.equal(MapBaker.base_material_at(control, _highest(height)), MapAssets.material_id("snow"), "the highest peak is snow")
 	t.equal(MapBaker.base_material_at(control, Vector2i(int(0.42 * MapBaker.RESOLUTION.x), int(0.66 * MapBaker.RESOLUTION.y))) in
 		[MapAssets.material_id("grass"), MapAssets.material_id("farmland")], true, "the central plain is grassland or farmland")
+	var land := 0
+	var forest := 0
+	var farmland := 0
+	for y in MapBaker.RESOLUTION.y:
+		for x in MapBaker.RESOLUTION.x:
+			if height.get_pixel(x, y).r <= 0.0:
+				continue
+			land += 1
+			var base := MapBaker.base_material_at(control, Vector2i(x, y))
+			forest += int(base == MapAssets.material_id("forest"))
+			farmland += int(base == MapAssets.material_id("farmland"))
+	t.truth(float(forest) / land >= 0.12, "forest covers at least 12%% of the land (%.1f%%)" % (100.0 * forest / land))
+	t.truth(float(farmland) / land >= 0.10 and float(farmland) / land <= 0.35, "farmland covers 10-35%% of the land (%.1f%%)" % (100.0 * farmland / land))
 
 	var borders := MapBaker.trace_borders(regions, geo)
 	t.truth(borders["national"].size() >= 1, "the national border is traced")
