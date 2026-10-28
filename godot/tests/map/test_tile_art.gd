@@ -13,6 +13,10 @@ func _initialize() -> void:
 
 	var atlas := TileArt.build_atlas()
 	t.equal(atlas.get_data(), TileArt.build_atlas().get_data(), "the atlas builds byte-identically")
+	var committed := Image.new()
+	committed.load("res://data/map/tile_atlas.png")
+	committed.convert(atlas.get_format())
+	t.equal(committed.get_data(), atlas.get_data(), "the committed atlas matches the code")
 	var allowed := {}
 	for c in MapPalette.DAY:
 		allowed[c.to_rgba32()] = true
