@@ -27,12 +27,20 @@ static var DAY := PackedColorArray([
 
 static var DUSK := _dusk_of(DAY)
 
+static var FOREIGN := PackedColorArray([
+	Color8(20, 22, 22), Color8(34, 38, 36), Color8(48, 52, 48), Color8(62, 66, 60),
+	Color8(76, 80, 72), Color8(90, 94, 84), Color8(108, 110, 100), Color8(132, 134, 124),
+	Color8(164, 164, 156), Color8(200, 200, 194),
+])
 
-static func _dusk_of(day: PackedColorArray) -> PackedColorArray:
+static var FOREIGN_DUSK := _dusk_of(FOREIGN, [])
+
+
+static func _dusk_of(day: PackedColorArray, emissive: Array[int] = EMISSIVE) -> PackedColorArray:
 	var out := PackedColorArray()
 	for i in day.size():
 		var c := day[i]
-		out.append(c if i in EMISSIVE else Color(c.r * DUSK_TINT.x, c.g * DUSK_TINT.y, c.b * DUSK_TINT.z))
+		out.append(c if i in emissive else Color8(roundi(c.r8 * DUSK_TINT.x), roundi(c.g8 * DUSK_TINT.y), roundi(c.b8 * DUSK_TINT.z)))
 	return out
 
 
@@ -44,5 +52,14 @@ static func nearest(c: Color) -> int:
 		var d := Vector3(p.r - c.r, p.g - c.g, p.b - c.b).length_squared()
 		if d < best_d:
 			best_d = d
+			best = i
+	return best
+
+
+static func nearest_foreign(c: Color) -> int:
+	var lum := c.get_luminance()
+	var best := 0
+	for i in FOREIGN.size():
+		if absf(FOREIGN[i].get_luminance() - lum) < absf(FOREIGN[best].get_luminance() - lum):
 			best = i
 	return best

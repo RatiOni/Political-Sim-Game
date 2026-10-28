@@ -10,6 +10,7 @@ const ATLAS_PNG := "res://data/map/tile_atlas.png"
 const ATLAS_JSON := "res://data/map/tile_atlas.json"
 const MICRO_SHEET := "res://assets/pixel/kenney_micro_roguelike.png"
 const MICRO_BACKGROUND := Color8(34, 35, 35)
+const FOREIGN_DIM := 0.2
 
 const KENNEY := {
 	"house": [Vector2i(5, 7), [MapPalette.ROOF, MapPalette.ROOF, MapPalette.INK, MapPalette.WALL]],
@@ -40,12 +41,19 @@ static func variant_key(kind: String, variant: int) -> String:
 	return "%s_%d" % [kind, variant]
 
 
+static func foreign_key(kind: String, variant: int) -> String:
+	return "foreign_%s_%d" % [kind, variant]
+
+
 static func cell_names() -> Array[String]:
 	var names: Array[String] = []
 	for kind in KINDS:
 		for v in VARIANTS:
 			names.append(variant_key(kind, v))
 	names.append_array(SPRITES)
+	for kind in KINDS:
+		for v in VARIANTS:
+			names.append(foreign_key(kind, v))
 	return names
 
 
@@ -65,15 +73,18 @@ static func build_atlas() -> Image:
 	var sheet: Image = load(MICRO_SHEET).get_image()
 	sheet.convert(Image.FORMAT_RGBA8)
 	var kind_count := KINDS.size() * VARIANTS
+	var foreign_start := kind_count + SPRITES.size()
 	for i in names.size():
-		var cell: PackedInt32Array
+		var origin := Vector2i(i % COLUMNS, i / COLUMNS) * CELL
 		if i < kind_count:
-			cell = ground(KINDS[i / VARIANTS], i % VARIANTS)
+			_blit(atlas, ground(KINDS[i / VARIANTS], i % VARIANTS), origin)
+		elif i >= foreign_start:
+			var k := i - foreign_start
+			_blit_foreign(atlas, ground(KINDS[k / VARIANTS], k % VARIANTS), origin)
 		elif KENNEY.has(names[i]):
-			cell = recolour(sheet, KENNEY[names[i]][0], KENNEY[names[i]][1])
+			_blit(atlas, recolour(sheet, KENNEY[names[i]][0], KENNEY[names[i]][1]), origin)
 		else:
-			cell = drawn(DRAWN[names[i]])
-		_blit(atlas, cell, Vector2i(i % COLUMNS, i / COLUMNS) * CELL)
+			_blit(atlas, drawn(DRAWN[names[i]]), origin)
 	return atlas
 
 
@@ -96,6 +107,27 @@ static func _blit(atlas: Image, cell: PackedInt32Array, origin: Vector2i) -> voi
 	for p in CELL * CELL:
 		if cell[p] >= 0:
 			atlas.set_pixelv(origin + Vector2i(p % CELL, p / CELL), MapPalette.DAY[cell[p]])
+
+static func _blit_foreign(atlas: Image, cell: PackedInt32Array, origin: Vector2i) -> void:
+	for p in CELL * CELL:
+		var day := MapPalette.DAY[cell[p]]
+		atlas.set_pixelv(origin + Vector2i(p % CELL, p / CELL), MapPalette.FOREIGN[MapPalette.nearest_foreign(day.darkened(FOREIGN_DIM))])
+
+
+static func dusk_atlas(day: Image) -> Image:
+	var to_dusk := {}
+	for i in MapPalette.DAY.size():
+		to_dusk[MapPalette.DAY[i].to_rgba32()] = MapPalette.DUSK[i]
+	for i in MapPalette.FOREIGN.size():
+		to_dusk[MapPalette.FOREIGN[i].to_rgba32()] = MapPalette.FOREIGN_DUSK[i]
+	var out := day.duplicate() as Image
+	for y in out.get_height():
+		for x in out.get_width():
+			var c := out.get_pixel(x, y)
+			if c.a > 0.0:
+				out.set_pixel(x, y, to_dusk.get(c.to_rgba32(), c))
+	return out
+
 
 
 static func recolour(sheet: Image, at: Vector2i, ramp: Array) -> PackedInt32Array:

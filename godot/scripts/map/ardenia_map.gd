@@ -3,32 +3,195 @@ class_name ArdeniaMap
 
 signal region_selected(region_id: String)
 
-const MAP_ASPECT := 1.68
-const ROOMY_LABEL_HEIGHT := 480
+const NATIVE := Vector2(MapLines.SIZE)
+const BORDERS_PATH := "res://data/map/baked/borders.json"
+const UNAVAILABLE_TEXT := "Map data unavailable"
+const HOVER_WIDTH := 1.0
+const SELECTION_WIDTH := 2.0
+const SIDES: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+const CORNERS: Array[Vector2i] = [Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]
 
-var geography: Dictionary = {}
+var tiles_path := TileBaker.TILES_PATH
 var regions: Dictionary = {}
 var polygons: Dictionary = {}
 var selected_id := ""
 var hovered_id := ""
-var _transform := Transform2D.IDENTITY
-var _label_boxes: Array[Rect2] = []
+var unavailable := false
+var terrain_layer := TileMapLayer.new()
+var growth_layer := TileMapLayer.new()
+var lines_rect := TextureRect.new()
+var _sea := ColorRect.new()
+var _canvas := Node2D.new()
+var _highlight := Node2D.new()
+var _labels := MapLabels.new()
+var _notice := Label.new()
+var _geo: MapGeometry
+var _tiles: Dictionary = {}
+var _outlines: Dictionary = {}
+var _cells: Dictionary = {}
+var _scale := 1.0
+var _offset := Vector2.ZERO
+var _day_texture: Texture2D
+var _dusk_texture: Texture2D
+var _lines: Dictionary = {}
+var _dusk := false
+var _weight := 1
+
+
+func _init() -> void:
+	_build_nodes()
+
 
 func _ready() -> void:
-	var file := FileAccess.open("res://data/ardenia_map.json", FileAccess.READ)
-	if file == null:
-		push_error("Ardenia map data could not be opened.")
-		return
-	var parsed = JSON.parse_string(file.get_as_text())
-	if not parsed is Dictionary:
-		push_error("Ardenia map data must be a JSON object.")
-		return
-	geography = parsed
-	resized.connect(_rebuild_geometry)
-	mouse_exited.connect(func(): hovered_id = ""; queue_redraw())
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	resized.connect(_layout)
+	mouse_exited.connect(func(): hovered_id = ""; _redraw())
 	focus_entered.connect(queue_redraw)
 	focus_exited.connect(queue_redraw)
-	_rebuild_geometry()
+	unavailable = not _load()
+	_notice.visible = unavailable
+	_canvas.visible = not unavailable
+	_labels.visible = not unavailable
+	_layout()
+
+
+func _build_nodes() -> void:
+	_sea.color = MapPalette.DAY[MapPalette.INK]
+	_sea.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sea.show_behind_parent = true
+	_sea.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_sea)
+	_canvas.show_behind_parent = true
+	add_child(_canvas)
+	for layer in [terrain_layer, growth_layer]:
+		layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_canvas.add_child(layer)
+	terrain_layer.name = "Terrain"
+	growth_layer.name = "Growth"
+	lines_rect.name = "Lines"
+	lines_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	lines_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lines_rect.size = NATIVE
+	_canvas.add_child(lines_rect)
+	_highlight.draw.connect(_draw_highlight)
+	_canvas.add_child(_highlight)
+	_labels.name = "Labels"
+	_labels.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_labels)
+	_notice.name = "Unavailable"
+	_notice.text = UNAVAILABLE_TEXT
+	_notice.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_notice.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_notice.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(_notice)
+
+
+func _load() -> bool:
+	_geo = MapGeometry.load_world()
+	_tiles = TileBaker.load_tiles(tiles_path)
+	var tileset := TileArt.load_tileset()
+	var borders: Variant = JSON.parse_string(FileAccess.get_file_as_string(BORDERS_PATH))
+	if _geo == null or _tiles.is_empty() or tileset == null or not (borders is Dictionary) or not (borders.get("outlines") is Dictionary):
+		push_error("ArdeniaMap: map data unavailable")
+		return false
+	_outlines = borders["outlines"]
+	terrain_layer.tile_set = tileset
+	growth_layer.tile_set = tileset
+	_fill_terrain()
+	_day_texture = atlas_texture()
+	_dusk_texture = ImageTexture.create_from_image(TileArt.dusk_atlas(_day_texture.get_image()))
+	_labels.cities = _geo.cities
+	_labels.region_points = _region_centres()
+	_labels.to_local = map_to_local
+	return true
+
+
+func _fill_terrain() -> void:
+	var cells := TileArt.index()
+	var kinds: PackedByteArray = _tiles["kinds"]
+	var variants: PackedByteArray = _tiles["variants"]
+	for id in _geo.region_ids:
+		_cells[id] = {}
+	for y in TileBaker.GRID.y:
+		for x in TileBaker.GRID.x:
+			var i := y * TileBaker.GRID.x + x
+			var region := TileBaker.region_at_tile(_tiles, Vector2i(x, y))
+			var kind := TileArt.KINDS[kinds[i]]
+			var key := TileArt.foreign_key(kind, variants[i]) if region == MapBaker.FOREIGN_REGION else TileArt.variant_key(kind, variants[i])
+			terrain_layer.set_cell(Vector2i(x, y), 0, Vector2i(cells[key][0], cells[key][1]))
+			if region < _geo.region_ids.size():
+				_cells[_geo.region_ids[region]][Vector2i(x, y)] = true
+
+
+func _region_centres() -> Dictionary:
+	var out := {}
+	for id in _cells:
+		var sum := Vector2.ZERO
+		for cell in _cells[id]:
+			sum += Vector2(cell) + Vector2(0.5, 0.5)
+		out[id] = sum / maxf(1.0, _cells[id].size()) / Vector2(TileBaker.GRID)
+	return out
+
+
+func atlas_texture() -> Texture2D:
+	if terrain_layer.tile_set == null:
+		return null
+	return (terrain_layer.tile_set.get_source(0) as TileSetAtlasSource).texture
+
+
+func set_dusk(on: bool) -> void:
+	if unavailable:
+		return
+	(terrain_layer.tile_set.get_source(0) as TileSetAtlasSource).texture = _dusk_texture if on else _day_texture
+	_dusk = on
+	_apply_lines()
+
+
+func _apply_lines() -> void:
+	if unavailable:
+		return
+	var key := Vector2i(_weight, int(_dusk))
+	if not _lines.has(key):
+		_lines[key] = ImageTexture.create_from_image(MapLines.build(_tiles, _geo, MapPalette.DUSK if _dusk else MapPalette.DAY, _weight))
+	lines_rect.texture = _lines[key]
+
+
+func _layout() -> void:
+	var fit := minf(size.x / NATIVE.x, size.y / NATIVE.y)
+	_scale = floorf(fit) if fit >= 1.0 else maxf(fit, 0.01)
+	_offset = ((size - NATIVE * _scale) / 2.0).round()
+	_canvas.position = _offset
+	_canvas.scale = Vector2(_scale, _scale)
+	_labels.zoom = maxi(1, int(_scale))
+	_weight = 1 if _scale >= 1.0 else ceili(1.0 / _scale)
+	_apply_lines()
+	polygons.clear()
+	for id in _outlines:
+		var ring := PackedVector2Array()
+		for p in _outlines[id]:
+			ring.append(map_to_local(Vector2(float(p[0]), float(p[1]))))
+		polygons[String(id)] = ring
+	_redraw()
+
+
+func _redraw() -> void:
+	queue_redraw()
+	_highlight.queue_redraw()
+	_labels.queue_redraw()
+
+
+func map_to_local(p: Vector2) -> Vector2:
+	return _offset + p * NATIVE * _scale
+
+
+func local_to_map(p: Vector2) -> Vector2:
+	return (p - _offset) / (NATIVE * _scale)
+
+
+func _point(value: Array) -> Vector2:
+	return map_to_local(Vector2(float(value[0]), float(value[1])) / 100.0)
+
 
 func apply_snapshot(values: Array, selection: String) -> void:
 	regions.clear()
@@ -36,45 +199,32 @@ func apply_snapshot(values: Array, selection: String) -> void:
 		if region is Dictionary and region.has("id"):
 			regions[str(region["id"])] = region.duplicate(true)
 	selected_id = selection if polygons.has(selection) else ""
-	queue_redraw()
+	_redraw()
+
 
 func select_region(region_id: String) -> void:
 	if not polygons.has(region_id):
 		return
 	selected_id = region_id
-	queue_redraw()
+	_redraw()
 	region_selected.emit(region_id)
 
-func _rebuild_geometry() -> void:
-	var width := maxf(1.0, minf(size.x - 48.0, (size.y - 36.0) * MAP_ASPECT))
-	var extent := Vector2(width, width / MAP_ASPECT)
-	_transform = Transform2D(Vector2(extent.x / 100.0, 0), Vector2(0, extent.y / 100.0), (size - extent) / 2.0)
-	polygons.clear()
-	for region in geography.get("regions", []):
-		polygons[region["id"]] = _points(region["points"])
-	queue_redraw()
-
-func _point(value: Array) -> Vector2:
-	return _transform * Vector2(float(value[0]), float(value[1]))
-
-func _points(values: Array) -> PackedVector2Array:
-	var result := PackedVector2Array()
-	for point in values:
-		result.append(_point(point))
-	return result
 
 func region_at(position: Vector2) -> String:
-	for id in polygons:
-		if Geometry2D.is_point_in_polygon(position, polygons[id]):
-			return id
-	return ""
+	if unavailable:
+		return ""
+	var m := local_to_map(position)
+	var cell := Vector2i((m * Vector2(TileBaker.GRID)).floor())
+	var index := TileBaker.region_at_tile(_tiles, cell)
+	return _geo.region_ids[index] if index < _geo.region_ids.size() else ""
+
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		var id := region_at(event.position)
 		if id != hovered_id:
 			hovered_id = id
-			queue_redraw()
+			_redraw()
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		grab_focus()
 		select_region(region_at(event.position))
@@ -87,68 +237,30 @@ func _gui_input(event: InputEvent) -> void:
 		select_region(ids[posmod(ids.find(selected_id) + direction, ids.size())])
 		accept_event()
 
-func _color(token: String) -> Color:
-	return get_theme_color(token, "ArdeniaMap")
-
-func _border(points: PackedVector2Array, color: Color, width: float) -> void:
-	if points.size() < 2:
-		return
-	var closed := points.duplicate()
-	closed.append(points[0])
-	draw_polyline(closed, color, width, true)
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), _color("sea"))
-	if geography.is_empty():
-		return
-	for neighbor in geography.get("neighbors", []):
-		draw_colored_polygon(_points(neighbor["points"]), _color("neighbor"))
-	for id in polygons:
-		var fill := _color("neighbor")
-		if regions.has(id) and regions[id].has("pressure"):
-			fill = _color("low_pressure").lerp(_color("high_pressure"), clampf(float(regions[id]["pressure"]), 0.0, 1.0))
-		draw_colored_polygon(polygons[id], fill)
-		_border(polygons[id], _color("border"), 1.0)
-	_border(_points(geography.get("outline", [])), _color("border"), 2.0)
-	for route in geography.get("routes", []):
-		draw_polyline(_points(route["points"]), _color("rail" if route.get("kind") == "rail" else "road"), 1.3, true)
-	var ceasefire := _points(geography.get("ceasefire_line", []))
-	for index in range(ceasefire.size() - 1):
-		draw_dashed_line(ceasefire[index], ceasefire[index + 1], _color("ceasefire"), 2.8, 6.0, true, true)
-	if polygons.has(hovered_id) and hovered_id != selected_id:
-		_border(polygons[hovered_id], _color("hover"), 2.0)
-	if polygons.has(selected_id):
-		_border(polygons[selected_id], _color("selection"), 3.0)
-	var font := get_theme_default_font()
-	_label_boxes.clear()
-	for label in geography.get("labels", []):
-		if str(label["name"]).is_empty():
-			continue
-		var is_region := polygons.has(label["id"])
-		_draw_label(font, str(label["name"]), _point(label["point"]), 16 if is_region else 13, _color("ink" if is_region else "context_ink"))
-	for city in geography.get("cities", []):
-		var point := _point(city["point"])
-		var capital: bool = city.get("capital", false)
-		draw_circle(point, 4.0 if capital else 2.6, _color("selection" if capital else "ink"))
-		if capital:
-			draw_arc(point, 7.0, 0, TAU, 24, _color("selection"), 1.2, true)
-		if city.get("importance") == "national" or size.y >= ROOMY_LABEL_HEIGHT:
-			for offset in [Vector2(0, 22), Vector2(0, -12), Vector2(44, 14), Vector2(-44, 14)]:
-				if _draw_label(font, str(city["name"]), point + offset, 14, _color("ink"), true):
-					break
 	if has_focus():
 		draw_style_box(get_theme_stylebox("focus", "ArdeniaMap"), Rect2(Vector2(2, 2), size - Vector2(4, 4)))
 
-func _draw_label(font: Font, text: String, center: Vector2, font_size: int, color: Color, avoid_overlap := false) -> bool:
-	var extent := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	var position := center - Vector2(extent.x / 2.0, 0)
-	position.x = clampf(position.x, 6.0, maxf(6.0, size.x - extent.x - 6.0))
-	var bounds := Rect2(position - Vector2(0, font.get_ascent(font_size)), extent).grow(2)
-	if avoid_overlap:
-		for previous in _label_boxes:
-			if bounds.intersects(previous):
-				return false
-	_label_boxes.append(bounds)
-	draw_string_outline(font, position, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 4, _color("sea"))
-	draw_string(font, position, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
-	return true
+
+func _draw_highlight() -> void:
+	if _cells.has(hovered_id) and hovered_id != selected_id:
+		_outline(_cells[hovered_id], HOVER_WIDTH * _weight, MapPalette.DAY[MapPalette.SNOW])
+	if _cells.has(selected_id):
+		_outline(_cells[selected_id], SELECTION_WIDTH * _weight, MapPalette.DAY[MapPalette.GOLD])
+
+
+func _outline(cells: Dictionary, width: float, colour: Color) -> void:
+	var tile := float(TileBaker.TILE)
+	for cell in cells:
+		var origin := Vector2(cell) * tile
+		for side in SIDES:
+			if cells.has(cell + side):
+				continue
+			var at := origin + Vector2(tile - width if side.x > 0 else 0.0, tile - width if side.y > 0 else 0.0)
+			var extent := Vector2(width if side.x != 0 else tile, width if side.y != 0 else tile)
+			_highlight.draw_rect(Rect2(at, extent), colour)
+		for corner in CORNERS:
+			if cells.has(cell + Vector2i(corner.x, 0)) and cells.has(cell + Vector2i(0, corner.y)) and not cells.has(cell + corner):
+				var at := origin + Vector2(tile - width if corner.x > 0 else 0.0, tile - width if corner.y > 0 else 0.0)
+				_highlight.draw_rect(Rect2(at, Vector2(width, width)), colour)
