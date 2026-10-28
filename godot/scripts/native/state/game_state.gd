@@ -109,6 +109,8 @@ var law_history: Array[Law] = []
 ## The government's ministers — Python's `Cabinet` is just `list[Minister]`
 ## plus aggregate helpers, so no wrapper type is ported (see header note).
 var ministers: Array[Minister] = []
+## Outstanding appointment choices, keyed by core portfolio. Candidates are typed Ministers.
+var cabinet_shortlists: Dictionary = {}
 
 ## Every active time-shaped policy effect currently in flight (see
 ## modifier.gd). Task 3 ages these each simulated day/month.
@@ -214,6 +216,7 @@ func to_dict() -> Dictionary:
 		"enacted_laws": enacted_law_dicts,
 		"law_history": law_history_dicts,
 		"ministers": minister_dicts,
+		"cabinet_shortlists": _cabinet_shortlists_to_dict(),
 		"modifiers": modifier_dicts,
 		"ruling_faction_id": ruling_faction_id,
 		"civil_war_risk": civil_war_risk,
@@ -375,6 +378,26 @@ static func from_dict(data: Dictionary) -> GameState:
 				var minister := Minister.from_dict(m_data)
 				if minister != null:
 					state.ministers.append(minister)
+	var shortlists_data: Variant = data.get("cabinet_shortlists", {})
+	if data.has("cabinet_shortlists") and not (shortlists_data is Dictionary):
+		push_error("GameState.from_dict: malformed cabinet_shortlists")
+		return null
+	if shortlists_data is Dictionary:
+		for portfolio in shortlists_data:
+			var list_data: Variant = shortlists_data[portfolio]
+			if not (portfolio is String) or not (list_data is Array):
+				push_error("GameState.from_dict: malformed cabinet shortlist")
+				return null
+			var shortlist: Array[Minister] = []
+			for candidate_data in list_data:
+				if not (candidate_data is Dictionary):
+					push_error("GameState.from_dict: malformed cabinet candidate")
+					return null
+				var candidate := Minister.from_dict(candidate_data)
+				if candidate == null:
+					return null
+				shortlist.append(candidate)
+			state.cabinet_shortlists[portfolio] = shortlist
 	var modifiers_data: Variant = data.get("modifiers", [])
 	if data.has("modifiers") and not (modifiers_data is Array):
 		push_error("GameState.from_dict: malformed 'modifiers', expected an Array, got %s" % [modifiers_data])
@@ -459,3 +482,15 @@ static func _bool_field(data: Dictionary, key: String, fallback: bool) -> bool:
 	if typeof(v) == TYPE_BOOL:
 		return v
 	return fallback
+
+func _cabinet_shortlists_to_dict() -> Dictionary:
+	var out := {}
+	for portfolio in cabinet_shortlists:
+		var rows: Variant = cabinet_shortlists[portfolio]
+		var serial: Array = []
+		if rows is Array:
+			for candidate in rows:
+				if candidate is Minister:
+					serial.append((candidate as Minister).to_dict())
+		out[portfolio] = serial
+	return out

@@ -37,6 +37,7 @@ const MonthlyDigestScript = preload("res://scripts/native/presentation/monthly_d
 const RegionalProgramActionsScript = preload("res://scripts/native/actions/regional_program_actions.gd")
 const BudgetActionsScript = preload("res://scripts/native/actions/budget_actions.gd")
 const LawActionsScript = preload("res://scripts/native/actions/law_actions.gd")
+const CabinetActionsScript = preload("res://scripts/native/actions/cabinet_actions.gd")
 
 var _state: GameState = null
 var _busy := false
@@ -259,6 +260,33 @@ func withdraw_law() -> Dictionary:
 	_busy = false
 	return result
 
+## Native cabinet appointment boundary. Shortlists and appointments are
+## engine-owned; callers receive detached snapshots only after mutations.
+func issue_cabinet_shortlist(portfolio: String) -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = CabinetActionsScript.issue_shortlist(_state, portfolio)
+	if result.get("ok", false):
+		result["snapshot"] = snapshot()
+		state_changed.emit(result["snapshot"])
+	_busy = false
+	return result
+
+func appoint_minister(portfolio: String, candidate_id: String) -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = CabinetActionsScript.appoint(_state, portfolio, candidate_id)
+	if result.get("ok", false):
+		result["snapshot"] = snapshot()
+		state_changed.emit(result["snapshot"])
+	_busy = false
+	return result
 ## Persists the live campaign under the requested save slot. SaveStore's result
 ## passes straight through; saves never mutate or emit.
 func save(slot: String) -> Dictionary:
@@ -427,6 +455,7 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 		"decisions": [],
 		"budget": _budget_snapshot(state),
 		"legislation": LawActionsScript.read_model(state).duplicate(true),
+		"cabinet": CabinetActionsScript.read_model(state).duplicate(true),
 		"ministries": _ministries_snapshot(state),
 		"households": _household_snapshot(state),
 		"digest": state.monthly_digest.duplicate(),

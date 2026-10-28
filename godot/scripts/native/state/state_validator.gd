@@ -47,6 +47,7 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_relation_ranges(state, errors)
 	_validate_date(state, errors)
 	_validate_ministers(state, errors)
+	_validate_cabinet_shortlists(state, errors)
 	_validate_households(state, errors)
 	_validate_budgets(state, errors)
 	_validate_laws(state, errors)
@@ -201,6 +202,24 @@ static func _validate_ministers(state: GameState, errors: Array[String]) -> void
 		if m.trait_id != "" and not Minister.TRAIT_EFFECTS.has(m.trait_id):
 			errors.append("minister '%s' has an unknown trait '%s'" % [m.id, m.trait_id])
 
+static func _validate_cabinet_shortlists(state: GameState, errors: Array[String]) -> void:
+	var seen_candidate_ids := {}
+	for portfolio in state.cabinet_shortlists:
+		if not portfolio in ["Finance", "Interior", "Foreign Affairs", "Defense", "Economy", "Justice"]:
+			errors.append("cabinet shortlist has unknown portfolio '%s'" % portfolio)
+			continue
+		var rows: Variant = state.cabinet_shortlists[portfolio]
+		if not (rows is Array) or rows.size() != 3:
+			errors.append("cabinet shortlist '%s' must contain exactly three candidates" % portfolio)
+			continue
+		for candidate in rows:
+			if not (candidate is Minister):
+				errors.append("cabinet shortlist '%s' contains malformed candidate" % portfolio)
+				continue
+			var minister: Minister = candidate
+			if minister.portfolio != portfolio or minister.id == "" or seen_candidate_ids.has(minister.id):
+				errors.append("cabinet shortlist '%s' has inconsistent candidate identity" % portfolio)
+			seen_candidate_ids[minister.id] = true
 
 static func _validate_households(state: GameState, errors: Array[String]) -> void:
 	for key in state.households:
