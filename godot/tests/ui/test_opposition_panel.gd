@@ -53,6 +53,22 @@ func _opposition() -> Dictionary:
 	return game.snapshot().get("opposition", {})
 
 
+func _test_the_menu_offers_an_opposition_start(t) -> void:
+	var flow := root.get_node("GameFlow")
+	var menu: Node = (load("res://scenes/menu.tscn") as PackedScene).instantiate()
+	root.add_child(menu)
+	await _frames(1)
+	var button: Button = menu.find_child("OppositionCampaignButton", true, false)
+	t.truth(button != null and button.custom_minimum_size == (menu.find_child("NewCampaignButton", true, false) as Button).custom_minimum_size,
+		"the menu offers an opposition start in the same style")
+	flow.pending_role = "contextual"
+	menu.call("_new_campaign", "opposition")
+	t.equal(flow.pending_role, "opposition", "which opens the campaign in opposition")
+	menu.call("_new_campaign", "contextual")
+	t.equal(flow.pending_role, "contextual", "and New Campaign keeps the ordinary opening")
+	menu.queue_free()
+
+
 func _run() -> void:
 	await _test_the_desk_follows_the_players_side(t)
 	await _test_every_opposition_action_works_through_the_panel(t)
@@ -61,6 +77,7 @@ func _run() -> void:
 		DirAccess.remove_absolute("user://saves/%s.json%s" % [TEST_SLOT, suffix])
 	if app != null:
 		app.queue_free()
+	await _test_the_menu_offers_an_opposition_start(t)
 	quit(t.finish())
 
 

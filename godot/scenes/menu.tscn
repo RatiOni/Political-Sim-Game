@@ -42,6 +42,13 @@ custom_minimum_size = Vector2(280, 48)
 layout_mode = 2
 text = "New Campaign"
 
+[node name="OppositionCampaignButton" type="Button" parent="Center/Layout"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 48)
+layout_mode = 2
+text = "New Campaign in Opposition"
+tooltip_text = "Begin as Leader of the Opposition, with another party in government"
+
 [node name="ContinueButton" type="Button" parent="Center/Layout"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(280, 48)
