@@ -8,9 +8,35 @@ extends RefCounted
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 const HouseholdsSimScript = preload("res://scripts/native/sim/households_sim.gd")
 
+## How the public reads the economy. Growth is felt but discounted (people
+## notice prices and jobs before GDP). Mild inflation is tolerated; past a
+## few percent it bites hard, because it eats every household's income at
+## once. A debt burden only registers once it is plainly heavy.
+const SIGNAL_GROWTH_REFERENCE := 0.02
+const SIGNAL_GROWTH_WEIGHT := 2.5
+const SIGNAL_UNEMPLOYMENT_WEIGHT := 0.6
+const SIGNAL_INFLATION_WEIGHT := 0.3
+const SIGNAL_INFLATION_PAIN_ABOVE := 0.06
+const SIGNAL_INFLATION_PAIN_WEIGHT := 1.2
+const SIGNAL_DEBT_PAIN_ABOVE := 0.90
+const SIGNAL_DEBT_PAIN_WEIGHT := 0.25
+
+## Public services as people experience them. Ardenians expect roughly the
+## service they had in 1993; noticeably better earns credit, a state that
+## thins out or vanishes costs the government that let it. In opposition the
+## same collapse is the player's opportunity.
+const SERVICES_EXPECTED := 0.58
+const SERVICES_APPROVAL_WEIGHT := 0.40
+## A state whose ministries cannot deliver is a weaker state, whoever runs it.
+const STATE_PRESENCE_WEIGHT := 0.15
+
 static func economic_signal(state: GameState) -> float:
 	var econ := state.country.economy
-	return (econ.growth_rate - 0.02) * 4.0 - econ.unemployment * 0.5 - econ.inflation * 0.3
+	return ((econ.growth_rate - SIGNAL_GROWTH_REFERENCE) * SIGNAL_GROWTH_WEIGHT
+		- econ.unemployment * SIGNAL_UNEMPLOYMENT_WEIGHT
+		- econ.inflation * SIGNAL_INFLATION_WEIGHT
+		- maxf(0.0, econ.inflation - SIGNAL_INFLATION_PAIN_ABOVE) * SIGNAL_INFLATION_PAIN_WEIGHT
+		- maxf(0.0, econ.public_debt_pct - SIGNAL_DEBT_PAIN_ABOVE) * SIGNAL_DEBT_PAIN_WEIGHT)
 
 static func national_pressure(state: GameState) -> float:
 	if state.regions.is_empty():
@@ -48,7 +74,11 @@ static func update_approval(state: GameState) -> void:
 	var household_mood := (HouseholdsSimScript.national_confidence(state) - 0.5) * 2.0
 	if not state.player.in_government:
 		household_mood *= -1.0
-	var target := 0.5 + economic_signal(state) * 0.25 + faction_signal * 0.15 + household_mood * 0.12 + approval_bias
+	var services_mood := (HouseholdsSimScript.national_service_access(state) - SERVICES_EXPECTED) * SERVICES_APPROVAL_WEIGHT
+	if not state.player.in_government:
+		services_mood *= -1.0
+	var target := (0.5 + economic_signal(state) * 0.25 + faction_signal * 0.15 + household_mood * 0.12
+		+ services_mood + approval_bias)
 	target = clampf(target, 0.05, 0.95)
 	state.player.approval = clampf(state.player.approval + (target - state.player.approval) * 0.05, 0.0, 1.0)
 
@@ -92,7 +122,18 @@ static func stability_breakdown(state: GameState) -> Dictionary:
 		"Cabinet dysfunction": -risk * 0.15,
 		"Unrest": -unrest * 0.15,
 		"Coalition cohesion": -(1.0 - cohesion) * 0.08,
+		"State presence": -(1.0 - _mean_delivery(state)) * STATE_PRESENCE_WEIGHT,
 	}
+
+
+## Average delivery across the core ministries (1.0 before any are tracked).
+static func _mean_delivery(state: GameState) -> float:
+	if state.ministries.is_empty():
+		return 1.0
+	var total := 0.0
+	for key in state.ministries:
+		total += (state.ministries[key] as MinistryState).delivery
+	return total / float(state.ministries.size())
 
 static func update_stability(state: GameState) -> void:
 	if state.player == null or state.country == null or state.country.economy == null:

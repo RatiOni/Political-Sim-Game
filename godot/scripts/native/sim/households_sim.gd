@@ -1,11 +1,11 @@
 class_name HouseholdsSim
 extends RefCounted
 
-## Design-reference port of engine/households.py. Task 10 owns the pulse:
-## regions first, households next, then approval/stability. No UI dependency.
-## Seeding is additive and requires existing Ardenian regions. Readers are
-## deliberately PURE: unlike Python's readers they never call ensure; the
-## caller seeds explicitly or calls simulate. No balances or save fields change.
+## How national conditions land on people: six social groups in each region,
+## each exposed differently to jobs, prices, public services and welfare.
+## Runs after regions and before approval/stability. Seeding is additive and
+## requires existing Ardenian regions. Readers are deliberately pure: they
+## never seed; the caller seeds explicitly or calls simulate.
 
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 
@@ -76,14 +76,24 @@ static func _hardship_target(region: RegionState, h: HouseholdGroupState, defini
 		+ region.pressure * 0.15, 0.0, 1.0)
 
 
+## How well funded one service is, against what a normal state of this
+## economy's size spends on it (not against today's total, which would make
+## an across-the-board cut invisible). A deeply starved service reads as
+## deeply starved rather than flooring at half.
+const ENVELOPE_RATIO_MIN := 0.10
+const ENVELOPE_RATIO_MAX := 1.50
+
 static func _envelope_ratio(state: GameState, envelope_id: String, catalogs: Dictionary) -> float:
 	if state.active_budget == null:
 		return 1.0
+	var norm_total := state.country.economy.expected_primary_spending()
+	if norm_total <= 0.0:
+		norm_total = state.active_budget.expenditure()
 	for envelope in catalogs.get("budget", {}).get("envelopes", []):
 		if String(envelope["id"]) == envelope_id:
-			var expected := state.active_budget.expenditure() * float(envelope["share"])
+			var expected := norm_total * float(envelope["share"])
 			var actual := float(state.active_budget.allocations.get(envelope_id, expected))
-			return clampf(actual / maxf(1.0, expected), 0.50, 1.50)
+			return clampf(actual / maxf(1.0, expected), ENVELOPE_RATIO_MIN, ENVELOPE_RATIO_MAX)
 	return 1.0
 
 
@@ -97,7 +107,7 @@ static func _public_administration_delivery(state: GameState) -> float:
 
 static func _delivery(state: GameState, envelope_id: String, catalogs: Dictionary) -> float:
 	return clampf(_envelope_ratio(state, envelope_id, catalogs)
-		* _public_administration_delivery(state), 0.25, 1.25)
+		* _public_administration_delivery(state), 0.10, 1.25)
 
 
 static func welfare_delivery(state: GameState) -> float:

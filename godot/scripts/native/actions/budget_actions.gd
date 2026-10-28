@@ -92,6 +92,10 @@ static func vote(state: GameState) -> Dictionary:
 	var passed := bool(projection["passed"])
 	if passed:
 		plan.status = "approved"
+		if plan.year == state.year:
+			# An in-year settlement ends the emergency resolution at once.
+			state.pending_budget = null
+			BudgetSimScript.activate(state, plan)
 	else:
 		plan.status = "rejected"
 		state.budget_history.append(plan)
@@ -223,7 +227,7 @@ static func validation_error(state: GameState, plan: AnnualBudget) -> String:
 		if not (typeof(value) in [TYPE_INT, TYPE_FLOAT]) or not is_finite(float(value)) or float(value) < 0.0:
 			return "Appropriations must be finite non-negative numbers."
 	var active := _active_view(state, catalog["envelopes"])
-	var expected_year := maxi(state.year + 1, active.year + 1)
+	var expected_year := target_year(state, active)
 	if plan.year != expected_year:
 		return "The next budget must be for %s." % expected_year
 	var low := active.expenditure() * BudgetSimScript.MIN_TOTAL_FACTOR
@@ -231,6 +235,14 @@ static func validation_error(state: GameState, plan: AnnualBudget) -> String:
 	if plan.expenditure() < low or plan.expenditure() > high:
 		return "Total appropriations must remain within 30% of the current budget."
 	return ""
+
+
+## The fiscal year a new plan is for. Normally next year; while the state is
+## on an emergency resolution, a plan for THIS year ends the emergency.
+static func target_year(state: GameState, active: AnnualBudget) -> int:
+	if BudgetSimScript.is_emergency(state) and active.year == state.year:
+		return state.year
+	return maxi(state.year + 1, active.year + 1)
 
 
 static func proposal_cost(state: GameState, plan: AnnualBudget) -> float:
@@ -266,11 +278,12 @@ static func _build_plan(state: GameState, adjustments: Dictionary) -> Dictionary
 			return _error("Each appropriation must use an allowed adjustment step.")
 	var active := _active_view(state, catalog["envelopes"])
 	var plan := AnnualBudget.new()
-	plan.year = maxi(state.year + 1, active.year + 1)
+	plan.year = target_year(state, active)
 	plan.status = "draft"
 	plan.source = "player"
 	plan.proposed_by = state.player.faction_id if state.player != null else ""
 	plan.forecast_revenue = state.country.economy.budget.revenue
+	plan.economy_basis = state.country.economy.structural_revenue
 	for item in catalog["envelopes"]:
 		var id := String(item["id"])
 		var change := float(adjustments.get(id, 0.0))

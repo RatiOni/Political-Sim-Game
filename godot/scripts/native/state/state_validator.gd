@@ -388,7 +388,9 @@ static func _validate_budgets(state: GameState, errors: Array[String]) -> void:
 	if state.active_budget != null:
 		_validate_budget(state.active_budget, "active_budget", "active", state.year, expected, portfolios, errors)
 	if state.pending_budget != null:
-		_validate_budget(state.pending_budget, "pending_budget", "pending", state.year, expected, portfolios, errors)
+		# During an emergency resolution the pending plan may be for this year.
+		var pending_year := state.year if BudgetSim.is_emergency(state) 			and state.pending_budget.year == state.year else state.year + 1
+		_validate_budget(state.pending_budget, "pending_budget", "pending", pending_year - 1, expected, portfolios, errors)
 	for i in range(state.budget_history.size()):
 		_validate_budget(state.budget_history[i], "budget_history[%s]" % i, "history", state.year, expected, portfolios, errors)
 

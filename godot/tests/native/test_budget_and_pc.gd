@@ -1,16 +1,16 @@
 extends SceneTree
 
-## Standalone headless test for Phase 2 Task 5: BudgetSim (annual budget
-## rollover) and PoliticalCapital (governing overhead + regen).
+## Standalone headless test for BudgetSim (the fiscal year) and
+## PoliticalCapital (governing bandwidth).
 ## Run via:
 ##   Godot --headless --path godot --script res://tests/native/test_budget_and_pc.gd
 ##
-## These check the native game behaviours: a fresh campaign gets a
-## seeded budget, an approved plan activates at January rollover, a
-## no-plan government eats the continuing-budget cut, PC upkeep sums the
-## commitments that genuinely exist natively today, PC regen respects its
-## floor) — no comparison against Python is made or needed (task-5-brief.md:
-## no oracle/parity requirement).
+## Checks intended behaviour: a fresh campaign gets a seeded budget; an
+## approved plan takes effect on 1 January; a government with no plan runs
+## on an emergency resolution whose costs mount monthly, freezes new
+## programmes, loads every ministry, and can be ended by passing a budget
+## for the current year — and is never better than a settlement (review
+## S2); PC upkeep sums real commitments and regeneration uses a soft limit.
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
@@ -153,41 +153,134 @@ func _test_approved_pending_becomes_active(t, content: Dictionary) -> void:
 		"a second January call does not activate the approved settlement twice")
 
 
-func _test_no_plan_gets_continuing_budget_cut(t, content: Dictionary) -> void:
-	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
-	t.truth(state != null, "campaign builds")
-	if state == null:
-		return
-	t.truth(state.player.in_government, "sanity: default Ardenia opening is in government")
-
-	BudgetSimScript.process_fiscal_year(state)   # seeds active_budget for state.year (1993)
-	var original_allocations: Dictionary = state.active_budget.allocations.duplicate(true)
-	var original_total := _sum(original_allocations)
-
+## Starts the next fiscal year with no budget passed: the emergency begins.
+static func _enter_emergency(state: GameState) -> void:
+	BudgetSimScript.process_fiscal_year(state)   # seeds the opening settlement
 	state.year += 1
 	state.month = 1
 	state.pending_budget = null
-	var approval_before: float = state.player.approval
-	var stability_before: float = state.stability_value
-
 	BudgetSimScript.process_fiscal_year(state)
 
-	t.truth(state.active_budget != null, "active_budget still set")
-	if state.active_budget != null:
-		# activate() always stamps status="active" on whatever it enacts,
-		# even a continuing rollover — mirrors engine/budget.py: activate,
-		# which does the same before storing (Python's continuing_budget()
-		# builds status="continuing", but activate() overwrites it). `source`
-		# is what actually distinguishes a continuing rollover afterward.
-		t.equal(state.active_budget.status, "active", "activation always stamps status active, even for a continuing rollover")
-		t.equal(state.active_budget.source, "continuing", "continuing budget is marked as such")
-		t.near(_sum(state.active_budget.allocations), original_total * (1.0 - BudgetSimScript.CONTINUING_CUT),
-			0.5, "continuing budget applies the 3%% reduction to the prior total")
-	t.equal(state.pending_budget, null, "pending_budget stays cleared")
-	t.near(state.player.approval, maxf(0.0, approval_before - 0.015), 0.0001,
-		"budget impasse costs the player approval")
-	t.near(state.stability_value, maxf(0.0, stability_before - 0.02), 0.0001,
-		"budget impasse costs government stability")
+
+func _test_no_plan_starts_an_emergency_resolution(t, content: Dictionary) -> void:
+	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	t.truth(state.player.in_government, "sanity: default Ardenia opening is in government")
+	BudgetSimScript.process_fiscal_year(state)
+	var original_total := _sum(state.active_budget.allocations)
+	var approval_before: float = state.player.approval
+	var stability_before: float = state.stability_value
+	state.year += 1
+	state.month = 1
+	BudgetSimScript.process_fiscal_year(state)
+
+	t.equal(state.active_budget.source, "continuing", "a missing budget puts the state on an emergency resolution")
+	t.truth(BudgetSimScript.is_emergency(state), "is_emergency reports it")
+	t.near(_sum(state.active_budget.allocations), original_total, 0.5,
+		"spending carries forward unchanged: the state keeps running, nothing is quietly saved")
+	t.equal(state.active_budget.year, state.year, "the resolution covers the new fiscal year")
+	t.truth(state.player.approval < approval_before, "the failure costs approval on day one")
+	t.truth(state.stability_value < stability_before, "and government stability")
+
+
+func _test_emergency_costs_mount_each_month(t, content: Dictionary) -> void:
+	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	_enter_emergency(state)
+	var drops: Array[float] = []
+	for m in range(2, 10):
+		state.month = m
+		var before: float = state.player.approval
+		BudgetSimScript.process_fiscal_year(state)
+		drops.append(before - state.player.approval)
+	t.truth(drops[0] > 0.0, "every month on emergency rules costs approval")
+	t.truth(drops[drops.size() - 1] > drops[0], "and the cost grows the longer it drags on (%.4f -> %.4f)" % [drops[0], drops[drops.size() - 1]])
+	t.equal(state.active_budget.emergency_months, 8, "the resolution counts its months")
+
+
+func _test_emergency_freezes_new_programmes(t, content: Dictionary) -> void:
+	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	state.player.political_capital = 100.0
+	_enter_emergency(state)
+	var region_id := String(state.regions.keys()[0])
+	var options: Array = RegionalProgramActions.options_for(state, region_id, content)
+	var any_eligible := false
+	var frozen_reason := false
+	for option in options:
+		if option.get("eligible", false):
+			any_eligible = true
+		if String(option.get("disabled_reason", "")).contains("emergency budget"):
+			frozen_reason = true
+	t.truth(not any_eligible, "no new regional programme can start under an emergency budget")
+	t.truth(frozen_reason, "and the player is told why")
+
+
+func _test_emergency_loads_every_ministry_more_over_time(t, content: Dictionary) -> void:
+	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	_enter_emergency(state)
+	var first := MinistriesSim.workload_breakdown(state, "Finance")
+	t.truth(first.has("emergency budget rules"), "ministries carry the extra work of emergency rules")
+	for m in range(2, 8):
+		state.month = m
+		BudgetSimScript.process_fiscal_year(state)
+	var later := MinistriesSim.workload_breakdown(state, "Interior")
+	t.truth(float(later["emergency budget rules"]) > float(first["emergency budget rules"]),
+		"and the load grows as the emergency lasts")
+	t.truth(float(later["emergency budget rules"]) <= BudgetSimScript.EMERGENCY_MAX_WORKLOAD,
+		"up to a bound")
+
+
+func _test_in_year_budget_ends_the_emergency(t, content: Dictionary) -> void:
+	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	state.player.political_capital = 100.0
+	_enter_emergency(state)
+	state.month = 3
+	var proposed: Dictionary = BudgetActions.propose(state, {})
+	t.truth(proposed.get("ok", false), "a budget can be tabled in the middle of an emergency (%s)" % proposed.get("error", ""))
+	if not proposed.get("ok", false):
+		return
+	t.equal(state.pending_budget.year, state.year, "it is a plan for THIS year, not next")
+	for f in state.country.factions:
+		if not f.in_coalition:
+			BudgetActions.lobby(state, f.id)
+	var vote: Dictionary = BudgetActions.vote(state)
+	t.truth(vote.get("passed", false), "the neutral settlement passes")
+	if vote.get("passed", false):
+		t.truth(not BudgetSimScript.is_emergency(state), "passing it ends the emergency at once")
+		t.equal(state.active_budget.source, "player", "the voted plan is now in force")
+		t.equal(state.pending_budget, null, "nothing is left waiting for January")
+		t.equal(StateValidator.validate(state).size(), 0, "the resulting state is valid")
+
+
+func _test_failure_is_never_better_than_a_settlement(t, content: Dictionary) -> void:
+	var failed: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	var governed: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	_enter_emergency(failed)
+	BudgetSimScript.process_fiscal_year(governed)
+	governed.year += 1
+	governed.month = 1
+	var plan := AnnualBudget.from_dict(governed.active_budget.to_dict())
+	plan.year = governed.year
+	plan.status = "approved"
+	plan.source = "player"
+	governed.pending_budget = plan
+	BudgetSimScript.process_fiscal_year(governed)
+	for m in range(2, 13):
+		for s in [failed, governed]:
+			s.month = m
+			BudgetSimScript.process_fiscal_year(s)
+	t.truth(failed.player.approval < governed.player.approval, "a year without a budget ends with lower approval")
+	t.truth(failed.stability_value < governed.stability_value, "and a less stable government")
+
+
+func _test_emergency_months_survive_save_and_reload(t, content: Dictionary) -> void:
+	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	_enter_emergency(state)
+	for m in range(2, 6):
+		state.month = m
+		BudgetSimScript.process_fiscal_year(state)
+	var copy := AnnualBudget.from_dict(state.active_budget.to_dict())
+	t.equal(copy.emergency_months, state.active_budget.emergency_months,
+		"a reload cannot reset how long an emergency has lasted")
+	t.equal(copy.source, "continuing", "and still knows it is an emergency")
 
 
 func _test_opposition_player_gets_government_ai_budget(t, content: Dictionary) -> void:
@@ -322,6 +415,27 @@ func _test_regen_uses_a_soft_limit_not_a_hard_one_hundred(t, content: Dictionary
 	PoliticalCapitalScript.regenerate(above)
 	t.truth(above.player.political_capital <= PoliticalCapitalScript.ABSOLUTE_LIMIT,
 		"the extreme-state safety bound prevents unbounded accumulation")
+func _test_tabled_plan_keeps_pace_but_record_stays_exact(t, content: Dictionary) -> void:
+	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	BudgetSimScript.process_fiscal_year(state)
+	var plan := AnnualBudget.from_dict(state.active_budget.to_dict())
+	plan.year = state.year + 1
+	plan.status = "approved"
+	plan.source = "player"
+	plan.economy_basis = state.country.economy.structural_revenue
+	var voted := plan.allocations.duplicate()
+	var voted_total := _sum(voted)
+	state.pending_budget = plan
+	state.country.economy.structural_revenue *= 1.10   # the economy grew while the plan waited
+	state.year += 1
+	state.month = 1
+	BudgetSimScript.process_fiscal_year(state)
+	t.near(_sum(state.active_budget.allocations), voted_total * 1.10, 0.5,
+		"a plan tabled months earlier keeps pace with growth when it takes effect")
+	t.equal(state.budget_history[-1].allocations, voted,
+		"but the history records exactly what parliament voted")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 
@@ -334,7 +448,14 @@ func _initialize() -> void:
 		_test_default_allocations_matches_envelope_shares(t, content)
 
 		_test_approved_pending_becomes_active(t, content)
-		_test_no_plan_gets_continuing_budget_cut(t, content)
+		_test_no_plan_starts_an_emergency_resolution(t, content)
+		_test_emergency_costs_mount_each_month(t, content)
+		_test_emergency_freezes_new_programmes(t, content)
+		_test_emergency_loads_every_ministry_more_over_time(t, content)
+		_test_in_year_budget_ends_the_emergency(t, content)
+		_test_failure_is_never_better_than_a_settlement(t, content)
+		_test_emergency_months_survive_save_and_reload(t, content)
+		_test_tabled_plan_keeps_pace_but_record_stays_exact(t, content)
 		_test_opposition_player_gets_government_ai_budget(t, content)
 
 		_test_upkeep_zero_on_a_fresh_campaign(t, content)

@@ -456,7 +456,7 @@ func _test_simulate_grows_backlog_and_months_overloaded_when_capacity_falls_shor
 
 	t.near(defense.capacity, 1.45, 0.01, "capacity matches the hand-computed value")
 	t.near(defense.workload, 1.65, 0.0001, "workload includes the civil-war crisis load")
-	t.near(defense.backlog, 1.0 + 1.65 - 1.45, 0.001, "backlog grows by exactly the shortfall")
+	t.near(defense.backlog, 1.0 + defense.workload - defense.capacity, 0.001, "backlog grows by exactly the shortfall")
 	t.equal(defense.months_overloaded, 1, "months_overloaded increments while overloaded")
 	t.truth(defense.delivery < 1.0, "delivery is degraded while overloaded")
 
@@ -494,6 +494,70 @@ func _test_simulate_updates_workload_breakdown_snapshot(t, content: Dictionary) 
 	t.near(float(defense.workload_breakdown.get("civil war", -1.0)), 1.00, 0.0001,
 		"persisted breakdown matches Defense's crisis load")
 
+# ── Funding is a real decision (review S4) ───────────────────────────────
+
+func _test_funding_curve_has_three_zones(t, _content: Dictionary) -> void:
+	var f := func(r: float) -> float: return MinistriesSimScript.funding_factor(r)
+	t.truth(f.call(0.30) < f.call(0.60) * 0.6,
+		"below the operating minimum a department loses capacity fast (%.2f at 30%%)" % f.call(0.30))
+	t.near(f.call(1.0), 1.0, 1e-9, "full funding is full capacity")
+	t.truth(f.call(1.5) - f.call(1.0) < f.call(1.0) - f.call(0.6),
+		"money above full funding buys less than money below it")
+	t.truth(f.call(2.0) - f.call(1.5) < f.call(1.5) - f.call(1.0), "and keeps buying less")
+	t.truth(f.call(10.0) <= 1.0 + MinistriesSimScript.MAX_FUNDING_BONUS, "with a firm ceiling")
+	t.truth(f.call(0.0) >= 0.0, "and no negative capacity")
+
+
+func _test_starved_ministry_delivers_materially_less(t, content: Dictionary) -> void:
+	var funded: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	var starved: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	for s in [funded, starved]:
+		BudgetSim.ensure_budget_state(s)
+		MinistriesSimScript.ensure_ministries(s)
+	for key in starved.active_budget.allocations.keys():
+		starved.active_budget.allocations[key] = float(starved.active_budget.allocations[key]) * 0.40
+	MinistriesSimScript.simulate(funded)
+	MinistriesSimScript.simulate(starved)
+	var a: MinistryState = funded.ministries["Interior"]
+	var b: MinistryState = starved.ministries["Interior"]
+	t.truth(b.capacity < a.capacity * 0.6,
+		"a department on 40%% of its budget has well under 60%% of the capacity (%.2f vs %.2f)" % [b.capacity, a.capacity])
+	t.truth(b.delivery < a.delivery, "and delivers less")
+
+
+func _test_good_minister_cannot_rescue_a_starved_department(t, content: Dictionary) -> void:
+	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	_clear_ministers(state)
+	_assign_minister(state, "Defense", 1.0, 1.0)
+	state.active_budget = _synthetic_budget(state.year)
+	var ministries: Dictionary = MinistriesSimScript.ensure_ministries(state)
+	var defense: MinistryState = ministries["Defense"]
+	var starved_best := MinistriesSimScript.operating_capacity(state, defense)
+	state.active_budget.allocations["national_defense"] = float(state.active_budget.allocations["national_defense"]) * 0.30
+	starved_best = MinistriesSimScript.operating_capacity(state, defense)
+	_clear_ministers(state)
+	_assign_minister(state, "Defense", 0.5, 0.5)
+	state.active_budget = _synthetic_budget(state.year)
+	var funded_average := MinistriesSimScript.operating_capacity(state, defense)
+	t.truth(float(starved_best[0]) < float(funded_average[0]),
+		"the best possible minister on 30%% funding does worse than an ordinary one fully funded (%.2f vs %.2f)" % [float(starved_best[0]), float(funded_average[0])])
+
+
+func _test_flat_money_falls_behind_a_growing_economy(t, content: Dictionary) -> void:
+	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
+	BudgetSim.ensure_budget_state(state)
+	MinistriesSimScript.ensure_ministries(state)
+	var frozen := state.active_budget.allocations.duplicate()
+	MinistriesSimScript.simulate(state)
+	var ratio0: float = (state.ministries["Finance"] as MinistryState).funding_ratio
+	for _i in range(60):
+		state.active_budget.allocations = frozen.duplicate()   # the same money, five years running
+		MinistriesSimScript.simulate(state)
+	var ratio5: float = (state.ministries["Finance"] as MinistryState).funding_ratio
+	t.truth(ratio5 < ratio0 - 0.05,
+		"five years of unchanged money is a real cut once the economy has grown (%.3f -> %.3f)" % [ratio0, ratio5])
+	t.truth(ratio5 < 1.0, "so no ministry drifts into permanent free surplus capacity")
+
 
 func _initialize() -> void:
 	var t = TestSupportScript.new()
@@ -526,5 +590,9 @@ func _initialize() -> void:
 		_test_simulate_grows_backlog_and_months_overloaded_when_capacity_falls_short(t, content)
 		_test_simulate_clamps_backlog_at_max(t, content)
 		_test_simulate_updates_workload_breakdown_snapshot(t, content)
+		_test_funding_curve_has_three_zones(t, content)
+		_test_starved_ministry_delivers_materially_less(t, content)
+		_test_good_minister_cannot_rescue_a_starved_department(t, content)
+		_test_flat_money_falls_behind_a_growing_economy(t, content)
 
 	quit(t.finish())

@@ -79,6 +79,8 @@ static func _disabled_reason(state: GameState, region_id: String, _program_id: S
 		return "No campaign is active."
 	if not state.player.in_government:
 		return "Regional programmes can only be launched from government."
+	if BudgetSim.is_emergency(state):
+		return "No new programmes can start while the state runs on an emergency budget. Pass a budget first."
 	if not state.regions.has(region_id) or not (state.regions[region_id] is RegionState):
 		return "Unknown region."
 	for active in state.regional_programs:

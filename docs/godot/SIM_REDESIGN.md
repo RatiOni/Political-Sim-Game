@@ -1,6 +1,8 @@
 # Ardenia Godot simulation redesign
 
-**Status:** Design authority before any simulation rewrite.
+**Status:** Design authority. Economy, budget and the ministry funding curve
+were redesigned on 2026-10-28 (see *Progress* at the end); regions and
+calendar remain.
 
 ## Non-negotiable native-design rules
 
@@ -284,3 +286,70 @@ resolve the economic and administrative consequences that need time.
   changes.
 - Add long-run cadence tests that quiet time can advance safely and no month
   closes twice after save/load.
+
+---
+
+## Progress
+
+### 2026-10-28 — economy, budget, ministry funding (S1, S2, S3, S4, S5)
+
+- **S1 closed.** Each month's overall deficit is added to the debt stock;
+  interest on the whole stock is a mandatory line inside expenditure, priced
+  by the market (premia above 80% debt and 6% inflation) and repriced slowly
+  as old debt rolls over. Opening primary spending is the authored total
+  minus interest, so the opening deficit is unchanged. Ardenia opens with a
+  primary gap of ~1.9% of GDP: left alone, debt climbs ~3 points a year and
+  spirals after about a decade; one 5% trim in the first budget avoids it.
+- **S2 closed.** No budget by January starts an emergency continuing
+  resolution: last year's money continues, new regional programmes are
+  frozen, every ministry carries emergency-rules workload, and approval and
+  stability costs escalate monthly. A budget for the current year can be
+  passed mid-year and ends it at once. Fiscal stance moves demand only while
+  it is new (spending vs. its own 2-year trend), so cuts cost growth and jobs.
+  Households now judge services against what a normal state of the
+  economy's size spends — an equal cut to everything is no longer invisible —
+  and approval reads service access while stability reads ministry delivery.
+- **S3 closed.** Inflation pressures are deficit, demand gap and debt
+  monetisation; the anchor loses grip above 8%. The public signal adds a
+  steep penalty above 6% inflation and a debt-burden term above 90%.
+- **S4 closed.** Ministry funding has three zones (starved below 60%,
+  credible to 100%, diminishing returns above, max +25%), and the baseline
+  grows with the economy so flat money is a real cut.
+- **S5 closed.** Unemployment reverts to a natural rate set by workforce
+  quality and state capacity (half-life ~3 years); demand above supply lowers
+  it temporarily at the price of inflation.
+- Tabled budgets carry the size of the economy at tabling and keep pace when
+  they take effect; history records exactly what was voted.
+- Shipped content is parsed once and frozen (month close 436 ms -> <1 ms,
+  daily snapshot 187 ms -> 1.5 ms).
+- Budget totals are summed in sorted key order so a save/load cannot change
+  them in their last bits.
+
+20-year outcomes from `godot/tests/native/balance_probe.gd`:
+
+| Policy | Debt/GDP | Inflation | Unemployment | Approval | Stability |
+|---|---|---|---|---|---|
+| One -5% trim, then steady | 1.06 | 3.7% | 10.0% | 0.51 | 0.52 |
+| Steady, gap never closed | 1.55 | 9.6% | 10.0% | 0.47 | 0.51 |
+| Austerity -15%/yr | 0.00 | 0.0% | 12.9% | 0.34 | 0.33 |
+| No budget ever | 1.55 | 9.6% | 10.0% | 0.31 | 0.33 |
+| Max spend +15%/yr | 4.00 (cap) | 60% | 9.5% | 0.01 | 0.24 |
+
+Tests changed and why:
+- `test_economy_sim.gd`: three inflation tests used the removed fixed growth
+  trend to stage "overheating"; they now stage a real fiscal stimulus. 14
+  behaviour tests added (debt accumulation both ways, gradual movement,
+  interest in the bill, slow repricing, opening deficit preserved, stimulus
+  fades, austerity costs jobs, natural-rate convergence, workforce effect,
+  anchor slippage, inflation-vs-growth signal, save/reload, 40-year bounds).
+- `test_budget_and_pc.gd`: the 3%-cut test asserted the removed mechanic; it
+  is replaced by 8 tests of the emergency resolution and tabled-plan pacing.
+- `test_ministries_sim.gd`: "backlog grows by exactly the shortfall" now
+  asserts against the computed capacity instead of a hand-written 1.45
+  (capacity is ~0.2% lower because the baseline now grows). 4 S4 tests added.
+
+Still open: S6 political capital (partly redesigned 2026-10-24), S7
+programme cost against the portfolio, S8 a revenue/taxation side to the
+budget (the only fiscal fix is currently cuts or the two revenue bills), S9
+nominal law deltas, S10 indexation; `regions_sim.gd` and `calendar.gd`.
+

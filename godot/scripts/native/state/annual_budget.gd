@@ -19,12 +19,23 @@ var lobbying_bonus: Dictionary = {}   # String faction_id -> float
 ## Mid-year supplementary appropriations, kept separate from `allocations` on
 ## purpose — see models/budget.py's docstring for why.
 var supplements: Dictionary = {}      # String portfolio -> float
+## Months this settlement has run as an emergency continuing resolution.
+var emergency_months: int = 0
+## The size of the economy (structural revenue) when the plan was tabled. A
+## plan is written in that month's money; when it takes effect it keeps pace
+## with growth since, so a "no change" budget does not arrive quietly cut.
+var economy_basis: float = 0.0
 
 
+## Summed in sorted key order: a float sum depends on the order it is added
+## in, and a save stores keys sorted, so any other order would let a reload
+## change the total in its last bits.
 func expenditure() -> float:
+	var keys := allocations.keys()
+	keys.sort()
 	var total := 0.0
-	for value in allocations.values():
-		total += float(value)
+	for key in keys:
+		total += float(allocations[key])
 	return total
 
 
@@ -42,6 +53,8 @@ func to_dict() -> Dictionary:
 		"allocations": allocations.duplicate(true),
 		"status": status,
 		"source": source,
+		"emergency_months": emergency_months,
+		"economy_basis": economy_basis,
 		"proposed_by": proposed_by,
 		"proposed_turn": proposed_turn,
 		"forecast_revenue": forecast_revenue,
@@ -62,6 +75,8 @@ static func from_dict(data: Dictionary) -> AnnualBudget:
 	b.allocations = allocations_data.duplicate(true) if allocations_data is Dictionary else {}
 	b.status = String(data.get("status", "draft"))
 	b.source = String(data.get("source", "inherited"))
+	b.emergency_months = maxi(0, _int_field(data, "emergency_months", 0))
+	b.economy_basis = maxf(0.0, float(data.get("economy_basis", 0.0)))
 	b.proposed_by = String(data.get("proposed_by", ""))
 	b.proposed_turn = _int_field(data, "proposed_turn", -1)
 	b.forecast_revenue = float(data.get("forecast_revenue", 0.0))

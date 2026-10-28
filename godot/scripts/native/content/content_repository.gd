@@ -68,7 +68,37 @@ static func _find_duplicate_id(value, context: String) -> String:
 	return ""
 
 
+## The shipped content never changes while the game runs, so it is parsed
+## once and frozen. Every caller shares one read-only copy; a write anywhere
+## is an engine error rather than silent corruption of everyone else's data.
+## Other roots (tests building fixture trees) are always read fresh.
+static var _shipped_cache: Dictionary = {}
+
+
 static func load_all(root: String = DEFAULT_ROOT) -> Dictionary:
+	if root == DEFAULT_ROOT:
+		if _shipped_cache.is_empty():
+			var loaded := _load_uncached(root)
+			if loaded.has("error"):
+				return loaded
+			_freeze(loaded)
+			_shipped_cache = loaded
+		return _shipped_cache
+	return _load_uncached(root)
+
+
+static func _freeze(value) -> void:
+	if value is Dictionary:
+		for v in value.values():
+			_freeze(v)
+		(value as Dictionary).make_read_only()
+	elif value is Array:
+		for v in value:
+			_freeze(v)
+		(value as Array).make_read_only()
+
+
+static func _load_uncached(root: String) -> Dictionary:
 	var manifest_path := root.path_join("catalog_manifest.json")
 	var manifest = _load_json_file(manifest_path)
 	if manifest is Dictionary and manifest.has("__error__"):

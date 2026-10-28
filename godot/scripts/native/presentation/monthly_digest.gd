@@ -18,6 +18,7 @@ static func capture(state: GameState) -> Dictionary:
 		"regional_pressure": StabilitySimScript.national_pressure(state),
 		"household_confidence": HouseholdsSimScript.national_confidence(state),
 		"household_hardship": HouseholdsSimScript.national_hardship(state),
+		"debt": econ.public_debt_pct,
 	}
 
 static func build(state: GameState, before: Dictionary) -> Array[String]:
@@ -30,6 +31,10 @@ static func build(state: GameState, before: Dictionary) -> Array[String]:
 	_append_change(lines, "Inflation", float(before.get("inflation", 0.0)), float(after["inflation"]), 0.002, false)
 	_append_change(lines, "Regional pressure", float(before.get("regional_pressure", 0.0)), float(after["regional_pressure"]), 0.003, false)
 	_append_change(lines, "Household hardship", float(before.get("household_hardship", 0.0)), float(after["household_hardship"]), 0.003, false)
+	# Debt moves slowly by design, so even a small monthly change is news.
+	_append_change(lines, "Public debt", float(before.get("debt", after["debt"])), float(after["debt"]), 0.002, false)
+	if BudgetSim.is_emergency(state):
+		lines.append("The state is running on an emergency budget (month %d): no new programmes, every ministry overloaded, and the cost rises each month. Pass a budget to end it." % maxi(1, state.active_budget.emergency_months))
 	return lines
 
 static func _append_change(lines: Array[String], label: String, before: float, after: float, threshold: float, higher_is_better: bool) -> void:
