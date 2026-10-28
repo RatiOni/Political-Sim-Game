@@ -108,32 +108,84 @@ func _check_spill(geo: MapGeometry, tiles: Dictionary) -> void:
 			var fenced := GrowthLayers.cells_for_town(centre, 120, tiles, {r: true})
 			t.truth(fenced.all(func(c: Vector2i) -> bool: return TileBaker.region_at_tile(tiles, c) != r), "%s keeps out of blocked region %d" % [city["name"], r])
 	t.truth(spilled, "a town at a region edge gets cells across it")
-	var rows := _rows(geo, 600.0, 0.5)
-	var plan := GrowthLayers.all_targets(rows, geo, tiles)
-	var seen := {}
-	var total := 0
-	for id in plan:
-		for c in plan[id]["town_cells"]:
-			seen[c] = true
-			total += 1
-	t.equal(seen.size(), total, "two towns never share a cell")
-	rows[geo.region_ids.find("vetrenka")]["control"] = "separatist"
-	var fenced_plan := GrowthLayers.all_targets(rows, geo, tiles)
-	var vetrenka := geo.region_ids.find("vetrenka")
-	var intruders := 0
-	for id in fenced_plan:
-		if id == "vetrenka":
-			continue
-		for c in fenced_plan[id]["town_cells"]:
-			if TileBaker.region_at_tile(tiles, c) == vetrenka:
-				intruders += 1
-	t.equal(intruders, 0, "no town spills into a separatist region")
+	_check_overlap(geo, tiles)
+	_check_fence(geo, tiles)
 	var small := GrowthLayers.all_targets(_rows(geo, 400.0, 0.5), geo, tiles)
 	var large := GrowthLayers.all_targets(_rows(geo, 1200.0, 0.5), geo, tiles)
 	for id in small:
 		t.truth(large[id]["town_cells"].size() >= 2 * small[id]["town_cells"].size(), "%s: tripled population at least doubles its town (%d to %d)" % [id, small[id]["town_cells"].size(), large[id]["town_cells"].size()])
 	for pop in [50.0, 150.0, 300.0, 600.0]:
 		t.truth(GrowthLayers.town_tiles(pop * 3.0, false) >= 2 * GrowthLayers.town_tiles(pop, false), "town_tiles at %dk tripled at least doubles" % pop)
+
+func _unfenced(geo: MapGeometry, tiles: Dictionary, count: int) -> Dictionary:
+	var all := {}
+	for city in geo.cities:
+		var centre := Vector2i(Vector2(city["point"]) * Vector2(TileBaker.GRID))
+		all[city["name"]] = GrowthLayers.cells_for_town(centre, count, tiles)
+	return all
+
+
+func _geo_with(geo: MapGeometry, cities: Array[Dictionary]) -> MapGeometry:
+	var synthetic := MapGeometry.new()
+	synthetic.region_ids = geo.region_ids
+	synthetic.cities = cities
+	return synthetic
+
+
+func _town_cells_outside(plan: Dictionary, tiles: Dictionary, region: int, except_id: String) -> int:
+	var count := 0
+	for id in plan:
+		if id == except_id:
+			continue
+		for c in plan[id]["town_cells"]:
+			count += 1 if TileBaker.region_at_tile(tiles, c) == region else 0
+	return count
+
+
+func _check_overlap(geo: MapGeometry, tiles: Dictionary) -> void:
+	var capital: Dictionary = geo.cities.filter(func(c: Dictionary) -> bool: return c["capital"])[0]
+	var neighbour := capital.duplicate()
+	neighbour["name"] = "Neighbour"
+	neighbour["capital"] = false
+	neighbour["point"] = Vector2(capital["point"]) + Vector2(3.0, 2.0) / Vector2(TileBaker.GRID)
+	var crowded := _geo_with(geo, [capital, neighbour] as Array[Dictionary])
+	var first := GrowthLayers.cells_for_town(Vector2i(Vector2(capital["point"]) * Vector2(TileBaker.GRID)), 40, tiles)
+	var second := GrowthLayers.cells_for_town(Vector2i(Vector2(neighbour["point"]) * Vector2(TileBaker.GRID)), 40, tiles)
+	var shared := 0
+	for c in second:
+		shared += 1 if c in first else 0
+	t.truth(shared > 10, "two unclaimed footprints three cells apart collide (%d shared cells)" % shared)
+	var plan := GrowthLayers.all_targets(_rows(crowded, 1.0e7, 0.5), crowded, tiles)
+	var cells: Array = plan[capital["region"]]["town_cells"]
+	var owned := {}
+	for c in cells:
+		owned[c] = true
+	t.truth(cells.size() > first.size(), "both crowded towns are painted (%d cells)" % cells.size())
+	t.equal(owned.size(), cells.size(), "two towns never share a cell")
+
+
+func _check_fence(geo: MapGeometry, tiles: Dictionary) -> void:
+	var crossings := 0
+	for city in geo.cities:
+		var lone := city.duplicate()
+		lone["capital"] = true
+		var alone := _geo_with(geo, [lone] as Array[Dictionary])
+		var own := geo.region_ids.find(city["region"])
+		var reached := {}
+		for c in GrowthLayers.cells_for_town(Vector2i(Vector2(city["point"]) * Vector2(TileBaker.GRID)), GrowthLayers.CAPITAL_CEILING, tiles):
+			var r := TileBaker.region_at_tile(tiles, c)
+			if r != own:
+				reached[r] = true
+		for r in reached:
+			crossings += 1
+			var rows := _rows(geo, 1.0e7, 0.5)
+			rows[r]["control"] = "separatist"
+			var unfenced := GrowthLayers.all_targets(_rows(geo, 1.0e7, 0.5), alone, tiles)
+			t.truth(_town_cells_outside(unfenced, tiles, r, "") > 0, "without the fence %s reaches %s" % [city["name"], geo.region_ids[r]])
+			var fenced := GrowthLayers.all_targets(rows, alone, tiles)
+			t.equal(_town_cells_outside(fenced, tiles, r, geo.region_ids[r]), 0, "%s keeps out of separatist %s" % [city["name"], geo.region_ids[r]])
+	t.truth(crossings > 0, "some town spirals cross a region line")
+
 
 func _run() -> void:
 	var geo := MapGeometry.load_world()
