@@ -313,7 +313,9 @@ static func _introduce(state: GameState, law: Law, notes: Array[String]) -> void
 	state.opposition.government_bill = law
 	state.opposition.bill_introduced_turn = state.turn
 	state.opposition.response = ""
-	notes.append("Government bill: %s introduces \"%s\". The opposition can support, oppose or amend it before the vote next month." % [ruling.name, law.name])
+	var line := "Government bill: %s introduces \"%s\". The opposition can support, oppose or amend it before the vote next month." % [ruling.name, law.name]
+	Voice.record(state, "government_bill", {"bill": law.name, "party": ruling.name}, line)
+	notes.append(line)
 
 
 static func _bring_to_division(state: GameState, notes: Array[String]) -> void:
@@ -329,8 +331,8 @@ static func _bring_to_division(state: GameState, notes: Array[String]) -> void:
 	note_bill_result(state, law, passed)
 	if not passed:
 		opp.last_government_defeat_turn = state.turn
-	var stance := "with the opposition uncommitted" if opp.response == "" else "after the opposition chose to %s" % opp.response
-	notes.append("\"%s\" %s %d–%d %s." % [law.name, "passes" if passed else "falls", law.votes_for, law.votes_against, stance])
+	notes.append(Voice.say(state, "vote_passed" if passed else "vote_failed", {"bill": law.name,
+		"vfor": law.votes_for, "vagainst": law.votes_against, "threshold": result["threshold"]}))
 	opp.government_bill = null
 	opp.response = ""
 	opp.next_bill_turn = state.turn + BILL_CADENCE_MONTHS

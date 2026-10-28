@@ -95,6 +95,8 @@ var event_fire_history: Dictionary = {}
 var event_history: Array[Dictionary] = []
 var world_arcs: Dictionary = {}
 var opposition: OppositionState = OppositionState.new()
+var monthly_news: Array[Dictionary] = []
+var front_page: Dictionary = {}
 
 var rng: SimRng = SimRng.from_seed(0)
 
@@ -184,6 +186,8 @@ func to_dict() -> Dictionary:
 		"event_history": event_history.duplicate(true),
 		"world_arcs": world_arcs.duplicate(),
 		"opposition": opposition.to_dict(),
+		"monthly_news": monthly_news.duplicate(true),
+		"front_page": front_page.duplicate(true),
 		"rng": rng_snapshot,
 	}
 
@@ -409,6 +413,18 @@ static func from_dict(data: Dictionary) -> GameState:
 		return null
 	for key in arcs:
 		state.world_arcs[String(key)] = String(arcs[key])
+	var news: Variant = data.get("monthly_news", [])
+	var page: Variant = data.get("front_page", {})
+	if not (news is Array) or not (page is Dictionary):
+		push_error("GameState.from_dict: malformed press record")
+		return null
+	for item in news:
+		if not (item is Dictionary) or not (item.get("fields", null) is Dictionary):
+			push_error("GameState.from_dict: malformed news item")
+			return null
+		state.monthly_news.append({"key": String(item.get("key", "")), "fields": (item["fields"] as Dictionary).duplicate(),
+			"text": String(item.get("text", ""))})
+	state.front_page = (page as Dictionary).duplicate(true)
 	state.opposition = OppositionState.from_dict(data.get("opposition", null))
 	if state.opposition == null:
 		push_error("GameState.from_dict: malformed opposition")

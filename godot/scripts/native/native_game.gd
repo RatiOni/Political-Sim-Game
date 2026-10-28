@@ -79,6 +79,8 @@ static func close_month(state: GameState) -> void:
 	state.monthly_digest.append_array(world_notes)
 	state.monthly_digest.append_array(crisis_notes)
 	state.monthly_digest.append_array(situation_notes)
+	state.front_page = Press.front_page(state, before, MonthlyDigestScript.capture(state))
+	state.monthly_news.clear()
 
 
 func start_regional_program(region_id: String, program_id: String) -> Dictionary:
@@ -483,7 +485,8 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 		"households": _household_snapshot(state),
 		"digest": state.monthly_digest.duplicate(),
 		"reform": {"active": null, "objectives": []},
-		"dispatches": [],
+		"dispatches": Press.lines(state.front_page),
+		"front_page": state.front_page.duplicate(true),
 	}
 
 

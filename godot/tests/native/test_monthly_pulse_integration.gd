@@ -73,6 +73,7 @@ static func _run_reference_rollover(state: GameState) -> void:
 	MinistriesSimScript.simulate(state)
 	DiplomacySim.monthly(state)
 	var world_notes := WorldSim.monthly(state)
+	world_notes.append_array(OppositionSim.monthly(state))
 	EconomySimScript.update(state)
 	RegionsSimScript.simulate(state)
 	HouseholdsSimScript.simulate(state)
@@ -86,6 +87,8 @@ static func _run_reference_rollover(state: GameState) -> void:
 	state.monthly_digest.append_array(world_notes)
 	state.monthly_digest.append_array(crisis_notes)
 	state.monthly_digest.append_array(situation_notes)
+	state.front_page = Press.front_page(state, before, MonthlyDigestScript.capture(state))
+	state.monthly_news.clear()
 
 
 func _test_full_monthly_pulse(t) -> void:

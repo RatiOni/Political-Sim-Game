@@ -187,8 +187,11 @@ static func _lapse_overdue(state: GameState, notes: Array[String]) -> void:
 		state.player.political_capital = maxf(0.0,
 			state.player.political_capital - float(option.get("pc_cost", 0.0)))
 		var line := apply_option(state, event, option, situation, true)
-		notes.append("Left undecided, %s was settled by default: %s." % [
-			String(event.get("title", situation.event_id)), String(option.get("label", ""))])
+		var lapse_line := "Left undecided, %s was settled by default: %s." % [
+			String(event.get("title", situation.event_id)), String(option.get("label", ""))]
+		Voice.record(state, "situation_lapsed", {"title": String(event.get("title", situation.event_id)),
+			"option": String(option.get("label", ""))}, lapse_line)
+		notes.append(lapse_line)
 		if line != "":
 			notes.append(line)
 
@@ -269,10 +272,10 @@ static func _arrive(state: GameState, event: Dictionary, target: String, notes: 
 	state.pending_situations.append(situation)
 	state.event_fire_history[situation.event_id] = state.turn
 	var title := String(event.get("title", situation.event_id))
-	if follows_on:
-		notes.append("Following on from an earlier decision: %s needs a decision." % title)
-	else:
-		notes.append("A new situation needs a decision: %s." % title)
+	var line := ("Following on from an earlier decision: %s needs a decision." if follows_on
+		else "A new situation needs a decision: %s.") % title
+	Voice.record(state, "situation", {"title": title, "category": String(event.get("category", ""))}, line)
+	notes.append(line)
 
 
 static func _diplomatic_target(state: GameState, event: Dictionary) -> String:
@@ -301,7 +304,10 @@ static func apply_option(state: GameState, event: Dictionary, option: Dictionary
 	var note := ""
 	var handler: Variant = option.get("on_apply", null)
 	if handler != null:
+		var fields := Arcs.press_fields(state, String(handler))
 		note = Arcs.run(state, String(handler))
+		if note != "" and Arcs.PRESS_KEYS.has(String(handler)):
+			Voice.record(state, String(Arcs.PRESS_KEYS[handler]), fields, note)
 	state.event_history.append({"event_id": event_id, "option_id": String(option.get("id", "")),
 		"turn": state.turn, "lapsed": lapsed})
 	return note

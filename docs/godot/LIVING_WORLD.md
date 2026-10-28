@@ -3,8 +3,8 @@
 **Status:** situations engine, the schemer arc, the party leadership
 challenge, the Vasca question, Vetrenka, the civil-war gauge and
 diplomacy are playable — all 46 events (2026-10-28) — the eight AI
-countries deliberate and act, and opposition is a full career. The press
-remains. Same native-design rules as
+countries deliberate and act, opposition is a full career, and the month
+ends with a front page. Phase 4 is complete. Same native-design rules as
 `SIM_REDESIGN.md`: Python is a reference for what Ardenia contains, never a
 formula to match.
 
@@ -24,7 +24,7 @@ formula to match.
 5. **The world acts** — done (`sim/world_sim.gd`).
 6. **Opposition play** — done (`sim/opposition_sim.gd`,
    `actions/opposition_actions.gd`, `state/opposition_state.gd`).
-7. **The press** — dispatch voice and the monthly front page.
+7. **The press** — done (`presentation/voice.gd`, `presentation/press.gd`).
 
 ## How situations work (and why)
 
@@ -69,8 +69,6 @@ Re-running the retired exporter would undo this; edit the JSON directly.
 
 - At 1280x720 the situation panel shows one option above the fold; the rest
   scroll. Phase 5 layout work should give the panel more of the body.
-- No dispatch/press voice yet: arrivals and lapses are reported as plain
-  monthly-report lines.
 
 ## The schemer arc
 
@@ -275,3 +273,33 @@ Not yet native: the general election itself. `take_office`,
 directly. The catalogue holds nine parliamentary bills, so a long
 opposition term exhausts the government's programme after about five
 years.
+
+## The press
+
+**Player-facing job:** a month should read like news. The paper tells the
+player what mattered most, in a voice that changes from month to month
+without ever changing what happened.
+
+- **One voice.** `Voice.say(state, key, fields)` renders a variant from the
+  authored dispatch pools and records `{key, fields, text}` in
+  `GameState.monthly_news`. The variant is chosen by a local generator
+  seeded from (month, key, position in the month's news) — never the
+  campaign stream — so a reload reads the same and the simulation is
+  untouched. Every variant of every dispatch carries its stable marker
+  keyword (case-insensitive), so tests and players can rely on a word.
+- **Who speaks.** Foreign plans, moves and arcs; civil wars at home and
+  abroad; every parliamentary division, the government's and the player's.
+  Situations, lapses, government bills and the bespoke arc outcomes (Vasca,
+  Vetrenka, the schemer) keep their own sentences but are filed under their
+  press key, so the paper can rank and headline them.
+- **The front page.** `Press.front_page(state, before, after)` ranks the
+  month's news by drama (Vetrenka retaken or Vasca dead above a neighbour's
+  civil war, above a failed vote, above foreign courtesies, with a leak
+  last), leads with the top story's headline and copy, runs up to four more
+  headlines, and keeps everything else as briefs, with the month's opening
+  and closing numbers. The masthead is the country's own paper, or "The
+  <Country> Herald". A month with nothing to report says so.
+- **Where it shows.** The month closes by printing the page into
+  `GameState.front_page` (saved) and clearing the news; news from the
+  player's own actions between closes runs in the next edition. The monthly
+  report's dispatch column shows the masthead, the lead and the headlines.

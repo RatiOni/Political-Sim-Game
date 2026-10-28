@@ -57,7 +57,7 @@ static func monthly(state: GameState) -> Array[String]:
 	var notes: Array[String] = []
 	_player_month(state, notes)
 	for c in state.world:
-		_world_month(c, notes)
+		_world_month(state, c, notes)
 	return notes
 
 
@@ -69,31 +69,31 @@ static func _player_month(state: GameState, notes: Array[String]) -> void:
 		if state.civil_war_risk >= WAR_THRESHOLD:
 			state.civil_war = true
 			state.country.in_civil_war = true
-			notes.append("%s has fallen into civil war." % state.country.name)
+			notes.append(Voice.say(state, "civil_war_out", {}))
 		return
 	if state.civil_war_risk < PEACE_THRESHOLD:
 		state.civil_war = false
 		state.country.in_civil_war = false
-		notes.append("The civil war in %s is over." % state.country.name)
+		notes.append(Voice.say(state, "civil_war_end", {}))
 		return
 	state.stability_value = maxf(WAR_STABILITY_FLOOR, state.stability_value - WAR_STABILITY_COST)
 	state.player.approval = maxf(0.0, state.player.approval - WAR_APPROVAL_COST)
 	state.player.political_capital = maxf(0.0, state.player.political_capital - WAR_PC_COST)
 	state.country.economy.gdp *= (1.0 - WAR_OUTPUT_LOSS)
-	notes.append("The civil war goes on, at a cost to the economy and the government.")
+	notes.append(Voice.say(state, "civil_war_ongoing", {}))
 
 
-static func _world_month(c: Country, notes: Array[String]) -> void:
+static func _world_month(state: GameState, c: Country, notes: Array[String]) -> void:
 	c.civil_war_risk = clampf(
 		c.civil_war_risk + (country_target_risk(c) - c.civil_war_risk) * RISK_CATCH_UP, 0.0, 1.0)
 	if not c.in_civil_war:
 		if c.civil_war_risk >= WAR_THRESHOLD:
 			c.in_civil_war = true
-			notes.append("%s has fallen into civil war." % c.name)
+			notes.append(Voice.say(state, "world_civil_war_out", {"country": c.name, "leader": Voice.leader(c)}))
 		return
 	if c.civil_war_risk < PEACE_THRESHOLD:
 		c.in_civil_war = false
-		notes.append("The civil war in %s is over." % c.name)
+		notes.append(Voice.say(state, "world_civil_war_end", {"country": c.name, "leader": Voice.leader(c)}))
 		return
 	c.stability = maxf(WAR_STABILITY_FLOOR, c.stability - WAR_STABILITY_COST)
 	if c.economy != null:

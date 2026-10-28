@@ -97,11 +97,9 @@ static func hostile_action(state: GameState, actor: Country, target: Country, no
 	var condemn := state.rng.next_float() < CONDEMN_CHANCE
 	DiplomacySim.shift_between(actor, target, CONDEMN_COST if condemn else PRESSURE_COST)
 	if against_player:
-		notes.append(("%s publicly condemns your government." if condemn
-			else "%s leans on your government, and relations cool.") % actor.name)
+		_say(state, notes, "world_condemn_player" if condemn else "world_pressure_player", actor, null)
 	else:
-		notes.append(("%s publicly condemns %s." if condemn
-			else "%s moves quietly to undermine %s.") % [actor.name, target.name])
+		_say(state, notes, "world_condemn" if condemn else "world_undermine", actor, target)
 	return "condemned" if condemn else "undermined"
 
 
@@ -114,13 +112,13 @@ static func cooperative_action(state: GameState, actor: Country, target: Country
 	if not with_player and _rel(actor, target).score > PACT_GROUND and not _has_treaty(actor, target, "trade") \
 			and state.rng.next_float() < PACT_CHANCE:
 		_sign_trade_pact(state, actor, target)
-		notes.append("%s and %s sign a trade pact." % [actor.name, target.name])
+		_say(state, notes, "world_trade_pact", actor, target)
 		return "trade_pact"
 	DiplomacySim.shift_between(actor, target, COURT_PLAYER_GAIN if with_player else COURT_GAIN)
 	if with_player:
-		notes.append("%s is courting your government." % actor.name)
+		_say(state, notes, "world_court_player", actor, null)
 	else:
-		notes.append("%s and %s deepen their ties." % [actor.name, target.name])
+		_say(state, notes, "world_deepen", actor, target)
 	return "courted"
 
 
@@ -145,13 +143,13 @@ static func _update_arc(state: GameState, a: Country, b: Country, notes: Array[S
 	if arc == "":
 		if rel.score > AXIS_FORMS and _has_treaty(a, b, "trade"):
 			state.world_arcs[key] = "axis"
-			notes.append("Diplomats begin speaking of a %s–%s axis." % [a.name, b.name])
+			notes.append(Voice.say(state, "world_axis", {"a": a.name, "b": b.name}))
 		elif rel.score < FEUD_FORMS:
 			state.world_arcs[key] = "feud"
-			notes.append("The quarrel between %s and %s hardens into open feud." % [a.name, b.name])
+			notes.append(Voice.say(state, "world_feud", {"a": a.name, "b": b.name}))
 	elif (arc == "axis" and rel.score < AXIS_BREAKS) or (arc == "feud" and rel.score > FEUD_BREAKS):
 		state.world_arcs.erase(key)
-		notes.append("The %s–%s %s is no more." % [a.name, b.name, arc])
+		notes.append(Voice.say(state, "world_arc_ends", {"a": a.name, "b": b.name, "kind": arc}))
 
 
 static func _deliberate(state: GameState, actor: Country, index: int, notes: Array[String]) -> void:
@@ -181,7 +179,7 @@ static func _foreshadow(state: GameState, actor: Country, notes: Array[String]) 
 	if target == null:
 		return
 	plan["foreshadowed"] = true
-	notes.append("%s is weighing its options toward %s." % [actor.name, target.name])
+	_say(state, notes, "world_deliberates", actor, target)
 
 
 static func _execute(state: GameState, actor: Country, notes: Array[String]) -> void:
@@ -193,6 +191,14 @@ static func _execute(state: GameState, actor: Country, notes: Array[String]) -> 
 			hostile_action(state, actor, target, notes)
 		"court", "trade":
 			cooperative_action(state, actor, target, notes)
+
+
+static func _say(state: GameState, notes: Array[String], key: String, actor: Country, target: Country) -> void:
+	var fields := {"actor": actor.name, "actor_leader": Voice.leader(actor)}
+	if target != null:
+		fields["target"] = "your government" if target == state.country else target.name
+		fields["target_leader"] = state.player.name if target == state.country else Voice.leader(target)
+	notes.append(Voice.say(state, key, fields))
 
 
 static func _drift_world_relations(state: GameState) -> void:

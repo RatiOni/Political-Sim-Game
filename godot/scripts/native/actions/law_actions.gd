@@ -78,6 +78,8 @@ static func vote(state: GameState) -> Dictionary:
 		state.player.approval = maxf(0.0, state.player.approval - DEFEAT_APPROVAL_PENALTY)
 	state.pending_law = null
 	OppositionSim.note_bill_result(state, law, passed)
+	Voice.say(state, "vote_passed" if passed else "vote_failed", {"bill": law.name,
+		"vfor": law.votes_for, "vagainst": law.votes_against, "threshold": projection["threshold"]})
 	return {"ok": true, "passed": passed, "votes_for": law.votes_for,
 		"votes_against": law.votes_against, "threshold": projection["threshold"],
 		"rebellions": projection["rebellions"].duplicate(true),

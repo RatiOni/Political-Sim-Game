@@ -110,11 +110,13 @@ func _test_plans_leak_before_hostile_and_trade_moves(t) -> void:
 	var state := _state()
 	var leaked := {}
 	for _m in range(24):
-		for line in _world_month(state):
-			if line.contains("weighing"):
-				for c in state.world:
-					if line.begins_with(c.name):
-						leaked[c.id] = true
+		_world_month(state)
+	for item in state.monthly_news:
+		if item["key"] == "world_deliberates":
+			t.truth(String(item["text"]).contains("weighing"), "a leak carries its marker")
+			for c in state.world:
+				if item["fields"]["actor"] == c.name:
+					leaked[c.id] = true
 	t.truth(leaked.has("krasova") and leaked.has("terand"), "hostile plans are foreshadowed")
 	t.truth(not leaked.has("merova"), "courtesies are not")
 
@@ -215,7 +217,7 @@ func _test_named_arcs_form_dissolve_and_persist(t) -> void:
 	_set_score(state, "krasova", "veldoria", -0.1)
 	WorldSim.update_arcs(state, notes)
 	t.truth(state.world_arcs.is_empty(), "arcs dissolve when the conditions reverse")
-	t.truth(notes[-1].contains("no more"), "and their end is reported")
+	t.truth(notes[-1].contains("feud") or notes[-1].contains("axis"), "and their end is reported")
 
 
 func _test_the_validator_rejects_impossible_world_state(t) -> void:
