@@ -57,6 +57,12 @@ func advance_day() -> Dictionary:
 	return {"ok": true, "snapshot": snap, "month_rolled": month_rolled}
 
 
+static func next_month(state: GameState) -> void:
+	while not Calendar.advance_day(state):
+		pass
+	close_month(state)
+
+
 static func close_month(state: GameState) -> void:
 	var before: Dictionary = MonthlyDigestScript.capture(state)
 	state.turn += 1

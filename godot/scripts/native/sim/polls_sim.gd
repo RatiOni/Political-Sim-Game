@@ -4,7 +4,10 @@ extends RefCounted
 
 const MONTHLY_CAP := 0.01
 const SUPPORT_FLOOR := 0.01
-const NEUTRAL := 0.5
+const ORDINARY_APPROVAL := 0.47
+const ORDINARY_CONFIDENCE := 0.445
+const ORDINARY_MISERY := 0.007
+const ORDINARY_STABILITY := 0.52
 const APPROVAL_WEIGHT := 0.012
 const CONFIDENCE_WEIGHT := 0.010
 const MISERY_WEIGHT := 0.06
@@ -39,9 +42,9 @@ static func monthly(state: GameState) -> String:
 
 
 static func record(state: GameState) -> float:
-	return (government_approval(state) - NEUTRAL) * APPROVAL_WEIGHT \
-		+ (HouseholdsSim.national_confidence(state) - NEUTRAL) * CONFIDENCE_WEIGHT \
-		- misery_gap(state) * MISERY_WEIGHT
+	return (government_approval(state) - ORDINARY_APPROVAL) * APPROVAL_WEIGHT \
+		+ (HouseholdsSim.national_confidence(state) - ORDINARY_CONFIDENCE) * CONFIDENCE_WEIGHT \
+		- (misery_gap(state) - ORDINARY_MISERY) * MISERY_WEIGHT
 
 
 static func misery_gap(state: GameState) -> float:
@@ -52,8 +55,8 @@ static func misery_gap(state: GameState) -> float:
 static func government_approval(state: GameState) -> float:
 	if state.player.in_government:
 		return state.player.approval
-	return clampf(NEUTRAL + (HouseholdsSim.national_confidence(state) - NEUTRAL)
-		+ (state.stability_value - NEUTRAL) * STABILITY_IN_PROXY, 0.0, 1.0)
+	return clampf(ORDINARY_APPROVAL + (HouseholdsSim.national_confidence(state) - ORDINARY_CONFIDENCE)
+		+ (state.stability_value - ORDINARY_STABILITY) * STABILITY_IN_PROXY, 0.0, 1.0)
 
 
 static func public_mood(state: GameState) -> Faction.Ideology:

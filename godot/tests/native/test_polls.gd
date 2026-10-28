@@ -146,6 +146,41 @@ func _test_twenty_years_change_hands_for_a_reason(t) -> void:
 	t.truth(mean.call(lost) < mean.call(kept), "and those that fell were less approved (%.2f) than those returned (%.2f)" % [mean.call(lost), mean.call(kept)])
 
 
+const ENVELOPES := ["state_administration", "foreign_affairs", "justice_and_policing", "national_defense",
+	"infrastructure", "industry_and_jobs", "education", "health_and_welfare"]
+
+
+static func _steady_budget(state: GameState) -> void:
+	if not state.player.in_government or state.month != 10 or state.pending_budget != null:
+		return
+	var adjustments := {}
+	for e in ENVELOPES:
+		adjustments[e] = -0.05 if state.year == 1993 else 0.0
+	if BudgetActions.propose(state, adjustments).get("ok", false):
+		for f in state.country.factions:
+			if not f.in_coalition:
+				BudgetActions.lobby(state, f.id)
+				break
+		BudgetActions.vote(state)
+
+
+func _test_a_steady_government_is_returned_about_half_the_time(t) -> void:
+	var held := 0
+	var returned := 0
+	for seed in [11, 22, 33, 44, 55, 66]:
+		var state := _state("government", seed)
+		for _m in range(240):
+			var governing := state.player.in_government
+			_steady_budget(state)
+			NativeGameScript.next_month(state)
+			if governing and not state.election_history.is_empty() and state.election_history[-1].turn == state.turn:
+				held += 1
+				if state.player.in_government:
+					returned += 1
+	var rate := float(returned) / maxf(1.0, held)
+	t.truth(rate >= 0.4 and rate <= 0.65, "a steady government is returned about half the time (%d of %d, %.2f)" % [returned, held, rate])
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_a_record_moves_the_polls(t)
@@ -154,4 +189,5 @@ func _initialize() -> void:
 	_test_the_polls_are_deterministic_and_reported(t)
 	_test_regions_follow_national_moves(t)
 	_test_twenty_years_change_hands_for_a_reason(t)
+	_test_a_steady_government_is_returned_about_half_the_time(t)
 	quit(t.finish())

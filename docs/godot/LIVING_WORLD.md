@@ -382,9 +382,14 @@ from what happened, never from a roll.
   another party in power.
 
 - **The polls move with the record** (`sim/polls_sim.gd`). Each month the
-  ruling party gains or loses with approval against 0.5 (×0.012), household
-  confidence against 0.5 (×0.010) and misery — inflation plus unemployment
-  above their structural levels (×0.06); coalition partners take half. The
+  ruling party gains or loses with approval (×0.012), household confidence
+  (×0.010) and misery — inflation plus unemployment above their structural
+  levels (×0.06) — each read against what a steady, ordinary government
+  measures in play (approval 0.47, confidence 0.445, misery 0.007,
+  stability 0.52; `PollsSim.ORDINARY_*`, measured from 20-year steady
+  journeys); coalition partners take half. Turnout reads the same
+  references, and a governing party's turnout falls 0.025 for each
+  consecutive term it has held (`GOVERNMENT_FATIGUE`). The
   opposition takes what the government loses, more for parties nearer the
   public mood (the support-weighted average ideology). Every party is pulled
   3% a month back toward its starting share, no party moves more than a
@@ -393,6 +398,7 @@ from what happened, never from a roll.
   through the count's national swing while keeping their own character, and
   the monthly report carries a poll line.
 
-Twenty years from either opening hold five elections and about four changes
-of office; across six journeys the governments that fell averaged approval
-0.43 against 0.49 for those returned.
+Over twenty years on six seeds a steady government is returned 52% of the
+time, a strong one (an able, loyal cabinet) 75%, and an austerity or
+no-budget government never; governments that fell averaged lower approval
+than those returned.

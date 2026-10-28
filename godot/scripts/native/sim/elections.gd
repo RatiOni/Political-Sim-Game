@@ -14,6 +14,7 @@ const OPPOSITION_JUDGEMENT := 0.3
 const STABILITY_IN_JUDGEMENT := 0.5
 const LEADER_STANDING := 0.3
 const PLATFORM_WEIGHT := 1.5
+const GOVERNMENT_FATIGUE := 0.025
 
 const CONTROL_ACCESS := {"state": 1.0, "autonomous": 0.9, "limited": 0.55, "separatist": 0.0}
 const REACH_IN_ACCESS := 0.3
@@ -31,15 +32,27 @@ static func monthly(state: GameState) -> Array[String]:
 
 
 static func government_performance(state: GameState) -> float:
-	return (HouseholdsSim.national_confidence(state) - 0.5) + (state.stability_value - 0.5) * STABILITY_IN_JUDGEMENT
+	return (HouseholdsSim.national_confidence(state) - PollsSim.ORDINARY_CONFIDENCE) \
+		+ (state.stability_value - PollsSim.ORDINARY_STABILITY) * STABILITY_IN_JUDGEMENT
 
 
 static func enthusiasm(state: GameState, f: Faction) -> float:
 	var performance := government_performance(state)
 	var value := TURNOUT_BASELINE + (performance * GOVERNMENT_JUDGEMENT if f.in_coalition else -performance * OPPOSITION_JUDGEMENT)
+	if f.id == state.ruling_faction_id:
+		value -= GOVERNMENT_FATIGUE * terms_in_office(state)
 	if f.id == state.player.faction_id:
-		value += (state.player.approval - 0.5) * LEADER_STANDING + OppositionSim.electoral_edge(state) * PLATFORM_WEIGHT
+		value += (state.player.approval - PollsSim.ORDINARY_APPROVAL) * LEADER_STANDING + OppositionSim.electoral_edge(state) * PLATFORM_WEIGHT
 	return clampf(value, TURNOUT_FLOOR, TURNOUT_CEILING)
+
+
+static func terms_in_office(state: GameState) -> int:
+	var terms := 1
+	for i in range(state.election_history.size() - 1, -1, -1):
+		if state.election_history[i].ruling_faction_id != state.ruling_faction_id:
+			break
+		terms += 1
+	return terms
 
 
 static func access(region: RegionState) -> float:
