@@ -7,7 +7,7 @@ const FLOAT_FIELDS := ["price", "reference_price", "contracted_volume", "annual_
 	"take_or_pay", "cut", "sabotage", "storage", "storage_capacity", "storage_target",
 	"second_line_volume", "spot_pending"]
 const INT_FIELDS := ["term_end", "cut_until", "last_cut_turn", "last_demand_turn", "storage_started",
-	"second_line_started", "last_renegotiated", "demands", "threats", "cuts"]
+	"second_line_started", "last_renegotiated", "demands", "threats", "cuts", "second_line_months_saved"]
 const FLOW_FIELDS := ["demand", "delivered", "drawn", "injected", "bill", "shortfall", "severity"]
 
 var supplier_id: String = ""
@@ -30,6 +30,7 @@ var storage_target: float = 0.0
 var storage_started: int = -1
 var second_line_volume: float = 0.0
 var second_line_started: int = -1
+var second_line_months_saved: int = 0
 var spot_pending: float = 0.0
 var last_renegotiated: int = -1
 var demands: int = 0

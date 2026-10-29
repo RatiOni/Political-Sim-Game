@@ -168,6 +168,7 @@ static func _renegotiate(state: GameState, verb: String) -> String:
 			OrientationActions.act(state, "union_observer")
 		"gas_renegotiate_policy":
 			g.second_line_started = -1
+			g.second_line_months_saved = 0
 			state.modifiers = state.modifiers.filter(func(m: Modifier) -> bool: return m.source_id != "gas_second_line")
 			DiplomacySim.shift(state, g.supplier_id, SHELVE_GOODWILL, "Ardenia shelved its second gas line.")
 	g.price = maxf(g.reference_price * PRICE_FLOOR_SHARE, g.price * float(PRICE_CUTS[verb]))
@@ -181,7 +182,7 @@ static func _second_line_status(state: GameState) -> String:
 		return "open"
 	if g.second_line_started < 0:
 		return "none"
-	return "building, %d months left" % maxi(0, GasSim.SECOND_LINE_MONTHS - (state.turn - g.second_line_started))
+	return "building, %d months left" % maxi(0, GasSim.second_line_months(g) - (state.turn - g.second_line_started))
 
 
 static func read_model(state: GameState) -> Dictionary:

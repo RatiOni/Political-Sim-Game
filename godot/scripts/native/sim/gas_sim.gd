@@ -6,6 +6,7 @@ const PAYMENT_SHARE := 0.85
 const WINTER_WEIGHT := 1.5
 const STORAGE_MONTHS := 24
 const SECOND_LINE_MONTHS := 48
+const FAST_TRACK_MONTHS := 18
 const SECOND_LINE_OPENING := -0.1
 const UNION_PRICE_SHARE := 0.7
 const INJECTION_SHARE := 0.25
@@ -340,7 +341,11 @@ static func _advance_projects(state: GameState, notes: Array[String]) -> void:
 		if built >= 1.0:
 			notes.append(line("storage_ready"))
 	if g.second_line_started >= 0 and g.second_line_volume <= 0.0 \
-			and state.turn - g.second_line_started >= SECOND_LINE_MONTHS:
+			and state.turn - g.second_line_started >= second_line_months(g):
 		g.second_line_volume = float(catalog().get("second_line", {}).get("volume", 0.0))
 		DiplomacySim.shift(state, g.supplier_id, SECOND_LINE_OPENING, "Ardenia opened a gas line around Krasova.")
 		notes.append(line("second_line_open"))
+
+
+static func second_line_months(g: GasContract) -> int:
+	return SECOND_LINE_MONTHS - g.second_line_months_saved

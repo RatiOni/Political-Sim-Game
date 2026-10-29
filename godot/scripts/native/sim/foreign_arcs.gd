@@ -7,13 +7,14 @@ const TARGETS := ["__supplier__", "__rival__", "__western__", "__union_anchor__"
 const HANDLERS: Array[String] = ["valve_pay", "valve_cargo", "valve_appeal_west", "transit_concede",
 	"transit_arbitrate", "windfall_storage", "isf_crisis_renegotiate", "concert_embrace", "union_accept",
 	"union_play_west", "union_comply", "coup_recognise", "coup_condemn", "coup_wait", "sanctions_join",
-	"sanctions_abstain", "sanctions_oppose", "arms_buy", "interests_acknowledge", "interests_internationalise"]
+	"sanctions_abstain", "sanctions_oppose", "arms_buy", "interests_acknowledge", "interests_internationalise",
+	"west_fast_track", "west_conditions_stalled"]
 const CONDITIONS: Array[String] = ["transit_dispute_ripe", "transit_windfall_due", "concert_delegation_due",
 	"union_invites", "union_member_pressed", "western_aid_offered", "neighbour_coup_ripe",
-	"sanctions_coalition_forming", "arms_offer_open", "rival_presses_interests"]
+	"sanctions_coalition_forming", "arms_offer_open", "rival_presses_interests", "west_relief_open"]
 const EVENT_IDS: Array[String] = ["valve_threat", "transit_dispute", "transit_windfall", "isf_review_crisis",
 	"concert_delegation", "union_invitation", "union_pressure", "western_aid_strings", "aid_conditions_due",
-	"neighbour_coup", "sanctions_coalition", "arms_offer", "rival_interests"]
+	"neighbour_coup", "sanctions_coalition", "arms_offer", "rival_interests", "concert_energy_offer", "concert_energy_conditions"]
 const GATES := ["energy_verb", "orientation_verb", "diplomacy_verb"]
 const COUP_STABILITY := 0.3
 const COUP_MAX_WAR_RISK := 0.5
@@ -39,6 +40,9 @@ const ARMS_RIVAL := -0.04
 const INTERESTS_LINE := -0.4
 const INTERESTS_MEMORY := 12
 const INTERESTS_WEST := 0.04
+const WEST_RELIEF_HOSTILITY := -0.08
+const STALLED_SHARE := 0.5
+const STALLED_OPEN_WEST := -0.08
 
 static var probes: Dictionary = {}
 
@@ -184,6 +188,14 @@ static func condition_met(state: GameState, rule_id: String) -> bool:
 				return false
 			return state.foreign.hostile_log.any(func(r: Dictionary) -> bool:
 				return String(r.get("actor", "")) == rival and state.turn - int(r.get("turn", -999)) <= INTERESTS_MEMORY)
+		"west_relief_open":
+			var r := state.foreign.reached
+			if not state.player.in_government or not GasSim.is_active(state) or not r.has("concert_application") \
+					or r.has("union_observer") or r.has("union_member"):
+				return false
+			var g := GasSim.gas(state)
+			return g.second_line_started >= 0 and g.second_line_volume <= 0.0 and g.second_line_months_saved == 0 \
+				and GasSim.second_line_months(g) - (state.turn - g.second_line_started) > GasSim.FAST_TRACK_MONTHS
 	return false
 
 
@@ -254,6 +266,21 @@ static func run(state: GameState, handler_id: String, target: String) -> String:
 		"interests_internationalise":
 			shift(state, "__western__", INTERESTS_WEST)
 			return "The note is published in the Western press."
+		"west_fast_track":
+			var g := GasSim.gas(state)
+			if g.second_line_started < 0 or g.second_line_volume > 0.0:
+				return ""
+			g.second_line_months_saved = GasSim.FAST_TRACK_MONTHS
+			shift(state, "__supplier__", WEST_RELIEF_HOSTILITY)
+			return "Western contractors arrive on the second line. It will open in %d months." % maxi(0, \
+				GasSim.second_line_months(g) - (state.turn - g.second_line_started))
+		"west_conditions_stalled":
+			var g := GasSim.gas(state)
+			if g.second_line_volume > 0.0 or g.second_line_started < 0:
+				shift(state, "__western__", STALLED_OPEN_WEST)
+				return "The Concert notes that its help was banked and its conditions were not."
+			g.second_line_months_saved = int(GasSim.FAST_TRACK_MONTHS * STALLED_SHARE)
+			return "The Concert slows its money, and the second line slips."
 	return ""
 
 

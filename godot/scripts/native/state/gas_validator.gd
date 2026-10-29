@@ -14,6 +14,10 @@ static func validate(state: GameState, errors: Array[String]) -> void:
 	for field in ["take_or_pay", "cut", "sabotage"]:
 		if float(g.get(field)) > 1.0:
 			errors.append("gas %s is above one" % field)
+	var saved := g.second_line_months_saved
+	if saved < 0 or saved > GasSim.FAST_TRACK_MONTHS \
+			or (saved > 0 and g.second_line_started < 0 and g.second_line_volume <= 0.0):
+		errors.append("gas second line saving is impossible")
 	if not g.is_active():
 		return
 	if state.world_country(g.supplier_id) == null:

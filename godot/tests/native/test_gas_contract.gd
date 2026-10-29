@@ -86,7 +86,7 @@ func _test_the_contract_round_trips_through_a_binary_save(t) -> void:
 	var state := _state()
 	var g := state.foreign.gas
 	var floats := ["price", "reference_price", "contracted_volume", "annual_demand", "arrears", "take_or_pay", "cut", "sabotage", "storage", "storage_capacity", "storage_target", "second_line_volume", "spot_pending"]
-	var ints := ["term_end", "cut_until", "last_cut_turn", "last_demand_turn", "storage_started", "second_line_started", "last_renegotiated", "demands", "threats", "cuts"]
+	var ints := ["term_end", "cut_until", "last_cut_turn", "last_demand_turn", "storage_started", "second_line_started", "last_renegotiated", "demands", "threats", "cuts", "second_line_months_saved"]
 	t.equal(floats, GasContract.FLOAT_FIELDS, "the float field list is the one pinned here")
 	t.equal(ints, GasContract.INT_FIELDS, "the int field list is the one pinned here")
 	var n := 1

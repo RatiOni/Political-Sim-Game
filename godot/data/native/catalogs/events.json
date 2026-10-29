@@ -4191,6 +4191,26 @@
         {"id": "reject", "label": "Reject the note", "description": "Ardenia's interests are Ardenia's. Send it back unanswered.", "effects": {"faction_loyalty_deltas": {"@nationalist": 0.03}}, "relation_deltas": {"__rival__": -0.03}, "pc_cost": 0, "follow_up": null, "on_apply": null, "requires": null}
       ],
       "default_option_id": "reject", "once": false, "cooldown": 30, "audience": "government", "portfolio": "Foreign Affairs"
+    },
+    {
+      "id": "concert_energy_offer", "title": "The Concert Offers to Build Faster",
+      "description": "The Concert's energy commissioner has seen the second line's timetable and offers to put Western contractors and guarantees behind it. It would open a year and a half sooner. The commissioner mentions, in passing, that there will be conditions on the gas market.",
+      "category": "Diplomatic", "condition": "west_relief_open", "chance": 0.35, "once": true, "target": "__western__",
+      "options": [
+        {"id": "accept", "label": "Accept the Concert's help", "description": "Heat without the supplier's leave, eighteen months early. The supplier will read it as what it is.", "effects": {"faction_loyalty_deltas": {"@reform": 0.03}}, "relation_deltas": {"__western__": 0.05}, "pc_cost": 10, "follow_up": {"event_id": "concert_energy_conditions", "delay": 6, "chance": 1.0}, "on_apply": "west_fast_track", "requires": null},
+        {"id": "decline", "label": "Build it ourselves", "description": "Slower, and nobody else's line.", "effects": {}, "relation_deltas": {}, "pc_cost": 0, "follow_up": null, "on_apply": null, "requires": null}
+      ],
+      "default_option_id": "decline", "cooldown": 0, "audience": "government", "portfolio": "Foreign Affairs"
+    },
+    {
+      "id": "concert_energy_conditions", "title": "The Concert's Gas Conditions",
+      "description": "The Concert's help with the second line came with a page about the gas market: unbundle the state gas company, publish the Zovar contract, and let Western suppliers bid. The commissioner would like to see progress.",
+      "category": "Diplomatic", "condition": "never", "chance": 0.0,
+      "options": [
+        {"id": "meet", "label": "Meet the conditions", "description": "Break up the gas company and publish the contract. The supplier's friends in the ministry will not forgive it.", "effects": {"faction_loyalty_deltas": {"@labour": -0.04, "@business": 0.03}}, "relation_deltas": {"__western__": 0.04}, "pc_cost": 8, "follow_up": null, "on_apply": null, "requires": null},
+        {"id": "stall", "label": "Stall", "description": "A review of the review. The Concert slows its money to match.", "effects": {}, "relation_deltas": {"__western__": -0.04}, "pc_cost": 0, "follow_up": null, "on_apply": "west_conditions_stalled", "requires": null}
+      ],
+      "default_option_id": "stall", "once": false, "cooldown": 0, "audience": "government", "portfolio": "Foreign Affairs"
     }
   ],
   "ardenia_only_events": [
