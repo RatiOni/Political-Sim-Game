@@ -138,6 +138,10 @@ func _resize_layout() -> void:
 	for name in ["Rule", "PressureHeading", "PressureValue", "Details"]:
 		%RegionBrief.find_child(name).visible = not compact
 	find_child("Layout").add_theme_constant_override("separation", 12 if compact else 16)
+	# The header carries eleven controls. At 1280 they fit only if the gaps
+	# close up — hiding a destination instead would make it unreachable on
+	# exactly the machines most likely to be running at that size.
+	find_child("Header").add_theme_constant_override("separation", 8 if compact else 16)
 	%MonthlyReport.find_child("DispatchColumn").visible = not compact
 	if not snapshot.is_empty():
 		_refresh_controls()
@@ -863,7 +867,8 @@ func _region_caption(region: Dictionary) -> String:
 		parts.append("the state is barely present")
 	if parts.is_empty():
 		return "An ordinary month."
-	return parts[0].capitalize() + ("; " + "; ".join(parts.slice(1)) if parts.size() > 1 else "") + "."
+	var text := "; ".join(parts)
+	return text.substr(0, 1).to_upper() + text.substr(1) + "."
 
 
 func _on_country_selected(index: int) -> void:

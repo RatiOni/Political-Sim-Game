@@ -33,6 +33,7 @@ autowrap_mode = 3
 
 [node name="Picture" type="VBoxContainer" parent="Content"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 400)
 layout_mode = 2
 size_flags_vertical = 3
 
@@ -47,7 +48,7 @@ autowrap_mode = 3
 layout_mode = 2
 
 [node name="RegionScroll" type="ScrollContainer" parent="Content"]
-custom_minimum_size = Vector2(0, 120)
+custom_minimum_size = Vector2(0, 190)
 layout_mode = 2
 horizontal_scroll_mode = 0
 

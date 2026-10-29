@@ -17,9 +17,11 @@ extends Control
 ## Drawn on a fixed virtual grid and scaled by whole numbers only, so it stays
 ## in the map's 8 px idiom at any panel size.
 
-const GRID_X := 112
-const GRID_Y := 63
-const HORIZON := 40     # ground starts here, in grid rows
+## Rows are fixed; columns follow the panel's aspect so the picture fills
+## its frame instead of sitting letterboxed in it.
+const GRID_Y := 56
+const GRID_X_MIN := 96
+const HORIZON := 34     # ground starts here, in grid rows
 
 enum Land { HIGHLAND, PASS, BASIN, INDUSTRY, FRONTIER, PLAIN, TRADE, FOOTHILL, COAST }
 
@@ -40,12 +42,13 @@ const LAND_OF := {
 var _region: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 var _cell := 4
+var _cols := 140
 var _origin := Vector2.ZERO
 
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	custom_minimum_size = Vector2(0, 220)
+	custom_minimum_size = Vector2(0, 300)
 
 
 func show_region(region: Dictionary) -> void:
@@ -69,8 +72,9 @@ func _blk(gx: float, gy: float, w: float, h: float, color: Color) -> void:
 
 
 func _draw() -> void:
-	_cell = maxi(1, int(min(size.x / GRID_X, size.y / GRID_Y)))
-	var used := Vector2(GRID_X * _cell, GRID_Y * _cell)
+	_cell = maxi(1, int(size.y / GRID_Y))
+	_cols = maxi(GRID_X_MIN, int(size.x / _cell))
+	var used := Vector2(_cols * _cell, GRID_Y * _cell)
 	_origin = ((size - used) * 0.5).floor()
 
 	if _region.is_empty():
@@ -118,9 +122,9 @@ func _sky(trouble: float) -> void:
 		var color := top.lerp(low, t)
 		var y0 := int(HORIZON * float(b) / bands)
 		var y1 := int(HORIZON * float(b + 1) / bands)
-		_blk(0, y0, GRID_X, y1 - y0, color)
+		_blk(0, y0, _cols, y1 - y0, color)
 		# Dither the seam between bands.
-		for x in range(0, GRID_X, 2):
+		for x in range(0, _cols, 2):
 			if b + 1 < bands:
 				_blk(x + (b % 2), y1 - 1, 1, 1, top.lerp(low, minf(1.0, t + 1.0 / bands)))
 
@@ -158,7 +162,7 @@ func _land(land: int, trouble: float) -> void:
 
 	# The ground itself.
 	for row in range(HORIZON, GRID_Y):
-		for col in range(GRID_X):
+		for col in range(_cols):
 			var c := ground_dark if (col + row) % 2 == 0 else ground
 			_blk(col, row, 1, 1, c)
 
@@ -168,10 +172,10 @@ func _land(land: int, trouble: float) -> void:
 			for row in range(GRID_Y - 12, GRID_Y):
 				var depth := float(row - (GRID_Y - 12)) / 12.0
 				var water: Color = pal[MapPalette.SHALLOWS].lerp(pal[MapPalette.SEA], depth)
-				for col in range(GRID_X):
+				for col in range(_cols):
 					_blk(col, row, 1, 1, water)
 				if row == GRID_Y - 12:
-					for col in range(0, GRID_X, 3):
+					for col in range(0, _cols, 3):
 						_blk(col, row, 2, 1, pal[MapPalette.SAND])
 		Land.PLAIN, Land.TRADE:
 			# Field strips, so grain country looks farmed.
@@ -180,11 +184,11 @@ func _land(land: int, trouble: float) -> void:
 				if y >= GRID_Y:
 					break
 				var tone: Color = pal[MapPalette.FARM_GREEN] if strip % 2 == 0 else pal[MapPalette.FARM_DARK]
-				_blk(0, y, GRID_X, 2, tone)
+				_blk(0, y, _cols, 2, tone)
 		Land.BASIN:
 			# The Kesla, crossing in front of the capital.
 			var y := GRID_Y - 9
-			for col in range(GRID_X):
+			for col in range(_cols):
 				var wob := int(sin(col * 0.18) * 1.5)
 				_blk(col, y + wob, 1, 4, pal[MapPalette.RIVER])
 
@@ -196,9 +200,9 @@ func _peaks(amplitude: int, lift: int, color: Color, capped: bool) -> void:
 	var base := HORIZON - lift
 	var summits: Array[int] = []
 	var xs: Array[int] = []
-	var spacing := maxi(9, GRID_X / 7)
+	var spacing := maxi(9, _cols / 7)
 	var x := -spacing / 2
-	while x < GRID_X + spacing:
+	while x < _cols + spacing:
 		xs.append(x)
 		summits.append(base - _rng.randi_range(0, maxi(1, amplitude * 2)))
 		x += spacing + _rng.randi_range(-2, 3)
@@ -210,7 +214,7 @@ func _peaks(amplitude: int, lift: int, color: Color, capped: bool) -> void:
 		var y1 := summits[i + 1]
 		var saddle := maxi(y0, y1) + _rng.randi_range(2, 4)
 		for col in range(x0, x1):
-			if col < 0 or col >= GRID_X:
+			if col < 0 or col >= _cols:
 				continue
 			# Up to the saddle, then down to the next summit: two slopes per
 			# span gives a ridgeline instead of a sawtooth.
@@ -234,14 +238,17 @@ func _town(land: int, development: float, pressure: float, unemployment: float,
 
 	# The street the town stands on: dirt when poor, paved once developed.
 	var road: Color = pal[MapPalette.ROAD] if development < 0.55 else pal[MapPalette.ROCK_DARK]
-	_blk(0, ground_y + 10, GRID_X, 2, road)
+	_blk(0, ground_y + 10, _cols, 2, road)
 
 	# How much town there is. Development builds upward, population outward.
 	var population := clampf(float(_region.get("population", 1000.0)) / 3000.0, 0.15, 1.0)
-	var count := int(lerpf(5.0, 20.0, clampf(development * 0.65 + population * 0.35, 0.0, 1.0)))
+	# Density, not a fixed count: the grid widens with the panel, and a count
+	# tuned for a narrow frame leaves a wide one half empty.
+	var built := clampf(development * 0.65 + population * 0.35, 0.0, 1.0)
+	var count := int(lerpf(5.0, 20.0, built) * (float(_cols) / 140.0))
 	var x := 4
 	for i in count:
-		if x >= GRID_X - 6:
+		if x >= _cols - 6:
 			break
 		var w := _rng.randi_range(4, 7)
 		# Taller where the state is present and the place is developed.
@@ -255,7 +262,7 @@ func _town(land: int, development: float, pressure: float, unemployment: float,
 
 	# A civic building with a flag once the state actually reaches here.
 	if reach > 0.45:
-		var cx := int(GRID_X * 0.5) - 5
+		var cx := int(_cols * 0.5) - 5
 		var ch := 10 + int(reach * 5.0)
 		var cy := ground_y + 10 - ch
 		_blk(cx, cy, 11, ch, pal[MapPalette.SNOW_SHADE])
@@ -269,7 +276,7 @@ func _town(land: int, development: float, pressure: float, unemployment: float,
 	# Industry: chimneys that only exist in a developed industrial region, and
 	# only smoke when there is work.
 	if land == Land.INDUSTRY or development > 0.7:
-		var fx := GRID_X - 26
+		var fx := _cols - 26
 		var fh := 14
 		var fy := ground_y + 10 - fh
 		_blk(fx, fy + 4, 18, fh - 4, pal[MapPalette.ROCK_DARK])
@@ -312,15 +319,15 @@ func _unrest(trouble: float, at_war: bool) -> void:
 	# Barricades across the street.
 	var bars := int(lerpf(1.0, 4.0, trouble))
 	for i in bars:
-		var bx := 16 + i * 23
-		if bx >= GRID_X - 8:
+		var bx := 16 + i * int(_cols / maxi(1, bars + 1))
+		if bx >= _cols - 8:
 			break
 		_blk(bx, ground_y - 3, 7, 3, pal[MapPalette.TRUNK])
 		_blk(bx + 1, ground_y - 5, 5, 2, pal[MapPalette.ROCK_DARK])
 
 	# Fire only once it is genuinely bad, so it keeps its meaning.
 	if at_war or trouble > 0.75:
-		var fx := int(GRID_X * 0.32)
+		var fx := int(_cols * 0.32)
 		var fy := ground_y - 14
 		_blk(fx, fy, 3, 4, pal[MapPalette.CEASEFIRE])
 		_blk(fx + 1, fy - 2, 2, 3, pal[MapPalette.GOLD])
@@ -337,5 +344,5 @@ func _plume(x: int, y: int, height: int, color: Color) -> void:
 
 ## A dark border so the vignette reads as a framed picture, not a background.
 func _vignette() -> void:
-	var frame := Rect2(_origin, Vector2(GRID_X * _cell, GRID_Y * _cell))
+	var frame := Rect2(_origin, Vector2(_cols * _cell, GRID_Y * _cell))
 	draw_rect(frame, UiPalette.EDGE, false, 1.0)
