@@ -49,15 +49,20 @@ static func _mask_warp() -> FastNoiseLite:
 	return _noise(MASK_WARP_FREQUENCY, 3, 3)
 
 
-static func _edge_noise(offset: int) -> FastNoiseLite:
-	if not _edge_cache.has(offset):
-		_edge_cache[offset] = _noise(1.0, 3, offset)
-	return _edge_cache[offset]
+static func _edge_noise(offset: int, octaves: int) -> FastNoiseLite:
+	var key := Vector2i(offset, octaves)
+	if not _edge_cache.has(key):
+		_edge_cache[key] = _noise(1.0, octaves, offset)
+	return _edge_cache[key]
 
 
-static func _fold(offset: int, t: float, scale: float) -> float:
-	# A folded (ridged) sample: creases rather than bulges.
-	return absf(_edge_noise(offset).get_noise_1d(t * scale)) * 2.0 - 0.5
+static func _fold(offset: int, t: float, scale: float, octaves: int = 3) -> float:
+	# A folded (ridged) sample: creases rather than bulges. Note what the
+	# octaves cost: with lacunarity 2 the third octave creases at four times
+	# `scale`, and folding doubles that again — so three octaves at scale 9
+	# put a crease every eighth of a `scale` unit. Pass fewer octaves on any
+	# edge where that lands below one tile.
+	return absf(_edge_noise(offset, octaves).get_noise_1d(t * scale)) * 2.0 - 0.5
 
 
 static func northern_edge(u: float) -> float:
@@ -79,7 +84,14 @@ static func southern_edge(u: float) -> float:
 
 static func coastline(v: float) -> float:
 	var base := 0.072 + (v - 0.15) * 0.145
-	var crinkle := _fold(24, v, 9.0) * 0.016 + _fold(25, v, 14.0) * 0.007
+	# One fold, and a coarse single-octave one. The coast runs along the short
+	# axis — a hundred tiles — so the old pair of three-octave folds creased
+	# every row and a half, well under the tile floor, and the grid could only
+	# draw that as a ±1 tile wobble in and out of the sea. Scale six at one
+	# octave creases every eight rows, which it can draw; the second fold's
+	# weight is folded into the first rather than kept as detail nothing can
+	# render. The headland, bay and estuary below are Gaussians and untouched.
+	var crinkle := _fold(24, v, 6.0, 1) * 0.021
 	var headland := -0.044 * exp(-pow((v - 0.215) / 0.042, 2.0))
 	# The Orvena bay cuts deep enough to leave a waist behind it: the only
 	# land route from Vetrenka's coast to the south is a few tiles wide.

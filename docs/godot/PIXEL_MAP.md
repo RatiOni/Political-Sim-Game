@@ -83,7 +83,15 @@ earlier map read as a generated blob.
   so a wavelength near the tile size serrates the whole frontier),
   `CROOK_FREQUENCY` (a jog every twenty tiles is a jog; every five is jitter),
   and the fine `_fold`/`sin` terms in `northern_edge`, `southern_edge` and
-  `coastline`. The Gaussian features — the passes, the lost valley, the
+  `coastline`. **Count a `_fold`'s octaves, not its scale:** lacunarity is 2,
+  so a third octave creases at four times `scale`, and the fold itself doubles
+  that again — three octaves at scale 9 crease every eighth of a `scale` unit.
+  The coast is the edge that cannot afford them, because it runs along the
+  *short* axis of a hundred tiles: its pair of three-octave folds creased
+  roughly every row and a half and the grid drew that as a ±1 tile stutter in
+  and out of the sea. It is now one single-octave fold at scale 6, which
+  creases every eight rows. `_fold` takes an `octaves` argument for this.
+  The Gaussian features — the passes, the lost valley, the
   headland, the Orvena bay, the Kesla estuary — are all far above the floor
   and are untouched by any of this.
 - **`_majority` is the de-staircase**, and its radius is set in tiles, not in
