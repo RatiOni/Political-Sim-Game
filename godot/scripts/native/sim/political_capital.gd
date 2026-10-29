@@ -11,7 +11,7 @@ const PC_UPKEEP_TREATY := 0.7
 const PC_UPKEEP_SANCTIONS := 1.2
 
 static func upkeep(state: GameState) -> Dictionary:
-	var laws := state.enacted_laws.size()
+	var laws := state.enacted_laws.filter(func(l: Law) -> bool: return l.proposed_by == state.player.faction_id).size()
 	var treaties := 0
 	var sanctions := 0
 	for rel in state.country.relations.values():

@@ -315,6 +315,10 @@ static func _preview_plan(state: GameState, plan: AnnualBudget) -> Dictionary:
 	}
 
 
+static func projection(state: GameState, plan: AnnualBudget) -> Dictionary:
+	return _projection(state, plan)
+
+
 static func _projection(state: GameState, plan: AnnualBudget) -> Dictionary:
 	var motion := _motion(state, plan)
 	return ParliamentaryVoteScript.project(state.country.factions, motion)

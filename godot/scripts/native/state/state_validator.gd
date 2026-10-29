@@ -414,7 +414,7 @@ static func _validate_budget(budget: AnnualBudget, label: String, container: Str
 		var enacted_ok := budget.status == "active" \
 			and budget.source in ["player", "government_ai", "continuing"] \
 			and budget.year <= current_year
-		var rejected_ok := budget.status == "rejected" and budget.source == "player" \
+		var rejected_ok := budget.status == "rejected" and budget.source in ["player", "government_ai"] \
 			and budget.year <= current_year + 1
 		if not enacted_ok and not rejected_ok:
 			errors.append("%s has an impossible historical lifecycle" % label)

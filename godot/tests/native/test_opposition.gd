@@ -373,6 +373,22 @@ func _test_the_read_model_explains_every_choice(t) -> void:
 	t.truth(not OppositionActions.read_model(_state("government"))["portfolios"][0]["eligible"], "a government names no shadow team")
 
 
+func _test_ai_governments_choose_from_the_saved_stream(t) -> void:
+	var first := {}
+	for seed in [1, 2, 3, 4, 5, 6, 7, 8]:
+		var a := _state("opposition", seed)
+		var b := _state("opposition", seed)
+		var pick_a := OppositionSim.choose_bill(a)
+		var pick_b := OppositionSim.choose_bill(b)
+		t.equal(pick_a.id, pick_b.id, "seed %d: the same stream makes the same choice" % seed)
+		first[pick_a.id] = true
+	t.truth(first.size() >= 2, "different campaigns see different government programmes (%d first bills)" % first.size())
+	var calm := _state("opposition", 1)
+	var top := OppositionSim.ranked_bills(calm)
+	t.truth(top.size() <= OppositionSim.PROGRAMME_SHORTLIST and top.has(OppositionSim.choose_bill(_state("opposition", 1)).id),
+		"the choice always comes from the government's own shortlist")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_the_government_runs_a_programme(t)
@@ -391,4 +407,5 @@ func _initialize() -> void:
 	_test_opposition_state_persists_and_validates(t)
 	_test_opposition_years_replay_and_stay_bounded(t)
 	_test_the_read_model_explains_every_choice(t)
+	_test_ai_governments_choose_from_the_saved_stream(t)
 	quit(t.finish())
