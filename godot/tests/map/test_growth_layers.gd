@@ -192,6 +192,90 @@ func _check_fence(geo: MapGeometry, tiles: Dictionary) -> void:
 	t.truth(crossings > 0, "some town spirals cross a region line")
 
 
+func _city_centres(geo: MapGeometry) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for city in geo.cities:
+		out.append(Vector2i(Vector2(city["point"]) * Vector2(TileBaker.GRID)))
+	return out
+
+
+func _check_hamlets(geo: MapGeometry, tiles: Dictionary) -> void:
+	var first := GrowthLayers.HAMLET_FIRST_POPULATION
+	var step := GrowthLayers.HAMLET_POPULATION_STEP
+	t.equal(GrowthLayers.hamlet_count(first - 1.0), 0, "below the first threshold no hamlet stands")
+	t.equal(GrowthLayers.hamlet_count(first), 1, "the first threshold raises one hamlet")
+	t.equal(GrowthLayers.hamlet_count(first + step), 2, "each further step raises another")
+	t.equal(GrowthLayers.hamlet_count(1.0e9), GrowthLayers.MAX_HAMLETS, "hamlets are capped")
+	var below := GrowthLayers.all_targets(_rows(geo, first - 1.0, 0.5), geo, tiles)
+	var crowded := GrowthLayers.all_targets(_rows(geo, 1.0e7, 0.5), geo, tiles)
+	var raised := 0
+	for id in below:
+		t.equal(below[id]["hamlet_cells"].size(), 0, "%s has no hamlet below the threshold" % id)
+	var centres := _city_centres(geo)
+	for id in crowded:
+		var region := geo.region_ids.find(id)
+		var cells: Array = crowded[id]["hamlet_cells"]
+		raised += 1 if not cells.is_empty() else 0
+		t.truth(cells.size() <= GrowthLayers.MAX_HAMLETS * GrowthLayers.HAMLET_HOUSES, "%s keeps its hamlets small" % id)
+		for c in cells:
+			t.truth(TileBaker.region_at_tile(tiles, c) == region and _kind(tiles, c) in GrowthLayers.BUILDABLE, "%s's hamlet cell %s is buildable land in the region" % [id, c])
+			t.truth(centres.all(func(p: Vector2i) -> bool: return maxi(absi(c.x - p.x), absi(c.y - p.y)) > GrowthLayers.TOWN_RADIUS), "%s's hamlet cell %s lies beyond every town's reach" % [id, c])
+			t.truth(c in crowded[id]["town_cells"] and c not in crowded[id]["farm_cells"], "%s's hamlet cell %s is a house, not a field" % [id, c])
+	t.truth(raised >= 3, "hamlets appear across the country (%d regions)" % raised)
+	var grown := false
+	for pop in [first, first + step / 3.0, first + step, first + 2.0 * step]:
+		var smaller := GrowthLayers.all_targets(_rows(geo, pop, 0.5), geo, tiles)
+		var larger := GrowthLayers.all_targets(_rows(geo, pop + step / 3.0, 0.5), geo, tiles)
+		for id in smaller:
+			var held: Array = smaller[id]["hamlet_cells"]
+			t.truth(held.all(func(c: Vector2i) -> bool: return c in larger[id]["hamlet_cells"]), "%s's hamlets at %dk stay put as it grows" % [id, pop])
+			grown = grown or larger[id]["hamlet_cells"].size() > held.size()
+	t.truth(grown, "growing population grows and adds hamlets")
+	t.equal(crowded, GrowthLayers.all_targets(_rows(geo, 1.0e7, 0.5), geo, tiles), "hamlets are deterministic")
+	var one := GrowthLayers.all_targets(_rows(geo, first, 0.5), geo, tiles)
+	for id in one:
+		t.truth(one[id]["hamlet_cells"].size() <= 1, "%s's new hamlet starts as one house" % id)
+
+
+func _check_rail_unlock(geo: MapGeometry, tiles: Dictionary) -> void:
+	var gate := GrowthLayers.RAIL_DEVELOPMENT
+	var low := _rows(geo, 600.0, gate - 0.01)
+	var high := _rows(geo, 600.0, gate)
+	var locked := GrowthLayers.overlay(low, geo, tiles, GrowthLayers.all_targets(low, geo, tiles))
+	var open := GrowthLayers.overlay(high, geo, tiles, GrowthLayers.all_targets(high, geo, tiles))
+	var rails := func(o: Dictionary) -> int: return o["routes"].values().filter(func(s: String) -> bool: return s.begins_with("rail")).size()
+	t.equal(rails.call(locked), 0, "below the development gate no rail is laid")
+	t.truth(rails.call(open) > 0, "at the gate the rail links open")
+	var rail_routes: Array[int] = []
+	for i in geo.routes.size():
+		if geo.routes[i]["kind"] == "rail":
+			rail_routes.append(i)
+	t.equal(locked["locked_rails"].size(), rail_routes.size(), "every rail link is locked below the gate")
+	t.equal(open["locked_rails"].size(), 0, "no rail link is locked at the gate")
+	var route: Dictionary = geo.routes[rail_routes[0]]
+	var crossed := {}
+	for cell in TileBaker.line_tiles(route["points"]):
+		var r := TileBaker.region_at_tile(tiles, cell)
+		if r < geo.region_ids.size():
+			crossed[r] = true
+	var mixed := _rows(geo, 600.0, 0.9)
+	mixed[crossed.keys()[0]]["development"] = gate - 0.01
+	var partial := GrowthLayers.overlay(mixed, geo, tiles, GrowthLayers.all_targets(mixed, geo, tiles))
+	t.truth(partial["locked_rails"].has(rail_routes[0]), "one lagging region keeps its rail link closed")
+	var shared := {}
+	for i in rail_routes:
+		if not partial["locked_rails"].has(i):
+			for cell in TileBaker.line_tiles(geo.routes[i]["points"]):
+				shared[cell] = true
+	for cell in TileBaker.line_tiles(route["points"]):
+		if not shared.has(cell):
+			t.truth(not String(partial["routes"].get(cell, "")).begins_with("rail"), "the closed link lays no rail at %s" % cell)
+	var all_open := MapLines.routes(geo, MapPalette.DAY)
+	var shut := MapLines.routes(geo, MapPalette.DAY, TileBaker.TILE, {}, locked["locked_rails"])
+	t.truth(_pixels(all_open, MapPalette.DAY[MapPalette.RAIL]) > 0 and _pixels(shut, MapPalette.DAY[MapPalette.RAIL]) == 0, "closed rail links leave no track on the route image")
+	t.equal(_pixels(shut, MapPalette.DAY[MapPalette.ROAD]), _pixels(all_open, MapPalette.DAY[MapPalette.ROAD]), "closing rail leaves the roads alone")
+
+
 func _troubled(geo: MapGeometry, pressure: float, development: float) -> Array:
 	var rows := _rows(geo, BASE_POPULATION, development, pressure)
 	for row in rows:
@@ -303,7 +387,7 @@ func _check_routes(geo: MapGeometry, tiles: Dictionary) -> void:
 	t.truth(kinds.has("paved") and kinds.has("rail"), "a developed country shows paved roads and rail")
 	var low := _rows(geo, 1500.0, 0.1, 0.1)
 	var rough := GrowthLayers.overlay(low, geo, tiles, GrowthLayers.all_targets(low, geo, tiles))
-	t.truth(rough["routes"].values().all(func(s: String) -> bool: return s.begins_with("rail")), "undeveloped roads stay tracks and only rail is drawn")
+	t.truth(rough["routes"].is_empty(), "an undeveloped country keeps dirt tracks and no rail")
 	var mid := _rows(geo, 1500.0, 0.5, 0.1)
 	var middling := GrowthLayers.overlay(mid, geo, tiles, GrowthLayers.all_targets(mid, geo, tiles))
 	t.truth(middling["routes"].values().any(func(s: String) -> bool: return s.begins_with("road")), "middling development draws roads")
@@ -321,13 +405,14 @@ func _check_routes(geo: MapGeometry, tiles: Dictionary) -> void:
 		t.truth(transposed_ok, "%s_v is %s turned on its side" % [base, base])
 		var mirrored: Array = TileArt.sprite_rows(base + "_d1").map(func(r: String) -> String: return r.reverse())
 		t.equal(TileArt.sprite_rows(base + "_d2"), mirrored, "%s_d2 mirrors %s_d1" % [base, base])
-	var plain := MapLines.build(tiles, geo, MapPalette.DAY)
-	var covered := MapLines.build(tiles, geo, MapPalette.DAY, TileBaker.TILE, overlay["covered"])
+	var plain := MapLines.routes(geo, MapPalette.DAY)
+	var covered := MapLines.routes(geo, MapPalette.DAY, TileBaker.TILE, overlay["covered"])
 	t.truth(_pixels(covered, MapPalette.DAY[MapPalette.ROAD]) < _pixels(plain, MapPalette.DAY[MapPalette.ROAD]), "covered route cells lose their dotted road")
 	t.truth(_pixels(covered, MapPalette.DAY[MapPalette.RAIL]) < _pixels(plain, MapPalette.DAY[MapPalette.RAIL]), "covered rail cells lose their drawn rail")
-	var line := _pixels(plain, MapPalette.DAY[MapPalette.CEASEFIRE])
-	t.truth(line > 0, "the ceasefire line is drawn")
-	t.equal(_pixels(covered, MapPalette.DAY[MapPalette.CEASEFIRE]), line, "covering routes leaves the ceasefire line alone")
+	var borders := MapLines.build(tiles, geo, MapPalette.DAY)
+	t.truth(_pixels(borders, MapPalette.DAY[MapPalette.CEASEFIRE]) > 0, "the ceasefire line is drawn with the borders")
+	t.equal(_pixels(plain, MapPalette.DAY[MapPalette.CEASEFIRE]), 0, "the route image never carries the ceasefire line")
+	t.equal(_pixels(borders, MapPalette.DAY[MapPalette.ROAD]) + _pixels(borders, MapPalette.DAY[MapPalette.RAIL]), 0, "the border image carries no routes")
 
 
 
@@ -424,6 +509,8 @@ func _run() -> void:
 	_check_trouble_cells(geo, tiles)
 	_check_routes(geo, tiles)
 	_check_plume_cells()
+	_check_hamlets(geo, tiles)
+	_check_rail_unlock(geo, tiles)
 
 	root.size = Vector2i(1920, 1080)
 	var map: ArdeniaMap = (load("res://scenes/map/ardenia_map.tscn") as PackedScene).instantiate()
@@ -437,6 +524,7 @@ func _run() -> void:
 	t.truth(before > 0 and houses > 0, "the first snapshot paints towns and fields at once")
 	t.truth(_count_sprite(map, "capital") == 1, "the capital carries one capital marker")
 	t.equal(_count_sprite(map, "house_lit"), 0, "no lights burn by day")
+	t.equal(_count_prefix(map, "rail"), 0, "an undeveloped map lays no rail yet")
 
 	map.apply_snapshot(_rows(geo, BASE_POPULATION * 3.0, 0.9), "")
 	t.equal(map.growth_layer.get_used_cells().size(), before, "a later snapshot starts flipping, not jumping")
@@ -445,6 +533,13 @@ func _run() -> void:
 	t.truth(after > before, "tripled population and development paint more cells (%d to %d)" % [before, after])
 	t.truth(_count_sprite(map, "house") > houses, "more houses stand")
 	t.truth(_count_sprite(map, "tower") > 0, "towers rise at high development")
+	t.truth(_count_prefix(map, "rail") > 0, "development opens the rail links on the map")
+	var plan := GrowthLayers.all_targets(_rows(geo, BASE_POPULATION * 3.0, 0.9), geo, tiles)
+	var hamlets: Array[Vector2i] = []
+	for id in plan:
+		hamlets.append_array(plan[id]["hamlet_cells"])
+	var house := Vector2i(TileArt.index()["house"][0], TileArt.index()["house"][1])
+	t.truth(not hamlets.is_empty() and hamlets.all(func(c: Vector2i) -> bool: return map.growth_layer.get_cell_atlas_coords(c) == house), "hamlets stand on the map as houses (%d cells)" % hamlets.size())
 
 	map.apply_snapshot(_rows(geo, BASE_POPULATION * 3.0, 0.9), "")
 	t.equal(map.growth_layer.get_used_cells().size(), after, "an unchanged snapshot changes nothing")

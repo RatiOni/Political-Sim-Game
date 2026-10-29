@@ -33,6 +33,15 @@ const SMOKE_SHARE := 0.8
 const PLUME_RISE: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, -2)]
 const MAX_SMOKE := 20
 const ROUTE_KINDS: Array[String] = ["road", "rail"]
+const RAIL_DEVELOPMENT := 0.5
+const HAMLET_FIRST_POPULATION := 500.0
+const HAMLET_POPULATION_STEP := 250.0
+const MAX_HAMLETS := 6
+const HAMLET_HOUSES := 3
+const HAMLET_SPACING := 6
+const HAMLET_SALT := 5
+
+static var _memo: Dictionary = {}
 
 
 static func town_tiles(population_k: float, is_capital: bool) -> int:
@@ -64,12 +73,15 @@ static func cell_less(a: Vector2i, b: Vector2i) -> bool:
 
 
 static func hash_order(cells: Array, salt: int = 0) -> Array[Vector2i]:
+	var keys := PackedInt64Array()
+	var span := TileBaker.GRID.x * TileBaker.GRID.y
+	for cell in cells:
+		keys.append(TileBaker.cell_hash(cell, salt) * span + cell.y * TileBaker.GRID.x + cell.x)
+	keys.sort()
 	var ordered: Array[Vector2i] = []
-	ordered.assign(cells)
-	ordered.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-		var ha := TileBaker.cell_hash(a, salt)
-		var hb := TileBaker.cell_hash(b, salt)
-		return ha < hb or (ha == hb and cell_less(a, b)))
+	for key in keys:
+		var index := key % span
+		ordered.append(Vector2i(index % TileBaker.GRID.x, index / TileBaker.GRID.x))
 	return ordered
 
 
@@ -79,20 +91,97 @@ static func kind_at(tiles: Dictionary, cell: Vector2i) -> String:
 	return TileArt.KINDS[tiles["kinds"][cell.y * TileBaker.GRID.x + cell.x]]
 
 
+static func _remember(key: Array, build: Callable) -> Variant:
+	if not _memo.has(key):
+		_memo[key] = build.call()
+	return _memo[key]
+
+
 static func cells_for_town(center: Vector2i, count: int, tiles: Dictionary, blocked: Dictionary = {}, claimed: Dictionary = {}) -> Array[Vector2i]:
-	var candidates: Array[Vector2i] = []
-	for dy in range(-TOWN_RADIUS, TOWN_RADIUS + 1):
-		for dx in range(-TOWN_RADIUS, TOWN_RADIUS + 1):
-			var cell := center + Vector2i(dx, dy)
-			var region := TileBaker.region_at_tile(tiles, cell)
-			if kind_at(tiles, cell) in BUILDABLE and region < MapBaker.FOREIGN_REGION and not blocked.has(region) and not claimed.has(cell):
-				candidates.append(cell)
-	candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-		var da := (a - center).length_squared()
-		var db := (b - center).length_squared()
-		return da < db or (da == db and cell_less(a, b)))
 	var out: Array[Vector2i] = []
-	out.assign(candidates.slice(0, count))
+	for cell in _town_candidates(center, tiles):
+		if out.size() >= count:
+			break
+		if not blocked.has(TileBaker.region_at_tile(tiles, cell)) and not claimed.has(cell):
+			out.append(cell)
+	return out
+
+
+static func _town_candidates(center: Vector2i, tiles: Dictionary) -> Array:
+	return _remember(["town", center, tiles.hash()], func() -> Array:
+		var candidates: Array[Vector2i] = []
+		for dy in range(-TOWN_RADIUS, TOWN_RADIUS + 1):
+			for dx in range(-TOWN_RADIUS, TOWN_RADIUS + 1):
+				var cell := center + Vector2i(dx, dy)
+				if kind_at(tiles, cell) in BUILDABLE and TileBaker.region_at_tile(tiles, cell) < MapBaker.FOREIGN_REGION:
+					candidates.append(cell)
+		candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+			var da := (a - center).length_squared()
+			var db := (b - center).length_squared()
+			return da < db or (da == db and cell_less(a, b)))
+		return candidates)
+
+
+static func hamlet_count(population_k: float) -> int:
+	if population_k < HAMLET_FIRST_POPULATION:
+		return 0
+	return mini(MAX_HAMLETS, 1 + floori((population_k - HAMLET_FIRST_POPULATION) / HAMLET_POPULATION_STEP))
+
+
+static func _hamlet_houses(population_k: float, index: int) -> int:
+	var past := population_k - HAMLET_FIRST_POPULATION - index * HAMLET_POPULATION_STEP
+	return clampi(1 + floori(past * HAMLET_HOUSES / HAMLET_POPULATION_STEP), 1, HAMLET_HOUSES)
+
+
+static func hamlet_sites(region: int, geo: MapGeometry, tiles: Dictionary) -> Array:
+	return _all_hamlet_sites(geo, tiles).get(region, [])
+
+
+static func _all_hamlet_sites(geo: MapGeometry, tiles: Dictionary) -> Dictionary:
+	return _remember(["hamlets", geo.cities.hash(), tiles.hash()], func() -> Dictionary:
+		var near := {}
+		for city in geo.cities:
+			var centre := Vector2i(Vector2(city["point"]) * Vector2(TileBaker.GRID))
+			for dy in range(-TOWN_RADIUS - 1, TOWN_RADIUS + 2):
+				for dx in range(-TOWN_RADIUS - 1, TOWN_RADIUS + 2):
+					near[centre + Vector2i(dx, dy)] = true
+		var land := {}
+		for y in TileBaker.GRID.y:
+			for x in TileBaker.GRID.x:
+				var cell := Vector2i(x, y)
+				var region := TileBaker.region_at_tile(tiles, cell)
+				if region < geo.region_ids.size() and not near.has(cell) and kind_at(tiles, cell) in BUILDABLE:
+					if not land.has(region):
+						land[region] = []
+					land[region].append(cell)
+		var out := {}
+		for region in land:
+			var sites: Array[Vector2i] = []
+			for cell in hash_order(land[region], HAMLET_SALT):
+				if sites.size() >= MAX_HAMLETS:
+					break
+				if _beyond(cell, sites, HAMLET_SPACING):
+					sites.append(cell)
+			out[region] = sites
+		return out)
+
+
+static func _beyond(cell: Vector2i, others: Array[Vector2i], gap: int) -> bool:
+	for other in others:
+		if maxi(absi(cell.x - other.x), absi(cell.y - other.y)) <= gap:
+			return false
+	return true
+
+
+static func _hamlet_cells(population_k: float, region: int, geo: MapGeometry, tiles: Dictionary) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var sites := hamlet_sites(region, geo, tiles)
+	for i in mini(hamlet_count(population_k), sites.size()):
+		var houses := _hamlet_houses(population_k, i)
+		for cell in [sites[i]] + TileBaker.SIDES.map(func(side: Vector2i) -> Vector2i: return sites[i] + side):
+			if houses > 0 and TileBaker.region_at_tile(tiles, cell) == region and kind_at(tiles, cell) in BUILDABLE:
+				out.append(cell)
+				houses -= 1
 	return out
 
 
@@ -132,6 +221,18 @@ static func all_targets(rows: Array, geo: MapGeometry, tiles: Dictionary) -> Dic
 				entry["towers"].append(cell)
 			else:
 				entry["houses"].append(cell)
+	for region_id in by_id:
+		var region := geo.region_ids.find(region_id)
+		if region < 0:
+			continue
+		if not towns.has(region_id):
+			towns[region_id] = {"cells": [] as Array[Vector2i], "houses": [] as Array[Vector2i], "towers": [] as Array[Vector2i], "capitals": [] as Array[Vector2i], "centres": [] as Array[Vector2i]}
+		var hamlets := _hamlet_cells(float(by_id[region_id].get("population", 0.0)), region, geo, tiles)
+		towns[region_id]["hamlets"] = hamlets
+		for cell in hamlets:
+			claimed[cell] = true
+			towns[region_id]["cells"].append(cell)
+			towns[region_id]["houses"].append(cell)
 	var out := {}
 	for region_id in towns:
 		out[region_id] = _region_targets(by_id[region_id], geo.region_ids.find(region_id), towns[region_id], claimed, tiles)
@@ -168,6 +269,7 @@ static func _region_targets(row: Dictionary, region: int, towns: Dictionary, cla
 		"town_cells": towns["cells"],
 		"tower_cells": towns["towers"] if development >= TOWER_DEVELOPMENT else [] as Array[Vector2i],
 		"capital_cells": towns["capitals"],
+		"hamlet_cells": towns["hamlets"],
 		"lit_cells": hash_order(towns["houses"], 1).slice(0, lit_count),
 		"farm_cells": farm,
 		"fallow_cells": farm.slice(farm.size() - fallow_count),
@@ -175,24 +277,36 @@ static func _region_targets(row: Dictionary, region: int, towns: Dictionary, cla
 
 
 static func _farm_cells(region: int, occupied: Dictionary, centres: Array, development: float, tiles: Dictionary) -> Array[Vector2i]:
-	var reach := {}
 	var limit := farm_reach(development)
-	var span := ceili(limit)
-	for centre in centres:
-		for dy in range(-span, span + 1):
-			for dx in range(-span, span + 1):
-				var cell: Vector2i = centre + Vector2i(dx, dy)
-				var distance := Vector2(dx, dy).length()
-				if distance > limit or occupied.has(cell) or kind_at(tiles, cell) not in ARABLE or TileBaker.region_at_tile(tiles, cell) != region:
-					continue
-				if not reach.has(cell) or distance < reach[cell]:
-					reach[cell] = distance
-	var ordered: Array = reach.keys()
-	ordered.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-		return reach[a] < reach[b] or (reach[a] == reach[b] and cell_less(a, b)))
+	var reachable: Array[Vector2i] = []
+	for entry in _farm_candidates(region, centres, tiles):
+		if entry[1] > limit:
+			break
+		if not occupied.has(entry[0]):
+			reachable.append(entry[0])
 	var out: Array[Vector2i] = []
-	out.assign(ordered.slice(0, roundi(ordered.size() * farm_share(development))))
+	out.assign(reachable.slice(0, roundi(reachable.size() * farm_share(development))))
 	return out
+
+
+static func _farm_candidates(region: int, centres: Array, tiles: Dictionary) -> Array:
+	return _remember(["farm", region, centres, tiles.hash()], func() -> Array:
+		var reach := {}
+		var limit := farm_reach(1.0)
+		var span := ceili(limit)
+		for centre in centres:
+			for dy in range(-span, span + 1):
+				for dx in range(-span, span + 1):
+					var cell: Vector2i = centre + Vector2i(dx, dy)
+					var distance := Vector2(dx, dy).length()
+					if distance > limit or kind_at(tiles, cell) not in ARABLE or TileBaker.region_at_tile(tiles, cell) != region:
+						continue
+					if not reach.has(cell) or distance < reach[cell]:
+						reach[cell] = distance
+		var ordered: Array = reach.keys()
+		ordered.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+			return reach[a] < reach[b] or (reach[a] == reach[b] and cell_less(a, b)))
+		return ordered.map(func(cell: Vector2i) -> Array: return [cell, reach[cell]]))
 
 
 static func road_tier(development: float, programme_active: bool) -> int:
@@ -262,9 +376,10 @@ static func overlay(rows: Array, geo: MapGeometry, tiles: Dictionary, targets: D
 		for key in ["town_cells", "farm_cells"]:
 			for cell in targets[region_id][key]:
 				occupied[cell] = true
+	var locked := locked_rails(geo, tiles, by_id)
 	for step in _route_walk(geo, tiles, by_id):
 		var row: Dictionary = by_id[step["region"]]
-		var sprite := _route_sprite(step, row)
+		var sprite := "" if locked.has(step["route"]) else _route_sprite(step, row)
 		if sprite != "":
 			routes[step["cell"]] = sprite
 		if not occupied.has(step["cell"]):
@@ -279,7 +394,23 @@ static func overlay(rows: Array, geo: MapGeometry, tiles: Dictionary, targets: D
 		out_trouble[region_id] = trouble_cells(by_id[region_id], houses, open.get(region_id, {}).keys())
 		for cell in out_trouble[region_id]["barricade"]:
 			covered[cell] = "barricade"
-	return {"routes": routes, "trouble": out_trouble, "covered": covered}
+	return {"routes": routes, "trouble": out_trouble, "covered": covered, "locked_rails": locked}
+
+
+static func locked_rails(geo: MapGeometry, tiles: Dictionary, by_id: Dictionary) -> Dictionary:
+	var out := {}
+	for i in geo.routes.size():
+		if geo.routes[i]["kind"] != "rail":
+			continue
+		for cell in TileBaker.line_tiles(geo.routes[i]["points"]):
+			var region := TileBaker.region_at_tile(tiles, cell)
+			if region >= geo.region_ids.size() or not by_id.has(geo.region_ids[region]):
+				continue
+			var row: Dictionary = by_id[geo.region_ids[region]]
+			if String(row.get("control", "")) != "separatist" and float(row.get("development", 0.0)) < RAIL_DEVELOPMENT:
+				out[i] = true
+				break
+	return out
 
 
 static func _route_sprite(step: Dictionary, row: Dictionary) -> String:
@@ -292,7 +423,8 @@ static func _route_sprite(step: Dictionary, row: Dictionary) -> String:
 static func _route_walk(geo: MapGeometry, tiles: Dictionary, by_id: Dictionary) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for kind in ROUTE_KINDS:
-		for route in geo.routes:
+		for index in geo.routes.size():
+			var route: Dictionary = geo.routes[index]
 			if route["kind"] != kind:
 				continue
 			var cells := TileBaker.line_tiles(route["points"])
@@ -304,7 +436,7 @@ static func _route_walk(geo: MapGeometry, tiles: Dictionary, by_id: Dictionary) 
 				if not by_id.has(region_id) or String(by_id[region_id].get("control", "")) == "separatist":
 					continue
 				var step := cells[mini(i + 1, cells.size() - 1)] - cells[maxi(i - 1, 0)]
-				out.append({"cell": cells[i], "region": region_id, "kind": kind, "suffix": route_suffix(step)})
+				out.append({"cell": cells[i], "region": region_id, "kind": kind, "route": index, "suffix": route_suffix(step)})
 	return out
 
 

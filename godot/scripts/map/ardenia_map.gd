@@ -36,6 +36,8 @@ var last_changed_cells := 0
 var lines_builds := 0
 var unknown_warnings := 0
 var lines_rect := TextureRect.new()
+var routes_rect := TextureRect.new()
+var routes_builds := 0
 var zoom_in_button := Button.new()
 var zoom_out_button := Button.new()
 var _sea := ColorRect.new()
@@ -55,6 +57,8 @@ var _day_textures: Dictionary = {}
 var _dusk_textures: Dictionary = {}
 var _lines: Dictionary = {}
 var _covered: Dictionary = {}
+var _locked_rails: Dictionary = {}
+var _routes_key := []
 var _dusk := false
 var _warned_ids: Dictionary = {}
 var _growth_started := false
@@ -115,10 +119,12 @@ func _build_nodes() -> void:
 	terrain_layer.name = "Terrain"
 	growth_layer.name = "Growth"
 	smoke_layer.name = "Smoke"
+	routes_rect.name = "Routes"
 	lines_rect.name = "Lines"
-	lines_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	lines_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_canvas.add_child(lines_rect)
+	for rect in [routes_rect, lines_rect]:
+		rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_canvas.add_child(rect)
 	_highlight.draw.connect(_draw_highlight)
 	_canvas.add_child(_highlight)
 	smoke_timer.name = "SmokeTimer"
@@ -250,9 +256,28 @@ func _apply_lines() -> void:
 	var key := Vector2i(tile_px, int(_dusk))
 	if not _lines.has(key):
 		lines_builds += 1
-		_lines[key] = ImageTexture.create_from_image(MapLines.build(_tiles, _geo, MapPalette.DUSK if _dusk else MapPalette.DAY, tile_px, _covered))
+		_lines[key] = ImageTexture.create_from_image(MapLines.build(_tiles, _geo, _palette(), tile_px))
 	lines_rect.texture = _lines[key]
 	lines_rect.size = Vector2(MapLines.canvas_size(tile_px))
+	_apply_routes()
+
+
+func _palette() -> PackedColorArray:
+	return MapPalette.DUSK if _dusk else MapPalette.DAY
+
+
+func _apply_routes() -> void:
+	var key := [tile_px, _dusk, _covered.hash(), _locked_rails.hash()]
+	if key == _routes_key:
+		return
+	_routes_key = key
+	routes_builds += 1
+	var image := MapLines.routes(_geo, _palette(), tile_px, _covered, _locked_rails)
+	if routes_rect.texture is ImageTexture and Vector2i(routes_rect.texture.get_size()) == image.get_size():
+		(routes_rect.texture as ImageTexture).update(image)
+	else:
+		routes_rect.texture = ImageTexture.create_from_image(image)
+	routes_rect.size = Vector2(image.get_size())
 
 
 func screen_transform() -> Transform2D:
@@ -398,7 +423,7 @@ func _paint_growth() -> void:
 		return
 	var targets := GrowthLayers.all_targets(regions.values(), _geo, _tiles)
 	var overlay := GrowthLayers.overlay(regions.values(), _geo, _tiles, targets)
-	_cover_routes(overlay["covered"])
+	_cover_routes(overlay["covered"], overlay["locked_rails"])
 	GrowthPainter.apply(self, targets, overlay, _growth_started)
 	_growth_started = true
 
@@ -499,9 +524,7 @@ func _outline(cells: Dictionary, width: float, colour: Color) -> void:
 				_highlight.draw_rect(Rect2(at, Vector2(width, width)), colour)
 
 
-func _cover_routes(covered: Dictionary) -> void:
-	if covered.hash() == _covered.hash():
-		return
+func _cover_routes(covered: Dictionary, locked_rails: Dictionary) -> void:
 	_covered = covered
-	_lines.clear()
-	_apply_lines()
+	_locked_rails = locked_rails
+	_apply_routes()

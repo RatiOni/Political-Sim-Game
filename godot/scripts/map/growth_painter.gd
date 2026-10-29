@@ -8,6 +8,8 @@ const SMOKE_SECONDS := SMOKE_CYCLE_SECONDS / SMOKE_FRAMES
 const PLUME_ROLES: Array[String] = ["fire", "smoke_mid", "smoke_top"]
 const NONE := Vector2i(-1, -1)
 
+static var _coords_by_sprite: Dictionary = {}
+
 
 static func apply(map: ArdeniaMap, all_targets: Dictionary, overlay: Dictionary, animate: bool) -> void:
 	map.growth_desired = _desired(all_targets, overlay)
@@ -65,8 +67,7 @@ static func _paint_smoke(map: ArdeniaMap) -> void:
 			map.smoke_layer.erase_cell(cell)
 	for cell in map.smoke_desired:
 		var entry: Dictionary = map.smoke_desired[cell]
-		var at: Array = TileArt.index()["%s_%d" % [entry["role"], (map.smoke_frame + entry["phase"]) % SMOKE_FRAMES]]
-		map.smoke_layer.set_cell(cell, 0, Vector2i(at[0], at[1]))
+		map.smoke_layer.set_cell(cell, 0, atlas_coords("%s_%d" % [entry["role"], (map.smoke_frame + entry["phase"]) % SMOKE_FRAMES]))
 
 
 static func _smoke_cells(overlay: Dictionary) -> Dictionary:
@@ -94,8 +95,14 @@ static func _coords(map: ArdeniaMap, cell: Vector2i) -> Vector2i:
 	var sprite: String = entry["sprite"]
 	if entry["lit"] and map.is_dusk():
 		sprite = "house_lit"
-	var at: Array = TileArt.index()[sprite]
-	return Vector2i(at[0], at[1])
+	return atlas_coords(sprite)
+
+
+static func atlas_coords(sprite: String) -> Vector2i:
+	if not _coords_by_sprite.has(sprite):
+		var at: Array = TileArt.index()[sprite]
+		_coords_by_sprite[sprite] = Vector2i(at[0], at[1])
+	return _coords_by_sprite[sprite]
 
 
 static func _desired(all_targets: Dictionary, overlay: Dictionary) -> Dictionary:

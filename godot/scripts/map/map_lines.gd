@@ -15,22 +15,33 @@ static func canvas_size(tile_px: int) -> Vector2i:
 	return TileBaker.GRID * tile_px
 
 
-static func build(tiles: Dictionary, geo: MapGeometry, palette: PackedColorArray, tile_px: int = TileBaker.TILE, covered: Dictionary = {}) -> Image:
+static func _blank(tile_px: int) -> Image:
 	var size := canvas_size(tile_px)
 	var img := Image.create_empty(size.x, size.y, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
+	return img
+
+
+static func build(tiles: Dictionary, geo: MapGeometry, palette: PackedColorArray, tile_px: int = TileBaker.TILE) -> Image:
+	var img := _blank(tile_px)
 	var count := geo.region_ids.size()
 	var inside := func(r: int) -> bool: return r < count
 	var foreign := func(r: int) -> bool: return r == MapBaker.FOREIGN_REGION
 	_internal_borders(img, tiles, count, palette[MapPalette.GOLD], tile_px)
 	_ring(img, tiles, foreign, inside, palette[MapPalette.GOLD], tile_px)
 	_ring(img, tiles, inside, foreign, palette[MapPalette.GOLD_DARK], tile_px)
-	for route in geo.routes:
+	_ceasefire(img, geo.ceasefire, palette[MapPalette.CEASEFIRE], tile_px)
+	return img
+
+
+static func routes(geo: MapGeometry, palette: PackedColorArray, tile_px: int = TileBaker.TILE, covered: Dictionary = {}, locked_rails: Dictionary = {}) -> Image:
+	var img := _blank(tile_px)
+	for i in geo.routes.size():
+		var route: Dictionary = geo.routes[i]
 		if route["kind"] == "road":
 			_road(img, route["points"], palette[MapPalette.ROAD], tile_px, covered)
-		elif route["kind"] == "rail":
+		elif route["kind"] == "rail" and not locked_rails.has(i):
 			_rail(img, route["points"], palette[MapPalette.RAIL], tile_px, covered)
-	_ceasefire(img, geo.ceasefire, palette[MapPalette.CEASEFIRE], tile_px)
 	return img
 
 

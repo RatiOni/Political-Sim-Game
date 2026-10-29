@@ -115,6 +115,38 @@ func _check_no_rebuilds(map: ArdeniaMap, geo: MapGeometry) -> void:
 	t.equal(map.lines_builds, dusk_builds, "toggling back and forth reuses the cached line images")
 
 
+func _crisis_rows(geo: MapGeometry, month: int) -> Array:
+	var rows: Array = []
+	for id in geo.region_ids:
+		rows.append({"id": id, "population": 400.0 + month * 40.0, "development": 0.3 + month * 0.03,
+			"pressure": 0.75 + 0.02 * (month % 4), "control": "full", "insurgency": 0.2, "civil_war": true})
+	return rows
+
+
+func _barricades(map: ArdeniaMap) -> Array:
+	return map.growth_desired.keys().filter(func(c: Vector2i) -> bool: return map.growth_desired[c]["sprite"] == "barricade")
+
+
+func _check_crisis_keeps_borders(geo: MapGeometry) -> void:
+	for level in [ArdeniaMap.OVERVIEW, ArdeniaMap.DETAIL]:
+		var map := _fresh_map()
+		await _frames()
+		if level == ArdeniaMap.DETAIL:
+			map.zoom_in()
+		else:
+			map.zoom_out()
+		map.apply_snapshot(_crisis_rows(geo, 0), "vashtera")
+		var builds := map.lines_builds
+		var layouts := {}
+		for month in range(1, 13):
+			map.apply_snapshot(_crisis_rows(geo, month), "vashtera")
+			layouts[_barricades(map)] = true
+		t.truth(layouts.size() > 1, "%d px: the barricades move during the crisis (%d layouts)" % [level, layouts.size()])
+		t.equal(map.lines_builds, builds, "%d px: twelve crisis months never rebuild the border image" % level)
+		map.queue_free()
+		await _frames()
+
+
 func _run() -> void:
 	var geo := MapGeometry.load_world()
 	var map := _fresh_map()
@@ -123,6 +155,7 @@ func _run() -> void:
 	await _check_unknown_ids(map, geo)
 	await _check_budget(geo)
 	await _check_no_rebuilds(map, geo)
+	await _check_crisis_keeps_borders(geo)
 	map.queue_free()
 	await _frames()
 	quit(t.finish())
