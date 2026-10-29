@@ -1191,7 +1191,7 @@
       "title": "The Government Retreats",
       "description": "After weeks of pressure, the government has abandoned one of its headline proposals. You cannot issue orders from opposition — but you can decide what political meaning the retreat will carry.",
       "category": "Opposition",
-      "condition": "out_of_office",
+      "condition": "government_in_retreat",
       "chance": 0.08,
       "options": [
         {
@@ -1269,7 +1269,7 @@
       "title": "A By-Election Opening",
       "description": "A vacant constituency has produced an unexpected contest. This is not a decision about the country; it is a test of how your opposition party spends its limited people, money, and attention.",
       "category": "Opposition",
-      "condition": "own_party_seated_in_opposition",
+      "condition": "by_election_opening",
       "chance": 0.06,
       "options": [
         {

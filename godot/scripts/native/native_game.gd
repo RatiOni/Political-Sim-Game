@@ -50,28 +50,48 @@ func advance_day() -> Dictionary:
 	_busy = true
 	var month_rolled := Calendar.advance_day(_state)
 	if month_rolled:
-		var before: Dictionary = MonthlyDigestScript.capture(_state)
-		_state.turn += 1
-		BudgetSimScript.process_fiscal_year(_state)
-		PoliticalCapitalScript.regenerate(_state)
-		MinistriesSimScript.simulate(_state)
-		DiplomacySim.monthly(_state)
-		EconomySimScript.update(_state)
-		RegionsSimScript.simulate(_state)
-		HouseholdsSimScript.simulate(_state)
-		CabinetSim.monthly(_state)
-		StabilitySimScript.update_approval(_state)
-		StabilitySimScript.update_stability(_state)
-		var crisis_notes := CrisisSim.monthly(_state)
-		Modifiers.age_all(_state)
-		var situation_notes := EventsSim.monthly(_state)
-		_state.monthly_digest = MonthlyDigestScript.build(_state, before)
-		_state.monthly_digest.append_array(crisis_notes)
-		_state.monthly_digest.append_array(situation_notes)
+		close_month(_state)
 	var snap := snapshot()
 	state_changed.emit(snap)
 	_busy = false
 	return {"ok": true, "snapshot": snap, "month_rolled": month_rolled}
+
+
+static func next_month(state: GameState) -> void:
+	while not Calendar.advance_day(state):
+		pass
+	close_month(state)
+
+
+static func close_month(state: GameState) -> void:
+	var before: Dictionary = MonthlyDigestScript.capture(state)
+	state.turn += 1
+	BudgetSimScript.process_fiscal_year(state)
+	PoliticalCapitalScript.regenerate(state)
+	MinistriesSimScript.simulate(state)
+	DiplomacySim.monthly(state)
+	var world_notes := WorldSim.monthly(state)
+	world_notes.append_array(OppositionSim.monthly(state))
+	EconomySimScript.update(state)
+	RegionsSimScript.simulate(state)
+	HouseholdsSimScript.simulate(state)
+	CabinetSim.monthly(state)
+	StabilitySimScript.update_approval(state)
+	StabilitySimScript.update_stability(state)
+	var poll_line := PollsSim.monthly(state)
+	var election_notes := Elections.monthly(state)
+	var crisis_notes := CrisisSim.monthly(state)
+	Modifiers.age_all(state)
+	var situation_notes := EventsSim.monthly(state)
+	state.monthly_digest = MonthlyDigestScript.build(state, before)
+	election_notes.append_array(state.monthly_digest)
+	election_notes.append(poll_line)
+	state.monthly_digest = election_notes
+	state.monthly_digest.append_array(world_notes)
+	state.monthly_digest.append_array(crisis_notes)
+	state.monthly_digest.append_array(situation_notes)
+	state.front_page = Press.front_page(state, before, MonthlyDigestScript.capture(state))
+	state.monthly_news.clear()
 
 
 func start_regional_program(region_id: String, program_id: String) -> Dictionary:
@@ -283,6 +303,40 @@ func appoint_minister(portfolio: String, candidate_id: String) -> Dictionary:
 		state_changed.emit(result["snapshot"])
 	_busy = false
 	return result
+func respond_to_government_bill(response: String) -> Dictionary:
+	return _guarded(func() -> Dictionary: return OppositionActions.respond(_state, response))
+
+
+func add_pledge(bill_id: String) -> Dictionary:
+	return _guarded(func() -> Dictionary: return OppositionActions.add_pledge(_state, bill_id))
+
+
+func drop_pledge(bill_id: String) -> Dictionary:
+	return _guarded(func() -> Dictionary: return OppositionActions.drop_pledge(_state, bill_id))
+
+
+func campaign_on_pledge(bill_id: String) -> Dictionary:
+	return _guarded(func() -> Dictionary: return OppositionActions.campaign(_state, bill_id))
+
+
+func appoint_shadow_minister(portfolio: String) -> Dictionary:
+	return _guarded(func() -> Dictionary: return OppositionActions.appoint_shadow(_state, portfolio))
+
+
+func _guarded(action: Callable) -> Dictionary:
+	if _busy:
+		return {"ok": false, "error": "another NativeGame operation is already in flight"}
+	if _state == null:
+		return {"ok": false, "error": "no campaign is active"}
+	_busy = true
+	var result: Dictionary = action.call()
+	if result.get("ok", false):
+		result["snapshot"] = snapshot()
+		state_changed.emit(result["snapshot"])
+	_busy = false
+	return result
+
+
 func save(slot: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -440,11 +494,13 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 		"cabinet": CabinetActionsScript.read_model(state).duplicate(true),
 		"situations": EventActions.read_model(state).duplicate(true),
 		"diplomacy": DiplomacyActions.read_model(state).duplicate(true),
+		"opposition": OppositionActions.read_model(state).duplicate(true),
 		"ministries": _ministries_snapshot(state),
 		"households": _household_snapshot(state),
 		"digest": state.monthly_digest.duplicate(),
 		"reform": {"active": null, "objectives": []},
-		"dispatches": [],
+		"dispatches": Press.lines(state.front_page),
+		"front_page": state.front_page.duplicate(true),
 	}
 
 

@@ -53,6 +53,9 @@ static func ensure_budget_state(state: GameState) -> AnnualBudget:
 	return state.active_budget
 
 
+const AI_TILT_LIMIT := 0.05
+
+
 static func is_emergency(state: GameState) -> bool:
 	return state != null and state.active_budget != null \
 		and state.active_budget.source == "continuing"
@@ -95,7 +98,7 @@ static func _emergency_resolution(state: GameState) -> AnnualBudget:
 	return b
 
 
-static func _government_ai_budget(state: GameState) -> AnnualBudget:
+static func government_ai_budget(state: GameState) -> AnnualBudget:
 	var active := ensure_budget_state(state)
 	var ruling: Faction = null
 	for f in state.country.factions:
@@ -122,10 +125,17 @@ static func _government_ai_budget(state: GameState) -> AnnualBudget:
 		changes["industry_and_jobs"] = 0.03
 		changes["national_defense"] = -0.03 if social > -0.4 else 0.0
 
-	var allocations := {}
+	var reference := _reference_allocations(state)
+	var current_total := 0.0
+	var tilted_total := 0.0
+	var tilted := {}
 	for key in active.allocations.keys():
-		var change: float = changes.get(key, 0.0)
-		allocations[key] = _round1(float(active.allocations[key]) * (1.0 + change))
+		current_total += float(active.allocations[key])
+		tilted[key] = float(reference.get(key, active.allocations[key])) * (1.0 + float(changes.get(key, 0.0)))
+		tilted_total += float(tilted[key])
+	var allocations := {}
+	for key in tilted:
+		allocations[key] = _round1(float(tilted[key]) / tilted_total * current_total) if tilted_total > 0.0 else float(active.allocations[key])
 
 	var votes_for := 0
 	var votes_against := 0
@@ -147,10 +157,16 @@ static func _government_ai_budget(state: GameState) -> AnnualBudget:
 	return b
 
 
+static func _reference_allocations(state: GameState) -> Dictionary:
+	return default_allocations(_envelopes(), state.country.economy.structural_expenditure)
+
+
 static func process_fiscal_year(state: GameState) -> void:
 	var active := ensure_budget_state(state)
 	if state.month == 1 and active.year < state.year:
 		_open_fiscal_year(state)
+	elif is_emergency(state) and not state.player.in_government:
+		activate(state, government_ai_budget(state))
 	elif is_emergency(state):
 		_emergency_month(state)
 
@@ -163,7 +179,7 @@ static func _open_fiscal_year(state: GameState) -> void:
 		return
 
 	if not state.player.in_government:
-		activate(state, _government_ai_budget(state))
+		activate(state, government_ai_budget(state))
 		state.pending_budget = null
 		return
 

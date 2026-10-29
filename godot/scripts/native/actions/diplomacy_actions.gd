@@ -20,6 +20,7 @@ const SANCTION_FRIEND_LIMIT := 0.20
 const SUMMIT_COOLDOWN := 8
 const LOAN_SHARE_OF_GDP := 0.05
 const LOAN_TERM_MONTHS := 48
+const RIVAL_RESISTANCE := 0.4
 
 
 static func act(state: GameState, verb: String, country_id: String, treaty_id := "") -> Dictionary:
@@ -61,6 +62,8 @@ static func reason_for(state: GameState, verb: String, country_id: String, treat
 			if rel.sanctioned:
 				return "Trade cannot be agreed under a sanctions regime."
 		"defense_pact":
+			if DiplomacySim.is_rival_of_player(state, other):
+				return "%s is your rival; it will not bind itself to your defence." % other.name
 			if DiplomacySim.has_treaty(state, country_id, "defense"):
 				return "A defence pact with %s already stands." % other.name
 			if rel.score < PACT_TRUST:
@@ -93,7 +96,7 @@ static func improve_relations(state: GameState, other: Country, _t: String) -> S
 		if m.portfolio == "Foreign Affairs":
 			minister = m
 	var quality := 0.4 if minister == null else minister.implementation_quality()
-	var boost := 0.05 + 0.05 * quality
+	var boost := (0.05 + 0.05 * quality) * _resistance(state, other)
 	DiplomacySim.shift(state, other.id, boost, "Diplomatic outreach.")
 	return "Outreach to %s warms relations (+%.2f)." % [other.name, boost]
 
@@ -195,7 +198,7 @@ static func lift_sanctions(state: GameState, other: Country, _t: String) -> Stri
 
 
 static func hold_summit(state: GameState, other: Country, _t: String) -> String:
-	DiplomacySim.shift(state, other.id, 0.12, "Bilateral summit.")
+	DiplomacySim.shift(state, other.id, 0.12 * _resistance(state, other), "Bilateral summit.")
 	state.player.approval = minf(0.95, state.player.approval + 0.01)
 	state.campaign_meta["last_summit_turn"] = state.turn
 	return "A summit with %s: handshakes, a communiqué, and a real thaw." % other.name
@@ -254,6 +257,10 @@ static func _treaty(state: GameState, other: Country, kind: String, name: String
 	for rel in DiplomacySim.pair(state, other.id):
 		(rel as Country.BilateralRelation).treaties.append(treaty.duplicate(true))
 	return treaty
+
+
+static func _resistance(state: GameState, other: Country) -> float:
+	return RIVAL_RESISTANCE if DiplomacySim.is_rival_of_player(state, other) else 1.0
 
 
 static func _error(message: String) -> Dictionary:

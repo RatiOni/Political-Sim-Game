@@ -60,7 +60,10 @@ func _test_catalog_integrity(t) -> void:
 	t.equal(gated_default, "", "no default option is gated (a lapse must always be possible)")
 	var playable := events.size() - EventsSim.unplayable_events().size()
 	t.truth(playable >= 20, "at least 20 events are fully playable now (%d)" % playable)
-	t.truth("opposition_by_election" in EventsSim.unplayable_events(), "events without consequence handlers are held back")
+	var unhandled := EventsSim.event_by_id("opposition_by_election").duplicate(true)
+	unhandled["options"][0]["on_apply"] = "no_such_handler"
+	t.truth(not EventsSim.is_playable(unhandled), "events without consequence handlers are held back")
+	t.equal(EventsSim.unplayable_events(), [] as Array[String], "and every authored event now has its handlers")
 	t.truth(not ("labour_unrest_spreads" in EventsSim.unplayable_events()), "ordinary situations are playable")
 
 

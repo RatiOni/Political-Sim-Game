@@ -2,8 +2,11 @@
 
 **Status:** situations engine, the schemer arc, the party leadership
 challenge, the Vasca question, Vetrenka, the civil-war gauge and
-diplomacy are playable — 44 of 46 events (2026-10-28). Arcs, the civil-war gauge, diplomacy verbs, the AI countries,
-opposition play and the press remain. Same native-design rules as
+diplomacy are playable — all 46 events (2026-10-28) — the eight AI
+countries deliberate and act (Krasova against Ardenia), opposition is a
+playable career with its own desk, and the month ends with a front page.
+Slices 1–7 are built, and the general election now decides who governs
+(`sim/elections.gd`). Same native-design rules as
 `SIM_REDESIGN.md`: Python is a reference for what Ardenia contains, never a
 formula to match.
 
@@ -13,21 +16,17 @@ formula to match.
    follow-up chains, the shared effect pipeline, role resolution, persistence,
    the "needs you" queue and the situation panel.
 2. **The arcs** — done: the schemer, the leadership challenge, Vasca and
-   Vetrenka (`sim/arcs.gd`, `sim/cabinet_sim.gd`). The two opposition events
-   (`government_policy_retreat`, `opposition_by_election`) wait for slice 6,
-   because their consequences act on the opposition layer. Each needs its bespoke
-   consequence handlers (`on_apply` ids) written into
-   `Arcs.HANDLERS`; until a handler exists, its events cannot
-   fire (`EventsSim.unplayable_events()` lists them). Their trigger
-   conditions (`schemer_plotting`, `vasca_stirring`, `vetrenka_friction_due`,
-   `vetrenka_crossroads_ready`) join `Arcs.CONDITIONS` with them.
+   Vetrenka (`sim/arcs.gd`, `sim/cabinet_sim.gd`), and since slice 6 the two
+   opposition events, whose handlers live in `OppositionSim` and are listed in
+   `Arcs.HANDLERS`. An event whose handler is missing still cannot fire;
+   `EventsSim.unplayable_events()` is now empty.
 3. **Civil-war gauge** — done (`sim/crisis_sim.gd`).
 4. **Diplomacy verbs** — done (`actions/diplomacy_actions.gd`,
    `sim/diplomacy_sim.gd`, the Diplomacy desk).
-5. **The world acts** — the eight AI countries deliberate and act, including
-   on the player.
-6. **Opposition play** — the domestic-AI government, pledges, shadow cabinet.
-7. **The press** — dispatch voice and the monthly front page.
+5. **The world acts** — done (`sim/world_sim.gd`).
+6. **Opposition play** — done (`sim/opposition_sim.gd`,
+   `actions/opposition_actions.gd`, `state/opposition_state.gd`).
+7. **The press** — done (`presentation/voice.gd`, `presentation/press.gd`).
 
 ## How situations work (and why)
 
@@ -70,10 +69,11 @@ Re-running the retired exporter would undo this; edit the JSON directly.
 
 ## Known gaps
 
+- No native confidence vote exists yet, so there are no snap elections:
+  every election is scheduled (`ElectionResult.was_snap` is always false).
+
 - At 1280x720 the situation panel shows one option above the fold; the rest
   scroll. Phase 5 layout work should give the panel more of the body.
-- No dispatch/press voice yet: arrivals and lapses are reported as plain
-  monthly-report lines.
 
 ## The schemer arc
 
@@ -191,3 +191,236 @@ the Diplomacy button fits.
 
 The dashboard map is a DOS-style pixel map whose tiles grow, develop and
 burn with each region's monthly state; see `PIXEL_MAP.md`.
+
+## The world acts
+
+**Player-facing job:** the neighbours have their own interests, and the
+player can read them coming. A foreign move should feel like policy, not
+weather.
+
+- **Interest, not dice.** Each country reads its national interest from its
+  agenda (hegemon, revanchist, trader, reformer, survivor, ideologue, plus an
+  authored rival or ally; an undeclared agenda follows the regime). A country
+  at war with itself or below 0.35 stability turns inward; a survivor does so
+  below 0.60. Whoever sanctions a country becomes its target, ahead of every
+  other interest. A hegemon whose rivalry has bottomed out (below −0.8)
+  spends the cycle courting a client instead.
+- **Plans, then action.** The choice is a persisted `Country.plan` with a
+  maturity month. Openings are staggered (first moves in months 3–6), then
+  each country acts every 3–5 months — the one random draw in the
+  scheduler, from the saved campaign stream, so a reload replays exactly.
+- **Threats leak.** A hostile or trade plan is reported a month before it
+  matures ("X is weighing its options toward Y"); courtesies are not.
+- **Krasova is the antagonist.** Krasova's authored rival is Ardenia and it
+  backs Vetrenka (`agenda.backs`). A hegemon rests a rivalry below −0.8;
+  while the backed region is retaken by force it never rests, and once
+  Vetrenka is settled it rests below −0.3. Over ten years in office it
+  moves against Ardenia 7–8 times on three seeds, every move leaked a
+  month ahead, and an unattended relationship becomes a feud.
+- **Your rival is hard to win over.** Outreach and summits toward a power
+  whose rival is the player gain 0.4× (`RIVAL_RESISTANCE`). A rival that
+  backs a region of yours cannot be warmed past −0.1 while that region's
+  question is open, retaken or partitioned, or past +0.3 once it is settled
+  (`DiplomacySim.warmth_cap`, read from `campaign_meta["<region>_status"]`).
+  Ten years of maximum outreach hold Krasova at about −0.10.
+- **Warmth buys time, never hostility.** A rival waits between provocations
+  against the player for 6 months at −0.8 or colder, one more month per
+  0.083 of warmth, up to 18 (`WorldSim.press_interval`), tending its sphere
+  meanwhile. Courting Krasova for a decade draws 6–7 moves against 7–8 for
+  neglect. Back-to-back plans against the same target leak once
+  (`FORESHADOW_MERGE_MONTHS`). Your rival refuses a defence pact, and a pact
+  never shelves the partner's own moves. While the rival is not working
+  against you and relations sit below −0.6 they recover 0.003 a month, so a
+  neglected feud runs −0.83 to −0.96 instead of being pinned at −1.00.
+- **Deterrence works.** Half of hostile moves against a defence-pact holder
+  are quietly shelved. A condemnation costs 0.12 of relations, pressure 0.06.
+- **No treaty without consent.** Foreign powers court the player (+0.06) but
+  never sign a pact on the player's behalf; world-to-world trade pacts form
+  between friends (relations above 0.1) and trade then grows like the
+  player's. A country never courts the power sanctioning it.
+- **Camps drift.** World-to-world relations warm within a regime camp and
+  cool across camps at the same rates as the player's own.
+- **Named arcs.** A pair above 0.7 with a trade pact becomes an *axis*; a
+  pair below −0.7 a *feud*. Each is announced once, persisted in
+  `GameState.world_arcs`, and dissolves (axis below 0.3, feud above −0.3)
+  with a report of its end.
+
+Over ten years in office or opposition the world takes about 240 actions and
+every figure stays bounded.
+
+A binary save whose length happened to begin with a space byte was misread
+as JSON and refused; the loader now tries JSON and falls back to binary.
+
+## Opposition play
+
+**Player-facing job:** opposition is a career, not a waiting room. The
+player cannot govern, but can shape what the government passes, build a
+platform, staff a team, and arrive in office with a mandate to keep.
+
+- **The government legislates.** A month after the campaign opens, and four
+  months after each division, the ruling party brings a bill from the shared
+  catalogue: the one closest to its ideology and its own interests, raised
+  by the country's live problems — inflation lifts bills that cut prices,
+  unemployment bills that add jobs or growth, a deficit bills that raise
+  revenue or cut spending, war risk defence. A bill it lost is not retried
+  for two years. The division comes the month after introduction, through
+  the same vote and effect pipeline as the player's own laws
+  (`LawActions.resolve`), with the ruling party and coalition whipped.
+- **One declared position per bill.** Support (4 PC) whips the player's
+  party for it, oppose (4 PC) against; amend (8 PC) offers the party's votes
+  for a text pulled 30% toward the player's ideology with its material
+  effects softened by a fifth. The division is held on the amended text.
+- **A platform of three.** Pledges (5 PC) name catalogue bills; decrees and
+  laws already in force cannot be pledged. Campaigning (8 PC, each pledge
+  rests six months) moves support from the ruling party to the player's,
+  more against a shaky government, and builds credibility — more with an
+  able shadow minister for the brief. Dropping a pledge costs credibility,
+  more for one that was campaigned on. Backing a bill you promised is
+  consistent; opposing it is not. A pledge the government passes is
+  *adopted* if you backed it (credibility +0.035) or stayed silent (no
+  credit: you did not fight your own promise, but did nothing for it), and
+  *undercut* only if you voted against it (−0.06).
+- **A shadow cabinet** (6 PC a post) is named from the player's party and
+  gains a little experience each month. Winning an election
+  (`OppositionSim.take_office`) restores the government title, builds the
+  coalition around the player's party, promotes every shadow into the real
+  post, fills every other post from the new coalition (never the outgoing
+  minister), lapses the outgoing government's bill and turns the platform
+  into a mandate.
+- **Promises are judged.** `electoral_edge` reads credibility, campaign
+  coverage and staffing in opposition, and delivered against undelivered
+  pledges in government; `judge_mandate` marks undelivered pledges broken
+  at the vote, costing credibility and support.
+- **The two opposition situations play.** *The Government Retreats* now
+  arrives only within three months of a government defeat on the floor
+  (`government_in_retreat`): claim it (the quicker support gain) or publish
+  the alternative (credibility). *A By-Election Opening* (from month 6)
+  is decided, never rolled, by standing — support against the ruling party,
+  credibility, and the government's weakness: a national push wins only
+  from ahead and is costly to lose; a local campaign wins from slightly
+  behind for a smaller prize; a won seat comes from the government.
+
+The catalogue holds nine parliamentary bills, so a long opposition term
+exhausts the government's programme after about five years.
+
+## The press
+
+**Player-facing job:** a month should read like news. The paper tells the
+player what mattered most, in a voice that changes from month to month
+without ever changing what happened.
+
+- **One voice.** `Voice.say(state, key, fields)` renders a variant from the
+  authored dispatch pools and records `{key, fields, text}` in
+  `GameState.monthly_news`. The variant is chosen by a local generator
+  seeded from (month, key, position in the month's news) — never the
+  campaign stream — so a reload reads the same and the simulation is
+  untouched. Every variant of every dispatch carries its stable marker
+  keyword (case-insensitive), so tests and players can rely on a word.
+- **Who speaks.** Foreign plans, moves and arcs; civil wars at home and
+  abroad; every parliamentary division, the government's and the player's.
+  Situations, lapses, government bills and the bespoke arc outcomes (Vasca,
+  Vetrenka, the schemer) keep their own sentences but are filed under their
+  press key, so the paper can rank and headline them.
+- **The front page.** `Press.front_page(state, before, after)` ranks the
+  month's news by drama (Vetrenka retaken or Vasca dead above a neighbour's
+  civil war, above a failed vote, above foreign courtesies, with a leak
+  last), leads with the top story's headline and copy, runs up to four more
+  headlines, and keeps everything else as briefs, with the month's opening
+  and closing numbers. The masthead is the country's own paper, or "The
+  <Country> Herald". A month with nothing to report says so.
+- **Where it shows.** The month closes by printing the page into
+  `GameState.front_page` (saved) and clearing the news; news from the
+  player's own actions between closes runs in the next edition. The monthly
+  report's dispatch column shows the masthead, the lead and the headlines.
+
+## The opposition desk
+
+**Player-facing job:** out of office, the header's Legislation button
+becomes **Opposition** and opens a desk in the same place (no header
+reflow). It shows credibility and the electoral edge, the government bill
+with Support / Oppose / Amend, three fixed platform slots (Campaign, Drop;
+an empty slot stays in place, blank and disabled), a pledge picker, and the
+six shadow posts with an Appoint picker. Every button takes its eligibility
+and refusal reason from `OppositionActions.read_model`; the desk's size never
+changes with its contents. `GameFlow.pending_role` chooses the opening role
+for a new campaign (the menu still starts in the contextual role).
+
+## Elections
+
+**Player-facing job:** every four years the country judges its government
+and the player's party, and office can be won or lost. The result follows
+from what happened, never from a roll.
+
+- **On schedule.** A term is 48 months (`Elections.TERM_MONTHS`); the vote
+  closes the month the term ends, after stability and before the crisis
+  gauge, so a new government faces its first month at once.
+- **Who votes.** Each region contributes its live population weight of
+  the voting-age public (72%). Access is 1.0 for administered ground, 0.9
+  autonomous, 0.55 limited and 0 separatist, scaled 70–100% by state reach:
+  separatist Vetrenka casts no ballot and limited Anera fewer.
+- **How they vote.** Local support is the region's authored party support
+  moved by each party's national swing since the campaign began. Each
+  party's turnout (0.35–0.92 around 0.65) reads the government's record —
+  household confidence and stability lift the coalition and sink its
+  opponents — and, for the player's party, the leader's approval and
+  `electoral_edge` ×1.5: credibility, a campaigned and staffed platform in
+  opposition, kept against broken promises in government
+  (`judge_mandate` runs first and names the broken ones).
+- **Seats.** Largest-remainder proportional representation over the whole
+  chamber; a party under 3% of the vote wins nothing. The largest party
+  that can build a majority with its nearest neighbours governs, falling
+  back to the largest party as a minority.
+- **Consequences.** Winning from opposition takes office with the shadow
+  team (above). Losing office makes the player Leader of the Opposition: the
+  player's own bill and any unapproved budget lapse, the new coalition fills
+  every post, and the platform's unfinished pledges carry over. A change
+  between other parties re-staffs the cabinet and lapses the outgoing
+  government's bill. A party returned to government gains 20 PC and a fresh
+  mandate.
+- **Seen.** The result leads the front page, and the monthly report opens
+  with the seats, a regional line (winner and share, or "no poll"), and
+  what it means for the player. `ElectionResult` keeps national and
+  regional shares, turnout and access in `GameState.election_history`.
+- **New Campaign in Opposition** on the main menu opens a campaign with
+  another party in power.
+
+- **The polls move with the record** (`sim/polls_sim.gd`). Each month the
+  ruling party gains or loses with approval (×0.012), household confidence
+  (×0.010) and misery — inflation plus unemployment above their structural
+  levels (×0.06) — each read against what a steady, ordinary government
+  measures in play — a player government against approval 0.464,
+  confidence 0.432, misery 0.0034, stability 0.503, an AI government
+  against approval 0.42, confidence 0.425, misery 0.004, stability 0.44
+  (`PollsSim.ORDINARY_PLAYER_GOVERNMENT` / `ORDINARY_AI_GOVERNMENT`,
+  measured on calendar-true 20-year journeys; the AI set sits below the
+  all-terms AI mean because AI governments usually take over a failing
+  government's country); coalition partners take half. Turnout reads the
+  same references. A government's first term is free; each further
+  consecutive term costs its party 0.12 of turnout, up to 3 terms
+  (`GOVERNMENT_FATIGUE`, `FATIGUE_TERM_CAP`) — the price of the structural
+  lead a large party's support base gives it. Terms count from the
+  election a party took power (`ElectionResult.previous_ruling_faction_id`). The
+  opposition takes what the government loses, more for parties nearer the
+  public mood (the support-weighted average ideology). Every party is pulled
+  1% a month back toward its starting share, no party moves more than a
+  point a month or falls below 1%, and shares stay normalised. Campaigns,
+  situations and by-elections still move support on top. Regions follow
+  through the count's national swing while keeping their own character, and
+  the monthly report carries a poll line.
+
+Calendar-true, over twenty years on six seeds: a steady player government
+is returned 58% of the time, an ordinary AI government 50%, a strong player
+government (able, loyal cabinet) 75%, an austerity one 33% and one that
+never passes a budget never. Governments that fell averaged lower approval
+than those returned, and seeds write different histories.
+
+**No unfunded AI years.** An AI government enacts its restrained plan every
+January and at once if it inherits an emergency (including the month the
+player loses office). Its plan re-composes spending toward its priorities
+around the default composition without cutting the total, so it never
+compounds year on year (each envelope stays within 5% of its default share).
+Tabling a neutral budget during an emergency costs no political capital, so
+an exhausted government can always restore supply; reshaping the state still
+costs. When the player is out of office, their party never joins the
+governing coalition or holds a government post (the validator rejects it),
+and an opposition start gives the government its own cabinet.

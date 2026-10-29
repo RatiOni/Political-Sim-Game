@@ -208,6 +208,24 @@ static func _test_save_floats_keep_full_precision(t) -> void:
 		DirAccess.remove_absolute("user://saves/%s.json%s" % [slot, suffix])
 
 
+func _test_a_binary_save_that_starts_like_text_still_loads(t) -> void:
+	var slot := "test_binary_brace"
+	for low_byte in [0x20]:
+		var state := _state()
+		var pad := ""
+		while pad.length() < 1024:
+			state.campaign_meta["pad"] = pad
+			var size := var_to_bytes({"version": SaveStore.SAVE_FORMAT_VERSION, "state": state.to_dict()}).size()
+			if size & 0xFF == low_byte:
+				break
+			pad += "x"
+		t.truth(SaveStore.save_slot(slot, state).get("ok", false), "a save is written (low byte %d)" % low_byte)
+		var loaded := SaveStore.load_slot(slot)
+		t.truth(loaded.get("ok", false), "and loads although its first byte reads like text (%d)" % low_byte)
+	for suffix in ["", ".bak", ".tmp"]:
+		DirAccess.remove_absolute("user://saves/%s.json%s" % [slot, suffix])
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_growth_wears_down_the_debt_ratio(t)
@@ -224,4 +242,5 @@ func _initialize() -> void:
 	_test_an_event_growth_shock_fades(t)
 	_test_emergency_escalation_is_capped(t)
 	_test_save_floats_keep_full_precision(t)
+	_test_a_binary_save_that_starts_like_text_still_loads(t)
 	quit(t.finish())

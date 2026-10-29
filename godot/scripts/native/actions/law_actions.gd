@@ -72,25 +72,45 @@ static func vote(state: GameState) -> Dictionary:
 	if law == null:
 		return _error("The authored bill definition is unavailable.")
 	state.pending_law = law
+	var projection := resolve(state, law)
+	var passed := bool(projection["passed"])
+	if not passed:
+		state.player.approval = maxf(0.0, state.player.approval - DEFEAT_APPROVAL_PENALTY)
+	state.pending_law = null
+	OppositionSim.note_bill_result(state, law, passed)
+	Voice.say(state, "vote_passed" if passed else "vote_failed", {"bill": law.name,
+		"vfor": law.votes_for, "vagainst": law.votes_against, "threshold": projection["threshold"]})
+	return {"ok": true, "passed": passed, "votes_for": law.votes_for,
+		"votes_against": law.votes_against, "threshold": projection["threshold"],
+		"rebellions": projection["rebellions"].duplicate(true),
+		"message": "%s %s." % [law.name, "passed" if passed else "was defeated"]}
+
+static func resolve(state: GameState, law: Law) -> Dictionary:
 	var projection := _projection(state, law)
 	law.votes_for = int(projection["votes_for"])
 	law.votes_against = int(projection["votes_against"])
-	var passed := bool(projection["passed"])
-	if passed:
+	if bool(projection["passed"]):
 		law.status = "enacted"
 		law.enacted_turn = state.turn
 		_apply_effects_once(state, law)
 		state.enacted_laws.append(law)
 	else:
 		law.status = "rejected"
-		state.player.approval = maxf(0.0, state.player.approval - DEFEAT_APPROVAL_PENALTY)
 	state.law_history.append(Law.from_dict(law.to_dict()))
-	state.pending_law = null
 	_apply_rebellion_penalties(state, projection["rebellions"])
-	return {"ok": true, "passed": passed, "votes_for": law.votes_for,
-		"votes_against": law.votes_against, "threshold": projection["threshold"],
-		"rebellions": projection["rebellions"].duplicate(true),
-		"message": "%s %s." % [law.name, "passed" if passed else "was defeated"]}
+	return projection
+
+static func projection(state: GameState, law: Law) -> Dictionary:
+	return _projection(state, law)
+
+static func canonical(source: Law) -> Law:
+	return _canonicalized_record(source)
+
+static func catalog_laws() -> Array[Law]:
+	var out: Array[Law] = []
+	for raw in _catalog():
+		out.append(Law.from_catalog(raw))
+	return out
 
 static func withdraw(state: GameState) -> Dictionary:
 	var law := _pending(state)
@@ -272,7 +292,7 @@ static func _projection(state: GameState, law: Law) -> Dictionary:
 		stakes[faction.id] = clampf((affinity - 0.5) * 0.28 + authored + coalition, -0.25, 0.25)
 	var motion := {"id": law.id, "ideology": ideology, "stakes": stakes,
 		"lobbying_bonus": law.lobbying_bonus.duplicate(true),
-		"sponsor_id": state.player.faction_id,
+		"sponsor_id": law.proposed_by if law.proposed_by != "" else state.player.faction_id,
 		"player_faction_id": state.player.faction_id,
 		"required_fraction": 2.0 / 3.0 if law.tier == "constitutional" else 0.5}
 	return ParliamentaryVoteScript.project(state.country.factions, motion)

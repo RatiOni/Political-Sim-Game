@@ -262,7 +262,7 @@ static func _apply_opening_position(state: GameState, opening_role_cfg: String) 
 
 	if role == "government":
 		if state.ruling_faction_id != own.id:
-			_configure_government(state, own.id, [])
+			configure_government(state, own.id, [])
 		else:
 			state.player.in_government = true
 	else:
@@ -276,14 +276,15 @@ static func _apply_opening_position(state: GameState, opening_role_cfg: String) 
 				for f in rivals:
 					if f.seats > lead.seats:
 						lead = f
-				_configure_government(state, lead.id, [own.id])
+				configure_government(state, lead.id, [own.id])
 		state.player.in_government = false
 
 	if not state.player.in_government:
 		state.player.title = "Opposition Leader"
+		Elections.staff_cabinet(state, [] as Array[Minister])
 
 
-static func _configure_government(state: GameState, ruling_faction_id: String,
+static func configure_government(state: GameState, ruling_faction_id: String,
 		excluded_ids: Array) -> Array[Faction]:
 	var factions: Array[Faction] = []
 	for f in state.country.factions:
@@ -303,7 +304,7 @@ static func _configure_government(state: GameState, ruling_faction_id: String,
 		total_seats += f.seats
 	var threshold := total_seats / 2 + 1
 
-	var coalition := _build_coalition_around(seed_faction, factions, threshold)
+	var coalition := build_coalition_around(seed_faction, factions, threshold)
 	if coalition.is_empty():
 		coalition = [seed_faction]
 
@@ -314,7 +315,7 @@ static func _configure_government(state: GameState, ruling_faction_id: String,
 	return coalition
 
 
-static func _build_coalition_around(seed_faction: Faction, factions: Array[Faction],
+static func build_coalition_around(seed_faction: Faction, factions: Array[Faction],
 		threshold: int) -> Array[Faction]:
 	var coalition: Array[Faction] = [seed_faction]
 	var seats := seed_faction.seats

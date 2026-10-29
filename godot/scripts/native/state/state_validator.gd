@@ -44,6 +44,13 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_region_growth(state, errors)
 	_validate_budgets(state, errors)
 	_validate_laws(state, errors)
+	_validate_world_plans(state, errors)
+	_validate_world_arcs(state, errors)
+	_validate_opposition(state, errors)
+	_validate_press(state, errors)
+	_validate_elections(state, errors)
+	_validate_support_base(state, errors)
+	_validate_opposition_out_of_government(state, errors)
 
 	if state.player != null:
 		_validate_player(state, errors)
@@ -273,7 +280,7 @@ static func _validate_laws(state: GameState, errors: Array[String]) -> void:
 	for i in range(state.law_history.size()):
 		var historical: Law = state.law_history[i]
 		_validate_law(historical, "law_history[%s]" % i,
-			["enacted", "rejected", "withdrawn"], known, faction_ids, errors)
+			["enacted", "rejected", "withdrawn", "lapsed"], known, faction_ids, errors)
 		_validate_law_lifecycle(historical, "law_history[%s]" % i, state.turn,
 			total_seats, errors)
 		if historical != null and historical.status == "enacted":
@@ -339,7 +346,7 @@ static func _validate_law_lifecycle(law: Law, label: String, current_turn: int,
 				errors.append("%s has an impossible enactment outcome" % label)
 		elif law.enacted_turn != -1 or law.votes_for >= threshold:
 			errors.append("%s has an impossible rejected outcome" % label)
-	elif law.status == "withdrawn" and (law.enacted_turn != -1 or law.votes_for != 0 or law.votes_against != 0):
+	elif law.status in ["withdrawn", "lapsed"] and (law.enacted_turn != -1 or law.votes_for != 0 or law.votes_against != 0):
 		errors.append("%s has impossible withdrawn fields" % label)
 
 
@@ -537,3 +544,148 @@ static func _validate_region_growth(state: GameState, errors: Array[String]) -> 
 			errors.append("region '%s' population out of range" % region.id)
 		if not is_finite(region.development) or region.development < 0.0 or region.development > 1.0:
 			errors.append("region '%s' development out of range" % region.id)
+
+
+static func _validate_world_plans(state: GameState, errors: Array[String]) -> void:
+	var ids := {state.country.id: true}
+	for c in state.world:
+		if c != null:
+			ids[c.id] = true
+	for c in state.world:
+		if c == null or c.plan.is_empty():
+			continue
+		var target := String(c.plan.get("target", ""))
+		if not (String(c.plan.get("objective", "")) in WorldSim.OBJECTIVES):
+			errors.append("world country(%s) plan has an unknown objective" % c.id)
+		if target == c.id or (target != "" and not ids.has(target)):
+			errors.append("world country(%s) plan has an impossible target '%s'" % [c.id, target])
+		var matures: Variant = c.plan.get("matures_turn", null)
+		if not (matures is int or matures is float) or float(matures) < 0.0:
+			errors.append("world country(%s) plan has no maturity" % c.id)
+		if target == "" and String(c.plan.get("objective", "")) != "consolidate":
+			errors.append("world country(%s) plan has no target" % c.id)
+		if not (c.plan.get("foreshadowed", false) is bool):
+			errors.append("world country(%s) plan has a malformed leak flag" % c.id)
+		for key in ["last_acted_turn", "last_pressed_turn", "last_warned_turn"]:
+			var when: Variant = c.plan.get(key, -1)
+			if not (when is int or when is float) or float(when) > state.turn:
+				errors.append("world country(%s) plan has an impossible %s" % [c.id, key])
+
+
+static func _validate_world_arcs(state: GameState, errors: Array[String]) -> void:
+	var ids := {state.country.id: true}
+	for c in state.world:
+		if c != null:
+			ids[c.id] = true
+	for key in state.world_arcs:
+		var parts := String(key).split("|")
+		if parts.size() != 2 or parts[0] >= parts[1] or not ids.has(parts[0]) or not ids.has(parts[1]):
+			errors.append("world arc '%s' does not name two known countries" % key)
+		if not (String(state.world_arcs[key]) in WorldSim.ARC_KINDS):
+			errors.append("world arc '%s' has an unknown kind" % key)
+
+
+static func _validate_opposition(state: GameState, errors: Array[String]) -> void:
+	var opp := state.opposition
+	if opp == null:
+		errors.append("opposition state is missing")
+		return
+	if not is_finite(opp.credibility) or opp.credibility < 0.0 or opp.credibility > 1.0:
+		errors.append("opposition credibility out of range")
+	if opp.pledges.size() > OppositionActions.MAX_PLEDGES:
+		errors.append("more than %d pledges" % OppositionActions.MAX_PLEDGES)
+	var known := {}
+	for law in LawActions.catalog_laws():
+		known[law.id] = true
+	var seen := {}
+	for p in opp.pledges:
+		var bill_id := String(p.get("bill_id", ""))
+		if not known.has(bill_id) or seen.has(bill_id):
+			errors.append("pledge '%s' is unknown or repeated" % bill_id)
+		seen[bill_id] = true
+		if not (String(p.get("status", "")) in OppositionState.PLEDGE_STATUSES) or int(p.get("campaigns", 0)) < 0:
+			errors.append("pledge '%s' has an impossible record" % bill_id)
+	var portfolios := {}
+	for m in opp.shadow_cabinet:
+		if not CabinetActions.CORE_PORTFOLIOS.has(m.portfolio) or portfolios.has(m.portfolio) \
+				or m.faction_id != state.player.faction_id:
+			errors.append("shadow minister '%s' holds an impossible post" % m.id)
+		portfolios[m.portfolio] = true
+	if not (opp.response in OppositionState.RESPONSES):
+		errors.append("opposition response '%s' is unknown" % opp.response)
+	if opp.government_bill != null:
+		if state.player.in_government:
+			errors.append("a domestic government bill exists while the player governs")
+		if opp.government_bill.status != "proposed" or not known.has(opp.government_bill.id) \
+				or opp.government_bill.proposed_by != state.ruling_faction_id:
+			errors.append("the government bill record is impossible")
+	elif opp.response != "":
+		errors.append("an opposition response exists without a government bill")
+
+
+static func _validate_press(state: GameState, errors: Array[String]) -> void:
+	for item in state.monthly_news:
+		if not (item is Dictionary) or String(item.get("key", "")) == "" or not (item.get("fields", null) is Dictionary) \
+				or not (item.get("text", null) is String):
+			errors.append("a news item is malformed")
+	var page := state.front_page
+	if page.is_empty():
+		return
+	var lead: Variant = page.get("lead", null)
+	if not (page.get("masthead", null) is String) or not (page.get("dateline", null) is String) \
+			or not (lead is Dictionary) or not (lead.get("headline", null) is String) \
+			or not (lead.get("body", null) is String) or not (page.get("headlines", null) is Array) \
+			or not (page.get("briefs", null) is Array) or not (page.get("numbers", null) is Array):
+		errors.append("the front page is malformed")
+
+
+static func _validate_elections(state: GameState, errors: Array[String]) -> void:
+	if state.last_election_turn < 0 or state.last_election_turn > state.turn:
+		errors.append("last_election_turn is impossible")
+	var factions := {}
+	var total_seats := 0
+	for f in state.country.factions:
+		factions[f.id] = true
+		total_seats += f.seats
+	for r in state.election_history:
+		var seats := 0
+		for id in r.final_seats:
+			seats += int(r.final_seats[id])
+			if not factions.has(id):
+				errors.append("an election result seats an unknown party")
+		if seats != total_seats:
+			errors.append("an election result does not fill the chamber")
+		if r.turn < 0 or r.turn > state.turn or not is_finite(r.turnout) or r.turnout < 0.0 or r.turnout > 1.0 \
+				or not factions.has(r.ruling_faction_id):
+			errors.append("an election result is impossible")
+		for share in r.vote_share.values():
+			if not is_finite(float(share)) or float(share) < 0.0 or float(share) > 1.0:
+				errors.append("an election result has an impossible vote share")
+		for table in [r.regional_access, r.regional_turnout, r.regional_vote_share]:
+			for region_id in table:
+				if not state.regions.has(region_id):
+					errors.append("an election result names an unknown region")
+		for value in r.regional_access.values() + r.regional_turnout.values():
+			if not is_finite(float(value)) or float(value) < 0.0 or float(value) > 1.0:
+				errors.append("an election result has an impossible regional figure")
+
+
+static func _validate_support_base(state: GameState, errors: Array[String]) -> void:
+	var ids := {}
+	for f in state.country.factions:
+		ids[f.id] = true
+	for key in state.support_base:
+		var value := float(state.support_base[key])
+		if not ids.has(key) or not is_finite(value) or value < 0.0 or value > 1.0:
+			errors.append("support base for '%s' is impossible" % key)
+
+
+static func _validate_opposition_out_of_government(state: GameState, errors: Array[String]) -> void:
+	if state.player == null or state.player.in_government:
+		return
+	for f in state.country.factions:
+		if f.id == state.player.faction_id and f.in_coalition:
+			errors.append("the opposition leader's party sits in the governing coalition")
+	for m in state.ministers:
+		if m.faction_id == state.player.faction_id:
+			errors.append("the opposition leader's party holds the government post %s" % m.portfolio)

@@ -13,10 +13,30 @@ const HANDLERS := [
 	"vetrenka_launch_offensive", "vetrenka_formalise", "vetrenka_settle",
 	"vetrenka_talks_failed", "vetrenka_won", "vetrenka_lost", "vetrenka_partitioned",
 	"vetrenka_normal", "vetrenka_backlash_lands",
+	"opposition_claims_retreat", "opposition_offers_alternative", "opposition_misses_retreat",
+	"by_election_national_push", "by_election_local_push", "by_election_stand_down",
 ]
 
 const CONDITIONS := ["schemer_plotting", "vasca_stirring", "vetrenka_friction_due",
-	"vetrenka_crossroads_ready"]
+	"vetrenka_crossroads_ready", "government_in_retreat", "by_election_opening"]
+
+const PRESS_KEYS := {
+	"schemer_noted": "schemer_arc", "schemer_buy_off": "schemer_bought",
+	"schemer_resign": "schemer_neutralized", "schemer_expose": "schemer_neutralized",
+	"schemer_crush": "schemer_neutralized", "schemer_ascend": "schemer_ascendant",
+	"vasca_crackdown": "vasca_operation", "vasca_lead_personally": "vasca_operation",
+	"vasca_amnesty": "vasca_amnesty", "vasca_taken": "vasca_captured", "vasca_storm": "vasca_dead",
+	"vasca_exile": "vasca_exiled", "vasca_amnesty_worked": "vasca_isolated",
+	"vasca_unresolved": "vasca_unresolved",
+	"vetrenka_absorb": "vetrenka_incident", "vetrenka_protest": "vetrenka_incident",
+	"vetrenka_respond": "vetrenka_incident", "vetrenka_open_talks": "vetrenka_talks",
+	"vetrenka_launch_offensive": "vetrenka_offensive", "vetrenka_formalise": "vetrenka_partition",
+	"vetrenka_settle": "vetrenka_settled", "vetrenka_talks_failed": "vetrenka_talks_failed",
+	"vetrenka_won": "vetrenka_retaken", "vetrenka_lost": "vetrenka_rout",
+	"vetrenka_normal": "vetrenka_normalised", "vetrenka_backlash_lands": "vetrenka_backlash",
+}
+const VASCA_REGION_NAME := "the west"
+const VETRENKA_REGION_NAME := "Vetrenka"
 
 const FRICTION_BEFORE_CROSSROADS := 3
 const OCCUPATION_INSURGENCY := 0.25
@@ -41,6 +61,8 @@ static func has_handler(handler_id: String) -> bool:
 
 
 static func run(state: GameState, handler_id: String) -> String:
+	if handler_id in OppositionSim.EVENT_HANDLERS:
+		return OppositionSim.run_event(state, handler_id)
 	match handler_id:
 		"schemer_noted":
 			var m := arc_schemer(state)
@@ -182,6 +204,15 @@ static func run(state: GameState, handler_id: String) -> String:
 	return ""
 
 
+static func press_fields(state: GameState, handler_id: String) -> Dictionary:
+	var fields := {"region": VETRENKA_REGION_NAME if handler_id.begins_with("vetrenka") else VASCA_REGION_NAME}
+	var m := arc_schemer(state)
+	if m != null:
+		fields["minister"] = m.name
+		fields["portfolio"] = m.portfolio
+	return fields
+
+
 static func vetrenka_open(state: GameState) -> bool:
 	return state.country.id == "ardenia" and state.player.in_government \
 		and not state.campaign_meta.has("vetrenka_status")
@@ -240,6 +271,8 @@ static func _schedule(state: GameState, event_id: String, delay: int) -> void:
 
 
 static func condition_met(state: GameState, rule_id: String) -> bool:
+	if rule_id in OppositionSim.EVENT_CONDITIONS:
+		return OppositionSim.condition_met(state, rule_id)
 	match rule_id:
 		"vetrenka_friction_due":
 			return vetrenka_open(state)
