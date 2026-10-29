@@ -14,7 +14,7 @@ static func resolve(state: GameState, event_id: String, option_id: String) -> Di
 	var option := EventsSim.option_by_id(event, option_id)
 	if option.is_empty():
 		return _error("That is not one of the choices.")
-	var reason := option_reason(state, option)
+	var reason := option_reason(state, option, situation.target_country_id)
 	if reason != "":
 		return _error(reason)
 	state.player.political_capital -= float(option.get("pc_cost", 0.0))
@@ -26,8 +26,8 @@ static func resolve(state: GameState, event_id: String, option_id: String) -> Di
 	return {"ok": true, "message": message}
 
 
-static func option_reason(state: GameState, option: Dictionary) -> String:
-	var gate := EventsSim.gate_reason(state, option)
+static func option_reason(state: GameState, option: Dictionary, target := "") -> String:
+	var gate := EventsSim.gate_reason(state, option, target)
 	if gate != "":
 		return gate
 	var cost := float(option.get("pc_cost", 0.0))
@@ -46,7 +46,7 @@ static func read_model(state: GameState) -> Array:
 			continue
 		var options: Array = []
 		for option in event.get("options", []):
-			var reason := option_reason(state, option)
+			var reason := option_reason(state, option, situation.target_country_id)
 			options.append({
 				"id": String(option.get("id", "")),
 				"label": String(option.get("label", "")),

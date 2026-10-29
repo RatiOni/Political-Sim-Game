@@ -535,6 +535,7 @@ static func _validate_situations(state: GameState, errors: Array[String]) -> voi
 			errors.append("scheduled follow-up names unknown event '%s'" % String(row.get("event_id", "")))
 		if not (row.get("due_turn", null) is int or row.get("due_turn", null) is float):
 			errors.append("scheduled follow-up '%s' has no due turn" % String(row.get("event_id", "")))
+	ForeignSituationValidator.validate(state, errors)
 
 
 

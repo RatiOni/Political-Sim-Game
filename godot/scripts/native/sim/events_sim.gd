@@ -7,7 +7,8 @@ const MAX_PENDING := 3
 const DECISION_WINDOW_MONTHS := 2
 
 
-const TARGET_KEYS := ["__coolest__", "__most_hostile__"]
+const TARGET_KEYS := ["__coolest__", "__most_hostile__", "__supplier__", "__rival__", "__western__",
+	"__union_anchor__", "__in_civil_war__", "__fragile__", "__concert_foe__", "__warmest__"]
 
 const KNOWN_CONDITIONS := ["always", "never", "has_serious_grievance", "any_cool_relation",
 	"any_bad_relation", "any_disloyal_minister", "has_opposition", "has_active_trade",
@@ -41,7 +42,7 @@ static func option_by_id(event: Dictionary, option_id: String) -> Dictionary:
 
 static func is_playable(event: Dictionary) -> bool:
 	var condition := String(event.get("condition", ""))
-	if event.is_empty() or not (condition in KNOWN_CONDITIONS or condition in Arcs.CONDITIONS):
+	if event.is_empty() or not (condition in KNOWN_CONDITIONS or condition in Arcs.CONDITIONS or condition in ForeignArcs.CONDITIONS):
 		return false
 	for o in event.get("options", []):
 		var handler: Variant = o.get("on_apply", null)
@@ -154,7 +155,7 @@ static func audience_ok(state: GameState, event: Dictionary) -> bool:
 	return true
 
 
-static func gate_reason(state: GameState, option: Dictionary) -> String:
+static func gate_reason(state: GameState, option: Dictionary, target := "") -> String:
 	var gate: Variant = option.get("requires", null)
 	if not (gate is Dictionary):
 		return ""
@@ -162,7 +163,7 @@ static func gate_reason(state: GameState, option: Dictionary) -> String:
 		return "Only open to a leader with the %s background." % String(gate["background"]).replace("_", " ")
 	if gate.has("player_social_at_most") and state.player.ideology_social > float(gate["player_social_at_most"]):
 		return "Only a markedly authoritarian leader would order this."
-	return ""
+	return ForeignArcs.gate_reason(state, gate, target)
 
 
 static func monthly(state: GameState) -> Array[String]:
@@ -202,6 +203,9 @@ static func _deliver_follow_ups(state: GameState, notes: Array[String]) -> void:
 			continue
 		var event := event_by_id(String(row.get("event_id", "")))
 		if not is_playable(event):
+			state.scheduled_events.erase(row)
+			continue
+		if event.has("stale_after") and state.turn > int(row.get("due_turn", 0)) + int(event["stale_after"]):
 			state.scheduled_events.erase(row)
 			continue
 		if not audience_ok(state, event) or _is_pending(state, event["id"]):
@@ -279,9 +283,11 @@ static func _arrive(state: GameState, event: Dictionary, target: String, notes: 
 
 
 static func _diplomatic_target(state: GameState, event: Dictionary) -> String:
+	if event.has("target"):
+		return ForeignArcs.resolve_target(state, String(event["target"]))
 	for o in event.get("options", []):
 		for key in o.get("relation_deltas", {}):
-			if String(key) in TARGET_KEYS:
+			if String(key) in ["__coolest__", "__most_hostile__"]:
 				return _worst_relation(state, INF)
 	return ""
 
@@ -305,7 +311,7 @@ static func apply_option(state: GameState, event: Dictionary, option: Dictionary
 	var handler: Variant = option.get("on_apply", null)
 	if handler != null:
 		var fields := Arcs.press_fields(state, String(handler))
-		note = Arcs.run(state, String(handler))
+		note = Arcs.run(state, String(handler), situation.target_country_id)
 		if note != "" and Arcs.PRESS_KEYS.has(String(handler)):
 			Voice.record(state, String(Arcs.PRESS_KEYS[handler]), fields, note)
 	state.event_history.append({"event_id": event_id, "option_id": String(option.get("id", "")),

@@ -57,10 +57,12 @@ const SCHEMER_THRESHOLD := 0.5
 
 
 static func has_handler(handler_id: String) -> bool:
-	return handler_id in HANDLERS
+	return handler_id in HANDLERS or handler_id in ForeignArcs.HANDLERS
 
 
-static func run(state: GameState, handler_id: String) -> String:
+static func run(state: GameState, handler_id: String, target := "") -> String:
+	if handler_id in ForeignArcs.HANDLERS:
+		return ForeignArcs.run(state, handler_id, target)
 	if handler_id in OppositionSim.EVENT_HANDLERS:
 		return OppositionSim.run_event(state, handler_id)
 	match handler_id:
@@ -271,6 +273,8 @@ static func _schedule(state: GameState, event_id: String, delay: int) -> void:
 
 
 static func condition_met(state: GameState, rule_id: String) -> bool:
+	if rule_id in ForeignArcs.CONDITIONS:
+		return ForeignArcs.condition_met(state, rule_id)
 	if rule_id in OppositionSim.EVENT_CONDITIONS:
 		return OppositionSim.condition_met(state, rule_id)
 	match rule_id:
