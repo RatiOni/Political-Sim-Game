@@ -215,8 +215,8 @@ static func _apply_headline_stats(state: GameState) -> void:
 	var econ := state.country.economy
 
 	econ.growth_rate = clampf(
-		econ.structural_growth_rate + econ.fiscal_impulse + _modifiers_sum(state, "gdp_growth"),
-		-0.15, 0.20)
+		econ.structural_growth_rate + econ.fiscal_impulse + _modifiers_sum(state, "gdp_growth")
+		+ GasSim.growth_effect(state), -0.15, 0.20)
 	econ.unemployment = clampf(
 		econ.structural_unemployment + _modifiers_sum(state, "unemployment"), 0.01, 0.50)
 	econ.inflation = clampf(

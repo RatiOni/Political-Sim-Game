@@ -113,6 +113,7 @@ static func stability_breakdown(state: GameState) -> Dictionary:
 		"Unrest": -unrest * 0.15,
 		"Coalition cohesion": -(1.0 - cohesion) * 0.08,
 		"State presence": -(1.0 - _mean_delivery(state)) * STATE_PRESENCE_WEIGHT,
+		"Energy supply": -GasSim.stability_drag(state),
 	}
 
 

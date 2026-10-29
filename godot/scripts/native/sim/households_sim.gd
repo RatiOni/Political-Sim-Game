@@ -161,7 +161,8 @@ static func simulate(state: GameState) -> void:
 		if region.control == "separatist":
 			service_target = minf(service_target, 0.15)
 		h.service_access += (clampf(service_target, 0.03, 0.98) - h.service_access) * 0.12
-		h.hardship = clampf(h.hardship + (_hardship_target(region, h, definition) - h.hardship) * 0.15, 0.0, 1.0)
+		var hardship_target := minf(1.0, _hardship_target(region, h, definition) + GasSim.heating_hardship(state, h.region_id))
+		h.hardship = clampf(h.hardship + (hardship_target - h.hardship) * 0.15, 0.0, 1.0)
 		var real_change := h.real_income_index - h.last_real_income_index
 		var confidence_target := clampf(0.62 - h.hardship * 0.62 + econ.growth_rate * 1.2
 			+ (state.stability_value - 0.5) * 0.16 + real_change * 3.0, 0.0, 1.0)

@@ -7,6 +7,13 @@ const WINTER_WEIGHT := 1.5
 const UNION_PRICE_SHARE := 0.7
 const INJECTION_SHARE := 0.25
 const SHORTFALL_NOTE := 0.05
+const SEPARATIST := "separatist"
+const HARDSHIP_PER_SEVERITY := 0.25
+const REACH_PER_SEVERITY := 0.15
+const JOBS_PER_SEVERITY := 0.06
+const GROWTH_PER_SEVERITY := 0.06
+const PRICE_GROWTH_WEIGHT := 0.01
+const STABILITY_PER_SEVERITY := 0.10
 
 
 static func catalog() -> Dictionary:
@@ -137,3 +144,57 @@ static func national_shortfall(state: GameState) -> float:
 
 static func national_severity(state: GameState) -> float:
 	return 0.0 if not is_active(state) else float(gas(state).last_flow.get("severity", 0.0))
+
+
+static func exposure(region_id: String) -> float:
+	return float(catalog().get("exposure", {}).get(region_id, 1.0))
+
+
+static func _on_network(state: GameState, region_id: String) -> bool:
+	var region: RegionState = state.regions.get(region_id) as RegionState
+	return region != null and region.control != SEPARATIST
+
+
+static func region_shortfall(state: GameState, region_id: String) -> float:
+	if not _on_network(state, region_id):
+		return 0.0
+	return clampf(national_shortfall(state) * exposure(region_id), 0.0, 1.0)
+
+
+static func region_severity(state: GameState, region_id: String) -> float:
+	if not _on_network(state, region_id):
+		return 0.0
+	return clampf(national_severity(state) * exposure(region_id), 0.0, 1.0)
+
+
+static func supply_by_region(state: GameState) -> Dictionary:
+	var out := {}
+	for key in state.regions:
+		out[String(key)] = 1.0 - region_shortfall(state, String(key))
+	return out
+
+
+static func heating_hardship(state: GameState, region_id: String) -> float:
+	return region_severity(state, region_id) * HARDSHIP_PER_SEVERITY
+
+
+static func reach_loss(state: GameState, region_id: String) -> float:
+	return region_severity(state, region_id) * REACH_PER_SEVERITY
+
+
+static func industry_jobs_loss(state: GameState, region_id: String) -> float:
+	if not (region_id in catalog().get("industrial", [])):
+		return 0.0
+	return region_severity(state, region_id) * JOBS_PER_SEVERITY
+
+
+static func growth_effect(state: GameState) -> float:
+	if not is_active(state) or gas(state).reference_price <= 0.0:
+		return 0.0
+	var g := gas(state)
+	var advantage := clampf((g.reference_price - g.price) / g.reference_price, -1.0, 1.0)
+	return advantage * PRICE_GROWTH_WEIGHT - national_severity(state) * GROWTH_PER_SEVERITY
+
+
+static func stability_drag(state: GameState) -> float:
+	return national_severity(state) * STABILITY_PER_SEVERITY

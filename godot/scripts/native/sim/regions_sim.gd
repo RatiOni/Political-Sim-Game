@@ -209,12 +209,13 @@ static func _tick_region(state: GameState, region: RegionState, region_id: Strin
 	var stability: float = state.stability_value
 
 	var unemployment_target: float = clampf(
-		national_unemployment + float(profile.get("unemployment_gap", 0.0)), 0.025, 0.45)
+		national_unemployment + float(profile.get("unemployment_gap", 0.0))
+		+ GasSim.industry_jobs_loss(state, region_id), 0.025, 0.45)
 	region.unemployment = clampf(
 		region.unemployment + (unemployment_target - region.unemployment) * UNEMPLOYMENT_CONVERGENCE,
 		0.0, 0.60)
 
-	var reach_target: float = capacity + float(profile.get("reach_offset", 0.0)) + (stability - 0.5) * 0.12 + (region.development - 0.5) * DEVELOPMENT_REACH_BONUS
+	var reach_target: float = capacity + float(profile.get("reach_offset", 0.0)) + (stability - 0.5) * 0.12 + (region.development - 0.5) * DEVELOPMENT_REACH_BONUS - GasSim.reach_loss(state, region_id)
 	if region.control == "limited":
 		reach_target = minf(reach_target, CONTROL_LIMITED_MAX)
 	elif region.control == "autonomous":
