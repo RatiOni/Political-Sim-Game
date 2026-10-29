@@ -170,11 +170,12 @@ func _test_an_ai_government_keeps_to_its_energy_budget(t) -> void:
 	g.threat = {"turn": state.turn, "due": state.turn + 1, "share": 0.3}
 	g.cut = 0.5
 	g.cut_until = state.turn + 3
+	_set_budget(state, 70.0 * 12.0 / EnergyActions.AI_ENERGY_SHARE, 0.0)
 	state.month = 9
 	var debt := state.country.economy.public_debt_pct
 	var capital := state.player.political_capital
 	EnergyActions.ai_policy(state)
-	t.truth((state.country.economy.public_debt_pct - debt) * state.country.economy.gdp <= EnergyActions.AI_MONTHLY_BUDGET + 0.000001, "it never spends more than its monthly energy budget")
+	t.truth((state.country.economy.public_debt_pct - debt) * state.country.economy.gdp <= EnergyActions.ai_room(state) + 0.000001, "it never spends more than its monthly energy budget")
 	t.equal(g.spot_pending, 0.0, "so the cargo it cannot afford is not bought")
 	t.equal(state.player.political_capital, capital, "and the player's capital is untouched")
 	g.arrears = 0.0
@@ -189,7 +190,7 @@ func _test_an_ai_government_keeps_to_its_energy_budget(t) -> void:
 	EnergyActions.ai_policy(state)
 	t.equal(state.country.economy.public_debt_pct, held, "and a second is not bought while one is on its way")
 	g.spot_pending = 0.0
-	g.price = EnergyActions.AI_MONTHLY_BUDGET / (EnergyActions.SPOT_VOLUME * EnergyActions.SPOT_PREMIUM) + 0.01
+	g.price = EnergyActions.ai_room(state) / (EnergyActions.SPOT_VOLUME * EnergyActions.SPOT_PREMIUM) + 0.01
 	EnergyActions.ai_policy(state)
 	t.equal(g.spot_pending, 0.0, "unless it costs more than the budget")
 	g.cut = 0.0
@@ -197,6 +198,65 @@ func _test_an_ai_government_keeps_to_its_energy_budget(t) -> void:
 	EnergyActions.ai_policy(state)
 	t.equal(g.spot_pending, 0.0, "and none without a cut")
 	t.equal(g.second_line_started, -1, "and it never starts the second line")
+
+
+static func _set_budget(state: GameState, expenditure: float, balance: float) -> void:
+	state.country.economy.budget.expenditure = expenditure
+	state.country.economy.budget.revenue = expenditure + balance
+
+
+func _pressed_state() -> GameState:
+	var state := _state("opposition")
+	var g := state.foreign.gas
+	g.arrears = 70.0
+	g.threat = {"turn": state.turn, "due": state.turn + 1, "share": 0.3}
+	g.cut = 0.5
+	g.cut_until = state.turn + 3
+	state.month = 9
+	return state
+
+
+func _test_a_surplus_pays_for_the_gas(t) -> void:
+	var state := _pressed_state()
+	_set_budget(state, 1200.0, 100.0)
+	t.near(EnergyActions.ai_room(state), 100.0 + EnergyActions.AI_ENERGY_SHARE * 100.0, 0.000001, "a surplus widens the room")
+	EnergyActions.ai_policy(state)
+	t.near(state.foreign.gas.arrears, 20.0, 0.000001, "a surplus pays the arrears")
+	t.near(state.foreign.gas.spot_pending, EnergyActions.SPOT_VOLUME, 0.000001, "and buys the cargo too")
+
+
+func _test_a_deep_deficit_limits_the_gas(t) -> void:
+	var state := _pressed_state()
+	var gdp := state.country.economy.gdp
+	_set_budget(state, 1200.0, -0.1 * gdp)
+	EnergyActions.ai_policy(state)
+	t.near(state.foreign.gas.arrears, 70.0, 0.000001, "a deep deficit leaves no room to pay")
+	var rich := _pressed_state()
+	var target := float(OrientationSim.isf_targets(rich)["deficit"])
+	_set_budget(rich, 200.0 * 12.0 / EnergyActions.AI_ENERGY_SHARE, -(target + 0.001) * gdp)
+	EnergyActions.ai_policy(rich)
+	t.near(rich.foreign.gas.arrears, 20.0, 0.000001, "a live threat is still defused above the deficit target")
+	t.equal(rich.foreign.gas.spot_pending, 0.0, "but no cargo is bought")
+	_set_budget(rich, 200.0 * 12.0 / EnergyActions.AI_ENERGY_SHARE, -(target - 0.001) * gdp)
+	EnergyActions.ai_policy(rich)
+	t.near(rich.foreign.gas.spot_pending, EnergyActions.SPOT_VOLUME, 0.000001, "within the target it is")
+	rich.foreign.gas.spot_pending = 0.0
+	rich.country.economy.gdp = 1000.0
+	rich.country.economy.budget.expenditure = 65536.0
+	rich.country.economy.budget.revenue = 65536.0 - 1000.0 * target
+	t.equal(rich.country.economy.deficit_share_of_gdp(), target, "a deficit exactly on the target")
+	EnergyActions.ai_policy(rich)
+	t.near(rich.foreign.gas.spot_pending, EnergyActions.SPOT_VOLUME, 0.000001, "still buys the cargo")
+
+
+func _test_the_player_hears_the_government_pay(t) -> void:
+	var state := _pressed_state()
+	_set_budget(state, 1200.0, 200.0)
+	var notes := OppositionSim.monthly(state)
+	t.truth(state.monthly_news.any(func(n: Dictionary) -> bool: return n["key"] == "ai_gas_paid"), "the payment is in the news")
+	t.truth(state.monthly_news.any(func(n: Dictionary) -> bool: return n["key"] == "ai_gas_cargo"), "and so is the cargo")
+	t.truth(notes.any(func(n: String) -> bool: return n.contains("gas arrears")), "and in the month's dispatches")
+	t.truth(notes.any(func(n: String) -> bool: return n.contains("spot cargo")), "with the cargo beside it")
 
 
 func _test_the_player_in_government_is_never_auto_paid(t) -> void:
@@ -224,4 +284,7 @@ func _initialize() -> void:
 	_test_an_ai_government_pays_down_a_threat(t)
 	_test_an_ai_government_keeps_to_its_energy_budget(t)
 	_test_the_player_in_government_is_never_auto_paid(t)
+	_test_a_surplus_pays_for_the_gas(t)
+	_test_a_deep_deficit_limits_the_gas(t)
+	_test_the_player_hears_the_government_pay(t)
 	quit(t.finish())

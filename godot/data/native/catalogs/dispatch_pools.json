@@ -74,6 +74,14 @@
       "Another month of civil war — checkpoints, shortages, and a state fighting for its own existence.",
       "The civil war grinds forward; every institution bends under the strain."
     ],
+    "ai_gas_paid": [
+      "The government pays {supplier} {amount} million kron of the gas arrears; {remaining} remains owed.",
+      "Treasury hard currency goes to {supplier}: the government clears {amount} million kron of gas arrears, leaving {remaining}."
+    ],
+    "ai_gas_cargo": [
+      "The government buys a spot cargo of gas for {amount} million kron to cover the cut.",
+      "Ahead of the winter the government charters a spot cargo of gas, {amount} million kron at a premium."
+    ],
     "civil_war_end": [
       "The civil war subsides — a fragile peace returns, and the rebuilding of the state begins.",
       "Quiet, at last: the civil war winds down, leaving a country exhausted but intact."
@@ -371,6 +379,8 @@
     "leader_ousted": "ousted",
     "civil_war_out": "CIVIL WAR BREAKS OUT",
     "civil_war_ongoing": "civil war",
+    "ai_gas_paid": "gas arrears",
+    "ai_gas_cargo": "spot cargo",
     "civil_war_end": "civil war",
     "world_civil_war_out": "ivil war",
     "world_civil_war_end": "civil war",

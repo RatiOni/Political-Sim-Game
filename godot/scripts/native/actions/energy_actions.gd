@@ -29,7 +29,7 @@ const STORAGE_TARGET := 1.0
 const STORAGE_COST := 40.0
 const SECOND_LINE_COST := 60.0
 const SECOND_LINE_HOSTILITY := -0.15
-const AI_MONTHLY_BUDGET := 60.0
+const AI_ENERGY_SHARE := 0.05
 
 
 static func act(state: GameState, verb: String) -> Dictionary:
@@ -202,21 +202,32 @@ static func read_model(state: GameState) -> Dictionary:
 		"union_capped": GasSim.union_member(state), "cuts": g.cuts, "steps": steps}
 
 
+static func ai_room(state: GameState) -> float:
+	var budget := state.country.economy.budget
+	return maxf(0.0, budget.balance()) + AI_ENERGY_SHARE * budget.expenditure / 12.0
+
+
 static func ai_policy(state: GameState) -> Array[String]:
-	var taken: Array[String] = []
+	var notes: Array[String] = []
 	if state == null or state.player == null or state.player.in_government or not GasSim.is_active(state):
-		return taken
+		return notes
 	var g := state.foreign.gas
-	var room := AI_MONTHLY_BUDGET
+	var room := ai_room(state)
 	var pressed := not g.threat.is_empty() or (g.last_demand_turn >= 0 and state.turn - g.last_demand_turn < GasSim.DEMAND_INTERVAL)
-	var arrears_cost := _cash_cost(state, "gas_pay_arrears")
-	if pressed and _ai_try(state, "gas_pay_arrears", room):
-		room -= arrears_cost
-		taken.append("gas_pay_arrears")
+	var supplier := state.world_country(g.supplier_id)
+	var supplier_name := supplier.name if supplier != null else g.supplier_id
+	if pressed:
+		var paid := _cash_cost(state, "gas_pay_arrears")
+		if _ai_try(state, "gas_pay_arrears", room):
+			room -= paid
+			notes.append(Voice.say(state, "ai_gas_paid", {"supplier": supplier_name, "amount": roundi(paid), "remaining": roundi(g.arrears)}))
 	var next_month := state.month % 12 + 1
-	if g.cut > 0.0 and GasSim.season_weight(next_month) >= GasSim.WINTER_WEIGHT and _ai_try(state, "gas_spot_purchase", room):
-		taken.append("gas_spot_purchase")
-	return taken
+	var solvent := state.country.economy.deficit_share_of_gdp() <= float(OrientationSim.isf_targets(state)["deficit"])
+	if g.cut > 0.0 and solvent and GasSim.season_weight(next_month) >= GasSim.WINTER_WEIGHT:
+		var cost := _cash_cost(state, "gas_spot_purchase")
+		if _ai_try(state, "gas_spot_purchase", room):
+			notes.append(Voice.say(state, "ai_gas_cargo", {"amount": roundi(cost)}))
+	return notes
 
 
 static func _ai_try(state: GameState, verb: String, room: float) -> bool:
