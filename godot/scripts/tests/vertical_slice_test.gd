@@ -208,6 +208,22 @@ func _run() -> void:
 					and compact_status.contains("Reach %.0f%%" % (float(compact_region["state_reach"]) * 100.0)),
 					"1920-to-1280 resize preserves live regional metrics in the compact status"):
 				return
+		# A status line must never widen the dashboard. A Label without
+		# clip_text reports its full text width as a minimum and propagates it
+		# up to the window, so resolving a decision with a wordy message grew
+		# the scene past the viewport and clipped the UI off both edges. This
+		# only reproduces at 1920, because compact mode hides the status.
+		var width_before: float = scene.get_combined_minimum_size().x
+		scene._set_status("DECIDED / " + "Respond in kind. Another incident on the Vetrenka line. ".repeat(4))
+		await process_frame
+		await process_frame
+		if not _check(is_equal_approx(scene.get_combined_minimum_size().x, width_before)
+				and scene.size.is_equal_approx(Vector2(dimensions)),
+				"A wordy status does not widen the dashboard at %s (minimum %s -> %s, scene %s)"
+				% [dimensions, width_before, scene.get_combined_minimum_size().x, scene.size]):
+			return
+		scene._set_status("LIVE SIMULATION / READY")
+		await process_frame
 		if not _check(scene.size.is_equal_approx(Vector2(dimensions)), "Native-size layout at %s (window %s, scene %s, minimum %s)" % [dimensions, root.size, scene.size, scene.get_combined_minimum_size()]):
 			return
 		var map_rect: Rect2 = map.get_global_rect()

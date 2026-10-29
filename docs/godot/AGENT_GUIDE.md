@@ -91,6 +91,28 @@ verification for that task's `Playable result` (see `PLAN.md`) succeeds, and
 an independent review has no open Critical or Important finding. Only
 complete work may be consumed by a later task or phase.
 
+## UI gotcha: a label must never set the window's minimum size
+
+A Godot `Label` reports its full text width as its minimum size and
+propagates that up through every parent to the window. A label that takes
+runtime text therefore widens the whole dashboard past the viewport, and the
+UI reads as clipped or "zoomed in" at both edges. This has now bitten twice:
+once in the Qt build (see the matching gotcha in the root `CLAUDE.md`) and
+once here, when resolving a decision wrote a full sentence into the header's
+`PreviewStatus` and pushed the scene to 2142 px inside a 1920 px window.
+
+**Any label that receives runtime text needs `text_overrun_behavior = 3`**
+(trim to ellipsis), and a header label that should absorb slack rather than
+demand it also wants `clip_text = true`, `size_flags_horizontal = 3` and a
+modest `custom_minimum_size`. Labels with static text authored in the
+`.tscn` do not need this.
+
+Note the trap that let it ship: the journey test asserts the layout at both
+1920 and 1280, but compact mode **hides** `PreviewStatus` below 1500, so the
+1280 case could never reproduce it. `vertical_slice_test.gd` now sets a wordy
+status before the native-size assertion at each width; that guard fails
+loudly if the protection is removed.
+
 ## Runtime prohibition
 
 The final game ships with no Python installation, no PySide, no worker

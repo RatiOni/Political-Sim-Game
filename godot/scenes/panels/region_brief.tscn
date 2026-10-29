@@ -22,6 +22,7 @@ text_overrun_behavior = 3
 layout_mode = 2
 theme_type_variation = &"Muted"
 text = "—"
+text_overrun_behavior = 3
 
 [node name="OpenDossierButton" type="Button" parent="Content"]
 custom_minimum_size = Vector2(0, 44)
