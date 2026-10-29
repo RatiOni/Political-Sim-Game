@@ -75,7 +75,7 @@ Re-running the retired exporter would undo this; edit the JSON directly.
 - At 1280x720 the situation panel shows one option above the fold; the rest
   scroll. Phase 5 layout work should give the panel more of the body.
 
-- The Union's net growth edge over neutrality is about +0.05 pp/yr until plan 2 adds cheap gas.
+- Gas situations (the valve threat as a decision) and Zovar sabotage arrive with plans 3 and 4; the hooks are `GasSim.valve_threat` and `GasContract.sabotage`.
 
 ## The schemer arc
 
@@ -242,6 +242,38 @@ memberships under `foreign.map.memberships` for the map.
 Twenty-year journeys on four seeds for each of three strategies (neutral,
 Western, Krasovan) check that each is viable, bounded and costly, and that
 seeds diverge.
+
+## Energy
+
+Ardenia's gas is one contract, `ForeignState.gas` (`GasContract`): Krasova
+supplies 6 bcm a year through the Zovar line at 50 million kron a unit,
+take-or-pay 80%, renewing every three years from January 1995. The treasury
+settles 85% of each bill in hard currency; the rest is arrears (40 at the
+start). The budget carries the rolling twelve months actually paid, so the
+winter peak does not jolt the deficit the ISF reviews.
+
+Demand weighs 1.5 from October to March and 0.5 otherwise. Delivered supply
+is the contract less any cut and any sabotage, plus a second line and spot
+cargoes; storage injects in summer and draws whenever there is a gap. The
+share of demand met is the map's `foreign.map.gas_supply`; effects read
+severity (shortfall scaled by the season), so a January cut costs three times
+a July one. Severity raises household hardship by region exposure (Zavost
+1.5, Darev 1.3), lays off workers in Zavost and Darev, shortens state reach,
+drags growth and appears as the "Energy supply" stability component.
+Separatist territory is off the network. Dear gas drags growth and cheap gas
+lifts it.
+
+Krasova uses its world-AI undermine plan for gas first: a demand for the
+arrears (at 60 or more), two months later a threat naming next month (leverage
+0.5 or more, in practice the heating season), and at the named month a two-month
+cut unless the arrears were paid below 30. After a cut it waits two years
+before threatening again. Renewal reprices by leverage. Union membership caps
+the price at 70% of the reference, reschedules half the arrears and blocks
+cuts unless relations fall below -0.5; leaving costs 20% over the reference.
+The player can pay arrears, renegotiate (transit fees, a Union step, or
+shelving the second line), buy a spot cargo, build storage over two years and
+build a second line over four, which Krasova treats as hostile. Energy draws
+no RNG.
 
 ## The world acts
 
