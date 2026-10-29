@@ -20,6 +20,11 @@ var _speed := 1
 var _clock_elapsed := 0.0
 var _selected_program_id := ""
 var _selected_program_option: Dictionary = {}
+var _vital_rows: Dictionary = {}
+var _seats: SeatStrip
+var _trend_current: Dictionary = {}
+var _trend_previous: Dictionary = {}
+var _trend_date := ""
 var _budget_open := false
 var _budget_adjustments := {}
 var _budget_preview: Dictionary = {}
@@ -154,15 +159,8 @@ func apply_snapshot(value: Dictionary) -> void:
 	find_child("OfficeLabel").text = "%s / %s" % [player.get("title", "Office of government"), player.get("name", "—")]
 	find_child("StabilityLabel").text = str(snapshot.get("headline", {}).get("stability", "—"))
 	var economy: Dictionary = snapshot.get("economy", {})
-	var vitals := ["Approval     %s" % _percent(player, "approval"), "Political capital     %s" % str(player.get("political_capital", "—")), ""]
-	for metric in [["Growth", "growth"], ["Unemployment", "unemployment"], ["Inflation", "inflation"], ["Debt / GDP", "debt"]]:
-		vitals.append("%s     %s" % [metric[0], _percent(economy, metric[1])])
-	vitals.append("\nRevenue     %s M\nExpenditure     %s M" % [economy.get("revenue", "—"), economy.get("expenditure", "—")])
-	find_child("VitalsText").text = "\n".join(vitals)
-	var assembly: Array[String] = []
-	for faction in snapshot.get("factions", []):
-		assembly.append("%s\n%s seats · %s" % [faction.get("name", "—"), faction.get("seats", "—"), "Coalition" if faction.get("in_coalition", false) else "Opposition"])
-	find_child("AssemblyText").text = "\n\n".join(assembly) if not assembly.is_empty() else "No assembly figures received."
+	_refresh_vitals(player, economy, snapshot.get("headline", {}))
+	_seat_strip().set_factions(snapshot.get("factions", []))
 	var items = find_child("DecisionItems")
 	for child in items.get_children():
 		items.remove_child(child)
@@ -217,6 +215,113 @@ func _sfx_result(result: Dictionary, resolve_vote: bool = false) -> void:
 
 func _percent(row: Dictionary, key: String) -> String:
 	return "%.1f%%" % (float(row[key]) * 100.0) if row.has(key) else "—"
+
+
+## Thousands separators, no decimals. The snapshot carries raw floats
+## (12070.3321872016) and a treasury figure printed to 13 decimal places is
+## noise, not information.
+func _money(value: Variant) -> String:
+	var whole := int(round(float(value)))
+	var sign_text := "-" if whole < 0 else ""
+	var digits := str(absi(whole))
+	var out := ""
+	for i in digits.length():
+		if i > 0 and (digits.length() - i) % 3 == 0:
+			out += ","
+		out += digits[i]
+	return sign_text + out
+
+
+## Trend is sampled per turn, never per repaint — otherwise an idle redraw
+## compares a value with itself and every glyph reads "steady".
+func _trend_for(key: String, value: float, date_text: String) -> int:
+	if date_text != _trend_date:
+		_trend_previous = _trend_current.duplicate()
+		_trend_date = date_text
+		_trend_current.clear()
+	_trend_current[key] = value
+	if not _trend_previous.has(key):
+		return 0
+	var delta: float = value - float(_trend_previous[key])
+	if absf(delta) < 0.0005:
+		return 0
+	return 1 if delta > 0.0 else -1
+
+
+func _vitals_box() -> VBoxContainer:
+	return find_child("Vitals") as VBoxContainer
+
+
+func _seat_strip() -> SeatStrip:
+	var box := find_child("Assembly") as VBoxContainer
+	if _seats == null or not is_instance_valid(_seats):
+		_seats = SeatStrip.new()
+		_seats.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		box.add_child(_seats)
+	return _seats
+
+
+## Rows are built once and then only updated, so the panel never reflows
+## as figures change (the dashboard's standing rule).
+func _vital_row(key: String) -> StatBar:
+	if _vital_rows.has(key) and is_instance_valid(_vital_rows[key]):
+		return _vital_rows[key]
+	var row := StatBar.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_vitals_box().add_child(row)
+	_vital_rows[key] = row
+	return row
+
+
+func _vital_rule() -> void:
+	var rule := HSeparator.new()
+	_vitals_box().add_child(rule)
+
+
+func _refresh_vitals(player: Dictionary, economy: Dictionary, headline: Dictionary) -> void:
+	var date_text := str(snapshot.get("date", {}).get("text", ""))
+	var first_build := _vital_rows.is_empty()
+
+	# Bounded, higher-is-better readings get a meter. Everything else gets a
+	# figure and a trend glyph — a bar for debt or inflation would imply a
+	# full bar is good (CLAUDE.md, dashboard conventions).
+	var stability := float(headline.get("value", 0.0))
+	_vital_row("stability").set_meter("Stability", stability,
+		"%.0f%%" % (stability * 100.0), UiPalette.good_scale(stability))
+
+	var approval := float(player.get("approval", 0.0))
+	_vital_row("approval").set_meter("Approval", approval,
+		"%.1f%%" % (approval * 100.0), UiPalette.good_scale(approval))
+
+	if first_build:
+		_vital_rule()
+
+	var capital := float(player.get("political_capital", 0.0))
+	_vital_row("capital").set_figure("Political capital", "%.1f" % capital,
+		_trend_for("capital", capital, date_text))
+
+	var growth := float(economy.get("growth", 0.0))
+	_vital_row("growth").set_figure("Growth", _percent(economy, "growth"),
+		_trend_for("growth", growth, date_text))
+
+	for metric in [["Unemployment", "unemployment"], ["Inflation", "inflation"], ["Debt / GDP", "debt"]]:
+		var amount := float(economy.get(metric[1], 0.0))
+		_vital_row(metric[1]).set_figure(metric[0], _percent(economy, metric[1]),
+			_trend_for(metric[1], amount, date_text), true)
+
+	if first_build:
+		_vital_rule()
+
+	var revenue := float(economy.get("revenue", 0.0))
+	var expenditure := float(economy.get("expenditure", 0.0))
+	_vital_row("revenue").set_figure("Revenue", "%s M" % _money(revenue),
+		_trend_for("revenue", revenue, date_text))
+	_vital_row("expenditure").set_figure("Expenditure", "%s M" % _money(expenditure),
+		_trend_for("expenditure", expenditure, date_text), true)
+	var balance := revenue - expenditure
+	var balance_row := _vital_row("balance")
+	balance_row.set_figure("Balance", "%s%s M" % ["+" if balance >= 0.0 else "", _money(balance)],
+		_trend_for("balance", balance, date_text))
 
 func _compact_region_status(region: Dictionary) -> String:
 	return "P %.0f%% · U %.1f%% · Reach %.0f%%" % [
