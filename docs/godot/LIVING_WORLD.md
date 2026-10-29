@@ -192,6 +192,55 @@ the Diplomacy button fits.
 The dashboard map is a DOS-style pixel map whose tiles grow, develop and
 burn with each region's monthly state; see `PIXEL_MAP.md`.
 
+## Orientation
+
+Ardenia's alignment is never a label. Five powers (Krasova, the ISF, the
+Concert, the Meridian Treaty Organisation and the Krasovan Economic Union)
+each carry three numbers, kept in `GameState.foreign` and recomputed every
+month by `ForeignSim` after the diplomacy pass and before the world acts:
+**dependence** (half gas share, a quarter of the debt it holds, a quarter
+of Ardenia's trade with it), **commitment** (the furthest milestone signed
+on its track; Krasova also counts its treaties and half the Union's
+commitment) and **leverage** (dependence, blunted by warm relations,
+sharpened by a quarter in the October–March heating season for a gas
+supplier). A hostile Krasovan move hits harder by up to half its leverage,
+and a Meridian guarantee shelves hostile plans like a defence pact.
+
+**The ISF.** Twelve quarterly reviews (January, April, July, October)
+judge the deficit (5% of GDP) and inflation (8%), and from the fifth
+review the Central Bank Independence Act. A pass releases a tranche of
+0.4% of GDP into the budget over three months and lifts growth briefly; a
+fail suspends the programme and dents growth for six months. A suspended
+programme can be renegotiated for 15 PC: the tranche is released, both
+targets tighten by 15% and the bank condition moves four reviews later.
+
+**The Western ladder.** The Concert application is lodged at the start.
+The association agreement needs 36 months of discipline (deficit ≤ 4%,
+inflation ≤ 8%; a loose month costs two) and an independent bank. The
+Meridian partnership is open at once; a guarantee needs 24 months of
+partnership and a resolved Vetrenka (settled, retaken or partitioned).
+
+**The Union.** Observer status needs Krasova no colder than −0.35;
+membership needs a year as observer and Krasova no colder than −0.15.
+Membership brings open markets (growth phasing in over a year) and
+rescheduled debt (60 M a year for three years), caps Concert trade at 60%
+of its ceiling, and needs Union consent to sanction or condemn a member or
+to sign a defence pact outside the bloc. Walking out costs stability,
+growth for a year and 0.35 of Krasova's goodwill, and bars re-entry for
+five years. The only hard locks: a member cannot hold the association
+agreement or a Meridian guarantee.
+
+**Blocs in the world.** Every January each bloc re-reads its world
+members: democratic traders and reformers warm to Solheim drift into the
+Concert (and, if steadier, the Meridian); revanchists, autocratic hegemons
+and Krasova's clients warm to Krasova drift into the Union. Anchors never
+leave, and no country sits on both sides. The snapshot publishes
+memberships under `foreign.map.memberships` for the map.
+
+Twenty-year journeys on four seeds for each of three strategies (neutral,
+Western, Krasovan) check that each is viable, bounded and costly, and that
+seeds diverge.
+
 ## The world acts
 
 **Player-facing job:** the neighbours have their own interests, and the
