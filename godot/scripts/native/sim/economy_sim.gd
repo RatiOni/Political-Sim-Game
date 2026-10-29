@@ -231,7 +231,7 @@ static func _update_budget_lines(state: GameState) -> void:
 	econ.budget.revenue = (econ.structural_revenue + econ.trade_revenue_contribution
 		+ _modifiers_sum(state, "budget_revenue"))
 	econ.budget.expenditure = (econ.structural_expenditure
-		+ _modifiers_sum(state, "budget_expenditure") + econ.debt_service)
+		+ _modifiers_sum(state, "budget_expenditure") + econ.debt_service + GasSim.budget_cost(state))
 
 
 static func _compound_gdp(state: GameState) -> void:

@@ -386,18 +386,45 @@ func _test_maximum_outreach_cannot_buy_off_krasova(t) -> void:
 			"seed %d: ten years of maximum outreach keep Krasova below zero while Vetrenka is open (high %.2f)" % [seed, highest])
 
 
+const FEUD_SEEDS := [515151, 7, 99, 11, 2024, 31337]
+const FEUD_HORIZON_MONTHS := 180
+const DECADE_MONTHS := 120
+const DECADE_HOSTILITY := -0.6
+
+
+static func _neglect_run(seed: int, outreach := false) -> Dictionary:
+	var state := _state("government", seed)
+	var out := {"feud_month": -1, "decade": 0.0, "pinned": 0}
+	for m in range(FEUD_HORIZON_MONTHS):
+		if outreach:
+			_max_outreach(state)
+		NativeGameScript.close_month(state)
+		if int(out["feud_month"]) < 0 and state.world_arcs.get("ardenia|krasova", "") == "feud":
+			out["feud_month"] = m + 1
+		if m < DECADE_MONTHS and _score(state, "krasova", "ardenia") <= -0.999:
+			out["pinned"] += 1
+		if m + 1 == DECADE_MONTHS:
+			out["decade"] = _score(state, "krasova", "ardenia")
+	return out
+
+
+static func _neglect_feuds(t, label: String, outreach := false) -> Dictionary:
+	var runs := {}
+	var total := 0.0
+	for seed in FEUD_SEEDS:
+		var run := _neglect_run(seed, outreach)
+		runs[seed] = run
+		total += float(run["decade"])
+		t.truth(int(run["feud_month"]) > 0, "seed %d: %s (feud month %d)" % [seed, label, run["feud_month"]])
+	var mean := total / float(FEUD_SEEDS.size())
+	t.truth(mean <= DECADE_HOSTILITY, "%s: mean Krasova relations at year 10 are hostile (%.2f)" % [label, mean])
+	return runs
+
+
 func _test_neglect_still_makes_a_feud_that_breathes(t) -> void:
+	var runs := _neglect_feuds(t, "an unattended Krasova still becomes a feud")
 	for seed in [515151, 7, 99]:
-		var state := _state("government", seed)
-		var feud := false
-		var pinned := 0
-		for _m in range(120):
-			NativeGameScript.close_month(state)
-			feud = feud or state.world_arcs.get("ardenia|krasova", "") == "feud"
-			if _score(state, "krasova", "ardenia") <= -0.999:
-				pinned += 1
-		t.truth(feud, "seed %d: an unattended Krasova still becomes a feud" % seed)
-		t.truth(pinned < 24, "seed %d: but the feud is not pinned at -1.00 (%d months there)" % [seed, pinned])
+		t.truth(int(runs[seed]["pinned"]) < 24, "seed %d: but the feud is not pinned at -1.00 (%d months there)" % [seed, runs[seed]["pinned"]])
 
 
 func _test_a_settled_vetrenka_lets_relations_warm_to_the_higher_cap(t) -> void:
@@ -431,8 +458,8 @@ func _test_outreach_never_provokes_krasova(t) -> void:
 			"seed %d: courting Krasova never makes it more hostile (harm %.3f courted, %.3f neglected)" % [seed, courted["harm"], neglect["harm"]])
 		t.truth(float(courted["final"]) > float(neglect["final"]),
 			"seed %d: courted relations end warmer (%.2f vs %.2f)" % [seed, courted["final"], neglect["final"]])
-		t.truth(bool(neglect["feud"]), "seed %d: neglect still becomes a feud" % seed)
 		t.truth(int(courted["hostile"]) + int(courted["shelved"]) >= 1, "seed %d: but the rivalry stays alive" % seed)
+	_neglect_feuds(t, "neglect still becomes a feud")
 
 
 func _test_a_warmer_rival_waits_longer(t) -> void:

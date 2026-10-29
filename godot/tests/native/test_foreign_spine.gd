@@ -224,7 +224,8 @@ static func _pressed_month(gas: float) -> float:
 	var krasova := DiplomacySim.world_country(state, "krasova")
 	state.foreign.powers["krasova"] = {"dependence": 0.0, "commitment": 0.0, "leverage": 0.0}
 	krasova.plan = {"objective": "undermine", "target": "ardenia", "matures_turn": 0, "last_acted_turn": -1, "foreshadowed": true}
-	state.foreign.gas_share["krasova"] = gas
+	state.foreign.gas.contracted_volume = 6.0 * gas
+	state.foreign.gas.second_line_volume = 6.0 * (1.0 - gas)
 	NativeGameScript.close_month(state)
 	for entry in state.foreign.hostile_log:
 		if String(entry["actor"]) == "krasova" and int(entry["turn"]) == state.turn:

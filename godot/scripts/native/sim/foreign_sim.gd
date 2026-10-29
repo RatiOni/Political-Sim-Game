@@ -175,6 +175,7 @@ static func update_spine(state: GameState) -> void:
 static func monthly(state: GameState) -> Array[String]:
 	ensure(state)
 	var notes := OrientationSim.monthly(state)
+	notes.append_array(GasSim.monthly(state))
 	update_spine(state)
 	return notes
 
