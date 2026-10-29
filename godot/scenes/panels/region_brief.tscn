@@ -23,6 +23,12 @@ layout_mode = 2
 theme_type_variation = &"Muted"
 text = "—"
 
+[node name="OpenDossierButton" type="Button" parent="Content"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Open region dossier"
+tooltip_text = "See this region drawn, and how it has been doing"
+
 [node name="Rule" type="HSeparator" parent="Content"]
 layout_mode = 2
 

@@ -25,6 +25,10 @@ var _seats: SeatStrip
 var _trend_current: Dictionary = {}
 var _trend_previous: Dictionary = {}
 var _trend_date := ""
+var _records_open := false
+var _region_panel_open := false
+var _charts: Dictionary = {}
+var _region_view: RegionView
 var _budget_open := false
 var _budget_adjustments := {}
 var _budget_preview: Dictionary = {}
@@ -68,6 +72,10 @@ func _ready() -> void:
 	%LegislationPanel.find_child("LobbyChoice").item_selected.connect(_on_bill_lobby_selected)
 	%SituationPanel.find_child("CloseSituationButton").pressed.connect(_close_situation)
 	%DiplomacyButton.pressed.connect(_open_diplomacy)
+	%RecordsButton.pressed.connect(_open_records)
+	%RecordsPanel.find_child("CloseRecordsButton").pressed.connect(_close_records)
+	%RegionPanel.find_child("CloseRegionButton").pressed.connect(_close_region_panel)
+	%RegionBrief.find_child("OpenDossierButton").pressed.connect(_open_region_panel)
 	%DiplomacyPanel.find_child("CloseDiplomacyButton").pressed.connect(_close_diplomacy)
 	%DiplomacyPanel.find_child("CountryChoice").item_selected.connect(_on_country_selected)
 	%OppositionPanel.requested.connect(_on_opposition_request)
@@ -122,6 +130,8 @@ func _resize_layout() -> void:
 	%SituationPanel.visible = _situation_open
 	%DiplomacyPanel.visible = _diplomacy_open
 	%OppositionPanel.visible = _opposition_open
+	%RecordsPanel.visible = _records_open
+	%RegionPanel.visible = _region_panel_open
 	find_child("MapHint").visible = not compact and not _desk_open()
 	%MonthlyReport.custom_minimum_size.y = 88 if compact else 192
 	%RegionBrief.find_child("Details").custom_minimum_size.y = 48 if compact else 84
@@ -142,6 +152,10 @@ func _resize_layout() -> void:
 			_refresh_diplomacy()
 		elif _opposition_open:
 			_refresh_opposition()
+		elif _records_open:
+			_refresh_records()
+		elif _region_panel_open:
+			_refresh_region_panel()
 		else:
 			_refresh_region()
 
@@ -196,6 +210,10 @@ func apply_snapshot(value: Dictionary) -> void:
 		_refresh_diplomacy()
 	elif _opposition_open:
 		_refresh_opposition()
+	elif _records_open:
+		_refresh_records()
+	elif _region_panel_open:
+		_refresh_region_panel()
 	_notice_new_situations()
 	_refresh_controls()
 
@@ -598,6 +616,256 @@ func _close_diplomacy() -> void:
 	_resize_layout()
 
 
+# --- the record (history charts) ----------------------------------------
+
+func _open_records() -> void:
+	if snapshot.is_empty() or _fatal:
+		return
+	_sfx_cue("navigation")
+	_budget_open = false
+	_legislation_open = false
+	_situation_open = false
+	_opposition_open = false
+	_diplomacy_open = false
+	_region_panel_open = false
+	_records_open = true
+	_refresh_records()
+	_resize_layout()
+
+
+func _close_records() -> void:
+	_sfx_cue("navigation")
+	_records_open = false
+	_resize_layout()
+
+
+## Charts are built once and then re-fed, so opening the panel does not
+## rebuild the scene tree every time.
+func _chart(key: String, title: String, height: int) -> PixelChart:
+	if _charts.has(key) and is_instance_valid(_charts[key]):
+		return _charts[key]
+	var body := %RecordsPanel.find_child("RecordsBody")
+	var heading := Label.new()
+	heading.text = title
+	heading.theme_type_variation = &"Section"
+	body.add_child(heading)
+	var chart := PixelChart.new()
+	chart.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chart.custom_minimum_size.y = height
+	body.add_child(chart)
+	_charts[key] = chart
+	return chart
+
+
+func _refresh_records() -> void:
+	var history: Dictionary = snapshot.get("history", {})
+	var economy: Array = history.get("economy", [])
+	var budgets: Array = history.get("budgets", [])
+	var elections: Array = history.get("elections", [])
+
+	# Growth and inflation share an axis: both are rates, and reading them
+	# against each other is the point.
+	var growth: Array = []
+	var inflation: Array = []
+	var months: Array = []
+	for row in economy:
+		growth.append(float(row.get("growth", 0.0)) * 100.0)
+		inflation.append(float(row.get("inflation", 0.0)) * 100.0)
+		months.append("%s" % row.get("year", ""))
+	_chart("growth", "GROWTH AND INFLATION  /  PER MONTH", 150).plot_lines([
+		{"name": "Growth", "color": UiPalette.GOOD, "points": growth},
+		{"name": "Inflation", "color": UiPalette.WARN, "points": inflation},
+	], months, "%.1f%%")
+
+	var unemployment: Array = []
+	var debt: Array = []
+	for row in economy:
+		unemployment.append(float(row.get("unemployment", 0.0)) * 100.0)
+		debt.append(float(row.get("debt", 0.0)) * 100.0)
+	_chart("burden", "UNEMPLOYMENT AND DEBT  /  PER MONTH", 150).plot_lines([
+		{"name": "Unemployment", "color": UiPalette.PARTY[1], "points": unemployment},
+		{"name": "Debt / GDP", "color": UiPalette.BAD, "points": debt},
+	], months, "%.0f%%")
+
+	var approval: Array = []
+	var stability: Array = []
+	for row in economy:
+		approval.append(float(row.get("approval", 0.0)) * 100.0)
+		stability.append(float(row.get("stability", 0.0)) * 100.0)
+	_chart("standing", "APPROVAL AND STABILITY  /  PER MONTH", 150).plot_lines([
+		{"name": "Approval", "color": UiPalette.GOLD, "points": approval},
+		{"name": "Stability", "color": UiPalette.GOOD, "points": stability},
+	], months, "%.0f%%")
+
+	# Budgets: the balance per year, so a run of deficits is one picture.
+	var balances: Array = []
+	var years: Array = []
+	for row in budgets:
+		balances.append(float(row.get("balance", 0.0)))
+		years.append(str(row.get("year", "")))
+	_chart("budget", "BUDGET BALANCE  /  PER YEAR  (M)", 150).plot_bars(balances, years, "%.0f")
+
+	_refresh_election_charts(elections)
+
+
+func _refresh_election_charts(elections: Array) -> void:
+	var turnout: Array = []
+	var labels: Array = []
+	for row in elections:
+		turnout.append(float(row.get("turnout", 0.0)) * 100.0)
+		labels.append(str(row.get("year", "")))
+	_chart("turnout", "TURNOUT  /  PER ELECTION", 130).plot_lines([
+		{"name": "Turnout", "color": UiPalette.GOLD, "points": turnout},
+	], labels, "%.0f%%")
+
+	# One line per party that has ever stood, in its assembly colour, so the
+	# chart and the chamber agree.
+	var names := {}
+	var hexes := {}
+	for faction in snapshot.get("factions", []):
+		names[String(faction.get("id", ""))] = String(faction.get("name", ""))
+		hexes[String(faction.get("id", ""))] = String(faction.get("color", ""))
+	var ordered: Array = []
+	for faction in snapshot.get("factions", []):
+		ordered.append(String(faction.get("color", "")))
+	var colors := UiPalette.party_colors(ordered)
+	var index := 0
+	var series: Array = []
+	for faction in snapshot.get("factions", []):
+		var id := String(faction.get("id", ""))
+		var points: Array = []
+		for row in elections:
+			var shares: Dictionary = row.get("vote_share", {})
+			points.append(float(shares.get(id, 0.0)) * 100.0)
+		if not points.is_empty():
+			series.append({"name": names.get(id, id), "color": colors[index], "points": points})
+		index += 1
+	_chart("shares", "VOTE SHARE  /  PER ELECTION", 150).plot_lines(series, labels, "%.0f%%")
+
+
+# --- the region dossier -------------------------------------------------
+
+func _open_region_panel() -> void:
+	if snapshot.is_empty() or _fatal or selected_region_id.is_empty():
+		return
+	_sfx_cue("navigation")
+	_budget_open = false
+	_legislation_open = false
+	_situation_open = false
+	_opposition_open = false
+	_diplomacy_open = false
+	_records_open = false
+	_region_panel_open = true
+	_refresh_region_panel()
+	_resize_layout()
+
+
+func _close_region_panel() -> void:
+	_sfx_cue("navigation")
+	_region_panel_open = false
+	_resize_layout()
+
+
+func _selected_region_row() -> Dictionary:
+	for row in snapshot.get("regions", []):
+		if String(row.get("id", "")) == selected_region_id:
+			return row
+	return {}
+
+
+func _refresh_region_panel() -> void:
+	var region := _selected_region_row()
+	if region.is_empty():
+		return
+	var panel := %RegionPanel
+	panel.find_child("Heading").text = String(region.get("name", "Region")).to_upper()
+
+	if _region_view == null or not is_instance_valid(_region_view):
+		_region_view = RegionView.new()
+		_region_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_region_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		panel.find_child("Picture").add_child(_region_view)
+	_region_view.show_region(region)
+
+	var pressure := float(region.get("pressure", 0.0))
+	var unemployment := float(region.get("unemployment", 0.0))
+	var reach := float(region.get("state_reach", 0.0))
+	var development := float(region.get("development", 0.0))
+	panel.find_child("Standing").text = _region_standing(region)
+	panel.find_child("Caption").text = _region_caption(region)
+
+	var body := panel.find_child("RegionBody")
+	for child in body.get_children():
+		body.remove_child(child)
+		child.queue_free()
+	var rows := [
+		["Development", "%.0f%%" % (development * 100.0), development, UiPalette.good_scale(development)],
+		["State reach", "%.0f%%" % (reach * 100.0), reach, UiPalette.good_scale(reach)],
+		["Political pressure", "%.0f%%" % (pressure * 100.0), pressure, UiPalette.risk_scale(pressure, 0.3, 0.6)],
+		["Unemployment", "%.1f%%" % (unemployment * 100.0), unemployment, UiPalette.risk_scale(unemployment, 0.1, 0.2)],
+	]
+	for row in rows:
+		var bar := StatBar.new()
+		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		body.add_child(bar)
+		bar.set_meter(row[0], row[2], row[1], row[3])
+
+	var note := Label.new()
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.theme_type_variation = &"Muted"
+	var program: Variant = region.get("active_program")
+	if program is Dictionary:
+		note.text = "%s — month %d of %d, %.0f M a month." % [
+			program.get("name", "Programme"), int(program.get("months_active", 0)) + 1,
+			int(program.get("duration", 0)), float(program.get("monthly_cost", 0.0))]
+	else:
+		note.text = "No programme running here."
+	body.add_child(note)
+
+
+## One line on how the place is doing, in plain words.
+func _region_standing(region: Dictionary) -> String:
+	if String(region.get("control", "full")) == "separatist":
+		return "Outside the government's administration."
+	var pressure := float(region.get("pressure", 0.0))
+	var development := float(region.get("development", 0.0))
+	if bool(region.get("civil_war", false)):
+		return "In open conflict."
+	if pressure > 0.6:
+		return "Close to losing patience."
+	if pressure > 0.35:
+		return "Restless, and watching."
+	if development > 0.65:
+		return "Prosperous and quiet."
+	return "Getting by."
+
+
+## The caption explains what changed the picture, so the art is read as
+## information rather than decoration.
+func _region_caption(region: Dictionary) -> String:
+	var parts: Array[String] = []
+	var development := float(region.get("development", 0.0))
+	if development > 0.7:
+		parts.append("new building and a paved street")
+	elif development < 0.35:
+		parts.append("little has been built here")
+	var unemployment := float(region.get("unemployment", 0.0))
+	if unemployment > 0.18:
+		parts.append("shuttered windows where the work went")
+	elif unemployment < 0.08:
+		parts.append("the works are running")
+	var pressure := float(region.get("pressure", 0.0))
+	if pressure > 0.6:
+		parts.append("barricades on the road")
+	elif pressure > 0.4:
+		parts.append("an uneasy quiet")
+	if float(region.get("state_reach", 0.0)) < 0.4:
+		parts.append("the state is barely present")
+	if parts.is_empty():
+		return "An ordinary month."
+	return parts[0].capitalize() + ("; " + "; ".join(parts.slice(1)) if parts.size() > 1 else "") + "."
+
+
 func _on_country_selected(index: int) -> void:
 	var choice: OptionButton = %DiplomacyPanel.find_child("CountryChoice")
 	_selected_country_id = str(choice.get_item_metadata(index))
@@ -678,7 +946,8 @@ func _set_diplomacy_status(text: String) -> void:
 
 
 func _desk_open() -> bool:
-	return _budget_open or _legislation_open or _situation_open or _diplomacy_open or _opposition_open
+	return _budget_open or _legislation_open or _situation_open or _diplomacy_open \
+		or _opposition_open or _records_open or _region_panel_open
 
 
 func _notice_new_situations() -> void:
@@ -1286,6 +1555,7 @@ func _refresh_controls() -> void:
 	%LegislationButton.disabled = not ready or _desk_open()
 	%LegislationButton.text = "Legislation" if _in_government() else "Opposition"
 	%DiplomacyButton.disabled = not ready or _desk_open()
+	%RecordsButton.disabled = not ready or _desk_open()
 	%PlayButton.disabled = not ready
 	%PlayButton.text = "Paused" if _paused else "Playing ×%d" % _speed
 	for index in range(5):
@@ -1356,6 +1626,10 @@ func _close_open_desk() -> void:
 		_close_diplomacy()
 	elif _opposition_open:
 		_close_opposition()
+	elif _records_open:
+		_close_records()
+	elif _region_panel_open:
+		_close_region_panel()
 
 
 func _unhandled_key_input(event: InputEvent) -> void:

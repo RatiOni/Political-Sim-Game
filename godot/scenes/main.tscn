@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/app.gd" id="1"]
 [ext_resource type="Theme" path="res://theme/ardenia_theme.tres" id="2"]
@@ -10,6 +10,8 @@
 [ext_resource type="PackedScene" path="res://scenes/panels/situation_panel.tscn" id="8"]
 [ext_resource type="PackedScene" path="res://scenes/panels/diplomacy_panel.tscn" id="9"]
 [ext_resource type="PackedScene" path="res://scenes/panels/opposition_panel.tscn" id="10"]
+[ext_resource type="PackedScene" path="res://scenes/panels/records_panel.tscn" id="11"]
+[ext_resource type="PackedScene" path="res://scenes/panels/region_panel.tscn" id="12"]
 
 [node name="App" type="PanelContainer"]
 layout_mode = 3
@@ -83,6 +85,15 @@ size_flags_vertical = 4
 disabled = true
 text = "Diplomacy"
 tooltip_text = "Open the foreign relations desk"
+
+[node name="RecordsButton" type="Button" parent="Margin/Layout/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 44)
+layout_mode = 2
+size_flags_vertical = 4
+disabled = true
+text = "Record"
+tooltip_text = "Open the national record: growth, budgets and elections over time"
 
 [node name="PlayButton" type="Button" parent="Margin/Layout/Header"]
 unique_name_in_owner = true
@@ -279,6 +290,14 @@ unique_name_in_owner = true
 layout_mode = 2
 
 [node name="OppositionPanel" parent="Margin/Layout/Body" instance=ExtResource("10")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="RecordsPanel" parent="Margin/Layout/Body" instance=ExtResource("11")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="RegionPanel" parent="Margin/Layout/Body" instance=ExtResource("12")]
 unique_name_in_owner = true
 layout_mode = 2
 

@@ -1,0 +1,58 @@
+[gd_scene format=3]
+
+[node name="RegionPanel" type="PanelContainer"]
+visible = false
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Content" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+
+[node name="Heading" type="Label" parent="Content/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Title"
+text = "REGION"
+
+[node name="CloseRegionButton" type="Button" parent="Content/Header"]
+custom_minimum_size = Vector2(96, 44)
+layout_mode = 2
+text = "Close"
+
+[node name="Standing" type="Label" parent="Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Section"
+text = ""
+autowrap_mode = 3
+
+[node name="Picture" type="VBoxContainer" parent="Content"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Caption" type="Label" parent="Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"Muted"
+text = ""
+autowrap_mode = 3
+
+[node name="Rule" type="HSeparator" parent="Content"]
+layout_mode = 2
+
+[node name="RegionScroll" type="ScrollContainer" parent="Content"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="RegionBody" type="VBoxContainer" parent="Content/RegionScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
