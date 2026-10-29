@@ -136,7 +136,8 @@ static func condition_met(state: GameState, rule_id: String) -> bool:
 
 
 static func _transit_open(state: GameState) -> bool:
-	return state.player.in_government and GasSim.is_active(state) and state.turn >= GAS_SITUATION_TURN 		and not ("transit" in GasSim.gas(state).concessions)
+	return state.player.in_government and GasSim.is_active(state) and state.turn >= GAS_SITUATION_TURN \
+			and not ("transit" in GasSim.gas(state).concessions)
 
 
 static func handles(handler_id: String) -> bool:
