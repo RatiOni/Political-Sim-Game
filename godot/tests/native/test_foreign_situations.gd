@@ -195,6 +195,45 @@ func _test_a_refused_gate_changes_nothing(t) -> void:
 	EventsSim._by_id.erase("gate_probe")
 
 
+func _probe_event(id: String, handler: String) -> Dictionary:
+	return EventsSim.event_by_id("bank_run").merged({"id": id, "default_option_id": "go",
+		"options": [{"id": "go", "on_apply": handler, "effects": {}}]}, true)
+
+
+func _test_a_handler_hears_its_situations_target(t) -> void:
+	var state := _state()
+	var heard: Array[String] = []
+	ForeignArcs.probes["probe_hear"] = func(_s: GameState, target: String) -> String:
+		heard.append(target)
+		return "heard %s" % target
+	var event := _probe_event("hear_probe", "probe_hear")
+	EventsSim._by_id["hear_probe"] = event
+	var s := _force(state, "hear_probe", "krasova")
+	var note := EventsSim.apply_option(state, event, event["options"][0], s, false)
+	t.equal(heard, ["krasova"] as Array[String], "a handler is told the situation's own target")
+	t.equal(note, "heard krasova", "and its line is the option's note")
+	ForeignArcs.probes.erase("probe_hear")
+	EventsSim._by_id.erase("hear_probe")
+
+
+func _test_a_trigger_made_mid_month_reaches_the_desk_that_month(t) -> void:
+	var state := _state()
+	ForeignArcs.probes["probe_trigger"] = func(st: GameState, _target: String) -> String:
+		ForeignArcs.schedule(st, "bank_run", "krasova")
+		return ""
+	EventsSim._by_id["trigger_probe"] = _probe_event("trigger_probe", "probe_trigger")
+	var s := _force(state, "trigger_probe")
+	s.deadline_turn = state.turn
+	state.event_fire_history.erase("bank_run")
+	NativeGameScript.next_month(state)
+	var arrived := state.pending_situations.filter(func(p: Situation) -> bool: return p.event_id == "bank_run")
+	t.equal(arrived.size(), 1, "a trigger fired during the month's close is on the desk when the month closes")
+	t.equal(arrived[0].arrived_turn if arrived.size() > 0 else -1, state.turn, "it arrives in the month that triggered it")
+	t.equal(state.scheduled_events.filter(func(r) -> bool: return r["event_id"] == "bank_run").size(), 0, "and leaves nothing waiting for next month")
+	ForeignArcs.probes.erase("probe_trigger")
+	EventsSim._by_id.erase("trigger_probe")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_every_sentinel_names_a_live_country(t)
@@ -205,4 +244,6 @@ func _initialize() -> void:
 	_test_a_triggered_situation_arrives_this_month_and_never_goes_stale(t)
 	_test_targets_must_name_real_countries(t)
 	_test_a_refused_gate_changes_nothing(t)
+	_test_a_handler_hears_its_situations_target(t)
+	_test_a_trigger_made_mid_month_reaches_the_desk_that_month(t)
 	quit(t.finish())

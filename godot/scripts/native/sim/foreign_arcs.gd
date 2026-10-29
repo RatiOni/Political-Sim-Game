@@ -12,6 +12,8 @@ const COUP_STABILITY := 0.3
 const COUP_MAX_WAR_RISK := 0.5
 const CONCERT_FOE_LINE := -0.6
 
+static var probes: Dictionary = {}
+
 
 static func resolve_target(state: GameState, key: String) -> String:
 	match key:
@@ -122,5 +124,11 @@ static func condition_met(_state: GameState, _rule_id: String) -> bool:
 	return false
 
 
-static func run(_state: GameState, _handler_id: String, _target: String) -> String:
+static func handles(handler_id: String) -> bool:
+	return handler_id in HANDLERS or probes.has(handler_id)
+
+
+static func run(state: GameState, handler_id: String, target: String) -> String:
+	if probes.has(handler_id):
+		return String((probes[handler_id] as Callable).call(state, target))
 	return ""
