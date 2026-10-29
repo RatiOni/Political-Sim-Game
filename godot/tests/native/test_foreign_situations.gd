@@ -697,6 +697,46 @@ func _test_no_foreign_event_names_a_country(t) -> void:
 		t.truth(not (id in ContentRepository.load_all()["catalogs"]["events"]["ardenia_only_events"]), "%s is not bespoke content" % id)
 
 
+func _answer(event_id: String, option: String, target_sentinel: String) -> Dictionary:
+	var state := _state()
+	if event_id == "neighbour_coup":
+		_ripe_neighbour(state)
+	if event_id == "rival_interests" or event_id == "arms_offer":
+		_set_score(state, ForeignArcs.resolve_target(state, "__rival__"), -0.2)
+	var target := ForeignArcs.resolve_target(state, target_sentinel)
+	var west := ForeignArcs.resolve_target(state, "__western__")
+	var rival := ForeignArcs.resolve_target(state, "__rival__")
+	state.player.political_capital = 100.0
+	_force(state, event_id, target)
+	var w0 := _score(state, west)
+	var r0 := _score(state, rival)
+	EventActions.resolve(state, event_id, option)
+	return {"west": _score(state, west) - w0, "rival": _score(state, rival) - r0,
+		"pc": 100.0 - state.player.political_capital, "distinct": west != rival and target != west}
+
+
+func _test_every_neighbour_answer_has_its_real_cost(t) -> void:
+	var abstain := _answer("sanctions_coalition", "abstain", "__rival__")
+	t.near(float(abstain["west"]), -0.03, 1e-9, "abstaining cools the West")
+	var oppose := _answer("sanctions_coalition", "speak_against", "__rival__")
+	t.near(float(oppose["west"]), -0.06, 1e-9, "speaking against cools it more")
+	var arms := _answer("arms_offer", "buy", "__warmest__")
+	t.truth(arms["distinct"], "sanity: the arms come from a third capital")
+	t.near(float(arms["rival"]), -0.04, 1e-9, "the rival hears about the arms")
+	t.near(float(arms["pc"]), 5.0, 1e-9, "the arms cost 5 capital")
+	var ack := _answer("rival_interests", "acknowledge", "__rival__")
+	t.truth(ack["distinct"], "sanity: the rival is not the West")
+	t.near(float(ack["west"]), -0.04, 1e-9, "acknowledging the note cools the West")
+	t.near(float(ack["rival"]), 0.08, 1e-9, "and warms the rival")
+	t.near(float(ack["pc"]), 0.0, 1e-9, "acknowledging costs no capital")
+	var pub := _answer("rival_interests", "take_it_to_the_concert", "__rival__")
+	t.near(float(pub["west"]), 0.04, 1e-9, "publishing the note warms the West")
+	t.near(float(pub["rival"]), -0.06, 1e-9, "and cools the rival")
+	t.near(float(pub["pc"]), 8.0, 1e-9, "publishing costs 8 capital")
+	t.near(float(_answer("neighbour_coup", "recognise", "__fragile__")["pc"]), 0.0, 1e-9, "recognising costs no capital")
+	t.near(float(_answer("neighbour_coup", "condemn", "__fragile__")["pc"]), 4.0, 1e-9, "condemning costs 4 capital")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_every_sentinel_names_a_live_country(t)
@@ -739,4 +779,5 @@ func _initialize() -> void:
 	_test_the_rival_presses_its_interests_after_pressing_ardenia(t)
 	_test_the_refugee_flow_is_about_the_warring_neighbour(t)
 	_test_no_foreign_event_names_a_country(t)
+	_test_every_neighbour_answer_has_its_real_cost(t)
 	quit(t.finish())
