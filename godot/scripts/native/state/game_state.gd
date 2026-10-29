@@ -1,6 +1,8 @@
 class_name GameState
 extends RefCounted
 
+const EconomicSampleScript = preload("res://scripts/native/state/economic_sample.gd")
+
 
 class Player extends RefCounted:
 	var name: String
@@ -101,6 +103,48 @@ var last_election_turn: int = 0
 var support_base: Dictionary = {}
 var election_history: Array[ElectionResult] = []
 
+# Economic history: one sample per month-rollover. Bounded: the newest
+# HISTORY_RECENT_MONTHS samples are kept monthly; anything older is thinned to
+# the first sample of each calendar year, so size <= 120 + years played.
+const HISTORY_RECENT_MONTHS := 120
+var economic_history: Array = []
+
+
+func record_economic_sample() -> void:
+	if country == null or country.economy == null:
+		return
+	var e: Economy = country.economy
+	var s: RefCounted = EconomicSampleScript.new()
+	s.turn = turn
+	s.year = year
+	s.month = month
+	s.growth = e.growth_rate
+	s.inflation = e.inflation
+	s.unemployment = e.unemployment
+	s.debt = e.public_debt_pct
+	s.gdp = e.gdp
+	s.revenue = e.budget.revenue if e.budget != null else 0.0
+	s.expenditure = e.budget.expenditure if e.budget != null else 0.0
+	s.approval = player.approval if player != null else 0.0
+	s.stability = stability_value
+	economic_history.append(s)
+	_thin_economic_history()
+
+
+func _thin_economic_history() -> void:
+	var cut := economic_history.size() - HISTORY_RECENT_MONTHS
+	if cut <= 0:
+		return
+	var kept: Array = []
+	var last_year := -1
+	for i in range(cut):
+		var y: int = economic_history[i].year
+		if y != last_year:
+			kept.append(economic_history[i])
+			last_year = y
+	kept.append_array(economic_history.slice(cut))
+	economic_history = kept
+
 var rng: SimRng = SimRng.from_seed(0)
 
 
@@ -193,6 +237,7 @@ func to_dict() -> Dictionary:
 		"front_page": front_page.duplicate(true),
 		"last_election_turn": last_election_turn,
 		"support_base": support_base.duplicate(),
+		"economic_history": economic_history.map(func(h: RefCounted) -> Dictionary: return h.to_dict()),
 		"election_history": election_history.map(func(r: ElectionResult) -> Dictionary: return r.to_dict()),
 		"rng": rng_snapshot,
 	}
@@ -447,6 +492,12 @@ static func from_dict(data: Dictionary) -> GameState:
 		if result == null:
 			return null
 		state.election_history.append(result)
+	var econ_hist: Variant = data.get("economic_history", [])
+	if econ_hist is Array:
+		for row in econ_hist:
+			var sample: RefCounted = EconomicSampleScript.from_dict(row)
+			if sample != null:
+				state.economic_history.append(sample)
 	state.opposition = OppositionState.from_dict(data.get("opposition", null))
 	if state.opposition == null:
 		push_error("GameState.from_dict: malformed opposition")

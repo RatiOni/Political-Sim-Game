@@ -80,6 +80,7 @@ static func _run_reference_rollover(state: GameState) -> void:
 	CabinetSim.monthly(state)
 	StabilitySimScript.update_approval(state)
 	StabilitySimScript.update_stability(state)
+	state.record_economic_sample()
 	var poll_line := PollsSim.monthly(state)
 	var election_notes := Elections.monthly(state)
 	var crisis_notes := CrisisSim.monthly(state)

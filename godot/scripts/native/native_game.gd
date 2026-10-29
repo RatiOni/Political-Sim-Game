@@ -78,6 +78,7 @@ static func close_month(state: GameState) -> void:
 	CabinetSim.monthly(state)
 	StabilitySimScript.update_approval(state)
 	StabilitySimScript.update_stability(state)
+	state.record_economic_sample()
 	var poll_line := PollsSim.monthly(state)
 	var election_notes := Elections.monthly(state)
 	var crisis_notes := CrisisSim.monthly(state)
@@ -497,10 +498,30 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 		"opposition": OppositionActions.read_model(state).duplicate(true),
 		"ministries": _ministries_snapshot(state),
 		"households": _household_snapshot(state),
+		"history": _history_snapshot(state),
 		"digest": state.monthly_digest.duplicate(),
 		"reform": {"active": null, "objectives": []},
 		"dispatches": Press.lines(state.front_page),
 		"front_page": state.front_page.duplicate(true),
+	}
+
+
+## Chart contract: {"economy": [sample dicts, oldest first], "budgets": [{year,
+## status, revenue, expenditure, balance}], "elections": [{turn, year, month,
+## turnout, was_snap, vote_share: {faction_id: share}}]}.
+static func _history_snapshot(state: GameState) -> Dictionary:
+	var budgets: Array = []
+	for b in state.budget_history:
+		budgets.append({"year": b.year, "status": b.status, "revenue": b.forecast_revenue,
+			"expenditure": b.expenditure(), "balance": b.forecast_balance()})
+	var elections: Array = []
+	for r in state.election_history:
+		elections.append({"turn": r.turn, "year": r.year, "month": r.month, "turnout": r.turnout,
+			"was_snap": r.was_snap, "vote_share": r.vote_share.duplicate()})
+	return {
+		"economy": state.economic_history.map(func(h: RefCounted) -> Dictionary: return h.to_dict()),
+		"budgets": budgets,
+		"elections": elections,
 	}
 
 
