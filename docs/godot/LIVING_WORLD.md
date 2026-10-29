@@ -436,12 +436,18 @@ an ordinary programme:
 | No-budget player | 0 of 15 |
 | AI party that won power | 26 of 44 (0.59) |
 | Player who won from opposition | 23 of 36 (0.64) |
-| Opening government | 0 of 24 (pending) |
+| 1997: steady opening government | 5 of 12 |
+| 1997: opening government that removes the schemer | 9 of 12 |
+| Opposition start's opening government | 7 of 12 |
 
-The opening government still loses its first election: in opposition starts
-it is the smaller party against an eight-point Liberal Democrat base, and in
-government starts the authored cabinet carries the schemer, whose cabinet
-dysfunction a passive test government never answers.
+The first term is hard but winnable. The ordinary path is measured on the
+canonical campaign — government starts, where the 1993 crisis (Vasca,
+Vetrenka, the schemer) lands on the government's desk — blended 9:1 with
+opposition starts, whose opening government never faces that crisis. Pooling
+the two evenly had made the crisis look like underperformance, so every
+opening government lost. A government that removes the schemer (through the
+arc, or by reshuffling the post once their threat passes the line) wins far
+more often.
 
 **AI governments govern.** Their budget passes through the same division as
 the player's, with the coalition whipped; a defeated plan leaves the state on

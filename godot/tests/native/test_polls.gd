@@ -156,6 +156,41 @@ static func ordinary_programme(state: GameState) -> void:
 		LawActions.vote(state)
 
 
+const SCHEMER_ANSWERS := {"a_schemer_stirs": "confront", "a_schemer_confronted": "demand_resignation", "a_schemer_moves": "expose"}
+
+
+static func handle_schemer(state: GameState) -> void:
+	for situation in state.pending_situations.duplicate():
+		if SCHEMER_ANSWERS.has(situation.event_id):
+			EventActions.resolve(state, situation.event_id, SCHEMER_ANSWERS[situation.event_id])
+	var schemer := Arcs.arc_schemer(state)
+	if schemer == null or schemer.threat_level() <= Arcs.SCHEMER_THRESHOLD or not state.player.in_government:
+		return
+	if CabinetActions.issue_shortlist(state, schemer.portfolio).get("ok", false):
+		var best: Minister = null
+		for candidate in state.cabinet_shortlists.get(schemer.portfolio, []):
+			if best == null or (candidate as Minister).effective_competence() > best.effective_competence():
+				best = candidate
+		if best != null:
+			CabinetActions.appoint(state, schemer.portfolio, best.id)
+
+
+static func first_election(role: String, step: float, answers_schemer: bool) -> Dictionary:
+	var out := {"held": 0, "kept": 0}
+	for seed in CALIBRATION_SEEDS:
+		var state := _state(role, seed)
+		var ruling := state.ruling_faction_id
+		for _m in range(Elections.TERM_MONTHS):
+			budget_policy(state, step)
+			ordinary_programme(state)
+			if answers_schemer:
+				handle_schemer(state)
+			NativeGameScript.next_month(state)
+		out["held"] += 1
+		out["kept"] += 1 if state.ruling_faction_id == ruling else 0
+	return out
+
+
 static func journeys(roles: Array, step: float, passes_budgets: bool, able_cabinet := false, legislates := true) -> Dictionary:
 	var out := {"player_held": 0, "player_kept": 0, "ai_won_held": 0, "ai_won_kept": 0, "opening_held": 0,
 		"opening_kept": 0, "first_held": 0, "first_kept": 0, "lost": [], "kept": [], "sequences": {}, "valid": true}
@@ -292,13 +327,23 @@ func _test_steady_governments_are_judged_like_ordinary_ones(t) -> void:
 	var first_held: int = governing["first_held"] + opposing["first_held"]
 	var first_kept: int = governing["first_kept"] + opposing["first_kept"]
 	var first_rate := float(first_kept) / maxf(1.0, first_held)
-	t.pending("the opening government faces a fair first election (%d of %d returned)" % [first_kept, first_held],
-		"the opposition start seats the smaller party against an eight-point Liberal Democrat base, and the government start's authored cabinet carries the schemer whose dysfunction a passive test government never answers")
 	var lost: Array = governing["lost"] + opposing["lost"]
 	var kept: Array = governing["kept"] + opposing["kept"]
 	t.truth(mean(lost) < mean(kept), "governments that fell were less approved (%.2f) than those returned (%.2f)" % [mean(lost), mean(kept)])
 	t.truth((governing["sequences"] as Dictionary).size() >= 3,
 		"six seeds write at least three political histories (%d)" % (governing["sequences"] as Dictionary).size())
+
+
+func _test_the_first_term_is_hard_but_winnable(t) -> void:
+	var steady := first_election("government", 0.0, false)
+	var answered := first_election("government", 0.0, true)
+	var opening_ai := first_election("opposition", 0.0, false)
+	var steady_rate := float(steady["kept"]) / float(steady["held"])
+	var answered_rate := float(answered["kept"]) / float(answered["held"])
+	var ai_rate := float(opening_ai["kept"]) / float(opening_ai["held"])
+	t.truth(steady_rate >= 0.35 and steady_rate <= 0.5, "a steady government wins the 1997 election sometimes (%d of %d)" % [steady["kept"], steady["held"]])
+	t.truth(answered_rate - steady_rate >= 0.15, "and clearly more often once it deals with the schemer (%d of %d)" % [answered["kept"], answered["held"]])
+	t.truth(ai_rate >= 0.3 and ai_rate <= 0.7, "the opposition start's opening government faces a fair first election (%d of %d)" % [opening_ai["kept"], opening_ai["held"]])
 
 
 func _initialize() -> void:
@@ -309,6 +354,7 @@ func _initialize() -> void:
 	_test_the_polls_are_deterministic_and_reported(t)
 	_test_regions_follow_national_moves(t)
 	_test_steady_governments_are_judged_like_ordinary_ones(t)
+	_test_the_first_term_is_hard_but_winnable(t)
 	_test_ruling_costs_about_two_points_a_term(t)
 	_test_the_base_realigns_after_each_election(t)
 	_test_a_malformed_inheritance_is_refused_and_rebuilt(t)
