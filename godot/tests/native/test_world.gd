@@ -408,21 +408,27 @@ static func _neglect_run(seed: int, outreach := false) -> Dictionary:
 	return out
 
 
-static func _neglect_feuds(t, label: String, outreach := false) -> Dictionary:
+static func _neglect_runs(outreach := false) -> Dictionary:
 	var runs := {}
+	for seed in FEUD_SEEDS:
+		runs[seed] = _neglect_run(seed, outreach)
+	return runs
+
+
+static func _assert_feuds(t, runs: Dictionary, label: String) -> void:
 	var total := 0.0
 	for seed in FEUD_SEEDS:
-		var run := _neglect_run(seed, outreach)
-		runs[seed] = run
+		var run: Dictionary = runs[seed]
 		total += float(run["decade"])
 		t.truth(int(run["feud_month"]) > 0, "seed %d: %s (feud month %d)" % [seed, label, run["feud_month"]])
 	var mean := total / float(FEUD_SEEDS.size())
 	t.truth(mean <= DECADE_HOSTILITY, "%s: mean Krasova relations at year 10 are hostile (%.2f)" % [label, mean])
-	return runs
 
 
 func _test_neglect_still_makes_a_feud_that_breathes(t) -> void:
-	var runs := _neglect_feuds(t, "an unattended Krasova still becomes a feud")
+	var runs := _neglect_runs()
+	_assert_feuds(t, runs, "an unattended Krasova still becomes a feud")
+	_assert_feuds(t, runs, "neglect still becomes a feud")
 	for seed in [515151, 7, 99]:
 		t.truth(int(runs[seed]["pinned"]) < 24, "seed %d: but the feud is not pinned at -1.00 (%d months there)" % [seed, runs[seed]["pinned"]])
 
@@ -459,7 +465,6 @@ func _test_outreach_never_provokes_krasova(t) -> void:
 		t.truth(float(courted["final"]) > float(neglect["final"]),
 			"seed %d: courted relations end warmer (%.2f vs %.2f)" % [seed, courted["final"], neglect["final"]])
 		t.truth(int(courted["hostile"]) + int(courted["shelved"]) >= 1, "seed %d: but the rivalry stays alive" % seed)
-	_neglect_feuds(t, "neglect still becomes a feud")
 
 
 func _test_a_warmer_rival_waits_longer(t) -> void:

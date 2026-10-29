@@ -121,6 +121,28 @@ func _test_dependence_reads_the_contract_in_the_month(t) -> void:
 	t.truth(before - float(state.foreign.powers["krasova"]["dependence"]) > 0.2, "so dependence on Krasova falls")
 
 
+func _test_spot_cargo_is_used_once(t) -> void:
+	var state := _state()
+	state.foreign.gas.cut = 1.0
+	state.foreign.gas.cut_until = state.turn + 12
+	state.foreign.gas.spot_pending = 0.3
+	t.near(float(_flow(state, 1)["shortfall"]), 0.45 / 0.75, 0.000001, "a spot cargo covers part of the month it lands in")
+	t.near(state.foreign.gas.spot_pending, 0.0, 0.000001, "and is spent")
+	t.near(float(_flow(state, 2)["shortfall"]), 1.0, 0.000001, "the month after it is gone")
+
+
+func _test_the_second_line_is_billed(t) -> void:
+	var state := _state()
+	state.foreign.gas.second_line_volume = 2.0
+	var f := _flow(state, 6)
+	var expected := 2.0 / 12.0 * 0.5 * 50.0 * GasSim.second_line_price_share()
+	t.near(state.foreign.gas.paid.back() - float(f["bill"]) * GasSim.PAYMENT_SHARE, expected, 0.000001, "the second line's gas is paid for in the same month")
+	var before := GasSim.budget_cost(state)
+	state.foreign.gas.second_line_volume = 0.0
+	_flow(state, 6)
+	t.truth(before > GasSim.budget_cost(state), "so the budget line carries the second line")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_a_full_contract_meets_winter_demand(t)
@@ -133,4 +155,6 @@ func _initialize() -> void:
 	_test_a_shortfall_is_reported(t)
 	_test_the_calendar_drives_the_season(t)
 	_test_dependence_reads_the_contract_in_the_month(t)
+	_test_spot_cargo_is_used_once(t)
+	_test_the_second_line_is_billed(t)
 	quit(t.finish())
