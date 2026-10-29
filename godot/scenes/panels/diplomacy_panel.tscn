@@ -26,7 +26,7 @@ text = "Close"
 [node name="Intro" type="Label" parent="Content"]
 layout_mode = 2
 theme_type_variation = &"Muted"
-text = "Choose a country to see where you stand with it, then decide how to spend political capital on the relationship."
+text = "Set the country's orientation first, then choose a country to see where you stand with it and spend political capital on the relationship."
 autowrap_mode = 3
 
 [node name="Rule" type="HSeparator" parent="Content"]
@@ -47,6 +47,33 @@ horizontal_scroll_mode = 0
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
+
+[node name="OrientationHeading" type="Label" parent="Content/DiplomacyScroll/DiplomacyBody"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Section"
+text = "ORIENTATION"
+
+[node name="OrientationPowers" type="Label" parent="Content/DiplomacyScroll/DiplomacyBody"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = ""
+autowrap_mode = 3
+
+[node name="OrientationReviews" type="Label" parent="Content/DiplomacyScroll/DiplomacyBody"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Muted"
+text = ""
+autowrap_mode = 3
+
+[node name="OrientationSteps" type="VBoxContainer" parent="Content/DiplomacyScroll/DiplomacyBody"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="OrientationRule" type="HSeparator" parent="Content/DiplomacyScroll/DiplomacyBody"]
+layout_mode = 2
 
 [node name="CountryStanding" type="Label" parent="Content/DiplomacyScroll/DiplomacyBody"]
 layout_mode = 2

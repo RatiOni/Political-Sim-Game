@@ -199,6 +199,10 @@ func diplomacy_act(verb: String, country_id: String, treaty_id: String = "") -> 
 	return result
 
 
+func orientation_act(verb: String) -> Dictionary:
+	return _guarded(func() -> Dictionary: return OrientationActions.act(_state, verb))
+
+
 func resolve_situation(event_id: String, option_id: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}
@@ -361,6 +365,7 @@ func load(slot: String) -> Dictionary:
 		return stored
 	var incoming: GameState = stored.get("state")
 	BudgetSimScript.ensure_budget_state(incoming)
+	ForeignSim.ensure(incoming)
 	var errors := StateValidator.validate(incoming)
 	if not errors.is_empty():
 		_busy = false
@@ -390,6 +395,7 @@ func _do_new_campaign(config: Dictionary) -> Dictionary:
 		return {"ok": false, "error": factory_message}
 	fresh.rng = SimRng.from_seed(int(config.get("seed", 0)))
 	BudgetSimScript.ensure_budget_state(fresh)
+	ForeignSim.ensure(fresh)
 	var errors := StateValidator.validate(fresh)
 	if not errors.is_empty():
 		var validation_message := "New campaign failed validation: %s" % [", ".join(errors)]
@@ -497,6 +503,7 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 		"cabinet": CabinetActionsScript.read_model(state).duplicate(true),
 		"situations": EventActions.read_model(state).duplicate(true),
 		"diplomacy": DiplomacyActions.read_model(state).duplicate(true),
+		"foreign": OrientationActions.read_model(state).duplicate(true),
 		"opposition": OppositionActions.read_model(state).duplicate(true),
 		"ministries": _ministries_snapshot(state),
 		"households": _household_snapshot(state),

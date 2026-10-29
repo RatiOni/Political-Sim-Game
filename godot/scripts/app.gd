@@ -879,6 +879,7 @@ func _on_country_selected(index: int) -> void:
 
 
 func _refresh_diplomacy() -> void:
+	_refresh_orientation()
 	var rows: Array = snapshot.get("diplomacy", [])
 	var panel = %DiplomacyPanel
 	var choice: OptionButton = panel.find_child("CountryChoice")
@@ -948,6 +949,71 @@ func _take_diplomatic_action(verb: String, treaty_id: String) -> void:
 
 func _set_diplomacy_status(text: String) -> void:
 	%DiplomacyPanel.find_child("DiplomacyStatus").text = text
+
+
+func _refresh_orientation() -> void:
+	var foreign: Dictionary = snapshot.get("foreign", {})
+	var panel = %DiplomacyPanel
+	var lines: Array[String] = []
+	for p in foreign.get("powers", []):
+		lines.append("%s / dependence %.2f / commitment %.2f / leverage %.2f" % [
+			str(p.get("name", "")).to_upper(), float(p.get("dependence", 0.0)),
+			float(p.get("commitment", 0.0)), float(p.get("leverage", 0.0))])
+	panel.find_child("OrientationPowers").text = "\n".join(lines)
+	panel.find_child("OrientationReviews").text = _isf_line(foreign.get("isf", {}), foreign)
+	var box: VBoxContainer = panel.find_child("OrientationSteps")
+	for child in box.get_children():
+		box.remove_child(child)
+		child.queue_free()
+	for step in foreign.get("steps", []):
+		if step.get("held", false):
+			var held := Label.new()
+			held.theme_type_variation = &"Muted"
+			held.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			held.text = "IN PLACE / %s" % str(step.get("label", ""))
+			box.add_child(held)
+			continue
+		var button := Button.new()
+		button.custom_minimum_size = Vector2(0, 44)
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var cost := float(step.get("cost", 0.0))
+		button.text = str(step.get("label", "")) + ("   · %.0f PC" % cost if cost > 0.0 else "")
+		button.disabled = not step.get("eligible", false)
+		button.tooltip_text = str(step.get("disabled_reason", ""))
+		button.pressed.connect(_take_orientation_step.bind(str(step.get("verb", ""))))
+		box.add_child(button)
+		var reason := str(step.get("disabled_reason", ""))
+		if reason != "":
+			var why := Label.new()
+			why.theme_type_variation = &"Muted"
+			why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			why.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			why.text = reason
+			box.add_child(why)
+
+
+static func _isf_line(isf: Dictionary, foreign: Dictionary) -> String:
+	if isf.is_empty():
+		return ""
+	return "ISF reviews %d of %d / passed %d / failed %d%s / next targets: deficit %.1f%%, inflation %.1f%%%s\nConcert discipline: %d of %d months" % [
+		int(isf.get("reviews_held", 0)), int(isf.get("reviews_total", 0)),
+		int(isf.get("passed", 0)), int(isf.get("failed", 0)),
+		" / SUSPENDED" if isf.get("suspended", false) else "",
+		float(isf.get("deficit_target", 0.0)) * 100.0, float(isf.get("inflation_target", 0.0)) * 100.0,
+		", independent bank" if isf.get("bank_required", false) else "",
+		int(foreign.get("western_qualifying_months", 0)), int(foreign.get("qualifying_months_needed", 0))]
+
+
+func _take_orientation_step(verb: String) -> void:
+	if _game == null:
+		return
+	var result: Dictionary = _game.orientation_act(verb)
+	_flush_snapshot()
+	_sfx_result(result)
+	if not result.get("ok", false):
+		_set_diplomacy_status("REFUSED / %s" % result.get("error", "Unknown error"))
+		return
+	_set_diplomacy_status(str(result.get("message", "")))
 
 
 func _desk_open() -> bool:

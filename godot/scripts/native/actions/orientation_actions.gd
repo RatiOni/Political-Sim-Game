@@ -242,3 +242,57 @@ static func _leave_union(state: GameState) -> String:
 	state.modifiers.append(shock)
 	DiplomacySim.shift(state, "krasova", EXIT_RELATIONS_COST, "Ardenia walked out of the Union.")
 	return "Ardenia walks out of the Krasovan Economic Union. Tariffs return overnight, and Krasova calls it betrayal."
+
+
+static func memberships(state: GameState) -> Dictionary:
+	var out := {}
+	for bloc_id in state.foreign.members:
+		for country_id in state.foreign.members[bloc_id]:
+			if not out.has(country_id):
+				out[country_id] = []
+			(out[country_id] as Array).append(String(bloc_id))
+	var own: Array = []
+	for bloc_id in PLAYER_BLOCS:
+		if state.foreign.reached.has(PLAYER_BLOCS[bloc_id]):
+			own.append(bloc_id)
+	out[state.country.id] = own
+	return out
+
+
+static func read_model(state: GameState) -> Dictionary:
+	if state == null or state.foreign == null or not state.foreign.seeded:
+		return {"powers": [], "steps": [], "isf": {}, "western_qualifying_months": 0,
+			"qualifying_months_needed": QUALIFYING_MONTHS_FOR_AGREEMENT, "map": {"memberships": {}}}
+	var powers: Array = []
+	for id in ForeignSim.power_ids():
+		var row: Dictionary = state.foreign.powers.get(id, {})
+		var p := ForeignSim.power(id)
+		powers.append({"id": id, "name": String(p.get("name", id)), "kind": String(p.get("kind", "")),
+			"dependence": float(row.get("dependence", 0.0)), "commitment": float(row.get("commitment", 0.0)),
+			"leverage": float(row.get("leverage", 0.0))})
+	var steps: Array = []
+	for verb in VERBS:
+		var held := state.foreign.reached.has(verb)
+		var reason := reason_for(state, verb)
+		steps.append({"verb": verb, "label": label_for(verb), "cost": float(COSTS[verb]), "held": held,
+			"eligible": reason == "", "disabled_reason": "" if held else reason})
+	var isf := state.foreign.isf
+	var targets := OrientationSim.isf_targets(state)
+	return {
+		"powers": powers,
+		"steps": steps,
+		"isf": {
+			"reviews_held": int(isf.get("reviews_held", 0)),
+			"reviews_total": OrientationSim.ISF_REVIEWS,
+			"passed": int(isf.get("passed", 0)),
+			"failed": int(isf.get("failed", 0)),
+			"suspended": bool(isf.get("suspended", false)),
+			"last_result": String(isf.get("last_result", "")),
+			"deficit_target": float(targets["deficit"]),
+			"inflation_target": float(targets["inflation"]),
+			"bank_required": int(isf.get("reviews_held", 0)) >= int(targets["bank_due_review"]),
+		},
+		"western_qualifying_months": state.foreign.western_qualifying_months,
+		"qualifying_months_needed": QUALIFYING_MONTHS_FOR_AGREEMENT,
+		"map": {"memberships": memberships(state)},
+	}
