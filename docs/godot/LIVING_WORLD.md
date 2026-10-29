@@ -75,6 +75,8 @@ Re-running the retired exporter would undo this; edit the JSON directly.
 - At 1280x720 the situation panel shows one option above the fold; the rest
   scroll. Phase 5 layout work should give the panel more of the body.
 
+- The Union's net growth edge over neutrality is about +0.05 pp/yr until plan 2 adds cheap gas.
+
 ## The schemer arc
 
 A schemer grows abler and more ambitious each month while their loyalty
