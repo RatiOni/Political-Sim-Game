@@ -39,6 +39,9 @@ static func _play(state: GameState, strategy: String) -> void:
 	OrientationActions.act(state, "isf_renegotiate")
 	match strategy:
 		"western":
+			if not state.enacted_laws.any(func(l: Law) -> bool: return l.id == OrientationSim.BANK_ACT):
+				if LawActions.propose(state, OrientationSim.BANK_ACT).get("ok", false):
+					LawActions.vote(state)
 			for verb in WESTERN_STEPS:
 				OrientationActions.act(state, verb)
 		"union":
@@ -103,6 +106,7 @@ func _test_each_orientation_reaches_its_goal(t, runs: Dictionary) -> void:
 	var members := 0
 	for seed in SEEDS:
 		t.truth("meridian_partnership" in runs["western/%d" % seed]["reached"], "seed %d: a Western-leaning government joins the Meridian partnership" % seed)
+		t.truth("concert_agreement" in runs["western/%d" % seed]["reached"], "seed %d: and reaches the Concert association agreement" % seed)
 		t.truth(not ("union_observer" in runs["neutral/%d" % seed]["reached"]), "seed %d: a neutral government stays out of the Union" % seed)
 		t.truth(not ("union_observer" in runs["western/%d" % seed]["reached"]), "seed %d: a Western-leaning one does too" % seed)
 		if "union_member" in runs["union/%d" % seed]["reached"]:
