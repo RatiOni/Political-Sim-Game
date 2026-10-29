@@ -54,6 +54,21 @@ func _test_the_game_takes_orientation_steps(t) -> void:
 	game.free()
 
 
+func _test_a_refused_step_changes_nothing(t) -> void:
+	var game: Node = NativeGameScript.new()
+	game._state = _state()
+	var state: GameState = game._state
+	var capital := state.player.political_capital
+	var reached := state.foreign.reached.duplicate(true)
+	var powers := state.foreign.powers.duplicate(true)
+	var result: Dictionary = game.orientation_act("meridian_guarantee")
+	t.truth(not result.get("ok", true), "a step out of reach is refused")
+	t.equal(state.player.political_capital, capital, "a refusal costs no political capital")
+	t.equal(state.foreign.reached, reached, "a refusal reaches no milestone")
+	t.equal(state.foreign.powers, powers, "a refusal moves no commitment")
+	game.free()
+
+
 func _test_a_save_without_a_ledger_is_seeded_on_load(t) -> void:
 	_wipe()
 	var state := _state()
@@ -71,5 +86,6 @@ func _initialize() -> void:
 	_test_the_snapshot_carries_the_orientation_desk(t)
 	_test_the_map_learns_who_sits_in_which_bloc(t)
 	_test_the_game_takes_orientation_steps(t)
+	_test_a_refused_step_changes_nothing(t)
 	_test_a_save_without_a_ledger_is_seeded_on_load(t)
 	quit(t.finish())

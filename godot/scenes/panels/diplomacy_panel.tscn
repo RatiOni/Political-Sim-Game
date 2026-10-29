@@ -26,7 +26,7 @@ text = "Close"
 [node name="Intro" type="Label" parent="Content"]
 layout_mode = 2
 theme_type_variation = &"Muted"
-text = "Set the country's orientation first, then choose a country to see where you stand with it and spend political capital on the relationship."
+text = "Choose a country to see where you stand with it. Ardenia's orientation is set below."
 autowrap_mode = 3
 
 [node name="Rule" type="HSeparator" parent="Content"]

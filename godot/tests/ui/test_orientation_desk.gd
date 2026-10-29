@@ -50,6 +50,7 @@ func _run() -> void:
 	await _test_the_desk_shows_where_ardenia_stands(t)
 	await _test_a_step_can_be_taken_from_the_desk(t)
 	await _test_a_step_out_of_reach_says_why(t)
+	await _test_a_long_step_label_keeps_the_desk_width(t)
 	_wipe_slot()
 	if app != null:
 		app.queue_free()
@@ -91,3 +92,21 @@ func _test_a_step_out_of_reach_says_why(t) -> void:
 	await _frames()
 	var button := _step_button("Meridian security guarantee")
 	t.truth(button != null and button.disabled and button.tooltip_text != "", "a step out of reach is disabled with its reason")
+
+
+func _test_a_long_step_label_keeps_the_desk_width(t) -> void:
+	await _fresh()
+	app._open_diplomacy()
+	await _frames(3)
+	var panel: Control = app.find_child("DiplomacyPanel", true, false)
+	var width := panel.size.x
+	var window_width := root.size.x
+	var long := "Ardenia " .repeat(80)
+	var steps: Array = app.snapshot["foreign"]["steps"]
+	for step in steps:
+		step["label"] = long
+	steps[0]["held"] = true
+	app._refresh_orientation()
+	await _frames(3)
+	t.equal(panel.size.x, width, "an absurdly long step label leaves the desk width unchanged")
+	t.equal(root.size.x, window_width, "and the window width")

@@ -970,6 +970,7 @@ func _refresh_orientation() -> void:
 			var held := Label.new()
 			held.theme_type_variation = &"Muted"
 			held.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			held.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			held.text = "IN PLACE / %s" % str(step.get("label", ""))
 			box.add_child(held)
 			continue
@@ -978,6 +979,7 @@ func _refresh_orientation() -> void:
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var cost := float(step.get("cost", 0.0))
 		button.text = str(step.get("label", "")) + ("   · %.0f PC" % cost if cost > 0.0 else "")
+		button.clip_text = true
 		button.disabled = not step.get("eligible", false)
 		button.tooltip_text = str(step.get("disabled_reason", ""))
 		button.pressed.connect(_take_orientation_step.bind(str(step.get("verb", ""))))
