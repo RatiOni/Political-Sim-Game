@@ -9,6 +9,7 @@ var members: Dictionary = {}
 var isf: Dictionary = default_isf()
 var western_qualifying_months: int = 0
 var union_left_turn: int = -1
+var hostile_log: Array = []
 var seeded: bool = false
 
 
@@ -26,6 +27,7 @@ func to_dict() -> Dictionary:
 		"isf": isf.duplicate(),
 		"western_qualifying_months": western_qualifying_months,
 		"union_left_turn": union_left_turn,
+		"hostile_log": hostile_log.duplicate(true),
 		"seeded": seeded,
 	}
 
@@ -80,5 +82,16 @@ static func from_dict(data: Variant) -> ForeignState:
 				out.isf[key] = String(isf_data[key])
 	out.western_qualifying_months = int(d.get("western_qualifying_months", 0))
 	out.union_left_turn = int(d.get("union_left_turn", -1))
+	var entries: Variant = d.get("hostile_log", [])
+	if not (entries is Array):
+		push_error("ForeignState.from_dict: malformed hostile_log")
+		return null
+	for entry in entries:
+		if not (entry is Dictionary):
+			push_error("ForeignState.from_dict: malformed hostile_log entry")
+			return null
+		out.hostile_log.append({"turn": int(entry.get("turn", 0)), "actor": String(entry.get("actor", "")),
+			"relation": float(entry.get("relation", 0.0)), "economy": float(entry.get("economy", 0.0)),
+			"stability": float(entry.get("stability", 0.0))})
 	out.seeded = bool(d.get("seeded", false))
 	return out

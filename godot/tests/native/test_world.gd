@@ -326,7 +326,7 @@ static func _decade_against_ardenia(seed: int, pact: bool, outreach := false) ->
 	if pact:
 		_sign_defence_pact(state, "veldoria")
 	var krasova := _c(state, "krasova")
-	var out := {"hostile": 0, "shelved": 0, "warned": 0, "lowest": 1.0, "final": 0.0}
+	var out := {"hostile": 0, "shelved": 0, "warned": 0, "lowest": 1.0, "final": 0.0, "harm": 0.0, "feud": false}
 	var warned_for := -1
 	for _m in range(120):
 		if outreach:
@@ -343,6 +343,10 @@ static func _decade_against_ardenia(seed: int, pact: bool, outreach := false) ->
 					out["hostile"] += 1
 				"shelved":
 					out["shelved"] += 1
+		for entry in state.foreign.hostile_log:
+			if int(entry["turn"]) == state.turn and String(entry["actor"]) == "krasova":
+				out["harm"] -= float(entry["relation"]) + float(entry["economy"]) + float(entry["stability"])
+		out["feud"] = bool(out["feud"]) or state.world_arcs.get("ardenia|krasova", "") == "feud"
 		out["lowest"] = minf(out["lowest"], _score(state, "krasova", "ardenia"))
 	out["final"] = _score(state, "krasova", "ardenia")
 	return out
@@ -423,11 +427,12 @@ func _test_outreach_never_provokes_krasova(t) -> void:
 	for seed in [515151, 7, 99]:
 		var neglect := _decade_against_ardenia(seed, false)
 		var courted := _decade_against_ardenia(seed, false, true)
-		var neglect_moves: int = neglect["hostile"] + neglect["shelved"]
-		var courted_moves: int = courted["hostile"] + courted["shelved"]
-		t.truth(courted_moves <= neglect_moves,
-			"seed %d: courting Krasova never makes it more hostile (%d moves courted, %d neglected)" % [seed, courted_moves, neglect_moves])
-		t.truth(courted_moves >= 1, "seed %d: but the rivalry stays alive" % seed)
+		t.truth(float(courted["harm"]) <= float(neglect["harm"]),
+			"seed %d: courting Krasova never makes it more hostile (harm %.3f courted, %.3f neglected)" % [seed, courted["harm"], neglect["harm"]])
+		t.truth(float(courted["final"]) > float(neglect["final"]),
+			"seed %d: courted relations end warmer (%.2f vs %.2f)" % [seed, courted["final"], neglect["final"]])
+		t.truth(bool(neglect["feud"]), "seed %d: neglect still becomes a feud" % seed)
+		t.truth(int(courted["hostile"]) + int(courted["shelved"]) >= 1, "seed %d: but the rivalry stays alive" % seed)
 
 
 func _test_a_warmer_rival_waits_longer(t) -> void:

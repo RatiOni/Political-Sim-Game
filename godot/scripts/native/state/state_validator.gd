@@ -749,6 +749,7 @@ static func _validate_foreign(state: GameState, errors: Array[String]) -> void:
 		errors.append("isf ledger is impossible")
 	if f.western_qualifying_months < 0 or f.union_left_turn < -1 or f.union_left_turn > state.turn:
 		errors.append("foreign counters are impossible")
+	_validate_hostile_log(state, errors)
 
 
 static func _validate_foreign_blocs(state: GameState, errors: Array[String]) -> void:
@@ -767,3 +768,20 @@ static func _validate_foreign_blocs(state: GameState, errors: Array[String]) -> 
 		for other in ForeignSim.UNION_LOCKED_BLOCS:
 			if country_id in state.foreign.members.get(other, []):
 				errors.append("bloc membership is exclusive for '%s'" % country_id)
+
+
+static func _validate_hostile_log(state: GameState, errors: Array[String]) -> void:
+	var entries := state.foreign.hostile_log
+	if entries.size() > WorldSim.HOSTILE_LOG_LIMIT:
+		errors.append("hostile log is over its limit")
+	for entry in entries:
+		if not (entry is Dictionary) or state.world_country(String(entry.get("actor", ""))) == null:
+			errors.append("hostile log names an unknown actor")
+			continue
+		var turn := int(entry.get("turn", -1))
+		if turn < 0 or turn > state.turn:
+			errors.append("hostile log entry is out of time")
+		for field in ["relation", "economy", "stability"]:
+			var x := float(entry.get(field, 0.0))
+			if not is_finite(x) or absf(x) > 2.0:
+				errors.append("hostile log %s is impossible" % field)

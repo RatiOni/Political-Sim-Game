@@ -40,6 +40,10 @@ const RIVAL_RECOVERY_TARGET := -0.6
 const CONDEMN_CHANCE := 0.35
 const CONDEMN_COST := -0.12
 const PRESSURE_COST := -0.06
+const LEVERAGE_PRESSURE_WEIGHT := 0.5
+const WARMTH_DAMPING := 0.5
+const WARMTH_FACTOR_FLOOR := 0.5
+const HOSTILE_LOG_LIMIT := 24
 const COURT_GAIN := 0.05
 const COURT_PLAYER_GAIN := 0.06
 const PACT_GROUND := 0.1
@@ -126,10 +130,11 @@ static func hostile_action(state: GameState, actor: Country, target: Country, no
 	if against_player and _shielded_from(state, actor) and state.rng.next_float() < PACT_SHELVE_CHANCE:
 		return "shelved"
 	var condemn := state.rng.next_float() < CONDEMN_CHANCE
-	DiplomacySim.shift_between(actor, target, CONDEMN_COST if condemn else PRESSURE_COST)
 	if against_player:
+		_press_player(state, actor, CONDEMN_COST if condemn else PRESSURE_COST)
 		_say(state, notes, "world_condemn_player" if condemn else "world_pressure_player", actor, null)
 	else:
+		DiplomacySim.shift_between(actor, target, CONDEMN_COST if condemn else PRESSURE_COST)
 		_say(state, notes, "world_condemn" if condemn else "world_undermine", actor, target)
 	return "condemned" if condemn else "undermined"
 
@@ -322,6 +327,8 @@ static func _has_treaty(a: Country, b: Country, kind: String) -> bool:
 
 
 static func _shielded_from(state: GameState, aggressor: Country) -> bool:
+	if state.foreign != null and state.foreign.reached.has("meridian_guarantee"):
+		return true
 	for other in state.world:
 		if other != aggressor and _has_treaty(state.country, other, "defense"):
 			return true
@@ -336,3 +343,27 @@ static func _rivalries_cool(state: GameState) -> void:
 		var score := _rel(c, state.country).score
 		if not feeding and score < RIVAL_RECOVERY_TARGET:
 			DiplomacySim.shift(state, c.id, minf(RIVAL_RECOVERY_RATE, RIVAL_RECOVERY_TARGET - score))
+
+
+static func warmth_factor(score: float) -> float:
+	return clampf(1.0 - WARMTH_DAMPING * maxf(0.0, score - FEUD_FORMS), WARMTH_FACTOR_FLOOR, 1.0)
+
+
+static func coercion_strength(state: GameState, actor: Country) -> float:
+	var score := _rel(state.country, actor).score
+	return (1.0 + LEVERAGE_PRESSURE_WEIGHT * ForeignSim.leverage_of(state, actor.id)) * warmth_factor(score)
+
+
+static func _press_player(state: GameState, actor: Country, cost: float) -> void:
+	var relation_before := _rel(state.country, actor).score
+	var growth_before := state.country.economy.growth_rate
+	var stability_before := state.stability_value
+	DiplomacySim.shift_between(actor, state.country, cost * coercion_strength(state, actor))
+	if state.foreign == null:
+		return
+	state.foreign.hostile_log.append({"turn": state.turn, "actor": actor.id,
+		"relation": _rel(state.country, actor).score - relation_before,
+		"economy": state.country.economy.growth_rate - growth_before,
+		"stability": state.stability_value - stability_before})
+	while state.foreign.hostile_log.size() > HOSTILE_LOG_LIMIT:
+		state.foreign.hostile_log.pop_front()
