@@ -4,13 +4,13 @@ extends RefCounted
 
 const MONTHLY_CAP := 0.01
 const SUPPORT_FLOOR := 0.01
-const ORDINARY_PLAYER_GOVERNMENT := {"approval": 0.464, "confidence": 0.432, "misery": 0.0034, "stability": 0.503}
-const ORDINARY_AI_GOVERNMENT := {"approval": 0.42, "confidence": 0.425, "misery": 0.004, "stability": 0.44}
-const APPROVAL_WEIGHT := 0.012
-const CONFIDENCE_WEIGHT := 0.010
+const ORDINARY_GOVERNMENT := {"approval": 0.45, "confidence": 0.42, "misery": -0.009, "stability": 0.496}
+const ORDINARY_OPPOSITION_LEADER_APPROVAL := 0.43
+const APPROVAL_WEIGHT := 0.025
+const CONFIDENCE_WEIGHT := 0.02
 const MISERY_WEIGHT := 0.06
 const PARTNER_SHARE := 0.5
-const REVERSION := 0.01
+const REVERSION := 0.03
 const PROXIMITY_FLOOR := 0.05
 const STABILITY_IN_PROXY := 0.5
 
@@ -19,7 +19,7 @@ static func monthly(state: GameState) -> String:
 	var factions := state.country.factions
 	if factions.is_empty():
 		return ""
-	_ensure_base(state)
+	ensure_base(state)
 	var before := {}
 	for f in factions:
 		before[f.id] = f.support
@@ -39,6 +39,38 @@ static func monthly(state: GameState) -> String:
 	return poll_line(state, before)
 
 
+const RULING_COST_PER_TERM := 0.022
+const BROKEN_PLEDGE_WEIGHT := 0.5
+const SCANDAL_WEIGHT := 0.75
+const EMERGENCY_WEIGHT := 2.0
+const DEFEAT_WEIGHT := 1.0
+const TROUBLE_MEMORY_MONTHS := 12
+const SCANDAL_EVENTS := ["cabinet_corruption_expose", "corruption_expose_media", "corruption_trial", "defection_drama"]
+
+
+static func ruling_cost(state: GameState) -> float:
+	return RULING_COST_PER_TERM / float(Elections.TERM_MONTHS) * (1.0 + trouble(state))
+
+
+static func trouble(state: GameState) -> float:
+	var weight := 0.0
+	if BudgetSim.is_emergency(state):
+		weight += EMERGENCY_WEIGHT
+	for law in state.law_history:
+		if law.status == "rejected" and law.proposed_by == state.ruling_faction_id \
+				and state.turn - law.proposed_turn < TROUBLE_MEMORY_MONTHS:
+			weight += DEFEAT_WEIGHT
+	if state.player.in_government:
+		for p in state.opposition.pledges:
+			if String(p.get("status", "")) == "broken":
+				weight += BROKEN_PLEDGE_WEIGHT
+		for row in state.event_history:
+			var recent := state.turn - int(row.get("turn", -999)) < TROUBLE_MEMORY_MONTHS
+			if recent and String(row.get("event_id", "")) in SCANDAL_EVENTS:
+				weight += SCANDAL_WEIGHT
+	return weight
+
+
 static func record(state: GameState) -> float:
 	var ordinary := ordinary_government(state)
 	return (government_approval(state) - float(ordinary["approval"])) * APPROVAL_WEIGHT \
@@ -46,8 +78,29 @@ static func record(state: GameState) -> float:
 		- (misery_gap(state) - float(ordinary["misery"])) * MISERY_WEIGHT
 
 
+const INHERITANCE_KEY := "inheritance"
+const INHERITANCE_FADE_MONTHS := 72.0
+const MEASURES := ["approval", "confidence", "misery", "stability"]
+
+
 static func ordinary_government(state: GameState) -> Dictionary:
-	return ORDINARY_PLAYER_GOVERNMENT if state.player.in_government else ORDINARY_AI_GOVERNMENT
+	var inherited := inheritance(state)
+	var fade := exp(-float(state.turn - int(inherited["turn"])) / INHERITANCE_FADE_MONTHS)
+	var expected := {}
+	for key in MEASURES:
+		var ordinary := float(ORDINARY_GOVERNMENT[key])
+		expected[key] = ordinary + (float(inherited[key]) - ordinary) * fade
+	return expected
+
+
+static func inheritance(state: GameState) -> Dictionary:
+	var inherited: Variant = state.campaign_meta.get(INHERITANCE_KEY, {})
+	if inherited is Dictionary and String(inherited.get("party", "")) == state.ruling_faction_id:
+		return inherited
+	var fresh := {"party": state.ruling_faction_id, "turn": state.turn, "approval": government_approval(state),
+		"confidence": HouseholdsSim.national_confidence(state), "misery": misery_gap(state), "stability": state.stability_value}
+	state.campaign_meta[INHERITANCE_KEY] = fresh
+	return fresh
 
 
 static func misery_gap(state: GameState) -> float:
@@ -58,7 +111,7 @@ static func misery_gap(state: GameState) -> float:
 static func government_approval(state: GameState) -> float:
 	if state.player.in_government:
 		return state.player.approval
-	var ordinary := ORDINARY_AI_GOVERNMENT
+	var ordinary := ORDINARY_GOVERNMENT
 	return clampf(float(ordinary["approval"]) + (HouseholdsSim.national_confidence(state) - float(ordinary["confidence"]))
 		+ (state.stability_value - float(ordinary["stability"])) * STABILITY_IN_PROXY, 0.0, 1.0)
 
@@ -87,7 +140,7 @@ static func poll_line(state: GameState, before: Dictionary) -> String:
 
 
 static func _record_deltas(state: GameState) -> Dictionary:
-	var change := record(state)
+	var change := record(state) - ruling_cost(state)
 	var deltas := {}
 	var government_total := 0.0
 	var mood := public_mood(state)
@@ -109,7 +162,7 @@ static func _record_deltas(state: GameState) -> Dictionary:
 	return deltas
 
 
-static func _ensure_base(state: GameState) -> void:
+static func ensure_base(state: GameState) -> void:
 	if not state.support_base.is_empty():
 		return
 	for f in state.country.factions:

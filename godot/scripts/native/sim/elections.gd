@@ -14,8 +14,10 @@ const OPPOSITION_JUDGEMENT := 0.3
 const STABILITY_IN_JUDGEMENT := 0.5
 const LEADER_STANDING := 0.3
 const PLATFORM_WEIGHT := 1.5
-const GOVERNMENT_FATIGUE := 0.12
+const GOVERNMENT_FATIGUE := 0.0
 const FATIGUE_TERM_CAP := 3
+const BASE_REALIGNMENT := 0.25
+const APPOINTMENT_SHORTLIST := 3
 
 const CONTROL_ACCESS := {"state": 1.0, "autonomous": 0.9, "limited": 0.55, "separatist": 0.0}
 const REACH_IN_ACCESS := 0.3
@@ -44,7 +46,7 @@ static func enthusiasm(state: GameState, f: Faction) -> float:
 	if f.id == state.ruling_faction_id:
 		value -= GOVERNMENT_FATIGUE * (terms_in_office(state) - 1)
 	if f.id == state.player.faction_id:
-		value += (state.player.approval - float(PollsSim.ORDINARY_PLAYER_GOVERNMENT["approval"])) * LEADER_STANDING + OppositionSim.electoral_edge(state) * PLATFORM_WEIGHT
+		value += (state.player.approval - ordinary_leader_approval(state)) * LEADER_STANDING + OppositionSim.electoral_edge(state) * PLATFORM_WEIGHT
 	return clampf(value, TURNOUT_FLOOR, TURNOUT_CEILING)
 
 
@@ -56,6 +58,10 @@ static func terms_in_office(state: GameState) -> int:
 			break
 		terms += 1
 	return mini(terms, FATIGUE_TERM_CAP)
+
+
+static func ordinary_leader_approval(state: GameState) -> float:
+	return float(PollsSim.ORDINARY_GOVERNMENT["approval"]) if state.player.in_government else PollsSim.ORDINARY_OPPOSITION_LEADER_APPROVAL
 
 
 static func access(region: RegionState) -> float:
@@ -154,6 +160,13 @@ static func allocate_seats(weights: Dictionary, total_seats: int) -> Dictionary:
 	return seats
 
 
+static func realign_base(state: GameState, vote_share: Dictionary) -> void:
+	PollsSim.ensure_base(state)
+	for id in state.support_base:
+		var base := float(state.support_base[id])
+		state.support_base[id] = base + (float(vote_share.get(id, base)) - base) * BASE_REALIGNMENT
+
+
 static func form_government(state: GameState) -> Array[Faction]:
 	var seated: Array[Faction] = []
 	var total := 0
@@ -193,7 +206,13 @@ static func staff_cabinet(state: GameState, preferred: Array[Minister]) -> Array
 			if m.portfolio == portfolio:
 				nominee = m
 		if nominee == null and not coalition.is_empty():
-			nominee = CabinetActions.generate_candidate(state, portfolio, coalition[i % coalition.size()], false)
+			var party := coalition[i % coalition.size()]
+			for _draw in range(APPOINTMENT_SHORTLIST):
+				var candidate := CabinetActions.generate_candidate(state, portfolio, party, false)
+				if nominee == null or candidate.effective_competence() > nominee.effective_competence():
+					nominee = candidate
+			if party.id != state.player.faction_id and state.ruling_faction_id != state.player.faction_id:
+				nominee.loyalty = clampf(nominee.loyalty + (StabilitySim.ai_government_loyalty(state, party) - party.loyalty) * 0.25, 0.15, 0.95)
 		if nominee != null:
 			cabinet.append(nominee)
 			notes.append("%s takes office at %s." % [nominee.name, portfolio])
@@ -213,6 +232,7 @@ static func hold(state: GameState, snap: bool) -> ElectionResult:
 		total_seats += f.seats
 	var verdict := OppositionSim.judge_mandate(state)
 	var count := tally(state)
+	realign_base(state, count["vote_share"])
 	var seats := allocate_seats(count["votes"], total_seats)
 	for f in state.country.factions:
 		f.seats = int(seats.get(f.id, 0))
