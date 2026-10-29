@@ -279,7 +279,8 @@ static func run(state: GameState, handler_id: String, target: String) -> String:
 			if g.second_line_volume > 0.0 or g.second_line_started < 0:
 				shift(state, "__western__", STALLED_OPEN_WEST)
 				return "The Concert notes that its help was banked and its conditions were not."
-			g.second_line_months_saved = int(GasSim.FAST_TRACK_MONTHS * STALLED_SHARE)
+			if g.second_line_months_saved > 0:
+				g.second_line_months_saved = int(GasSim.FAST_TRACK_MONTHS * STALLED_SHARE)
 			return "The Concert slows its money, and the second line slips."
 	return ""
 

@@ -114,6 +114,16 @@ func _test_stalling_halves_the_saving_or_costs_the_west(t) -> void:
 	t.near(_score(open, west), w0 + ForeignArcs.STALLED_OPEN_WEST - 0.04, 1e-9, "so the West takes it out in goodwill")
 
 
+func _test_a_restarted_line_gains_nothing_from_a_stall(t) -> void:
+	var state := _state()
+	var g := _building(state)
+	g.second_line_months_saved = 0
+	_force(state, "concert_energy_conditions", ForeignArcs.resolve_target(state, "__western__"))
+	EventActions.resolve(state, "concert_energy_conditions", "stall")
+	t.equal(g.second_line_months_saved, 0, "a line restarted after shelving was never fast-tracked, so a stall saves nothing")
+	t.equal(StateValidator.validate(state).size(), 0, "and the contract stays valid")
+
+
 func _test_shelving_the_line_forgets_the_saving(t) -> void:
 	var state := _state()
 	var g := _building(state)
@@ -158,6 +168,7 @@ func _initialize() -> void:
 	_test_accepting_opens_the_line_eighteen_months_early(t)
 	_test_the_line_opens_on_the_real_calendar(t)
 	_test_stalling_halves_the_saving_or_costs_the_west(t)
+	_test_a_restarted_line_gains_nothing_from_a_stall(t)
 	_test_shelving_the_line_forgets_the_saving(t)
 	_test_the_saving_round_trips_and_validates(t)
 	quit(t.finish())
