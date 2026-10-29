@@ -14,6 +14,20 @@ const JOBS_PER_SEVERITY := 0.06
 const GROWTH_PER_SEVERITY := 0.06
 const PRICE_GROWTH_WEIGHT := 0.01
 const STABILITY_PER_SEVERITY := 0.10
+const ARREARS_DEMAND := 60.0
+const DEMAND_INTERVAL := 6
+const THREAT_AFTER_DEMAND := 2
+const THREAT_LEVERAGE := 0.5
+const CUT_COOLDOWN := 24
+const CUT_SHARE_PER_LEVERAGE := 0.4
+const CUT_MONTHS := 2
+const DEFUSED_SHARE := 0.5
+const DEMAND_RELATIONS := -0.03
+const TERM_MONTHS := 36
+const RENEWAL_RISE := 0.4
+const UNION_RESCHEDULED := 0.5
+const UNION_CRISIS_WARMTH := -0.5
+const EXIT_PRICE_RISE := 0.2
 
 
 static func catalog() -> Dictionary:
@@ -94,6 +108,10 @@ static func monthly(state: GameState) -> Array[String]:
 	var notes: Array[String] = []
 	if not is_active(state):
 		return notes
+	_renew(state, notes)
+	_restore(state, notes)
+	_mature_threat(state, notes)
+	coerce(state, state.world_country(gas(state).supplier_id), notes)
 	flow(state)
 	write_share(state)
 	if national_shortfall(state) >= SHORTFALL_NOTE:
@@ -198,3 +216,111 @@ static func growth_effect(state: GameState) -> float:
 
 static func stability_drag(state: GameState) -> float:
 	return national_severity(state) * STABILITY_PER_SEVERITY
+
+
+static func supplier_warmth(state: GameState) -> float:
+	var p := DiplomacySim.pair(state, gas(state).supplier_id)
+	return 0.0 if p.is_empty() else (p[0] as Country.BilateralRelation).score
+
+
+static func crisis(state: GameState) -> bool:
+	return supplier_warmth(state) < UNION_CRISIS_WARMTH
+
+
+static func cuts_blocked(state: GameState) -> bool:
+	return union_member(state) and not crisis(state)
+
+
+static func valve_threat(state: GameState) -> Dictionary:
+	return {} if not is_active(state) else gas(state).threat.duplicate()
+
+
+static func coerce(state: GameState, actor: Country, notes: Array[String]) -> String:
+	if actor == null or not is_active(state) or actor.id != gas(state).supplier_id:
+		return ""
+	var g := gas(state)
+	if not g.threat.is_empty() or g.cut > 0.0 or g.arrears < ARREARS_DEMAND:
+		return ""
+	if g.last_demand_turn < 0 or state.turn - g.last_demand_turn >= DEMAND_INTERVAL:
+		g.last_demand_turn = state.turn
+		g.demands += 1
+		var before := supplier_warmth(state)
+		DiplomacySim.shift(state, actor.id, DEMAND_RELATIONS * WorldSim.coercion_strength(state, actor), "Pressed for the gas arrears.")
+		_log_harm(state, actor.id, supplier_warmth(state) - before)
+		notes.append(line("gas_demand", {"supplier": actor.name, "arrears": roundi(g.arrears)}))
+		return "gas_demand"
+	var leverage := ForeignSim.leverage_of(state, actor.id)
+	var cooling := g.last_cut_turn >= 0 and state.turn - g.last_cut_turn < CUT_COOLDOWN
+	if state.turn - g.last_demand_turn < THREAT_AFTER_DEMAND or leverage < THREAT_LEVERAGE \
+			or cooling or cuts_blocked(state) or season_weight(state.month) < WINTER_WEIGHT:
+		return ""
+	g.threat = {"turn": state.turn, "due": state.turn + 1,
+		"share": clampf(CUT_SHARE_PER_LEVERAGE * leverage, 0.0, 1.0)}
+	g.threats += 1
+	_log_harm(state, actor.id, 0.0)
+	notes.append(line("gas_threat", {"supplier": actor.name}))
+	return "gas_threat"
+
+
+static func _renew(state: GameState, notes: Array[String]) -> void:
+	var g := gas(state)
+	if state.turn < g.term_end:
+		return
+	var price := g.reference_price * (1.0 + RENEWAL_RISE * ForeignSim.leverage_of(state, g.supplier_id))
+	if union_member(state):
+		price = minf(price, union_cap(g))
+	g.price = price
+	g.contracted_volume = maxf(0.0, g.annual_demand - g.second_line_volume)
+	g.term_end = state.turn + TERM_MONTHS
+	notes.append(line("gas_renewal", {"price": snappedf(price, 0.1)}))
+
+
+static func _restore(state: GameState, notes: Array[String]) -> void:
+	var g := gas(state)
+	if g.cut > 0.0 and (state.turn >= g.cut_until or cuts_blocked(state)):
+		g.cut = 0.0
+		g.cut_until = -1
+		notes.append(line("gas_restored"))
+
+
+static func _mature_threat(state: GameState, notes: Array[String]) -> void:
+	var g := gas(state)
+	if g.threat.is_empty() or state.turn < int(g.threat["due"]):
+		return
+	var share := float(g.threat["share"])
+	g.threat = {}
+	if cuts_blocked(state) or g.arrears < ARREARS_DEMAND * DEFUSED_SHARE:
+		notes.append(line("gas_threat_lapsed"))
+		return
+	g.cut = share
+	g.cut_until = state.turn + CUT_MONTHS
+	g.last_cut_turn = state.turn
+	g.cuts += 1
+	_log_harm(state, g.supplier_id, 0.0, -share * GROWTH_PER_SEVERITY)
+	notes.append(line("gas_cut", {"share": roundi(share * 100.0)}))
+
+
+static func on_union_join(state: GameState) -> void:
+	if not is_active(state):
+		return
+	var g := gas(state)
+	g.price = minf(g.price, union_cap(g))
+	g.arrears *= 1.0 - UNION_RESCHEDULED
+	g.threat = {}
+	g.cut = 0.0
+	g.cut_until = -1
+
+
+static func on_union_leave(state: GameState) -> void:
+	if not is_active(state):
+		return
+	var g := gas(state)
+	g.price = maxf(g.price, g.reference_price * (1.0 + EXIT_PRICE_RISE))
+	g.term_end = state.turn + TERM_MONTHS
+
+
+static func _log_harm(state: GameState, actor_id: String, relation: float, economy: float = 0.0) -> void:
+	state.foreign.hostile_log.append({"turn": state.turn, "actor": actor_id,
+		"relation": relation, "economy": economy, "stability": 0.0})
+	while state.foreign.hostile_log.size() > WorldSim.HOSTILE_LOG_LIMIT:
+		state.foreign.hostile_log.pop_front()

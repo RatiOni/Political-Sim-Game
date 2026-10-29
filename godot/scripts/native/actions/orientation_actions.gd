@@ -190,6 +190,7 @@ static func _reach(state: GameState, verb: String) -> String:
 				"budget_expenditure", -UNION_RESCHEDULING, UNION_RESCHEDULING_MONTHS - 1, false)
 			rescheduling.source_id = verb
 			state.modifiers.append(rescheduling)
+			GasSim.on_union_join(state)
 	return "%s. %s" % [ForeignSim.milestone_name(verb), String(ForeignSim.milestone(verb).get("body", ""))]
 
 
@@ -236,6 +237,7 @@ static func _leave_union(state: GameState) -> String:
 		DiplomacySim.shift(state, "krasova", OBSERVER_EXIT_COST, "Ardenia gave up its Union seat.")
 		return "Ardenia gives up its observer seat in the Krasovan Economic Union. Krasova notes the date."
 	state.modifiers = state.modifiers.filter(func(m: Modifier) -> bool: return m.source_id != "union_member")
+	GasSim.on_union_leave(state)
 	state.stability_value = maxf(0.0, state.stability_value - EXIT_STABILITY_COST)
 	var shock := OrientationSim.timed_modifier("union_exit_%d" % state.turn, "Union exit", "gdp_growth",
 		EXIT_GROWTH_COST, EXIT_GROWTH_MONTHS, true)
