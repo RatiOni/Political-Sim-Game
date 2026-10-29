@@ -327,7 +327,7 @@ func _test_steady_governments_are_judged_like_ordinary_ones(t) -> void:
 		t.truth(true, "an AI party that won power is returned often enough (%d of %d)" % [won_kept, won_held])
 	else:
 		t.pending("an AI party that won power is returned often enough (%d of %d)" % [won_kept, won_held],
-			"AI that won power: recalibrate after fiscal double-count fix (2026-10-29); AI reference removed in phase-4 rereview, needs principled redesign")
+			"AI that won power: 0/28 after energy; AI reference removed in phase-4 rereview, needs principled redesign")
 	var first_held: int = governing["first_held"] + opposing["first_held"]
 	var first_kept: int = governing["first_kept"] + opposing["first_kept"]
 	var first_rate := float(first_kept) / maxf(1.0, first_held)
@@ -349,13 +349,13 @@ func _test_the_first_term_is_hard_but_winnable(t) -> void:
 		t.truth(true, "a steady government wins the 1997 election sometimes (%d of %d)" % [steady["kept"], steady["held"]])
 	else:
 		t.pending("a steady government wins the 1997 election sometimes (%d of %d)" % [steady["kept"], steady["held"]],
-			"1997 steady: 4/12 after fiscal fix; recalibrate with election follow-up")
+			"1997 steady: 3/12 after energy; recalibrate with election follow-up")
 	t.truth(answered_rate - steady_rate >= 0.15, "and clearly more often once it deals with the schemer (%d of %d)" % [answered["kept"], answered["held"]])
 	if ai_rate >= 0.3 and ai_rate <= 0.7:
 		t.truth(true, "the opposition start's opening government faces a fair first election (%d of %d)" % [opening_ai["kept"], opening_ai["held"]])
 	else:
 		t.pending("the opposition start's opening government faces a fair first election (%d of %d)" % [opening_ai["kept"], opening_ai["held"]],
-			"AI governments gain an energy policy in energy Task 5 (they currently never pay arrears); re-check in Task 8")
+			"opening government: 3/12 after energy; recalibrate with election follow-up")
 
 
 func _initialize() -> void:

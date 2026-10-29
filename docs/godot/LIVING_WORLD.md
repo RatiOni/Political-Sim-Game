@@ -266,7 +266,7 @@ lifts it.
 Krasova uses its world-AI undermine plan for gas first: a demand for the
 arrears (at 60 or more), two months later a threat naming next month (leverage
 0.5 or more, in practice the heating season), and at the named month a two-month
-cut unless the arrears were paid below 30. After a cut it waits two years
+cut unless the arrears were paid below 30. After a cut it waits four years
 before threatening again. Renewal reprices by leverage. Union membership caps
 the price at 70% of the reference, reschedules half the arrears and blocks
 cuts unless relations fall below -0.5; leaving costs 20% over the reference.
@@ -274,6 +274,19 @@ The player can pay arrears, renegotiate (transit fees, a Union step, or
 shelving the second line), buy a spot cargo, build storage over two years and
 build a second line over four, which Krasova treats as hostile. Energy draws
 no RNG.
+
+**Energy calibration (energy plan Task 8).** `energy_probe.gd` (steady
+government, 240 months) at `CUT_COOLDOWN` 24 gave 8 cuts on seeds 919191, 31
+and 424242 (4 on seed 7), above the design ceiling of 5; the bill was 0.51-0.52%
+of GDP, winter shortfall 0.010-0.025, price 62.5 (1.25x reference), arrears
+finite. `CUT_COOLDOWN` is now 48: 4/4/4/2 cuts, shortfall 0.002-0.010, bill
+0.51-0.52%, price 62.0-62.5, arrears 56-461. `trajectory_probe.gd` re-measured
+`ORDINARY_TRAJECTORY` (9:1 blend), but the new rows pushed the steady player
+government to 55/79 (above 0.65) and broke the seed-7 western goodwill journey,
+so the old reference is kept. Bands: steady player 39/77 pass; from opposition
+22/36 pass; schemer gain pass; election calibration, ISF, orientation journeys
+and fiscal regression pass; pending: AI that won power 0/28, 1997 steady 3/12,
+opening government 3/12.
 
 ## The world acts
 

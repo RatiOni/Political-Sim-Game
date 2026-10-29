@@ -119,7 +119,7 @@ func _test_a_threat_becomes_a_cut_unless_defused(t) -> void:
 	t.truth(paid.foreign.gas.threat.is_empty(), "and the threat lapses")
 
 
-func _test_a_cut_is_not_repeated_within_two_years(t) -> void:
+func _test_a_cut_is_not_repeated_within_the_cooldown(t) -> void:
 	var state := _state()
 	state.month = 1
 	state.turn = GasSim.CUT_COOLDOWN + GasSim.THREAT_AFTER_DEMAND
@@ -128,9 +128,9 @@ func _test_a_cut_is_not_repeated_within_two_years(t) -> void:
 	state.foreign.gas.arrears = 80.0
 	state.foreign.gas.last_demand_turn = state.turn - GasSim.THREAT_AFTER_DEMAND
 	state.foreign.gas.last_cut_turn = state.turn - GasSim.CUT_COOLDOWN + 1
-	t.equal(GasSim.coerce(state, _krasova(state), notes), "", "no new threat within two years of a cut")
+	t.equal(GasSim.coerce(state, _krasova(state), notes), "", "no new threat within the cooldown of a cut")
 	state.foreign.gas.last_cut_turn = state.turn - GasSim.CUT_COOLDOWN
-	t.equal(GasSim.coerce(state, _krasova(state), notes), "gas_threat", "after two years the valve is mentioned again")
+	t.equal(GasSim.coerce(state, _krasova(state), notes), "gas_threat", "after the cooldown the valve is mentioned again")
 
 
 func _test_the_union_shields_its_members_short_of_a_crisis(t) -> void:
@@ -250,6 +250,20 @@ func _test_the_ladder_climbs_on_the_calendar(t) -> void:
 	t.equal(cut_turn, threat_turn + 1, "and the cut lands exactly one month after the threat")
 
 
+func _test_an_unpaying_government_is_cut_at_most_every_four_winters(t) -> void:
+	var state := _state()
+	state.month = 1
+	state.turn = 100
+	var notes: Array[String] = []
+	_leverage(state, 0.6)
+	state.foreign.gas.arrears = 80.0
+	state.foreign.gas.last_demand_turn = state.turn - GasSim.THREAT_AFTER_DEMAND
+	state.foreign.gas.last_cut_turn = state.turn - 36
+	t.equal(GasSim.coerce(state, _krasova(state), notes), "", "three winters after a cut the valve stays quiet")
+	state.foreign.gas.last_cut_turn = state.turn - 48
+	t.equal(GasSim.coerce(state, _krasova(state), notes), "gas_threat", "four years after a cut it is mentioned again")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_renewal_prices_by_leverage(t)
@@ -257,7 +271,8 @@ func _initialize() -> void:
 	_test_the_ladder_starts_with_a_demand(t)
 	_test_a_threat_follows_an_unheeded_demand(t)
 	_test_a_threat_becomes_a_cut_unless_defused(t)
-	_test_a_cut_is_not_repeated_within_two_years(t)
+	_test_a_cut_is_not_repeated_within_the_cooldown(t)
+	_test_an_unpaying_government_is_cut_at_most_every_four_winters(t)
 	_test_the_union_shields_its_members_short_of_a_crisis(t)
 	_test_leaving_the_union_costs_its_gas(t)
 	_test_the_world_ai_keeps_its_ordinary_pressure(t)
