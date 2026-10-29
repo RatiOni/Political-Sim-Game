@@ -12,6 +12,8 @@ const SELECTION_WIDTH := 2.0
 const DRAG_THRESHOLD := 4.0
 const BUTTON_SIZE := Vector2(44, 44)
 const BUTTON_MARGIN := 8.0
+const DUSK_LABEL := "NITE"
+const DAY_LABEL := "DAY"
 const ZOOM_IN_KEYS: Array[Key] = [KEY_EQUAL, KEY_PLUS, KEY_KP_ADD]
 const ZOOM_OUT_KEYS: Array[Key] = [KEY_MINUS, KEY_KP_SUBTRACT]
 const CORNERS: Array[Vector2i] = [Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]
@@ -40,6 +42,7 @@ var routes_rect := TextureRect.new()
 var routes_builds := 0
 var zoom_in_button := Button.new()
 var zoom_out_button := Button.new()
+var dusk_button := Button.new()
 var _sea := ColorRect.new()
 var _physical := Node2D.new()
 var _canvas := Node2D.new()
@@ -93,6 +96,7 @@ func _ready() -> void:
 	_physical.visible = not unavailable
 	zoom_in_button.visible = not unavailable
 	zoom_out_button.visible = not unavailable
+	dusk_button.visible = not unavailable
 	_layout()
 	_paint_growth()
 
@@ -142,6 +146,8 @@ func _build_nodes() -> void:
 	add_child(_notice)
 	_build_zoom_button(zoom_in_button, "ZoomIn", "+", "Zoom in to detail (+ or mouse wheel)", zoom_in)
 	_build_zoom_button(zoom_out_button, "ZoomOut", "-", "Zoom out to the overview (- or mouse wheel)", zoom_out)
+	_build_zoom_button(dusk_button, "Dusk", DUSK_LABEL, "Toggle between day and dusk", func() -> void: set_dusk(not _dusk))
+	dusk_button.add_theme_font_size_override("font_size", 16)
 
 
 func _build_zoom_button(button: Button, id: String, label: String, tip: String, action: Callable) -> void:
@@ -246,6 +252,7 @@ func set_dusk(on: bool) -> void:
 	if unavailable:
 		return
 	_dusk = on
+	dusk_button.text = DAY_LABEL if on else DUSK_LABEL
 	for px in _tilesets:
 		_source(_tilesets[px]).texture = _dusk_textures[px] if on else _day_textures[px]
 	_apply_lines()
@@ -297,6 +304,7 @@ func default_tile_px() -> int:
 func _layout() -> void:
 	zoom_in_button.position = Vector2(size.x - BUTTON_SIZE.x - BUTTON_MARGIN, BUTTON_MARGIN)
 	zoom_out_button.position = zoom_in_button.position + Vector2(0, BUTTON_SIZE.y + BUTTON_MARGIN / 2.0)
+	dusk_button.position = zoom_out_button.position + Vector2(0, BUTTON_SIZE.y + BUTTON_MARGIN / 2.0)
 	if unavailable or not is_inside_tree():
 		return
 	_set_level(tile_px if _user_zoomed else default_tile_px())

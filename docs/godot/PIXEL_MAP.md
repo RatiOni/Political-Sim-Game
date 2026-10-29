@@ -13,18 +13,22 @@ photographic, nothing smoothed. New art follows this, always.
   mountains, snow, rivers. Foreign land is drawn in dim grey.
 - **Towns spread.** As a region grows, its towns put up more houses and spill
   past the administrative lines; the capital claims its ground first. Towers
-  appear in developed towns. At dusk the developed share of houses is lit.
+  appear in developed towns. Hamlets of one to three houses rise in the
+  countryside as a region's population passes thresholds. At dusk the
+  developed share of houses is lit.
 - **Farms and fallow.** Farmland spreads with development. Pressure leaves
   fields fallow.
 - **Roads follow development.** Dirt roads, then paved roads, run along the
   authored routes, with the right sprite for each direction. A regional
-  programme gives a small push up a tier. Rail is always drawn.
+  programme gives a small push up a tier. A rail link is laid only once every
+  region it crosses is developed enough; until then nothing marks it.
 - **Trouble is visible.** A region in trouble dims its towns, sends smoke
   up from them (3-cell plumes: fire, then two smoke cells, animated), and past
   higher thresholds puts barricades on its roads. Separatist land gets no
   barricades or routes.
 - Click a region to select it, drag to pan, `+`/`-` or the wheel to zoom.
-  Dusk shows the same map in a night palette.
+  The `NITE`/`DAY` button under the zoom buttons switches to dusk: the same
+  map in a night palette, with lit windows. The choice holds across zoom.
 
 ## The grid
 
@@ -58,9 +62,8 @@ first load. Every pixel is recoloured to `MapPalette.DAY`.
 
 Where the art comes from (full detail in `godot/assets/CREDITS.md`):
 
-- **Kenney (CC0), recoloured:** `house`, `house_lit`, `tower`, `tree`,
-  `crops`, `barricade`, from Micro Roguelike. The 1-Bit Pack and the
-  Kenney fonts ship too; the fonts draw the map labels.
+- **Kenney (CC0), recoloured:** `house`, `house_lit`, `tower`,
+  `barricade`, from Micro Roguelike. The Kenney fonts draw the map labels.
 - **Generated in the project's own style:** every ground tile and variant,
   the redrawn `farm`, `fallow`, `mountain` and `snow`, `capital`, the road,
   paved and rail tiles in all four orientations, fire and smoke frames.
@@ -89,7 +92,8 @@ Then run the full battery.
 | `terrain_layer` | The baked ground, filled once. |
 | `growth_layer` | Everything the state changes: farm, fallow, houses, towers, capital, route tiles, barricades. |
 | `smoke_layer` | Animated plumes above troubled towns. |
-| `map_lines` | Borders, routes under their tiles, the ceasefire line. Built per tile size and palette, then cached. |
+| `routes_rect` | Dotted roads and open rail where no route tile covers them. A small image updated in place when the covered cells or open rail links change. |
+| `lines_rect` | Borders and the ceasefire line. Built once per tile size and palette, then cached. |
 | `map_labels` | Region and city names in pixel fonts, drawn crisp. |
 
 Selection and hover outlines are drawn on top and never rebuild the lines.
@@ -104,12 +108,23 @@ trouble fields are filled in `native_game.gd`.
 - **Houses:** `town_tiles` from population, capital larger. Cities claim
   cells in order, the capital first, so towns spill past region lines
   without overlapping.
+- **Hamlets:** `hamlet_count` gives one hamlet at `HAMLET_FIRST_POPULATION`
+  (500k) and one more every `HAMLET_POPULATION_STEP` (250k), up to
+  `MAX_HAMLETS`. Each grows from one to `HAMLET_HOUSES` houses across its
+  step. Sites (`hamlet_sites`) are buildable cells of the region beyond every
+  city's town reach, in a stable hash order from the tile data and at least
+  `HAMLET_SPACING` apart, so a hamlet never moves once it stands.
 - **Lit houses:** `lit_share` from development and population.
 - **Farm and fallow:** `farm_share` and `farm_reach` from development;
   `fallow_share` from development and pressure.
 - **Road tier:** `road_tier` from development, plus a bonus while a regional
   programme runs. Each route cell picks its sprite from the route's direction
   (`route_suffix`).
+- **Rail:** `locked_rails` closes a rail link while any non-separatist
+  region it crosses is below `RAIL_DEVELOPMENT` (0.5). A closed link draws
+  nothing at all, not a track: rail usually runs beside a road, so a track
+  there would only double the road, and an empty corridor makes the opening
+  a visible event.
 - **Trouble:** `trouble` is pressure once it passes 0.5, plus insurgency,
   civil war and the Vetrenka status. Above 0.5 towns dim and smoke; above 0.7
   one barricade, above 0.85 two.
@@ -124,8 +139,13 @@ one-second tween, in a stable pseudo-random order. Smoke steps on a timer.
 - A month flips few cells. Measured over 24 synthetic months of growth and a
   civil war, the worst month flips under 300 growth cells (mean about 210);
   the test caps it at 600 (`ArdeniaMap.last_changed_cells`).
-- Redraws allocate no image. The line image is built once per tile size and
-  palette (`lines_builds` counts builds) and reused.
+- Redraws allocate no image. The border image is built once per tile size
+  and palette (`lines_builds` counts builds) and reused; a month that moves
+  barricades or opens rail only rewrites the route image (`routes_builds`).
+  The test holds `lines_builds` flat over 12 crisis months at both levels.
+- Town, farm and hamlet candidates depend only on the tiles and cities, so
+  `GrowthLayers` memoises them; the first snapshot pays for them once.
+- An unknown region id is warned about once (`unknown_warnings`).
 - Test: `godot/tests/map/test_map_resilience.gd`.
 
 ## Planned: the city panel

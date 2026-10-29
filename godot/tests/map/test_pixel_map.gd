@@ -33,6 +33,21 @@ func _click(map: Control, local: Vector2) -> void:
 	root.push_input(release)
 
 
+func _press(map: Control, local: Vector2) -> void:
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = map.global_position + local
+	click.button_mask = MOUSE_BUTTON_MASK_LEFT
+	root.push_input(click)
+	await _frames(1)
+	var release := click.duplicate() as InputEventMouseButton
+	release.pressed = false
+	release.button_mask = 0
+	root.push_input(release)
+	await _frames(2)
+
+
 func _check_levels() -> void:
 	t.equal(ArdeniaMap.level_zoom(1251, 4), 1, "a 1251 px panel shows the overview at 1x")
 	t.equal(ArdeniaMap.level_zoom(1344, 4), 2, "a 1344 px panel shows the overview at 2x")
@@ -46,6 +61,9 @@ func _wheel(map: Control, local: Vector2, up: bool) -> void:
 	wheel.pressed = true
 	wheel.position = map.global_position + local
 	root.push_input(wheel)
+	var release := wheel.duplicate() as InputEventMouseButton
+	release.pressed = false
+	root.push_input(release)
 
 
 func _key(keycode: Key) -> void:
@@ -84,8 +102,29 @@ func _check_zoom(map: Control) -> void:
 	t.equal(map.region_at(map.map_to_local(zavost)), "zavost", "hit testing follows the zoom level")
 	map.zoom_out_button.pressed.emit()
 	t.equal(map.tile_px, 4, "the zoom-out button zooms out")
-	for button in [map.zoom_in_button, map.zoom_out_button]:
+	for button in [map.zoom_in_button, map.zoom_out_button, map.dusk_button]:
 		t.truth(button.size.y >= 44.0 and Rect2(Vector2.ZERO, map.size).encloses(Rect2(button.position, button.size)), "%s is a 44 px target inside the map" % button.name)
+
+
+func _uses_dusk_atlas(map: Control) -> bool:
+	return map.is_dusk() and map.atlas_texture() == map._dusk_textures[map.tile_px] and map.atlas_texture() != map._day_textures[map.tile_px]
+
+
+func _check_dusk_toggle(map: Control) -> void:
+	var button: Button = map.dusk_button
+	t.truth(button.visible and not button.disabled, "a dusk toggle sits on the map")
+	t.truth(button.position.x + button.size.x <= map.zoom_in_button.position.x or button.position.y >= map.zoom_out_button.position.y + map.zoom_out_button.size.y, "the dusk toggle does not overlap the zoom buttons")
+	t.truth(not map.is_dusk(), "the map opens by day")
+	await _press(map, button.position + button.size / 2.0)
+	t.truth(_uses_dusk_atlas(map), "clicking the toggle draws the map from the dusk atlas")
+	map.zoom_in()
+	await _frames(2)
+	t.truth(_uses_dusk_atlas(map), "dusk holds after zooming in")
+	map.zoom_out()
+	await _frames(2)
+	t.truth(_uses_dusk_atlas(map), "dusk holds after zooming out")
+	await _press(map, button.position + button.size / 2.0)
+	t.truth(not map.is_dusk() and map.atlas_texture() == map._day_textures[map.tile_px], "clicking again brings the day back")
 
 
 func _check_render(map: Control, tag: String) -> void:
@@ -227,6 +266,7 @@ func _run() -> void:
 	map.set_dusk(false)
 	t.equal(map.atlas_texture(), day_texture, "day restores the day atlas")
 	await _check_zoom(map)
+	await _check_dusk_toggle(map)
 
 	root.size = Vector2i(1280, 720)
 	await _frames()

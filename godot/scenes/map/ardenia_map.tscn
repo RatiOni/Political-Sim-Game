@@ -14,5 +14,5 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 focus_mode = 2
 mouse_default_cursor_shape = 2
-tooltip_text = "Select a region. Keyboard: Tab to focus the map, then arrow keys to choose a region."
+tooltip_text = "Select a region. Drag to pan, + or - or the wheel to zoom. Keyboard: Tab to focus the map, then arrow keys to choose a region."
 script = ExtResource("1")
