@@ -140,6 +140,21 @@ func _test_the_validator_rejects_impossible_ledgers(t) -> void:
 	_rejects(t, n, "unknown bloc", "an unknown bloc is rejected")
 
 
+func _test_malformed_fields_are_refused_without_crashing(t) -> void:
+	var base := _state().foreign.to_dict()
+	t.truth(ForeignState.from_dict(base) != null, "an intact ledger parses")
+	for field in ["powers", "gas_share", "reached", "members", "isf"]:
+		var data := base.duplicate(true)
+		data[field] = "garbage"
+		t.truth(ForeignState.from_dict(data) == null, "a non-Dictionary %s is refused" % field)
+	var bad_power := base.duplicate(true)
+	bad_power["powers"] = {"krasova": 5}
+	t.truth(ForeignState.from_dict(bad_power) == null, "a power row that is not a Dictionary is refused")
+	var bad_members := base.duplicate(true)
+	bad_members["members"] = {"concert": "solheim"}
+	t.truth(ForeignState.from_dict(bad_members) == null, "a bloc roster that is not an Array is refused")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_the_catalog_is_coherent(t)
@@ -148,4 +163,5 @@ func _initialize() -> void:
 	_test_the_ledger_round_trips_through_a_binary_save(t)
 	_test_an_old_save_gains_the_ledger_on_load(t)
 	_test_the_validator_rejects_impossible_ledgers(t)
+	_test_malformed_fields_are_refused_without_crashing(t)
 	quit(t.finish())
