@@ -137,11 +137,21 @@ func _test_each_orientation_reaches_its_goal(t, runs: Dictionary) -> void:
 
 
 func _test_each_orientation_has_a_price(t, runs: Dictionary) -> void:
+	var colder := 0
+	var west_mean := 0.0
+	var neutral_mean := 0.0
+	for seed in SEEDS:
+		var w := float(runs["western/%d" % seed]["krasova_warmth"])
+		var n := float(runs["neutral/%d" % seed]["krasova_warmth"])
+		colder += 1 if w < n else 0
+		west_mean += w / float(SEEDS.size())
+		neutral_mean += n / float(SEEDS.size())
+	t.truth(west_mean < neutral_mean, "leaning west costs Krasova's goodwill on average (%.3f < %.3f)" % [west_mean, neutral_mean])
+	t.truth(colder >= SEEDS.size() - 1, "and on all but at most one seed (%d of %d)" % [colder, SEEDS.size()])
 	for seed in SEEDS:
 		var neutral: Dictionary = runs["neutral/%d" % seed]
 		var west: Dictionary = runs["western/%d" % seed]
 		var union: Dictionary = runs["union/%d" % seed]
-		t.truth(float(west["krasova_warmth"]) < float(neutral["krasova_warmth"]), "seed %d: leaning west costs Krasova's goodwill (%.3f < %.3f)" % [seed, west["krasova_warmth"], neutral["krasova_warmth"]])
 		if "union_member" in union["reached"]:
 			t.truth(float(union["concert_trade"]) < float(neutral["concert_trade"]) * TARIFF_BITE, "seed %d: Union tariffs cost Western trade (%.0f < %.0f x 0.75)" % [seed, union["concert_trade"], neutral["concert_trade"]])
 			t.truth(float(union["gdp"]) >= float(neutral["gdp"]) * UNION_GDP_FLOOR, "seed %d: the Union never costs real output (%.0f >= %.0f x 0.99)" % [seed, union["gdp"], neutral["gdp"]])

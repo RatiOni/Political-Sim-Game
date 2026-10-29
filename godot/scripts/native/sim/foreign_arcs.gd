@@ -4,13 +4,19 @@ extends RefCounted
 
 const TARGETS := ["__supplier__", "__rival__", "__western__", "__union_anchor__",
 	"__in_civil_war__", "__fragile__", "__concert_foe__", "__warmest__"]
-const HANDLERS: Array[String] = []
-const CONDITIONS: Array[String] = []
-const EVENT_IDS: Array[String] = []
+const HANDLERS: Array[String] = ["valve_pay", "valve_cargo", "valve_appeal_west", "transit_concede",
+	"transit_arbitrate", "windfall_storage"]
+const CONDITIONS: Array[String] = ["transit_dispute_ripe", "transit_windfall_due"]
+const EVENT_IDS: Array[String] = ["valve_threat", "transit_dispute", "transit_windfall"]
 const GATES := ["energy_verb", "orientation_verb", "diplomacy_verb"]
 const COUP_STABILITY := 0.3
 const COUP_MAX_WAR_RISK := 0.5
 const CONCERT_FOE_LINE := -0.6
+const VALVE_TRANCHES := 3
+const TRANSIT_WARMTH := -0.3
+const GAS_SITUATION_TURN := 12
+const WEST_APPEAL := 0.03
+const ARBITRATION_GOODWILL := 0.03
 
 static var probes: Dictionary = {}
 
@@ -120,8 +126,17 @@ static func shift(state: GameState, sentinel: String, delta: float) -> void:
 		DiplomacySim.shift(state, id, delta)
 
 
-static func condition_met(_state: GameState, _rule_id: String) -> bool:
+static func condition_met(state: GameState, rule_id: String) -> bool:
+	match rule_id:
+		"transit_dispute_ripe":
+			return _transit_open(state) and GasSim.supplier_warmth(state) < TRANSIT_WARMTH
+		"transit_windfall_due":
+			return _transit_open(state) and GasSim.supplier_warmth(state) >= TRANSIT_WARMTH
 	return false
+
+
+static func _transit_open(state: GameState) -> bool:
+	return state.player.in_government and GasSim.is_active(state) and state.turn >= GAS_SITUATION_TURN 		and not ("transit" in GasSim.gas(state).concessions)
 
 
 static func handles(handler_id: String) -> bool:
@@ -131,4 +146,36 @@ static func handles(handler_id: String) -> bool:
 static func run(state: GameState, handler_id: String, target: String) -> String:
 	if probes.has(handler_id):
 		return String((probes[handler_id] as Callable).call(state, target))
+	match handler_id:
+		"valve_pay":
+			return _pay_to_defuse(state)
+		"valve_cargo":
+			return _through(EnergyActions.act(state, "gas_spot_purchase"))
+		"valve_appeal_west":
+			shift(state, "__western__", WEST_APPEAL)
+			return "The Western embassies take the letter seriously, and say so in public."
+		"transit_concede":
+			return _through(EnergyActions.act(state, "gas_renegotiate_transit"))
+		"transit_arbitrate":
+			shift(state, "__western__", ARBITRATION_GOODWILL)
+			return "The dispute goes to a panel in a Western capital."
+		"windfall_storage":
+			return _through(EnergyActions.act(state, "gas_storage"))
 	return ""
+
+
+static func _through(result: Dictionary) -> String:
+	return String(result.get("message", result.get("error", "")))
+
+
+static func _pay_to_defuse(state: GameState) -> String:
+	var g := GasSim.gas(state)
+	var line := g.arrears < GasSim.ARREARS_DEMAND * GasSim.DEFUSED_SHARE
+	var tranches := 0
+	while tranches < VALVE_TRANCHES and g.arrears >= GasSim.ARREARS_DEMAND * GasSim.DEFUSED_SHARE:
+		if not EnergyActions.act(state, "gas_pay_arrears").get("ok", false):
+			break
+		tranches += 1
+	if line or tranches == 0:
+		return ""
+	return "The treasury pays %d tranches of the Zovar arrears; %.0f remains." % [tranches, g.arrears]

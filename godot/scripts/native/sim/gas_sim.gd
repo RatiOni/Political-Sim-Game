@@ -261,6 +261,8 @@ static func coerce(state: GameState, actor: Country, notes: Array[String]) -> St
 	g.threat = {"turn": state.turn, "due": state.turn + 1,
 		"share": clampf(CUT_SHARE_PER_LEVERAGE * leverage, 0.0, 1.0)}
 	g.threats += 1
+	if state.player.in_government:
+		ForeignArcs.schedule(state, "valve_threat", actor.id)
 	_log_harm(state, actor.id, 0.0)
 	notes.append(line("gas_threat", {"supplier": actor.name}))
 	return "gas_threat"

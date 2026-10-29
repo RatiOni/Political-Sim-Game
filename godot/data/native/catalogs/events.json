@@ -3897,6 +3897,192 @@
       "cooldown": 12,
       "audience": "government",
       "portfolio": null
+    },
+    {
+      "id": "valve_threat",
+      "title": "The Valve, With a Date",
+      "description": "The supplier's gas company has put it in writing: unless the arrears come down, deliveries through the Zovar line fall next month. The Finance Ministry can find some hard currency. Not much, and not twice.",
+      "category": "Diplomatic",
+      "condition": "never",
+      "chance": 0,
+      "target": "__supplier__",
+      "stale_after": 1,
+      "options": [
+        {
+          "id": "pay_down",
+          "label": "Pay enough to take the date off the table",
+          "description": "Hard currency the treasury does not have, paid in tranches until the arrears are below the line their lawyers named.",
+          "effects": {},
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": "valve_pay",
+          "requires": null
+        },
+        {
+          "id": "buy_cargo",
+          "label": "Buy a spot cargo and let them cut",
+          "description": "A tanker at a premium, so the cut lands on an empty pipe instead of cold flats.",
+          "effects": {},
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": "valve_cargo",
+          "requires": {
+            "energy_verb": "gas_spot_purchase"
+          }
+        },
+        {
+          "id": "appeal_west",
+          "label": "Take the letter to the Western embassies",
+          "description": "Make the threat a story about them, not us. The supplier will not enjoy reading it.",
+          "effects": {},
+          "relation_deltas": {
+            "__supplier__": -0.05
+          },
+          "pc_cost": 6,
+          "follow_up": null,
+          "on_apply": "valve_appeal_west",
+          "requires": null
+        },
+        {
+          "id": "call_bluff",
+          "label": "Call the bluff",
+          "description": "They have mentioned the valve before. Say nothing, and see whether they mean it this time.",
+          "effects": {
+            "faction_loyalty_deltas": {
+              "@nationalist": 0.03
+            }
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "call_bluff",
+      "once": false,
+      "cooldown": 0,
+      "audience": "government",
+      "portfolio": "Foreign Affairs"
+    },
+    {
+      "id": "transit_dispute",
+      "title": "Whose Pipe Is It?",
+      "description": "The supplier says the Zovar transit fees were set for a friendlier decade and wants them gone. Its gas company has started paying late, and the Foreign Ministry hears the word 'review' a great deal.",
+      "category": "Diplomatic",
+      "condition": "transit_dispute_ripe",
+      "chance": 0.05,
+      "target": "__supplier__",
+      "options": [
+        {
+          "id": "concede_fees",
+          "label": "Concede the fees for a better price",
+          "description": "Give up the transit revenue for good, and take a cheaper contract until the next renewal.",
+          "effects": {},
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": "transit_concede",
+          "requires": {
+            "energy_verb": "gas_renegotiate_transit"
+          }
+        },
+        {
+          "id": "seek_arbitration",
+          "label": "Ask the Western institutions to arbitrate",
+          "description": "A neutral panel in a Western capital. The supplier will call it a provocation and attend anyway.",
+          "effects": {},
+          "relation_deltas": {
+            "__supplier__": -0.02
+          },
+          "pc_cost": 8,
+          "follow_up": null,
+          "on_apply": "transit_arbitrate",
+          "requires": null
+        },
+        {
+          "id": "hold_fees",
+          "label": "Hold the fees where they are",
+          "description": "The treaty says what it says. Read it to them slowly.",
+          "effects": {
+            "faction_loyalty_deltas": {
+              "@nationalist": 0.02
+            }
+          },
+          "relation_deltas": {
+            "__supplier__": -0.04
+          },
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        }
+      ],
+      "default_option_id": "hold_fees",
+      "once": false,
+      "cooldown": 24,
+      "audience": "government",
+      "portfolio": "Foreign Affairs"
+    },
+    {
+      "id": "transit_windfall",
+      "title": "A Cold Winter in Someone Else's Country",
+      "description": "Gas through the Zovar line is running above contract on its way west, and the transit fees with it. The Finance Ministry has a sum it did not budget for and three ministers who know what to do with it.",
+      "category": "Economic",
+      "condition": "transit_windfall_due",
+      "chance": 0.04,
+      "options": [
+        {
+          "id": "bank_it",
+          "label": "Pay down the debt",
+          "description": "Nobody thanks a government for a debt figure, but the next ISF review will.",
+          "effects": {
+            "one_time_debt_pct_delta": -0.001
+          },
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "winter_rebate",
+          "label": "A heating rebate for the coldest regions",
+          "description": "Money back on the winter bill, delivered before anyone has to ask.",
+          "effects": {
+            "one_time_debt_pct_delta": 0.0005,
+            "faction_loyalty_deltas": {
+              "@labour": 0.04,
+              "@business": -0.02
+            }
+          },
+          "relation_deltas": {},
+          "pc_cost": 4,
+          "follow_up": null,
+          "on_apply": null,
+          "requires": null
+        },
+        {
+          "id": "fund_storage",
+          "label": "Put it toward gas storage",
+          "description": "Start the storage programme with someone else's money. The next valve threat will be quieter.",
+          "effects": {},
+          "relation_deltas": {},
+          "pc_cost": 0,
+          "follow_up": null,
+          "on_apply": "windfall_storage",
+          "requires": {
+            "energy_verb": "gas_storage"
+          }
+        }
+      ],
+      "default_option_id": "bank_it",
+      "once": false,
+      "cooldown": 24,
+      "audience": "government",
+      "portfolio": "Finance"
     }
   ],
   "ardenia_only_events": [

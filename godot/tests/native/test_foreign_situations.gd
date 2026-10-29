@@ -233,6 +233,174 @@ func _test_a_trigger_made_mid_month_reaches_the_desk_that_month(t) -> void:
 	ForeignArcs.probes.erase("probe_trigger")
 	EventsSim._by_id.erase("trigger_probe")
 
+func _test_a_valve_threat_reaches_the_government_the_month_it_is_made(t) -> void:
+	var state := _state()
+	var g := state.foreign.gas
+	var supplier := state.world_country(g.supplier_id)
+	while state.month != 11:
+		NativeGameScript.next_month(state)
+	state.pending_situations.clear()
+	state.scheduled_events.clear()
+	g.arrears = 120.0
+	g.last_demand_turn = state.turn - GasSim.THREAT_AFTER_DEMAND
+	g.last_cut_turn = -1
+	g.threat = {}
+	state.foreign.powers[g.supplier_id] = {"dependence": 1.0, "commitment": 0.0, "leverage": 0.9}
+	var notes: Array[String] = []
+	GasSim.coerce(state, supplier, notes)
+	t.truth(not g.threat.is_empty(), "sanity: the supplier names a date")
+	EventsSim._deliver_follow_ups(state, notes)
+	var arrived: Array = state.pending_situations.filter(func(s: Situation) -> bool: return s.event_id == "valve_threat")
+	t.equal(arrived.size(), 1, "the threat is on the desk the same month")
+	t.equal((arrived[0] as Situation).target_country_id, g.supplier_id, "and it is about the supplier")
+
+
+func _test_a_threat_against_the_opposition_is_not_its_desk(t) -> void:
+	var state := _state("opposition")
+	var g := state.foreign.gas
+	state.turn = 20
+	g.arrears = 120.0
+	g.last_demand_turn = state.turn - GasSim.THREAT_AFTER_DEMAND
+	state.month = 11
+	state.foreign.powers[g.supplier_id] = {"dependence": 1.0, "commitment": 0.0, "leverage": 0.9}
+	var notes: Array[String] = []
+	GasSim.coerce(state, state.world_country(g.supplier_id), notes)
+	t.truth(not g.threat.is_empty(), "sanity: the supplier threatens the AI government too")
+	t.equal(state.scheduled_events.filter(func(r: Dictionary) -> bool: return r["event_id"] == "valve_threat").size(), 0, "but the opposition is not handed the decision")
+
+
+func _test_paying_before_the_date_defuses_the_valve(t) -> void:
+	var state := _state()
+	var g := state.foreign.gas
+	g.arrears = 120.0
+	g.threat = {"turn": state.turn, "due": state.turn + 1, "share": 0.3}
+	_force(state, "valve_threat", g.supplier_id)
+	var result := EventActions.resolve(state, "valve_threat", "pay_down")
+	t.truth(result.get("ok", false), "the government can pay (%s)" % result.get("error", ""))
+	t.truth(g.arrears < GasSim.ARREARS_DEMAND * GasSim.DEFUSED_SHARE, "the arrears fall below the line that defuses the threat (%.1f)" % g.arrears)
+	t.near(g.arrears, 120.0 - 2.0 * EnergyActions.ARREARS_TRANCHE, 1e-6, "in whole tranches, and no more than needed")
+	state.turn += 1
+	var notes: Array[String] = []
+	GasSim._mature_threat(state, notes)
+	t.equal(g.cut, 0.0, "and the named date passes with the gas flowing")
+
+
+func _test_paying_never_exceeds_three_tranches(t) -> void:
+	var state := _state()
+	var g := state.foreign.gas
+	g.arrears = 400.0
+	_force(state, "valve_threat", g.supplier_id)
+	EventActions.resolve(state, "valve_threat", "pay_down")
+	t.near(g.arrears, 400.0 - float(ForeignArcs.VALVE_TRANCHES) * EnergyActions.ARREARS_TRANCHE, 1e-6, "a crisis payment is capped at three tranches")
+
+
+func _test_the_cargo_option_is_the_energy_desks_cargo(t) -> void:
+	var state := _state()
+	var g := state.foreign.gas
+	_force(state, "valve_threat", g.supplier_id)
+	state.player.political_capital = 0.0
+	var refused := EventActions.resolve(state, "valve_threat", "buy_cargo")
+	t.truth(not refused.get("ok", true), "with no capital the cargo is refused before anything happens")
+	t.equal(refused.get("error", ""), EnergyActions.reason_for(state, "gas_spot_purchase"), "in the energy desk's own words")
+	t.equal(g.spot_pending, 0.0, "and nothing is bought")
+	state.player.political_capital = 50.0
+	t.truth(EventActions.resolve(state, "valve_threat", "buy_cargo").get("ok", false), "with capital it goes through")
+	t.near(g.spot_pending, EnergyActions.SPOT_VOLUME, 1e-9, "and a cargo is on its way")
+	t.near(state.player.political_capital, 50.0 - float(EnergyActions.COSTS["gas_spot_purchase"]), 1e-9, "charged once, by the energy desk")
+
+
+func _test_appealing_to_the_west_moves_both_capitals(t) -> void:
+	var state := _state()
+	var g := state.foreign.gas
+	var west := ForeignArcs.resolve_target(state, "__western__")
+	_force(state, "valve_threat", g.supplier_id)
+	var s0 := _score(state, g.supplier_id)
+	var w0 := _score(state, west)
+	EventActions.resolve(state, "valve_threat", "appeal_west")
+	t.near(_score(state, west), w0 + ForeignArcs.WEST_APPEAL, 1e-9, "the West hears the appeal")
+	t.near(_score(state, g.supplier_id), s0 - 0.05, 1e-9, "and the supplier hears it too")
+
+
+func _test_calling_the_bluff_is_the_default_and_costs_nothing(t) -> void:
+	var state := _state()
+	var event := EventsSim.event_by_id("valve_threat")
+	t.equal(String(event["default_option_id"]), "call_bluff", "doing nothing is the default")
+	var option := EventsSim.option_by_id(event, "call_bluff")
+	t.equal(option.get("requires", null), null, "and it is never gated")
+	t.equal(option.get("follow_up", null), null, "and starts nothing that would draw on the stream")
+	t.equal(int(event.get("stale_after", -1)), 1, "a threat a month stale is never delivered")
+
+
+func _test_the_transit_dispute_needs_a_cold_supplier_and_uncoded_fees(t) -> void:
+	var state := _state()
+	state.turn = ForeignArcs.GAS_SITUATION_TURN
+	var supplier := state.foreign.gas.supplier_id
+	_set_score(state, supplier, ForeignArcs.TRANSIT_WARMTH)
+	t.truth(not EventsSim.condition_met(state, "transit_dispute_ripe"), "at exactly the line there is no dispute")
+	t.truth(EventsSim.condition_met(state, "transit_windfall_due"), "the fees flow instead")
+	_set_score(state, supplier, ForeignArcs.TRANSIT_WARMTH - 0.01)
+	t.truth(EventsSim.condition_met(state, "transit_dispute_ripe"), "just colder and the fees are disputed")
+	t.truth(not EventsSim.condition_met(state, "transit_windfall_due"), "and no windfall arrives")
+	state.turn = ForeignArcs.GAS_SITUATION_TURN - 1
+	t.truth(not EventsSim.condition_met(state, "transit_dispute_ripe"), "not in the first year")
+	state.turn = ForeignArcs.GAS_SITUATION_TURN
+	state.foreign.gas.concessions.append("transit")
+	t.truth(not EventsSim.condition_met(state, "transit_dispute_ripe"), "and not once the fees are conceded")
+	t.truth(not EventsSim.condition_met(state, "transit_windfall_due"), "when there are no fees to collect either")
+	state.foreign.gas.concessions.clear()
+	state.player.in_government = false
+	t.truth(not EventsSim.condition_met(state, "transit_dispute_ripe"), "and never for the opposition")
+
+
+func _test_conceding_the_fees_is_the_renegotiation(t) -> void:
+	var state := _state()
+	var g := state.foreign.gas
+	state.player.political_capital = 100.0
+	_force(state, "transit_dispute", g.supplier_id)
+	var price := g.price
+	t.truth(EventActions.resolve(state, "transit_dispute", "concede_fees").get("ok", false), "the fees can be conceded")
+	t.truth("transit" in g.concessions, "the contract records the concession")
+	t.near(g.price, maxf(g.reference_price * EnergyActions.PRICE_FLOOR_SHARE, price * float(EnergyActions.PRICE_CUTS["gas_renegotiate_transit"])), 1e-9, "at the renegotiation's own price")
+
+
+func _test_the_windfall_can_fund_storage(t) -> void:
+	var state := _state()
+	state.player.political_capital = 100.0
+	_force(state, "transit_windfall", "")
+	t.truth(EventActions.resolve(state, "transit_windfall", "fund_storage").get("ok", false), "the windfall can start storage")
+	t.equal(state.foreign.gas.storage_started, state.turn, "and the storage programme begins")
+	var again := _state()
+	_force(again, "transit_windfall", "")
+	var debt := again.country.economy.public_debt_pct
+	EventActions.resolve(again, "transit_windfall", "bank_it")
+	t.near(again.country.economy.public_debt_pct, debt - 0.001, 1e-9, "banking it pays down a little debt")
+
+func _test_the_valve_threat_closes_the_month_it_is_made(t) -> void:
+	var state := _state()
+	var g := state.foreign.gas
+	while state.month != 10:
+		NativeGameScript.next_month(state)
+	state.pending_situations.clear()
+	state.scheduled_events.clear()
+	g.arrears = 120.0
+	g.last_demand_turn = state.turn + 1 - GasSim.THREAT_AFTER_DEMAND
+	g.last_cut_turn = -1
+	g.threat = {}
+	state.foreign.powers[g.supplier_id] = {"dependence": 1.0, "commitment": 0.0, "leverage": 0.9}
+	NativeGameScript.next_month(state)
+	t.truth(not g.threat.is_empty() and int(g.threat.get("turn", -1)) == state.turn, "sanity: the supplier names a date while the month closes")
+	var arrived: Array = state.pending_situations.filter(func(s: Situation) -> bool: return s.event_id == "valve_threat")
+	t.equal(arrived.size(), 1, "the foreign desk runs before the situations desk, so the threat lands this month")
+
+
+func _test_paying_stops_at_the_line(t) -> void:
+	var state := _state()
+	var g := state.foreign.gas
+	g.arrears = 80.0
+	_force(state, "valve_threat", g.supplier_id)
+	EventActions.resolve(state, "valve_threat", "pay_down")
+	t.near(g.arrears, 0.0, 1e-6, "arrears left exactly at the line still owe a tranche")
+
 
 func _initialize() -> void:
 	var t = TestSupportScript.new()
@@ -246,4 +414,16 @@ func _initialize() -> void:
 	_test_a_refused_gate_changes_nothing(t)
 	_test_a_handler_hears_its_situations_target(t)
 	_test_a_trigger_made_mid_month_reaches_the_desk_that_month(t)
+	_test_a_valve_threat_reaches_the_government_the_month_it_is_made(t)
+	_test_a_threat_against_the_opposition_is_not_its_desk(t)
+	_test_paying_before_the_date_defuses_the_valve(t)
+	_test_paying_never_exceeds_three_tranches(t)
+	_test_the_cargo_option_is_the_energy_desks_cargo(t)
+	_test_appealing_to_the_west_moves_both_capitals(t)
+	_test_calling_the_bluff_is_the_default_and_costs_nothing(t)
+	_test_the_transit_dispute_needs_a_cold_supplier_and_uncoded_fees(t)
+	_test_conceding_the_fees_is_the_renegotiation(t)
+	_test_the_windfall_can_fund_storage(t)
+	_test_the_valve_threat_closes_the_month_it_is_made(t)
+	_test_paying_stops_at_the_line(t)
 	quit(t.finish())
