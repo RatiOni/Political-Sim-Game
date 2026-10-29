@@ -35,6 +35,7 @@ func _blk(x: float, y: float, w: float, h: float, c: Color) -> void:
 
 
 func _glow(x: float, y: float, r: float, c: Color, strength: float) -> void:
+	strength *= 0.15 + 0.85 * night   # light that blooms at night barely shows by day
 	for i in 4:
 		var k := 1.0 - i / 4.0
 		var col := c
@@ -45,7 +46,7 @@ func _glow(x: float, y: float, r: float, c: Color, strength: float) -> void:
 ## A soft beam: full strength at the source, fading to nothing at the far edge.
 func _beam(from: Vector2, a: Vector2, b: Vector2, c: Color, strength: float) -> void:
 	var near := c
-	near.a = strength
+	near.a = strength * (0.1 + 0.9 * night)
 	var far := c
 	far.a = 0.0
 	canvas.draw_polygon(PackedVector2Array([origin + from * px, origin + a * px, origin + b * px]),

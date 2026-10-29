@@ -220,7 +220,7 @@ func _towers() -> void:
 		if absi(x - landmark_x) < 34:
 			x += 70 if x >= landmark_x else -70
 		var tall := (40.0 + 60.0 * population * development) * (1.25 if capital else 1.0)
-		towers.append({"x": x, "w": rng.randi_range(12, 22), "h": int(tall * rng.randf_range(0.55, 1.0)),
+		towers.append({"x": x, "w": rng.randi_range(12, 22), "h": mini(int(tall * rng.randf_range(0.55, 1.0)), ground - 24),
 			"crown": rng.randf() < 0.4})
 
 

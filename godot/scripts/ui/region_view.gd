@@ -16,7 +16,10 @@ extends Control
 ## one texture at one image pixel per scene pixel (`RegionBake`), then scaled
 ## up nearest-neighbour. Only moving things are drawn per frame.
 
-const MAX_COLS := 900   # bound on scene width, in scene pixels
+const MAX_COLS := 1000   # bound on scene width, in scene pixels
+## Landmarks and towers are authored in scene pixels; below this many rows
+## they no longer fit under the frame, so the scale gives way to keep it.
+const MIN_ROWS := 200
 const MIN_W := 240
 
 var _region: Dictionary = {}
@@ -80,9 +83,9 @@ func _draw() -> void:
 	# Two screen pixels per scene pixel: fine enough for windows, people and
 	# lettering, coarse enough to stay pixel art. A very wide panel scales up
 	# rather than baking past MAX_COLS.
-	_scale = maxi(2, int(ceil(size.x / float(MAX_COLS))))
+	_scale = maxi(1, mini(maxi(2, int(ceil(size.x / float(MAX_COLS)))), int(size.y / MIN_ROWS)))
 	var cols := clampi(int(size.x / _scale), MIN_W, MAX_COLS)
-	var rows := maxi(120, int(size.y / _scale))
+	var rows := maxi(MIN_ROWS, int(size.y / _scale))
 	var used := Vector2(cols, rows) * _scale
 	_origin = ((size - used) * 0.5).floor()
 
@@ -100,6 +103,7 @@ func _draw() -> void:
 		_static_tex = ImageTexture.create_from_image(RegionBake.bake(_scene))
 		var m := _grade.material as ShaderMaterial
 		m.set_shader_parameter("sky_mask", ImageTexture.create_from_image(_scene.sky_mask))
+		m.set_shader_parameter("horizon_v", float(_scene.horizon) / _scene.h)
 		m.set_shader_parameter("water_v", float(_scene.water_top) / _scene.h if _scene.water_top >= 0 else 2.0)
 		m.set_shader_parameter("scene_rect", Vector4(_origin.x / size.x, _origin.y / size.y, used.x / size.x, used.y / size.y))
 		_frame_scene(before, used)
