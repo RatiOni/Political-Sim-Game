@@ -2,6 +2,8 @@ extends SceneTree
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
 const NativeGameScript = preload("res://scripts/native/native_game.gd")
+const DEFICIT_BOUND := 0.08
+const INFLATION_BOUND := 0.12
 const ENVELOPES := ["state_administration", "foreign_affairs", "justice_and_policing", "national_defense",
 	"infrastructure", "industry_and_jobs", "education", "health_and_welfare"]
 
@@ -210,6 +212,20 @@ func _test_steady_households_hold_their_confidence(t) -> void:
 		t.truth(absf(last - first) <= 0.03, "seed %d: steady government keeps household confidence flat over twenty years (%.3f to %.3f)" % [seed, first, last])
 
 
+func _test_steady_government_stays_fiscally_bounded(t) -> void:
+	for seed in [919191, 31, 424242, 7]:
+		var state := _state("government", seed)
+		var worst_deficit := 0.0
+		var worst_inflation := 0.0
+		for _m in range(240):
+			steady_budget(state)
+			NativeGameScript.next_month(state)
+			worst_deficit = maxf(worst_deficit, state.country.economy.deficit_share_of_gdp())
+			worst_inflation = maxf(worst_inflation, state.country.economy.inflation)
+		t.truth(worst_deficit <= DEFICIT_BOUND, "seed %d: twenty steady years keep the deficit under %.0f%% of GDP (%.3f)" % [seed, DEFICIT_BOUND * 100.0, worst_deficit])
+		t.truth(worst_inflation <= INFLATION_BOUND, "seed %d: and inflation under %.0f%% (%.3f)" % [seed, INFLATION_BOUND * 100.0, worst_inflation])
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_an_ai_government_ends_an_inherited_emergency_at_once(t)
@@ -222,4 +238,5 @@ func _initialize() -> void:
 	_test_inherited_laws_are_not_the_players_overhead(t)
 	_test_october_proposals_keep_a_long_government_funded(t)
 	_test_steady_households_hold_their_confidence(t)
+	_test_steady_government_stays_fiscally_bounded(t)
 	quit(t.finish())

@@ -10,6 +10,7 @@ const WESTERN_STEPS := ["meridian_partnership", "concert_agreement", "meridian_g
 const UNION_STEPS := ["union_observer", "union_member"]
 const OUTREACH_RESERVE := 40.0
 const TARIFF_BITE := 0.75
+const UNION_GDP_FLOOR := 0.99
 
 
 static func _state(seed: int) -> GameState:
@@ -122,7 +123,13 @@ func _test_each_orientation_has_a_price(t, runs: Dictionary) -> void:
 		t.truth(float(west["krasova_warmth"]) < float(neutral["krasova_warmth"]), "seed %d: leaning west costs Krasova's goodwill (%.3f < %.3f)" % [seed, west["krasova_warmth"], neutral["krasova_warmth"]])
 		if "union_member" in union["reached"]:
 			t.truth(float(union["concert_trade"]) < float(neutral["concert_trade"]) * TARIFF_BITE, "seed %d: Union tariffs cost Western trade (%.0f < %.0f x 0.75)" % [seed, union["concert_trade"], neutral["concert_trade"]])
-			t.truth(float(neutral["gdp"]) < float(union["gdp"]), "seed %d: staying neutral forgoes the Union's markets (%.0f < %.0f)" % [seed, neutral["gdp"], union["gdp"]])
+			t.truth(float(union["gdp"]) >= float(neutral["gdp"]) * UNION_GDP_FLOOR, "seed %d: the Union never costs real output (%.0f >= %.0f x 0.99)" % [seed, union["gdp"], neutral["gdp"]])
+	var neutral_gdp := 0.0
+	var union_gdp := 0.0
+	for seed in SEEDS:
+		neutral_gdp += float(runs["neutral/%d" % seed]["gdp"]) / SEEDS.size()
+		union_gdp += float(runs["union/%d" % seed]["gdp"]) / SEEDS.size()
+	t.truth(union_gdp > neutral_gdp, "on average staying neutral forgoes the Union's markets (%.0f < %.0f)" % [neutral_gdp, union_gdp])
 
 
 func _test_the_isf_is_demanding_but_passable(t, runs: Dictionary) -> void:

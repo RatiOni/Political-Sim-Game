@@ -112,6 +112,7 @@ static func _update_fiscal_baseline(state: GameState) -> void:
 	econ.structural_expenditure *= (1.0 + monthly_structural_growth)
 	econ.spending_trend *= (1.0 + monthly_structural_growth)
 	_sync_active_total(state, econ.structural_expenditure)
+	state.active_budget.economy_basis *= (1.0 + monthly_structural_growth)
 
 	var total_trade_revenue := 0.0
 	for rel in state.country.relations.values():

@@ -5,17 +5,17 @@ extends RefCounted
 const MONTHLY_CAP := 0.01
 const SUPPORT_FLOOR := 0.01
 const ORDINARY_TRAJECTORY := [
-	{"approval": 0.483, "confidence": 0.503, "misery": 0.0104, "stability": 0.534},
-	{"approval": 0.466, "confidence": 0.516, "misery": 0.0052, "stability": 0.499},
-	{"approval": 0.465, "confidence": 0.518, "misery": -0.0012, "stability": 0.491},
-	{"approval": 0.479, "confidence": 0.529, "misery": -0.0074, "stability": 0.511},
-	{"approval": 0.460, "confidence": 0.536, "misery": -0.0133, "stability": 0.517},
-	{"approval": 0.479, "confidence": 0.540, "misery": -0.0174, "stability": 0.526},
-	{"approval": 0.487, "confidence": 0.540, "misery": -0.0201, "stability": 0.524},
-	{"approval": 0.483, "confidence": 0.538, "misery": -0.0221, "stability": 0.518},
-	{"approval": 0.462, "confidence": 0.535, "misery": -0.0236, "stability": 0.513},
-	{"approval": 0.458, "confidence": 0.530, "misery": -0.0244, "stability": 0.509},
-	{"approval": 0.449, "confidence": 0.526, "misery": -0.0248, "stability": 0.504},
+	{"approval": 0.480, "confidence": 0.503, "misery": 0.0102, "stability": 0.533},
+	{"approval": 0.461, "confidence": 0.511, "misery": 0.0070, "stability": 0.498},
+	{"approval": 0.452, "confidence": 0.511, "misery": 0.0037, "stability": 0.491},
+	{"approval": 0.456, "confidence": 0.517, "misery": 0.0022, "stability": 0.513},
+	{"approval": 0.452, "confidence": 0.523, "misery": 0.0023, "stability": 0.521},
+	{"approval": 0.469, "confidence": 0.530, "misery": 0.0008, "stability": 0.529},
+	{"approval": 0.474, "confidence": 0.532, "misery": -0.0016, "stability": 0.530},
+	{"approval": 0.472, "confidence": 0.534, "misery": -0.0037, "stability": 0.527},
+	{"approval": 0.465, "confidence": 0.534, "misery": -0.0051, "stability": 0.532},
+	{"approval": 0.475, "confidence": 0.536, "misery": -0.0059, "stability": 0.537},
+	{"approval": 0.471, "confidence": 0.536, "misery": -0.0062, "stability": 0.535},
 ]
 const TRAJECTORY_PERIOD_MONTHS := 24
 const ORDINARY_OPPOSITION_LEADER_APPROVAL := 0.43
