@@ -62,8 +62,8 @@ func _test_a_shortfall_idles_zavost_and_darev(t) -> void:
 
 func _test_growth_reads_shortfall_and_price(t) -> void:
 	var state := _state()
-	_short(state, 0.5, 0.5)
-	t.near(GasSim.growth_effect(state), -0.03, 0.000001, "a severe shortfall costs three points of annualised growth")
+	_short(state, 0.5, 0.25)
+	t.near(GasSim.growth_effect(state), -0.015, 0.000001, "growth follows the season-weighted severity, not the raw shortfall")
 	_short(state, 0.0, 0.0)
 	state.foreign.gas.price = GasSim.union_cap(state.foreign.gas)
 	t.near(GasSim.growth_effect(state), 0.003, 0.000001, "gas 30% under the reference lifts growth")
@@ -72,9 +72,9 @@ func _test_growth_reads_shortfall_and_price(t) -> void:
 	state.foreign.gas.price = 50.0
 	EconomySim._apply_headline_stats(state)
 	var normal := state.country.economy.growth_rate
-	_short(state, 0.5, 0.5)
+	_short(state, 0.5, 0.25)
 	EconomySim._apply_headline_stats(state)
-	t.near(normal - state.country.economy.growth_rate, 0.03, 0.000001, "the economy books it")
+	t.near(normal - state.country.economy.growth_rate, 0.015, 0.000001, "the economy books it")
 
 
 func _test_stability_counts_the_cold(t) -> void:
