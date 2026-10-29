@@ -1,6 +1,7 @@
 extends SceneTree
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
+const NativeGameScript = preload("res://scripts/native/native_game.gd")
 
 
 static func _state(role: String = "government") -> GameState:
@@ -109,6 +110,52 @@ func _test_the_review_is_national_but_the_reply_is_the_governments(t) -> void:
 	t.truth(not OrientationActions.act(state, "annex_the_moon").get("ok", true), "an unknown step is refused")
 
 
+func _test_the_tranche_lasts_its_months_and_delivers_its_cash(t) -> void:
+	var state := _state()
+	state.month = 4
+	_economy(state, 0.01, 0.03)
+	OrientationSim.monthly(state)
+	var tranche: Modifier = state.modifiers.filter(func(m: Modifier) -> bool: return m.id.begins_with("isf_tranche"))[0]
+	t.equal(tranche.onset_delay + tranche.ramp_duration + tranche.hold_duration + tranche.decay_duration, OrientationSim.ISF_TRANCHE_MONTHS, "the tranche runs for its stated months")
+	var cash := 0.0
+	for _i in range(OrientationSim.ISF_TRANCHE_MONTHS + 25):
+		cash += tranche.current_value()
+		tranche.age += 1
+	t.near(cash, float(state.foreign.isf["disbursed"]), 1e-6, "and delivers exactly the sum the ISF holds as debt")
+
+
+func _test_reviews_fire_on_the_real_calendar(t) -> void:
+	var state := _state()
+	var fired: Array[int] = []
+	var last := int(state.foreign.isf["reviews_held"])
+	for _i in range(24):
+		NativeGameScript.next_month(state)
+		var now := int(state.foreign.isf["reviews_held"])
+		if now != last:
+			fired.append(state.month)
+			last = now
+	t.equal(fired.size(), 8, "two years hold eight reviews")
+	t.truth(fired.all(func(m: int) -> bool: return m in [1, 4, 7, 10]), "and each falls in January, April, July or October")
+	t.equal(fired.filter(func(m: int) -> bool: return m == 1).size(), 2, "twice in January")
+
+
+func _test_the_pass_boundary_is_inclusive(t) -> void:
+	var state := _state()
+	var econ := state.country.economy
+	econ.gdp = 1000.0
+	econ.budget.revenue = 0.0
+	econ.budget.expenditure = 1000.0 * OrientationSim.ISF_DEFICIT_TARGET
+	econ.inflation = 0.03
+	t.truth(OrientationSim.isf_passes(state), "a deficit exactly at target passes")
+	econ.budget.expenditure = 1000.0 * OrientationSim.ISF_DEFICIT_TARGET + 0.01
+	t.truth(not OrientationSim.isf_passes(state), "a deficit just above target fails")
+	econ.budget.expenditure = 0.0
+	econ.inflation = OrientationSim.ISF_INFLATION_TARGET
+	t.truth(OrientationSim.isf_passes(state), "inflation exactly at target passes")
+	econ.inflation = OrientationSim.ISF_INFLATION_TARGET + 0.0001
+	t.truth(not OrientationSim.isf_passes(state), "inflation just above target fails")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_reviews_fall_due_each_quarter(t)
@@ -118,4 +165,7 @@ func _initialize() -> void:
 	_test_the_bank_becomes_a_condition(t)
 	_test_renegotiation_trades_capital_for_tighter_terms(t)
 	_test_the_review_is_national_but_the_reply_is_the_governments(t)
+	_test_the_tranche_lasts_its_months_and_delivers_its_cash(t)
+	_test_reviews_fire_on_the_real_calendar(t)
+	_test_the_pass_boundary_is_inclusive(t)
 	quit(t.finish())
