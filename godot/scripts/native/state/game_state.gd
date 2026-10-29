@@ -97,6 +97,7 @@ var event_fire_history: Dictionary = {}
 var event_history: Array[Dictionary] = []
 var world_arcs: Dictionary = {}
 var opposition: OppositionState = OppositionState.new()
+var foreign: ForeignState = ForeignState.new()
 var monthly_news: Array[Dictionary] = []
 var front_page: Dictionary = {}
 var last_election_turn: int = 0
@@ -233,6 +234,7 @@ func to_dict() -> Dictionary:
 		"event_history": event_history.duplicate(true),
 		"world_arcs": world_arcs.duplicate(),
 		"opposition": opposition.to_dict(),
+		"foreign": null if foreign == null else foreign.to_dict(),
 		"monthly_news": monthly_news.duplicate(true),
 		"front_page": front_page.duplicate(true),
 		"last_election_turn": last_election_turn,
@@ -501,6 +503,10 @@ static func from_dict(data: Dictionary) -> GameState:
 	state.opposition = OppositionState.from_dict(data.get("opposition", null))
 	if state.opposition == null:
 		push_error("GameState.from_dict: malformed opposition")
+		return null
+	state.foreign = ForeignState.from_dict(data.get("foreign", null))
+	if state.foreign == null:
+		push_error("GameState.from_dict: malformed foreign ledger")
 		return null
 	if not data.has("rng"):
 		push_error("GameState.from_dict: missing required 'rng' (every writer since format v1 includes it)")

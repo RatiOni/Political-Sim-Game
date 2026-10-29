@@ -53,6 +53,7 @@ static func validate(state: GameState) -> PackedStringArray:
 	if state.campaign_meta.has(PollsSim.INHERITANCE_KEY) and not PollsSim.valid_inheritance(state.campaign_meta[PollsSim.INHERITANCE_KEY], state):
 		errors.append("campaign_meta.inheritance is malformed")
 	_validate_opposition_out_of_government(state, errors)
+	_validate_foreign(state, errors)
 
 	if state.player != null:
 		_validate_player(state, errors)
@@ -691,3 +692,76 @@ static func _validate_opposition_out_of_government(state: GameState, errors: Arr
 	for m in state.ministers:
 		if m.faction_id == state.player.faction_id:
 			errors.append("the opposition leader's party holds the government post %s" % m.portfolio)
+
+
+static func _foreign_unit(v: Variant) -> bool:
+	var x := float(v)
+	return is_finite(x) and x >= 0.0 and x <= 1.0
+
+
+static func _validate_foreign(state: GameState, errors: Array[String]) -> void:
+	var f := state.foreign
+	if f == null:
+		errors.append("foreign ledger is missing")
+		return
+	if not f.seeded:
+		return
+	var powers := ForeignSim.power_ids()
+	for id in f.powers:
+		if not (String(id) in powers):
+			errors.append("unknown foreign power '%s'" % id)
+			continue
+		var row: Variant = f.powers[id]
+		if not (row is Dictionary):
+			errors.append("foreign power '%s' is malformed" % id)
+			continue
+		for field in ["dependence", "commitment", "leverage"]:
+			if not _foreign_unit(row.get(field, 0.0)):
+				errors.append("foreign power '%s' %s out of range" % [id, field])
+	for id in f.gas_share:
+		if not (String(id) in powers):
+			errors.append("unknown foreign power '%s'" % id)
+		elif not _foreign_unit(f.gas_share[id]):
+			errors.append("foreign gas_share out of range for '%s'" % id)
+	var milestones := ForeignSim.milestone_ids()
+	for id in f.reached:
+		if not (String(id) in milestones):
+			errors.append("unknown milestone '%s'" % id)
+		elif int(f.reached[id]) > state.turn:
+			errors.append("milestone '%s' reached in the future" % id)
+	if f.reached.has("union_member"):
+		if not f.reached.has("union_observer"):
+			errors.append("union_member without observer status")
+		for locked in ForeignSim.UNION_LOCKS:
+			if f.reached.has(locked):
+				errors.append("union membership is locked out by '%s'" % locked)
+	_validate_foreign_blocs(state, errors)
+	var isf := f.isf
+	var held := int(isf.get("reviews_held", 0))
+	var passed := int(isf.get("passed", 0))
+	var failed := int(isf.get("failed", 0))
+	var disbursed := float(isf.get("disbursed", 0.0))
+	if held < 0 or passed < 0 or failed < 0 or passed + failed != held \
+			or int(isf.get("renegotiations", 0)) < 0 or not is_finite(disbursed) or disbursed < 0.0 \
+			or not (String(isf.get("last_result", "")) in ["", "passed", "failed"]):
+		errors.append("isf ledger is impossible")
+	if f.western_qualifying_months < 0 or f.union_left_turn < -1 or f.union_left_turn > state.turn:
+		errors.append("foreign counters are impossible")
+
+
+static func _validate_foreign_blocs(state: GameState, errors: Array[String]) -> void:
+	var blocs := ForeignSim.bloc_ids()
+	for bloc_id in state.foreign.members:
+		if not (String(bloc_id) in blocs):
+			errors.append("unknown bloc '%s'" % bloc_id)
+			continue
+		for country_id in state.foreign.members[bloc_id]:
+			var id := String(country_id)
+			if id == state.country.id:
+				errors.append("bloc '%s' lists the player country" % bloc_id)
+			elif state.world_country(id) == null:
+				errors.append("bloc '%s' has unknown member '%s'" % [bloc_id, id])
+	for country_id in state.foreign.members.get("union", []):
+		for other in ForeignSim.UNION_LOCKED_BLOCS:
+			if country_id in state.foreign.members.get(other, []):
+				errors.append("bloc membership is exclusive for '%s'" % country_id)

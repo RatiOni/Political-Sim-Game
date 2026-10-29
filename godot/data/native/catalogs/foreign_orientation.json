@@ -1,0 +1,29 @@
+{
+  "powers": [
+    {"id": "krasova", "name": "Krasova", "kind": "state", "anchor": "krasova", "gas_share": 1.0},
+    {"id": "isf", "name": "International Stabilisation Fund", "kind": "institution", "anchor": "", "gas_share": 0.0},
+    {"id": "concert", "name": "The Concert", "kind": "bloc", "anchor": "solheim", "gas_share": 0.0},
+    {"id": "meridian", "name": "The Meridian Treaty Organisation", "kind": "bloc", "anchor": "solheim", "gas_share": 0.0},
+    {"id": "union", "name": "The Krasovan Economic Union", "kind": "bloc", "anchor": "krasova", "gas_share": 0.0}
+  ],
+  "blocs": [
+    {"id": "concert", "seed_members": ["solheim", "nueva_costa"], "agendas": ["trader", "reformer"], "families": ["democratic"], "requires": "", "excludes": ["union"], "min_stability": 0.45, "min_warmth": 0.2, "leave_stability": 0.3, "leave_warmth": -0.2},
+    {"id": "meridian", "seed_members": ["solheim", "nueva_costa"], "agendas": ["trader", "reformer"], "families": ["democratic"], "requires": "concert", "excludes": ["union"], "min_stability": 0.5, "min_warmth": 0.3, "leave_stability": 0.3, "leave_warmth": -0.1},
+    {"id": "union", "seed_members": ["krasova"], "agendas": ["revanchist", "hegemon"], "families": ["autocratic", "hybrid"], "requires": "", "excludes": ["concert", "meridian"], "min_stability": 0.3, "min_warmth": 0.1, "leave_stability": 0.2, "leave_warmth": -0.3}
+  ],
+  "milestones": [
+    {"id": "isf_programme", "track": "isf", "power": "isf", "name": "ISF stabilisation programme", "commitment": 0.4, "starts_reached": true, "body": "The agreement the Baran Council signed in December 1992. Quarterly reviews judge the deficit, inflation and, in time, the Bank's independence."},
+    {"id": "concert_application", "track": "western", "power": "concert", "name": "Concert association application", "commitment": 0.15, "starts_reached": true, "body": "Ardenia's application to the Concert's association process is lodged. Admission is a decade away."},
+    {"id": "concert_agreement", "track": "western", "power": "concert", "name": "Concert association agreement", "commitment": 0.5, "starts_reached": false, "body": "The agreement binds Ardenia to Concert rules on budgets and markets, and opens those markets in return."},
+    {"id": "meridian_partnership", "track": "western", "power": "meridian", "name": "Meridian partnership", "commitment": 0.3, "starts_reached": false, "body": "Officers trained, exercises observed, no promises made."},
+    {"id": "meridian_guarantee", "track": "western", "power": "meridian", "name": "Meridian security guarantee", "commitment": 0.7, "starts_reached": false, "body": "An attack on Ardenia is now an attack on the alliance."},
+    {"id": "union_observer", "track": "union", "power": "union", "name": "Krasovan Economic Union observer status", "commitment": 0.3, "starts_reached": false, "body": "Ardenia hears the Union's plans and is asked for nothing yet."},
+    {"id": "union_member", "track": "union", "power": "union", "name": "Krasovan Economic Union membership", "commitment": 0.8, "starts_reached": false, "body": "Open markets to the east, rescheduled debts, and a common tariff set in Krasova."}
+  ],
+  "lines": {
+    "isf_pass": "The ISF mission signs off the quarterly review, and the next tranche is released.",
+    "isf_fail": "The ISF mission refuses to sign off the quarterly review. The tranche is suspended until terms are agreed.",
+    "bloc_join": "{country} joins {bloc}.",
+    "bloc_leave": "{country} leaves {bloc}."
+  }
+}
