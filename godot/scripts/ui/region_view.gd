@@ -133,8 +133,11 @@ func _draw() -> void:
 
 	# Chunky pixels on purpose, and a bounded canvas: at scale 1 the scene
 	# was ~1460 cells wide and the bake cost more than the picture is worth.
+	# Scale has to satisfy both the height and the width cap, or a wide
+	# panel hits MAX_COLS and the scene sits letterboxed inside it.
 	_scale = clampi(int(size.y / 150.0), 2, 4)
-	_virt_h = maxi(90, int(size.y / _scale))
+	_scale = maxi(_scale, int(ceil(size.x / float(MAX_COLS))))
+	_virt_h = maxi(80, int(size.y / _scale))
 	_cols = clampi(int(size.x / _scale), MIN_W, MAX_COLS)
 	_horizon = int(_virt_h * HORIZON_F)
 	_ground = int(_virt_h * 0.74)
