@@ -206,11 +206,37 @@ func _test_the_hostile_log_is_bounded_valid_and_saved(t) -> void:
 	t.equal(StateValidator.validate(state).size(), 0, "a real log is valid")
 	var loaded := GameState.from_dict(state.to_dict())
 	t.equal(loaded.foreign.hostile_log, state.foreign.hostile_log, "and survives a save")
-	loaded.foreign.hostile_log.append({"turn": loaded.turn + 5, "actor": "atlantis", "relation": 0.0, "economy": 0.0, "stability": 0.0})
-	t.truth(StateValidator.validate(loaded).size() > 0, "an invented or future entry is rejected")
+	var invented := GameState.from_dict(state.to_dict())
+	invented.foreign.hostile_log.pop_front()
+	invented.foreign.hostile_log.append({"turn": invented.turn, "actor": "atlantis", "relation": 0.0, "economy": 0.0, "stability": 0.0})
+	t.truth(StateValidator.validate(invented).size() > 0, "an invented actor is rejected")
+	var future := GameState.from_dict(state.to_dict())
+	future.foreign.hostile_log.pop_front()
+	future.foreign.hostile_log.append({"turn": future.turn + 5, "actor": "krasova", "relation": 0.0, "economy": 0.0, "stability": 0.0})
+	t.truth(StateValidator.validate(future).size() > 0, "a future-dated entry is rejected")
 	var bad := state.to_dict()
 	bad["foreign"]["hostile_log"] = "nonsense"
 	t.truth(ForeignState.from_dict(bad["foreign"]) == null, "a malformed log does not load")
+
+
+static func _pressed_month(gas: float) -> float:
+	var state := _isolated(31)
+	var krasova := DiplomacySim.world_country(state, "krasova")
+	state.foreign.powers["krasova"] = {"dependence": 0.0, "commitment": 0.0, "leverage": 0.0}
+	krasova.plan = {"objective": "undermine", "target": "ardenia", "matures_turn": 0, "last_acted_turn": -1, "foreshadowed": true}
+	state.foreign.gas_share["krasova"] = gas
+	NativeGameScript.close_month(state)
+	for entry in state.foreign.hostile_log:
+		if String(entry["actor"]) == "krasova" and int(entry["turn"]) == state.turn:
+			return -float(entry["relation"])
+	return 0.0
+
+
+func _test_the_spine_is_read_in_the_month_it_changes(t) -> void:
+	var calm := _pressed_month(0.0)
+	var dependent := _pressed_month(1.0)
+	t.truth(calm > 0.0, "Krasova moves against Ardenia in the closing month (%.3f)" % calm)
+	t.truth(dependent > calm, "that move already uses the leverage of the month it lands in (%.3f > %.3f)" % [dependent, calm])
 
 
 func _initialize() -> void:
@@ -228,4 +254,5 @@ func _initialize() -> void:
 	_test_warmth_never_raises_coercion(t)
 	_test_a_landed_move_logs_its_real_effect(t)
 	_test_the_hostile_log_is_bounded_valid_and_saved(t)
+	_test_the_spine_is_read_in_the_month_it_changes(t)
 	quit(t.finish())
