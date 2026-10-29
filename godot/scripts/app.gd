@@ -974,24 +974,72 @@ func _refresh_orientation() -> void:
 			held.text = "IN PLACE / %s" % str(step.get("label", ""))
 			box.add_child(held)
 			continue
-		var button := Button.new()
-		button.custom_minimum_size = Vector2(0, 44)
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var cost := float(step.get("cost", 0.0))
-		button.text = str(step.get("label", "")) + ("   · %.0f PC" % cost if cost > 0.0 else "")
-		button.clip_text = true
-		button.disabled = not step.get("eligible", false)
-		button.tooltip_text = str(step.get("disabled_reason", ""))
-		button.pressed.connect(_take_orientation_step.bind(str(step.get("verb", ""))))
-		box.add_child(button)
-		var reason := str(step.get("disabled_reason", ""))
-		if reason != "":
-			var why := Label.new()
-			why.theme_type_variation = &"Muted"
-			why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			why.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			why.text = reason
-			box.add_child(why)
+		_add_step_button(box, step, _take_orientation_step)
+
+
+func _add_step_button(box: VBoxContainer, step: Dictionary, on_press: Callable) -> void:
+	var button := Button.new()
+	button.custom_minimum_size = Vector2(0, 44)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var cost := float(step.get("cost", 0.0))
+	button.text = str(step.get("label", "")) + ("   · %.0f PC" % cost if cost > 0.0 else "")
+	button.clip_text = true
+	button.disabled = not step.get("eligible", false)
+	button.tooltip_text = str(step.get("disabled_reason", ""))
+	button.pressed.connect(on_press.bind(str(step.get("verb", ""))))
+	box.add_child(button)
+	var reason := str(step.get("disabled_reason", ""))
+	if reason != "":
+		var why := Label.new()
+		why.theme_type_variation = &"Muted"
+		why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		why.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		why.text = reason
+		box.add_child(why)
+
+
+func _refresh_energy() -> void:
+	var energy: Dictionary = snapshot.get("foreign", {}).get("energy", {})
+	var panel = %DiplomacyPanel
+	panel.find_child("EnergyContract").text = _energy_line(energy)
+	var box: VBoxContainer = panel.find_child("EnergySteps")
+	for child in box.get_children():
+		box.remove_child(child)
+		child.queue_free()
+	for step in energy.get("steps", []):
+		_add_step_button(box, step, _take_energy_step)
+
+
+static func _energy_line(energy: Dictionary) -> String:
+	if not energy.get("active", false):
+		return "Ardenia has no gas contract to manage."
+	var lines: Array[String] = [
+		"%s / price %.1f (reference %.1f)%s / renewal in %d months" % [
+			str(energy.get("supplier", "")).to_upper(), float(energy.get("price", 0.0)),
+			float(energy.get("reference_price", 0.0)), " / Union cap" if energy.get("union_capped", false) else "",
+			int(energy.get("months_to_renewal", 0))],
+		"Arrears %.0f / storage %.2f of %.2f / second line: %s" % [
+			float(energy.get("arrears", 0.0)), float(energy.get("storage", 0.0)),
+			float(energy.get("storage_capacity", 0.0)), str(energy.get("second_line", "none"))],
+	]
+	if energy.get("threat", false):
+		lines.append("VALVE THREATENED / deliveries fall next month unless the arrears come down")
+	if float(energy.get("cut", 0.0)) > 0.0:
+		lines.append("CUT / deliveries down %d%%" % roundi(float(energy["cut"]) * 100.0))
+	lines.append("Supply this month %d%% of demand" % roundi((1.0 - float(energy.get("shortfall", 0.0))) * 100.0))
+	return "\n".join(lines)
+
+
+func _take_energy_step(verb: String) -> void:
+	if _game == null:
+		return
+	var result: Dictionary = _game.energy_act(verb)
+	_flush_snapshot()
+	_sfx_result(result)
+	if not result.get("ok", false):
+		_set_diplomacy_status("REFUSED / %s" % result.get("error", "Unknown error"))
+		return
+	_set_diplomacy_status(str(result.get("message", "")))
 
 
 static func _isf_line(isf: Dictionary, foreign: Dictionary) -> String:

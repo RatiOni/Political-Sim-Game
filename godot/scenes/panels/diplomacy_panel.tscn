@@ -75,6 +75,26 @@ theme_override_constants/separation = 6
 [node name="OrientationRule" type="HSeparator" parent="Content/DiplomacyScroll/DiplomacyBody"]
 layout_mode = 2
 
+[node name="EnergyHeading" type="Label" parent="Content/DiplomacyScroll/DiplomacyBody"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Section"
+text = "ENERGY"
+
+[node name="EnergyContract" type="Label" parent="Content/DiplomacyScroll/DiplomacyBody"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = ""
+autowrap_mode = 3
+
+[node name="EnergySteps" type="VBoxContainer" parent="Content/DiplomacyScroll/DiplomacyBody"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="EnergyRule" type="HSeparator" parent="Content/DiplomacyScroll/DiplomacyBody"]
+layout_mode = 2
+
 [node name="CountryStanding" type="Label" parent="Content/DiplomacyScroll/DiplomacyBody"]
 layout_mode = 2
 size_flags_horizontal = 3

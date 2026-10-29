@@ -265,7 +265,7 @@ static func memberships(state: GameState) -> Dictionary:
 static func read_model(state: GameState) -> Dictionary:
 	if state == null or state.foreign == null or not state.foreign.seeded:
 		return {"powers": [], "steps": [], "isf": {}, "western_qualifying_months": 0,
-			"qualifying_months_needed": QUALIFYING_MONTHS_FOR_AGREEMENT, "map": {"memberships": {}}}
+			"qualifying_months_needed": QUALIFYING_MONTHS_FOR_AGREEMENT, "map": {"memberships": {}, "gas_supply": {}}, "energy": {"active": false, "steps": []}}
 	var powers: Array = []
 	for id in ForeignSim.power_ids():
 		var row: Dictionary = state.foreign.powers.get(id, {})
@@ -297,5 +297,6 @@ static func read_model(state: GameState) -> Dictionary:
 		},
 		"western_qualifying_months": state.foreign.western_qualifying_months,
 		"qualifying_months_needed": QUALIFYING_MONTHS_FOR_AGREEMENT,
-		"map": {"memberships": memberships(state)},
+		"map": {"memberships": memberships(state), "gas_supply": GasSim.supply_by_region(state)},
+		"energy": EnergyActions.read_model(state),
 	}
