@@ -91,6 +91,26 @@ verification for that task's `Playable result` (see `PLAN.md`) succeeds, and
 an independent review has no open Critical or Important finding. Only
 complete work may be consumed by a later task or phase.
 
+## The owner plays a packaged build, not the source
+
+`D:\Political Sim Game\Play\Ardenia.exe` is an exported Windows build with
+the scenes and scripts baked in at export time. **Editing the source does not
+change what the owner is playing.** A fix is not delivered until the build is
+re-exported:
+
+```
+"D:\AI Stuff\Godot\Godot_v4.7.2-stable_win64_console.exe" --headless --path <worktree>/godot --import
+"D:\AI Stuff\Godot\Godot_v4.7.2-stable_win64_console.exe" --headless --path <worktree>/godot --export-release "Windows Desktop" "D:\Political Sim Game\Play\Ardenia.exe"
+```
+
+`Play/Update Ardenia.cmd` does exactly this and then launches the game. This
+has already cost one round trip: a header-layout fix was committed at 13:12
+and reported as "not sure it did anything" because the build in `Play/` was
+from 12:48. Check the build's timestamp against the fix before concluding a
+fix did not work, and re-export when the owner is going to play. Note the
+export packages the worktree as it stands, including any other worker's
+uncommitted changes — boot the result once before handing it over.
+
 ## UI gotcha: a label must never set the window's minimum size
 
 A Godot `Label` reports its full text width as its minimum size and
