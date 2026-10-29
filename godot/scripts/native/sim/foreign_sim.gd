@@ -11,6 +11,8 @@ const HEATING_MONTHS := [10, 11, 12, 1, 2, 3]
 const WINTER_GAS_BONUS := 0.25
 const TREATY_COMMITMENT := {"trade": 0.15, "defense": 0.3}
 const BLOC_COMMITMENT_TO_ANCHOR := 0.5
+const UNION_TARIFF_SHARE := 0.6
+const RESOLVED_VETRENKA := ["settled", "retaken", "partitioned"]
 
 
 static func catalog() -> Dictionary:
@@ -172,3 +174,15 @@ static func monthly(state: GameState) -> Array[String]:
 	var notes := OrientationSim.monthly(state)
 	update_spine(state)
 	return notes
+
+
+static func trade_ceiling_share(state: GameState, country_id: String) -> float:
+	if state.foreign == null or not state.foreign.reached.has("union_member"):
+		return 1.0
+	return UNION_TARIFF_SHARE if country_id in state.foreign.members.get("concert", []) else 1.0
+
+
+static func vetrenka_resolved(state: GameState) -> bool:
+	if not state.regions.has("vetrenka"):
+		return true
+	return String(state.campaign_meta.get("vetrenka_status", "")) in RESOLVED_VETRENKA

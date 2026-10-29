@@ -55,6 +55,9 @@ static func reason_for(state: GameState, verb: String, country_id: String, treat
 	if other == null or p.is_empty():
 		return "No such country."
 	var rel: Country.BilateralRelation = p[0]
+	var consent := OrientationActions.consent_reason(state, verb, country_id)
+	if consent != "":
+		return consent
 	match verb:
 		"trade_agreement":
 			if DiplomacySim.has_treaty(state, country_id, "trade"):

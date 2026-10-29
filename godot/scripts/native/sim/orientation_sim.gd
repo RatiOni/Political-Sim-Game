@@ -16,11 +16,15 @@ const ISF_CONFIDENCE_GAIN := 0.001
 const ISF_CONFIDENCE_LOSS := -0.002
 const ISF_CONFIDENCE_GAIN_MONTHS := 3
 const ISF_CONFIDENCE_LOSS_MONTHS := 6
+const CONCERT_DEFICIT_LIMIT := 0.04
+const CONCERT_INFLATION_LIMIT := 0.08
+const QUALIFYING_SETBACK := 2
 
 
 static func monthly(state: GameState) -> Array[String]:
 	var notes: Array[String] = []
 	_isf_review(state, notes)
+	_western_discipline(state)
 	return notes
 
 
@@ -102,3 +106,14 @@ static func _isf_review(state: GameState, notes: Array[String]) -> void:
 		state.modifiers.append(timed_modifier("isf_confidence_%d" % state.turn, "ISF review failed",
 			"gdp_growth", ISF_CONFIDENCE_LOSS, ISF_CONFIDENCE_LOSS_MONTHS, true))
 		notes.append(line("isf_fail"))
+
+
+static func _western_discipline(state: GameState) -> void:
+	var f := state.foreign
+	if not f.reached.has("concert_application") or f.reached.has("concert_agreement"):
+		return
+	var econ := state.country.economy
+	if econ.deficit_share_of_gdp() <= CONCERT_DEFICIT_LIMIT and econ.inflation <= CONCERT_INFLATION_LIMIT:
+		f.western_qualifying_months += 1
+	else:
+		f.western_qualifying_months = maxi(0, f.western_qualifying_months - QUALIFYING_SETBACK)

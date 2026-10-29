@@ -107,6 +107,7 @@ static func monthly(state: GameState) -> void:
 				other.economy.gdp *= (1.0 - SANCTION_OUTPUT_LOSS)
 		elif not has_treaty(state, other.id, "trade"):
 			ceiling *= NO_PACT_CEILING_SHARE
+		ceiling *= ForeignSim.trade_ceiling_share(state, other.id)
 		set_trade(state, other.id, mine.trade_volume + (ceiling - mine.trade_volume) * TRADE_APPROACH)
 	var loans := state.country.economy.loans
 	for loan in loans.duplicate():
