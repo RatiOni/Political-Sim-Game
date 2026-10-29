@@ -80,6 +80,7 @@ static func _journey(seed: int, strategy: String, months: int) -> Dictionary:
 	var approval := 0.0
 	var lowest_stability := 1.0
 	var krasova_warmth := 0.0
+	var governed := 0
 	var concert_trade := 0.0
 	var invalid := 0
 	var unbounded := 0
@@ -99,12 +100,14 @@ static func _journey(seed: int, strategy: String, months: int) -> Dictionary:
 		worst_inflation = maxf(worst_inflation, state.country.economy.inflation)
 		approval += state.player.approval / float(months)
 		lowest_stability = minf(lowest_stability, state.stability_value)
-		krasova_warmth += _score(state, "krasova") / float(months)
+		if state.player.in_government:
+			krasova_warmth += _score(state, "krasova")
+			governed += 1
 		concert_trade += _bloc_trade(state, "concert") / float(months)
 		unbounded += _unbounded(state)
 		if m % 12 == 11 and not StateValidator.validate(state).is_empty():
 			invalid += 1
-	return {"approval": approval, "lowest_stability": lowest_stability, "krasova_warmth": krasova_warmth,
+	return {"approval": approval, "lowest_stability": lowest_stability, "krasova_warmth": krasova_warmth / maxf(1.0, governed),
 		"concert_trade": concert_trade, "invalid": invalid, "unbounded": unbounded,
 		"gdp": state.country.economy.gdp, "reached": state.foreign.reached.keys(),
 		"isf": state.foreign.isf.duplicate(), "signature": _signature(state),

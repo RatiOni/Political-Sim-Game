@@ -484,13 +484,21 @@ from what happened, never from a roll.
   ruling party gains or loses with approval (×0.025), household confidence
   (×0.02) and misery — inflation plus unemployment above their structural
   levels (×0.06) — read against what an ordinary elected government
-  measures (`ORDINARY_GOVERNMENT`: approval 0.45, confidence 0.42, misery
-  −0.009, stability 0.496, the mean over every month governed by a party
+  measures (`ORDINARY_TRAJECTORY`, two-year rows of approval, confidence,
+  misery and stability, the mean over every month governed by a party
   that won power at an election, player or AI, on twelve calendar-true
   seeds in both starting roles). A government is not blamed for the
   country it inherits: the expected figures start at what it took over and
   close on the ordinary case over `INHERITANCE_FADE_MONTHS` (72). Coalition
   partners take half. Turnout reads the same expected figures.
+- **The Reckoning's party is favoured.** By the owner's ruling a steady,
+  competent player government is returned about 70% of the time
+  (`STEADY_RETURN_CEILING` 0.72): the Liberal Democrats carry an authored
+  1993 base lead, and once the reference matches what ordinary governments
+  achieve only the ruling cost works against it. The reference was
+  re-measured after the fiscal fix and the gas bill (same procedure, 9:1
+  blend). AI parties that win power are returned 12 of 27, the 1997 steady
+  government 6 of 12 and the opposition start's opening government 8 of 12.
 - **Ruling costs.** The ruling party also pays about 2.2 points of support a
   term (`RULING_COST_PER_TERM`), multiplied up by trouble in the last year:
   each defeated government bill (`DEFEAT_WEIGHT` 1), corruption scandal

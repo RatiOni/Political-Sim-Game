@@ -5,19 +5,20 @@ extends RefCounted
 const MONTHLY_CAP := 0.01
 const SUPPORT_FLOOR := 0.01
 const ORDINARY_TRAJECTORY := [
-	{"approval": 0.480, "confidence": 0.503, "misery": 0.0102, "stability": 0.533},
-	{"approval": 0.461, "confidence": 0.511, "misery": 0.0070, "stability": 0.498},
-	{"approval": 0.452, "confidence": 0.511, "misery": 0.0037, "stability": 0.491},
-	{"approval": 0.456, "confidence": 0.517, "misery": 0.0022, "stability": 0.513},
-	{"approval": 0.452, "confidence": 0.523, "misery": 0.0023, "stability": 0.521},
-	{"approval": 0.469, "confidence": 0.530, "misery": 0.0008, "stability": 0.529},
-	{"approval": 0.474, "confidence": 0.532, "misery": -0.0016, "stability": 0.530},
-	{"approval": 0.472, "confidence": 0.534, "misery": -0.0037, "stability": 0.527},
-	{"approval": 0.465, "confidence": 0.534, "misery": -0.0051, "stability": 0.532},
-	{"approval": 0.475, "confidence": 0.536, "misery": -0.0059, "stability": 0.537},
-	{"approval": 0.471, "confidence": 0.536, "misery": -0.0062, "stability": 0.535},
+	{"approval": 0.478, "confidence": 0.501, "misery": 0.0102, "stability": 0.533},
+	{"approval": 0.454, "confidence": 0.507, "misery": 0.0075, "stability": 0.496},
+	{"approval": 0.441, "confidence": 0.507, "misery": 0.0037, "stability": 0.489},
+	{"approval": 0.443, "confidence": 0.512, "misery": 0.0014, "stability": 0.507},
+	{"approval": 0.447, "confidence": 0.516, "misery": -0.0008, "stability": 0.514},
+	{"approval": 0.459, "confidence": 0.517, "misery": -0.0028, "stability": 0.520},
+	{"approval": 0.458, "confidence": 0.521, "misery": -0.0043, "stability": 0.521},
+	{"approval": 0.459, "confidence": 0.521, "misery": -0.0053, "stability": 0.522},
+	{"approval": 0.451, "confidence": 0.523, "misery": -0.0060, "stability": 0.523},
+	{"approval": 0.462, "confidence": 0.524, "misery": -0.0066, "stability": 0.525},
+	{"approval": 0.453, "confidence": 0.525, "misery": -0.0068, "stability": 0.523},
 ]
 const TRAJECTORY_PERIOD_MONTHS := 24
+const STEADY_RETURN_CEILING := 0.72
 const ORDINARY_OPPOSITION_LEADER_APPROVAL := 0.43
 const APPROVAL_WEIGHT := 0.025
 const CONFIDENCE_WEIGHT := 0.02
@@ -97,7 +98,7 @@ static func record(state: GameState) -> float:
 
 
 const INHERITANCE_KEY := "inheritance"
-const INHERITANCE_FADE_MONTHS := 24.0
+const INHERITANCE_FADE_MONTHS := 72.0
 const MEASURES := ["approval", "confidence", "misery", "stability"]
 
 

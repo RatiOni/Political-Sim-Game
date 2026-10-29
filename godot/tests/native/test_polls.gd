@@ -318,16 +318,12 @@ func _test_steady_governments_are_judged_like_ordinary_ones(t) -> void:
 	var player_held: int = governing["player_held"] + opposing["player_held"]
 	var player_kept: int = governing["player_kept"] + opposing["player_kept"]
 	var player_rate := float(player_kept) / maxf(1.0, player_held)
-	t.truth(player_rate >= 0.4 and player_rate <= 0.65, "a steady player government is returned about half the time (%d of %d)" % [player_kept, player_held])
+	t.truth(player_rate >= 0.4 and player_rate <= PollsSim.STEADY_RETURN_CEILING, "a steady player government is usually returned (%d of %d)" % [player_kept, player_held])
 	t.truth(rate(opposing, "player") >= 0.25, "a player who wins office from opposition is returned often enough (%d of %d)" % [opposing["player_kept"], opposing["player_held"]])
 	var won_held: int = governing["ai_won_held"] + opposing["ai_won_held"]
 	var won_kept: int = governing["ai_won_kept"] + opposing["ai_won_kept"]
 	var won_rate := float(won_kept) / maxf(1.0, won_held)
-	if won_rate >= 0.3 and won_rate <= 0.7:
-		t.truth(true, "an AI party that won power is returned often enough (%d of %d)" % [won_kept, won_held])
-	else:
-		t.pending("an AI party that won power is returned often enough (%d of %d)" % [won_kept, won_held],
-			"AI that won power: 0/28 after energy; AI reference removed in phase-4 rereview, needs principled redesign")
+	t.truth(won_rate >= 0.3 and won_rate <= 0.7, "an AI party that won power is returned often enough (%d of %d)" % [won_kept, won_held])
 	var first_held: int = governing["first_held"] + opposing["first_held"]
 	var first_kept: int = governing["first_kept"] + opposing["first_kept"]
 	var first_rate := float(first_kept) / maxf(1.0, first_held)
@@ -345,17 +341,9 @@ func _test_the_first_term_is_hard_but_winnable(t) -> void:
 	var steady_rate := float(steady["kept"]) / float(steady["held"])
 	var answered_rate := float(answered["kept"]) / float(answered["held"])
 	var ai_rate := float(opening_ai["kept"]) / float(opening_ai["held"])
-	if steady_rate >= 0.35 and steady_rate <= 0.5:
-		t.truth(true, "a steady government wins the 1997 election sometimes (%d of %d)" % [steady["kept"], steady["held"]])
-	else:
-		t.pending("a steady government wins the 1997 election sometimes (%d of %d)" % [steady["kept"], steady["held"]],
-			"1997 steady: 3/12 after energy; recalibrate with election follow-up")
+	t.truth(steady_rate >= 0.35 and steady_rate <= 0.5, "a steady government wins the 1997 election sometimes (%d of %d)" % [steady["kept"], steady["held"]])
 	t.truth(answered_rate - steady_rate >= 0.15, "and clearly more often once it deals with the schemer (%d of %d)" % [answered["kept"], answered["held"]])
-	if ai_rate >= 0.3 and ai_rate <= 0.7:
-		t.truth(true, "the opposition start's opening government faces a fair first election (%d of %d)" % [opening_ai["kept"], opening_ai["held"]])
-	else:
-		t.pending("the opposition start's opening government faces a fair first election (%d of %d)" % [opening_ai["kept"], opening_ai["held"]],
-			"opening government: 3/12 after energy; recalibrate with election follow-up")
+	t.truth(ai_rate >= 0.3 and ai_rate <= 0.7, "the opposition start's opening government faces a fair first election (%d of %d)" % [opening_ai["kept"], opening_ai["held"]])
 
 
 func _initialize() -> void:
