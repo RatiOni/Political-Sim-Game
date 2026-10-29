@@ -409,20 +409,36 @@ from what happened, never from a roll.
   through the count's national swing while keeping their own character, and
   the monthly report carries a poll line.
 
-Calendar-true, over twenty years on twelve seeds (`test_polls`,
-`test_election_calibration`):
+Households no longer decay under a steady government: income and price
+indices rebase together once either passes 2.0 (they used to hit fixed caps
+after about fifteen years of inflation), and incomes recover lost purchasing
+power at `REAL_INCOME_CATCH_UP` (a year). The ordinary case is now a measured
+path, `ORDINARY_TRAJECTORY` (two-year periods over twenty years, every
+governing month on twelve seeds from both starts, with an ordinary
+legislative programme and neutral budgets), because misery genuinely falls
+over a campaign. The opening government is measured against that path from
+its own 1993 figures without fading, and stability now enters the record
+(`STABILITY_WEIGHT` 0.03). Sweep: fade 12–240 months and approval/confidence
+weights 0.018–0.035; chosen 24 months and 0.025/0.02, the only setting that
+held both the steady and AI-won bands. Base realignment is 0.2.
+
+Calendar-true over twelve seeds, with every player and AI government running
+an ordinary programme:
 
 | Government | Returned |
 |---|---|
-| Steady player | 16 of 35 (0.46) |
-| Strong player (able, loyal cabinet) | 39 of 50 (0.78) |
-| Austerity player | 0 of 35 |
+| Steady player | 32 of 64 (0.50) |
+| Strong player | 34 of 48 (0.71) |
+| Austerity player | 0 of 34 |
 | No-budget player | 0 of 15 |
-| AI party that won power | 15 of 37 (0.41) |
-| Opening AI government | 24 of 36 (0.67) |
+| AI party that won power | 26 of 44 (0.59) |
+| Player who won from opposition | 23 of 36 (0.64) |
+| Opening government | 0 of 24 (pending) |
 
-Governments that fell averaged lower approval than those returned, and six
-seeds write four different histories under the same steady policy.
+The opening government still loses its first election: in opposition starts
+it is the smaller party against an eight-point Liberal Democrat base, and in
+government starts the authored cabinet carries the schemer, whose cabinet
+dysfunction a passive test government never answers.
 
 **AI governments govern.** Their budget passes through the same division as
 the player's, with the coalition whipped; a defeated plan leaves the state on

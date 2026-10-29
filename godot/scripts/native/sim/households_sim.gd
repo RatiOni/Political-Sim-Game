@@ -70,6 +70,8 @@ static func _hardship_target(region: RegionState, h: HouseholdGroupState, defini
 		+ region.pressure * 0.15, 0.0, 1.0)
 
 
+const REAL_INCOME_CATCH_UP := 1.0
+const PRICE_REBASE_LEVEL := 2.0
 const ENVELOPE_RATIO_MIN := 0.10
 const ENVELOPE_RATIO_MAX := 1.50
 
@@ -137,7 +139,12 @@ static func simulate(state: GameState) -> void:
 		var nominal_rate := econ.inflation * indexation + growth * float(definition["growth_exposure"])
 		var excess_unemployment := maxf(0.0, region.unemployment - 0.08)
 		nominal_rate -= excess_unemployment * float(definition["job_sensitivity"]) * 0.12
-		h.nominal_income_index = clampf(h.nominal_income_index * (1.0 + nominal_rate / 12.0), 0.45, 2.50)
+		nominal_rate += (1.0 - h.real_income_index) * REAL_INCOME_CATCH_UP
+		h.nominal_income_index *= 1.0 + nominal_rate / 12.0
+		if h.living_cost_index > PRICE_REBASE_LEVEL or h.nominal_income_index > PRICE_REBASE_LEVEL:
+			h.nominal_income_index /= h.living_cost_index
+			h.living_cost_index = 1.0
+		h.nominal_income_index = clampf(h.nominal_income_index, 0.45, 2.50)
 		h.living_cost_index = clampf(h.living_cost_index, 0.65, 3.50)
 		h.real_income_index = clampf(h.nominal_income_index / h.living_cost_index, 0.35, 2.00)
 		var employment_target := 0.42 + welfare * 0.38 if h.group_id == "pensioners" else (

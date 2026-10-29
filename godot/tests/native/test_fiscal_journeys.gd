@@ -194,6 +194,22 @@ func _test_october_proposals_keep_a_long_government_funded(t) -> void:
 	t.truth(emergency <= 3, "a government that proposes each October stays funded for twenty years (%d emergency months)" % emergency)
 
 
+func _test_steady_households_hold_their_confidence(t) -> void:
+	for seed in [919191, 31]:
+		var state := _state("government", seed)
+		var first := 0.0
+		var last := 0.0
+		for m in range(240):
+			steady_budget(state)
+			NativeGameScript.next_month(state)
+			var c := HouseholdsSim.national_confidence(state)
+			if m >= 12 and m < 48:
+				first += c / 36.0
+			if m >= 204:
+				last += c / 36.0
+		t.truth(absf(last - first) <= 0.03, "seed %d: steady government keeps household confidence flat over twenty years (%.3f to %.3f)" % [seed, first, last])
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_an_ai_government_ends_an_inherited_emergency_at_once(t)
@@ -205,4 +221,5 @@ func _initialize() -> void:
 	_test_a_new_government_inherits_the_old_spending(t)
 	_test_inherited_laws_are_not_the_players_overhead(t)
 	_test_october_proposals_keep_a_long_government_funded(t)
+	_test_steady_households_hold_their_confidence(t)
 	quit(t.finish())

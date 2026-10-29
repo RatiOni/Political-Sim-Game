@@ -280,7 +280,7 @@ static func _build_plan(state: GameState, adjustments: Dictionary) -> Dictionary
 	plan.source = "player"
 	plan.proposed_by = state.player.faction_id if state.player != null else ""
 	plan.forecast_revenue = state.country.economy.budget.revenue
-	plan.economy_basis = state.country.economy.structural_revenue
+	plan.economy_basis = state.active_budget.economy_basis if state.active_budget != null and state.active_budget.economy_basis > 0.0 else state.country.economy.structural_revenue
 	for item in catalog["envelopes"]:
 		var id := String(item["id"])
 		var change := float(adjustments.get(id, 0.0))

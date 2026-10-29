@@ -16,7 +16,7 @@ const LEADER_STANDING := 0.3
 const PLATFORM_WEIGHT := 1.5
 const GOVERNMENT_FATIGUE := 0.0
 const FATIGUE_TERM_CAP := 3
-const BASE_REALIGNMENT := 0.25
+const BASE_REALIGNMENT := 0.2
 const APPOINTMENT_SHORTLIST := 3
 
 const CONTROL_ACCESS := {"state": 1.0, "autonomous": 0.9, "limited": 0.55, "separatist": 0.0}
@@ -36,8 +36,8 @@ static func monthly(state: GameState) -> Array[String]:
 
 static func government_performance(state: GameState) -> float:
 	var ordinary := PollsSim.ordinary_government(state)
-	return (HouseholdsSim.national_confidence(state) - float(ordinary["confidence"])) \
-		+ (state.stability_value - float(ordinary["stability"])) * STABILITY_IN_JUDGEMENT
+	return PollsSim.record_scale * ((HouseholdsSim.national_confidence(state) - float(ordinary["confidence"])) \
+		+ (state.stability_value - float(ordinary["stability"])) * STABILITY_IN_JUDGEMENT)
 
 
 static func enthusiasm(state: GameState, f: Faction) -> float:
@@ -61,7 +61,7 @@ static func terms_in_office(state: GameState) -> int:
 
 
 static func ordinary_leader_approval(state: GameState) -> float:
-	return float(PollsSim.ORDINARY_GOVERNMENT["approval"]) if state.player.in_government else PollsSim.ORDINARY_OPPOSITION_LEADER_APPROVAL
+	return float(PollsSim.ordinary_at(state.turn)["approval"]) if state.player.in_government else PollsSim.ORDINARY_OPPOSITION_LEADER_APPROVAL
 
 
 static func access(region: RegionState) -> float:

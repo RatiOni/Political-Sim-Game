@@ -124,9 +124,6 @@ static func government_ai_budget(state: GameState) -> AnnualBudget:
 		changes["health_and_welfare"] = 0.04
 		changes["industry_and_jobs"] = 0.03
 		changes["national_defense"] = -0.03 if social > -0.4 else 0.0
-	for key in PRAGMATIC_NEEDS:
-		if _need_pressing(state, key):
-			changes[PRAGMATIC_NEEDS[key]] = minf(AI_TILT_LIMIT * 0.8, float(changes.get(PRAGMATIC_NEEDS[key], 0.0)) + PRAGMATIC_TILT)
 
 	var reference := _reference_allocations(state)
 	var current_total := 0.0
@@ -159,22 +156,6 @@ static func government_ai_budget(state: GameState) -> AnnualBudget:
 	b.votes_for = votes_for
 	b.votes_against = votes_against
 	return b
-
-
-const PRAGMATIC_TILT := 0.04
-const PRAGMATIC_NEEDS := {"hardship": "health_and_welfare", "joblessness": "industry_and_jobs"}
-const HARDSHIP_PRESSING := 0.45
-const JOBLESSNESS_PRESSING := 0.01
-
-
-static func _need_pressing(state: GameState, need: String) -> bool:
-	match need:
-		"hardship":
-			return HouseholdsSim.national_confidence(state) < HARDSHIP_PRESSING
-		"joblessness":
-			var econ := state.country.economy
-			return econ.unemployment - econ.natural_unemployment > JOBLESSNESS_PRESSING
-	return false
 
 
 const AI_COALITION_WHIP := 0.16
