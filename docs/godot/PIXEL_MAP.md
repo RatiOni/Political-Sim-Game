@@ -72,9 +72,30 @@ earlier map read as a generated blob.
   frequency on purpose — high-frequency noise averages out along a Dijkstra
   path and leaves the line straight.
 - **`_crook`** then displaces the coarse ownership map by a domain warp, which
-  adds the small jogs a real line has, and two majority passes remove anything
-  it strands, so no boundary speckles at tile size. `_absorb_fragments`
-  returns any islet the coast cut loose to the sea.
+  adds the small jogs a real line has, and majority passes remove anything it
+  strands, so no boundary speckles at tile size. `_absorb_fragments` returns
+  any islet the coast cut loose to the sea.
+- **Nothing finer than a tile may be authored into a border**, because the
+  border is drawn on the tile grid and anything smaller can only alias into
+  raster noise — one-cell zigzags, jaggies and notches that read as a bad
+  scan rather than a frontier. Three things are kept above that floor:
+  `MASK_WARP_FREQUENCY` (the land mask's domain warp — two tiles of amplitude,
+  so a wavelength near the tile size serrates the whole frontier),
+  `CROOK_FREQUENCY` (a jog every twenty tiles is a jog; every five is jitter),
+  and the fine `_fold`/`sin` terms in `northern_edge`, `southern_edge` and
+  `coastline`. The Gaussian features — the passes, the lost valley, the
+  headland, the Orvena bay, the Kesla estuary — are all far above the floor
+  and are untouched by any of this.
+- **`_majority` is the de-staircase**, and its radius is set in tiles, not in
+  coarse cells: a coarse cell is half a tile, so a 3x3 kernel cannot see a
+  one-tile step at all. `MAJORITY_RADIUS` 2 spans two and a half tiles, which
+  shaves single-cell spurs and notches and collapses runs of alternating
+  single steps into one longer, regular step. It runs on the internal
+  ownership grid only, which is masked to Ardenia afterwards, so it can
+  lengthen a provincial line but can never touch the silhouette. Measured on
+  the tile grid, it took the partition from 1232 boundary edges and 72
+  one-tile spurs to 1095 and 27, with the canon adjacency table, the nine
+  cities and the ceasefire line all unmoved.
 - Everything is seeded from `MapBaker.SEED` (1993). Two bakes produce
   byte-identical `height.exr`, `region_ids.png`, `borders.json` and
   `tiles.json`.

@@ -12,6 +12,12 @@ const CHAIN_REACH_HALF_PIXELS := 3
 const MIN_CHAIN_POINTS := 6
 const BORDER_SAMPLE_STEP := 4
 const NATIONAL_FRAGMENT_SHARE := 0.05
+# The land mask is displaced by a domain warp whose amplitude is about two
+# tiles. At a wavelength near the tile size that can only alias into a one-tile
+# battlement along the frontier, so the frequency is kept well below it and the
+# warp bulges the coast instead of serrating it.
+const MASK_WARP_FREQUENCY := 0.006
+const MASK_WARP_AMPLITUDE := 0.02
 
 
 static func _noise(frequency: float, octaves: int, seed_offset: int, type := FastNoiseLite.TYPE_SIMPLEX_SMOOTH) -> FastNoiseLite:
@@ -39,6 +45,10 @@ const MEROVA_SURVEY_U := 0.70
 static var _edge_cache := {}
 
 
+static func _mask_warp() -> FastNoiseLite:
+	return _noise(MASK_WARP_FREQUENCY, 3, 3)
+
+
 static func _edge_noise(offset: int) -> FastNoiseLite:
 	if not _edge_cache.has(offset):
 		_edge_cache[offset] = _noise(1.0, 3, offset)
@@ -52,7 +62,7 @@ static func _fold(offset: int, t: float, scale: float) -> float:
 
 static func northern_edge(u: float) -> float:
 	var base := 0.125 + 0.052 * u
-	var fold := _fold(21, u, 7.0) * 0.030 + _fold(22, u, 19.0) * 0.012
+	var fold := _fold(21, u, 7.0) * 0.030 + _fold(22, u, 10.0) * 0.012
 	var passes := -0.030 * exp(-pow((u - 0.30) / 0.045, 2.0)) \
 		- 0.022 * exp(-pow((u - 0.52) / 0.035, 2.0)) \
 		- 0.026 * exp(-pow((u - 0.80) / 0.055, 2.0))
@@ -64,12 +74,12 @@ static func southern_edge(u: float) -> float:
 	if u >= MEROVA_SURVEY_U:
 		return 0.845 - (u - MEROVA_SURVEY_U) * 0.56
 	var base := 0.878 - 0.050 * exp(-pow((u - 0.44) / 0.10, 2.0))
-	return base + _fold(23, u, 11.0) * 0.020 + sin(u * 27.0 + 2.0) * 0.008
+	return base + _fold(23, u, 11.0) * 0.020 + sin(u * 13.0 + 2.0) * 0.008
 
 
 static func coastline(v: float) -> float:
 	var base := 0.072 + (v - 0.15) * 0.145
-	var crinkle := _fold(24, v, 9.0) * 0.016 + _fold(25, v, 29.0) * 0.007
+	var crinkle := _fold(24, v, 9.0) * 0.016 + _fold(25, v, 14.0) * 0.007
 	var headland := -0.044 * exp(-pow((v - 0.215) / 0.042, 2.0))
 	# The Orvena bay cuts deep enough to leave a waist behind it: the only
 	# land route from Vetrenka's coast to the south is a few tiles wide.
@@ -125,12 +135,12 @@ static func bake_height(_geo: MapGeometry) -> Image:
 	var ridged := _noise(0.012, 6, 1, FastNoiseLite.TYPE_PERLIN)
 	ridged.fractal_type = FastNoiseLite.FRACTAL_RIDGED
 	var hills := _noise(0.006, 5, 2)
-	var warp := _noise(0.02, 3, 3)
+	var warp := _mask_warp()
 	for y in RESOLUTION.y:
 		var v := float(y) / RESOLUTION.y
 		for x in RESOLUTION.x:
 			var u := float(x) / RESOLUTION.x
-			var w := warp.get_noise_2d(x, y) * 0.02
+			var w := warp.get_noise_2d(x, y) * MASK_WARP_AMPLITUDE
 			if is_sea(u, v, w):
 				img.set_pixel(x, y, Color(-40.0 - (coastline(v) - u) * 900.0, 0, 0))
 				continue
@@ -159,6 +169,17 @@ const FRONT_COST := 26.0
 const WANDER := 2.4
 const WANDER_FREQUENCY := 0.005
 const BORDER_CROOK := 5.0
+# The crook displaces by up to five coarse cells, which is two and a half
+# tiles. At the old 0.024 that was a jog every five tiles — at the drawn scale
+# that is per-tile jitter, not a jog. Broad enough and the eye reads one crook.
+const CROOK_FREQUENCY := 0.007
+# A coarse cell is half a tile, so a 3x3 majority cannot see a one-tile step at
+# all. Radius two spans two and a half tiles: it shaves single-cell protrusions
+# and notches and collapses runs of alternating single steps into one longer,
+# regular step — a line rather than a sawtooth. The region is a broad blob, so
+# there is no narrow neck for the wider kernel to bite through.
+const MAJORITY_RADIUS := 2
+const MAJORITY_PASSES := 3
 const SIDES: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 # Eight-way travel. Four-way growth meets along axis-aligned staircases — the
 # L1 metric's equidistance locus — which is exactly the gridded look we are
@@ -177,12 +198,12 @@ static func bake_regions(geo: MapGeometry, height: Image) -> Image:
 	var owner := _crook(_grow_regions(geo, height, gw, gh), gw, gh)
 	var data := PackedByteArray()
 	data.resize(RESOLUTION.x * RESOLUTION.y)
-	var warp := _noise(0.02, 3, 3)
+	var warp := _mask_warp()
 	for y in RESOLUTION.y:
 		var v := float(y) / RESOLUTION.y
 		for x in RESOLUTION.x:
 			var u := float(x) / RESOLUTION.x
-			var w := warp.get_noise_2d(x, y) * 0.02
+			var w := warp.get_noise_2d(x, y) * MASK_WARP_AMPLITUDE
 			var index := SEA_REGION
 			if not is_sea(u, v, w):
 				index = FOREIGN_REGION
@@ -199,8 +220,8 @@ static func _crook(owner: PackedByteArray, gw: int, gh: int) -> PackedByteArray:
 	# has. It moves only where the internal map is read, never the coast or the
 	# frontier. A majority pass afterwards removes any cell left stranded, so
 	# no boundary speckles at tile size.
-	var crook_u := _noise(0.024, 2, 11)
-	var crook_v := _noise(0.024, 2, 13)
+	var crook_u := _noise(CROOK_FREQUENCY, 2, 11)
+	var crook_v := _noise(CROOK_FREQUENCY, 2, 13)
 	var out := PackedByteArray()
 	out.resize(owner.size())
 	for gy in gh:
@@ -210,19 +231,20 @@ static func _crook(owner: PackedByteArray, gw: int, gh: int) -> PackedByteArray:
 			var sx := clampi(gx + int(crook_u.get_noise_2d(x, y) * BORDER_CROOK), 0, gw - 1)
 			var sy := clampi(gy + int(crook_v.get_noise_2d(x, y) * BORDER_CROOK), 0, gh - 1)
 			out[gy * gw + gx] = owner[sy * gw + sx]
-	for pass_index in 2:
+	for pass_index in MAJORITY_PASSES:
 		out = _majority(out, gw, gh)
 	return out
 
 
 static func _majority(owner: PackedByteArray, gw: int, gh: int) -> PackedByteArray:
 	var out := owner.duplicate()
-	for gy in range(1, gh - 1):
-		for gx in range(1, gw - 1):
+	var r := MAJORITY_RADIUS
+	for gy in range(r, gh - r):
+		for gx in range(r, gw - r):
 			var i := gy * gw + gx
 			var votes := {}
-			for dy in [-1, 0, 1]:
-				for dx in [-1, 0, 1]:
+			for dy in range(-r, r + 1):
+				for dx in range(-r, r + 1):
 					var who := owner[(gy + dy) * gw + gx + dx]
 					votes[who] = int(votes.get(who, 0)) + 1
 			var best := owner[i]
@@ -237,14 +259,14 @@ static func _travel_cost(geo: MapGeometry, height: Image, gw: int, gh: int) -> P
 	var cost := PackedFloat32Array()
 	cost.resize(gw * gh)
 	var grain := _noise(WANDER_FREQUENCY, 2, 31)
-	var warp := _noise(0.02, 3, 3)
+	var warp := _mask_warp()
 	for gy in gh:
 		for gx in gw:
 			var x := gx * COARSE + COARSE / 2
 			var y := gy * COARSE + COARSE / 2
 			var u := float(x) / RESOLUTION.x
 			var v := float(y) / RESOLUTION.y
-			if not is_ardenia(u, v, warp.get_noise_2d(x, y) * 0.02):
+			if not is_ardenia(u, v, warp.get_noise_2d(x, y) * MASK_WARP_AMPLITUDE):
 				cost[gy * gw + gx] = -1.0
 				continue
 			var elevation := clampf(height.get_pixel(x, y).r / MAX_HEIGHT_M, 0.0, 1.0)
