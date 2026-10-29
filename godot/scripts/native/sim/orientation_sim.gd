@@ -19,12 +19,15 @@ const ISF_CONFIDENCE_LOSS_MONTHS := 6
 const CONCERT_DEFICIT_LIMIT := 0.04
 const CONCERT_INFLATION_LIMIT := 0.08
 const QUALIFYING_SETBACK := 2
+const BLOC_MONTH := 1
 
 
 static func monthly(state: GameState) -> Array[String]:
 	var notes: Array[String] = []
 	_isf_review(state, notes)
 	_western_discipline(state)
+	if state.month == BLOC_MONTH:
+		_world_blocs(state, notes)
 	return notes
 
 
@@ -117,3 +120,57 @@ static func _western_discipline(state: GameState) -> void:
 		f.western_qualifying_months += 1
 	else:
 		f.western_qualifying_months = maxi(0, f.western_qualifying_months - QUALIFYING_SETBACK)
+
+
+static func _anchor(bloc_id: String) -> String:
+	return String(ForeignSim.power(bloc_id).get("anchor", ""))
+
+
+static func _warmth(c: Country, anchor: String) -> float:
+	if c.id == anchor:
+		return 1.0
+	var rel: Country.BilateralRelation = c.relations.get(anchor)
+	return 0.0 if rel == null else rel.score
+
+
+static func _in_excluded(state: GameState, c: Country, b: Dictionary) -> bool:
+	for other in b.get("excludes", []):
+		if c.id in state.foreign.members.get(String(other), []):
+			return true
+	return false
+
+
+static func bloc_fits(state: GameState, c: Country, b: Dictionary) -> bool:
+	var anchor := _anchor(String(b["id"]))
+	if c.in_civil_war or c.stability < float(b.get("min_stability", 0.0)) or _in_excluded(state, c, b):
+		return false
+	var requires := String(b.get("requires", ""))
+	if requires != "" and not (c.id in state.foreign.members.get(requires, [])):
+		return false
+	var family := String(DiplomacySim.REGIME_FAMILY.get(c.regime_type, c.regime_type))
+	var client := String(c.agenda.get("ally", "")) == anchor
+	var kindred: bool = WorldSim.agenda_type(c) in b.get("agendas", []) and family in b.get("families", [])
+	return (client or kindred) and _warmth(c, anchor) >= float(b.get("min_warmth", 0.0))
+
+
+static func bloc_rejects(state: GameState, c: Country, b: Dictionary) -> bool:
+	var anchor := _anchor(String(b["id"]))
+	return c.in_civil_war or c.stability < float(b.get("leave_stability", 0.0)) \
+		or _warmth(c, anchor) < float(b.get("leave_warmth", 0.0)) or _in_excluded(state, c, b)
+
+
+static func _world_blocs(state: GameState, notes: Array[String]) -> void:
+	for b in ForeignSim.catalog().get("blocs", []):
+		var bloc_id := String(b["id"])
+		var anchor := _anchor(bloc_id)
+		var bloc_name := String(ForeignSim.power(bloc_id).get("name", bloc_id))
+		var current: Array = state.foreign.members.get(bloc_id, [])
+		var next: Array = []
+		for c in state.world:
+			var member: bool = c.id in current
+			var stays := c.id == anchor or (not bloc_rejects(state, c, b) if member else bloc_fits(state, c, b))
+			if stays:
+				next.append(c.id)
+			if stays != member:
+				notes.append(line("bloc_join" if stays else "bloc_leave", {"country": c.name, "bloc": bloc_name}))
+		state.foreign.members[bloc_id] = next
