@@ -133,6 +133,31 @@ Note the trap that let it ship: the journey test asserts the layout at both
 status before the native-size assertion at each width; that guard fails
 loudly if the protection is removed.
 
+## Pictures are ASCII conversions of a smooth source
+
+Every picture except the map reaches the screen through
+`scripts/ui/ascii/ascii_convert.gd` (`shaders/ascii_convert.gdshader`). The
+control underneath draws an ordinary smooth image (sub-pixel motion, soft
+light, gradients and translucency are all fine there), and the converter re-picks
+every 5x8 screen-pixel cell each frame: tone chooses a glyph on the density
+ramp (empty . · : ░ ▒ ▓ █), hue snaps to the scene's restrained palette
+(`AsciiConvert.PALETTES`), and only glyph ink is drawn on `#0b0e09`. Rows
+below `set_water_from` use dash streaks. `burst()` is the big-moment flash and
+shockwave. Consequences:
+
+- Do not pixel-snap or quantise a source; the converter does that, and
+  snapping is what makes motion jump cell to cell.
+- Do not add glow, scanlines or colour grading on top of a converted picture —
+  nothing may reach the screen except glyphs. Scanlines (`CrtGlass`) belong to
+  the map only, by the owner's choice.
+- The ░ ▒ ▓ shades are screen-space patterns, not bitmaps: a 5-px cell cannot
+  tile a checkerboard, and a bitmap one prints vertical stripes.
+- Thumbnails mislead: amber ink at 25-50% coverage reads olive when scaled
+  down. Measure ink colour before "fixing" a palette.
+
+The map is the exception: `AsciiTerrain` draws glyphs from terrain data
+directly, with cell backgrounds, under scanline glass.
+
 ## Runtime prohibition
 
 The final game ships with no Python installation, no PySide, no worker

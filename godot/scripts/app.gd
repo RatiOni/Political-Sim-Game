@@ -29,6 +29,7 @@ var _records_open := false
 var _region_panel_open := false
 var _charts: Dictionary = {}
 var _region_view: RegionView
+var _elections_seen := -1
 var _budget_open := false
 var _budget_adjustments := {}
 var _budget_preview: Dictionary = {}
@@ -48,6 +49,8 @@ var _selected_bill_id := ""
 var _bill_preview: Dictionary = {}
 
 func _ready() -> void:
+	TerminalFrame.adopt_all(self)
+	TerminalFrame.capitalise(self)
 	%ArdeniaMap.region_selected.connect(_select_region)
 	find_child("NextDecision").pressed.connect(_next_decision)
 	%PlayButton.pressed.connect(_toggle_pause)
@@ -219,7 +222,34 @@ func apply_snapshot(value: Dictionary) -> void:
 	elif _region_panel_open:
 		_refresh_region_panel()
 	_notice_new_situations()
+	_notice_election()
 	_refresh_controls()
+
+
+## An election is the campaign's big national moment, so a new result gets
+## the newsreel card. The first snapshot only sets the baseline: loading a
+## save must not replay an old count.
+func _notice_election() -> void:
+	var elections: Array = snapshot.get("history", {}).get("elections", [])
+	var seen := _elections_seen
+	_elections_seen = elections.size()
+	if seen < 0 or elections.size() <= seen:
+		return
+	var row: Dictionary = elections[-1]
+	var shares: Dictionary = row.get("vote_share", {})
+	var ranked := shares.keys()
+	ranked.sort_custom(func(a, b): return float(shares[a]) > float(shares[b]))
+	var names := {}
+	for faction in snapshot.get("factions", []):
+		names[String(faction.get("id", ""))] = String(faction.get("name", ""))
+	var details: Array[String] = []
+	for i in mini(3, ranked.size()):
+		var id := String(ranked[i])
+		details.append("%s  %.1f%%" % [names.get(id, id), float(shares[id]) * 100.0])
+	if not details.is_empty():
+		details[0] = "%s first" % details[0]
+	details.append("Turnout %.0f%%  /  %s" % [float(row.get("turnout", 0.0)) * 100.0, str(row.get("year", ""))])
+	EventFlash.show_on(self, "ELECTION", details)
 
 func _sfx_cue(cue: String) -> void:
 	if _sfx != null and _sfx.has_method(cue):

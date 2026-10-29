@@ -11,10 +11,10 @@ extends Control
 ## debt, which get a figure and a trend glyph and no track.
 
 const SEGMENTS := 12
-const SEG_W := 6
+const SEG_W := 7
 const SEG_H := 10
 const GAP := 2
-const ROW_H := 34
+const ROW_H := 22
 
 @export var label_text: String = "Metric":
 	set(value):
@@ -67,7 +67,7 @@ func _draw() -> void:
 	var baseline := float(_font_size)
 
 	# Label left, figure right — one row, tabular, never reflowing.
-	draw_string(_font, Vector2(0, baseline), label_text,
+	draw_string(_font, Vector2(0, baseline), label_text.to_upper(),
 		HORIZONTAL_ALIGNMENT_LEFT, -1, _font_size, UiPalette.TEXT_DIM)
 
 	var fig_w := _font.get_string_size(figure_text, HORIZONTAL_ALIGNMENT_LEFT, -1, _font_size).x
@@ -81,18 +81,27 @@ func _draw() -> void:
 	if value < 0.0:
 		return
 
-	# Track: one unlit block per segment, lit blocks up to the value.
+	# Inline bracket gauge between key and figure: `[█████····]`, the
+	# control-room meter. Filled cells, dotted empties, thin bracket rules.
 	var lit := int(round(clampf(value, 0.0, 1.0) * SEGMENTS))
-	var top := baseline + 6
+	# Gauge sits just after the key column, never adrift in a wide row.
+	var gx := floorf(minf(w * 0.42, 190.0))
+	var cell := float(SEG_W)
+	var top := baseline - SEG_H + 1
+	var inner := 3.0
+	var right := gx + inner + SEGMENTS * cell + inner
+	for bx in [gx, right]:
+		draw_rect(Rect2(bx, top - 2, 1, SEG_H + 4), UiPalette.EDGE, true)
+	draw_rect(Rect2(gx, top - 2, 3, 1), UiPalette.EDGE, true)
+	draw_rect(Rect2(gx, top + SEG_H + 1, 3, 1), UiPalette.EDGE, true)
+	draw_rect(Rect2(right - 2, top - 2, 3, 1), UiPalette.EDGE, true)
+	draw_rect(Rect2(right - 2, top + SEG_H + 1, 3, 1), UiPalette.EDGE, true)
 	for i in SEGMENTS:
-		var x := float(i * (SEG_W + GAP))
-		var rect := Rect2(x, top, SEG_W, SEG_H)
-		draw_rect(rect, UiPalette.TRACK, true)
+		var x := gx + inner + i * cell
 		if i < lit:
-			draw_rect(rect, fill_color, true)
+			draw_rect(Rect2(x, top, cell - 1, SEG_H), fill_color, true)
 		else:
-			# A one-pixel ghost keeps the empty track legible on dark panel.
-			draw_rect(Rect2(x, top + SEG_H - 1, SEG_W, 1), UiPalette.EDGE, true)
+			draw_rect(Rect2(x + 2, top + SEG_H - 2, 2, 2), UiPalette.TRACK, true)
 
 
 ## A 5x5 pixel chevron — no font glyph, so it stays crisp at any scale.

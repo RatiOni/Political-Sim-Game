@@ -82,7 +82,7 @@ func _draw() -> void:
 	if _font == null:
 		_font = ThemeDB.fallback_font
 	if _total <= 0:
-		draw_string(_font, Vector2(0, _font_size), "Awaiting assembly figures.",
+		draw_string(_font, Vector2(0, _font_size), "AWAITING ASSEMBLY FIGURES.",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, _font_size, UiPalette.TEXT_FAINT)
 		return
 
@@ -119,7 +119,7 @@ func _draw() -> void:
 	var y := chamber_bottom + 10.0
 	var carried := _coalition >= majority
 	var verdict := "%d of %d · majority %d" % [_coalition, _total, majority]
-	draw_string(_font, Vector2(0, y), verdict, HORIZONTAL_ALIGNMENT_LEFT, -1,
+	draw_string(_font, Vector2(0, y), verdict.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1,
 		_font_size, UiPalette.GOOD if carried else UiPalette.BAD)
 	y += _font_size + 7
 
@@ -135,7 +135,7 @@ func _draw() -> void:
 		var seats_text := str(int(row["seats"]))
 		var seats_w := _font.get_string_size(seats_text, HORIZONTAL_ALIGNMENT_LEFT, -1, _font_size).x
 		var name_w := size.x - (SEAT + 6) - seats_w - 6
-		draw_string(_font, Vector2(SEAT + 6, y), _fit(String(row["name"]), name_w),
+		draw_string(_font, Vector2(SEAT + 6, y), _fit(String(row["name"]).to_upper(), name_w),
 			HORIZONTAL_ALIGNMENT_LEFT, -1, _font_size, name_col)
 		draw_string(_font, Vector2(size.x - seats_w, y), seats_text,
 			HORIZONTAL_ALIGNMENT_LEFT, -1, _font_size, name_col)

@@ -1,80 +1,82 @@
-; Ardenia dashboard theme — retro DOS pixel.
+; Ardenia dashboard theme — mission-control terminal.
 ;
-; The map is 8 px VGA pixel art, so the chrome is too: pixel fonts, flat
-; fills, hard 1 px borders, zero corner radius, spacing on an 8 px grid.
-; Colours here mirror `scripts/ui/ui_palette.gd`, which sources them from
-; `MapPalette.DAY`. Change one, change the other, or the UI and the map
-; drift apart again.
+; Target: Third Bloc's control-room screens (see memory
+; visual-reference-third-bloc). Near-black glass, thin grey frame lines with
+; the panel title cut into the top line (drawn by `TerminalFrame`), one
+; monospace face in caps, dim keys beside cream values, amber for state and
+; red only for alarm. Colours mirror `scripts/ui/ui_palette.gd`; change one,
+; change the other.
 [gd_resource type="Theme" load_steps=14 format=3]
 
-[ext_resource type="FontFile" path="res://assets/pixel/kenney_mini.ttf" id="BodyFont"]
-[ext_resource type="FontFile" path="res://assets/pixel/kenney_pixel.ttf" id="DisplayFont"]
+[sub_resource type="SystemFont" id="Mono"]
+font_names = PackedStringArray("Consolas", "Lucida Console", "Courier New", "Monospace")
+antialiasing = 1
+hinting = 2
 
 [sub_resource type="StyleBoxFlat" id="Background"]
-bg_color = Color(0.031, 0.031, 0.063, 1)
+bg_color = Color(0.043, 0.051, 0.043, 1)
 
 [sub_resource type="StyleBoxFlat" id="Panel"]
 content_margin_left = 16.0
-content_margin_top = 12.0
+content_margin_top = 16.0
 content_margin_right = 16.0
 content_margin_bottom = 12.0
-bg_color = Color(0.078, 0.086, 0.133, 1)
+bg_color = Color(0.051, 0.059, 0.051, 1)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.282, 0.298, 0.392, 1)
+border_color = Color(0.39, 0.40, 0.37, 1)
 
 [sub_resource type="StyleBoxFlat" id="Button"]
 content_margin_left = 12.0
-content_margin_top = 8.0
+content_margin_top = 6.0
 content_margin_right = 12.0
-content_margin_bottom = 8.0
-bg_color = Color(0.125, 0.133, 0.196, 1)
+content_margin_bottom = 6.0
+bg_color = Color(0.051, 0.059, 0.051, 1)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.282, 0.298, 0.392, 1)
+border_color = Color(0.30, 0.31, 0.29, 1)
 
 [sub_resource type="StyleBoxFlat" id="Hover"]
 content_margin_left = 12.0
-content_margin_top = 8.0
+content_margin_top = 6.0
 content_margin_right = 12.0
-content_margin_bottom = 8.0
-bg_color = Color(0.188, 0.196, 0.275, 1)
+content_margin_bottom = 6.0
+bg_color = Color(0.09, 0.10, 0.09, 1)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.910, 0.722, 0.220, 1)
+border_color = Color(0.89, 0.60, 0.23, 1)
 
-; Selected / toggled-on. Gold fill, dark ink — the speed pip the player
-; chose has to read as lit from across the desk, not as a slightly
-; different grey. This is deliberately NOT the hover box.
+; Selected / toggled-on: amber fill, dark ink — the chosen speed has to read
+; as lit from across the room, not as a slightly different grey.
 [sub_resource type="StyleBoxFlat" id="Pressed"]
 content_margin_left = 12.0
-content_margin_top = 8.0
+content_margin_top = 6.0
 content_margin_right = 12.0
-content_margin_bottom = 8.0
-bg_color = Color(0.910, 0.722, 0.220, 1)
+content_margin_bottom = 6.0
+bg_color = Color(0.89, 0.60, 0.23, 1)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(1, 0.890, 0.580, 1)
+border_color = Color(0.96, 0.78, 0.45, 1)
 
 [sub_resource type="StyleBoxFlat" id="Disabled"]
 content_margin_left = 12.0
-content_margin_top = 8.0
+content_margin_top = 6.0
 content_margin_right = 12.0
-content_margin_bottom = 8.0
-bg_color = Color(0.063, 0.071, 0.110, 1)
+content_margin_bottom = 6.0
+bg_color = Color(0.043, 0.051, 0.043, 1)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(0.173, 0.184, 0.243, 1)
+border_color = Color(0.18, 0.19, 0.17, 1)
 
 [sub_resource type="StyleBoxFlat" id="Focus"]
 bg_color = Color(0, 0, 0, 0)
@@ -82,85 +84,81 @@ border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(1, 0.890, 0.580, 1)
+border_color = Color(0.96, 0.78, 0.45, 1)
 expand_margin_left = 2.0
 expand_margin_top = 2.0
 expand_margin_right = 2.0
 expand_margin_bottom = 2.0
 
 [sub_resource type="StyleBoxLine" id="Rule"]
-color = Color(0.282, 0.298, 0.392, 1)
+color = Color(0.24, 0.25, 0.23, 1)
 thickness = 1
 
 [sub_resource type="StyleBoxFlat" id="Track"]
-bg_color = Color(0.055, 0.055, 0.094, 1)
+bg_color = Color(0.043, 0.051, 0.043, 1)
 content_margin_left = 2.0
 content_margin_top = 2.0
 content_margin_right = 2.0
 content_margin_bottom = 2.0
 
-; The title-screen plate: a DOS dialog box sat over the scene. Opaque, so
-; the backdrop never muddies the type, with a gold rule to match the map's
-; region borders.
+; The title-screen plate: a terminal window over the scene. Opaque, so the
+; backdrop never muddies the type.
 [sub_resource type="StyleBoxFlat" id="Plate"]
 content_margin_left = 40.0
-content_margin_top = 28.0
+content_margin_top = 32.0
 content_margin_right = 40.0
 content_margin_bottom = 28.0
-bg_color = Color(0.043, 0.047, 0.078, 0.961)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.910, 0.722, 0.220, 1)
+bg_color = Color(0.043, 0.051, 0.043, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.39, 0.40, 0.37, 1)
 
 [sub_resource type="StyleBoxFlat" id="Grabber"]
-bg_color = Color(0.282, 0.298, 0.392, 1)
+bg_color = Color(0.30, 0.31, 0.29, 1)
 
 [sub_resource type="StyleBoxFlat" id="GrabberLit"]
-bg_color = Color(0.910, 0.722, 0.220, 1)
+bg_color = Color(0.89, 0.60, 0.23, 1)
 
 [resource]
-default_font = ExtResource("BodyFont")
-default_font_size = 16
+default_font = SubResource("Mono")
+default_font_size = 15
 App/base_type = &"PanelContainer"
 App/styles/panel = SubResource("Background")
 PanelContainer/styles/panel = SubResource("Panel")
 Plate/base_type = &"PanelContainer"
 Plate/styles/panel = SubResource("Plate")
 Masthead/base_type = &"Label"
-Masthead/fonts/font = ExtResource("DisplayFont")
-Masthead/colors/font_color = Color(0.910, 0.722, 0.220, 1)
-Masthead/font_sizes/font_size = 56
-Label/colors/font_color = Color(0.910, 0.925, 0.957, 1)
-Label/font_sizes/font_size = 16
+Masthead/colors/font_color = Color(0.90, 0.88, 0.81, 1)
+Masthead/font_sizes/font_size = 52
+Label/colors/font_color = Color(0.90, 0.88, 0.81, 1)
+Label/font_sizes/font_size = 15
 Muted/base_type = &"Label"
-Muted/colors/font_color = Color(0.690, 0.737, 0.816, 1)
-Muted/font_sizes/font_size = 16
+Muted/colors/font_color = Color(0.55, 0.55, 0.50, 1)
+Muted/font_sizes/font_size = 15
 Section/base_type = &"Label"
-Section/colors/font_color = Color(0.910, 0.722, 0.220, 1)
-Section/font_sizes/font_size = 16
+Section/colors/font_color = Color(0.70, 0.70, 0.65, 1)
+Section/font_sizes/font_size = 15
 Title/base_type = &"Label"
-Title/fonts/font = ExtResource("DisplayFont")
-Title/colors/font_color = Color(0.910, 0.925, 0.957, 1)
-Title/font_sizes/font_size = 32
+Title/colors/font_color = Color(0.89, 0.60, 0.23, 1)
+Title/font_sizes/font_size = 22
 Metric/base_type = &"Label"
-Metric/fonts/font = ExtResource("DisplayFont")
-Metric/colors/font_color = Color(0.910, 0.925, 0.957, 1)
-Metric/font_sizes/font_size = 32
-Button/colors/font_color = Color(0.910, 0.925, 0.957, 1)
-Button/colors/font_disabled_color = Color(0.408, 0.431, 0.510, 1)
-Button/colors/font_hover_color = Color(1, 0.890, 0.580, 1)
-Button/colors/font_pressed_color = Color(0.031, 0.031, 0.063, 1)
-Button/colors/font_focus_color = Color(1, 0.890, 0.580, 1)
-Button/font_sizes/font_size = 16
+Metric/colors/font_color = Color(0.90, 0.88, 0.81, 1)
+Metric/font_sizes/font_size = 26
+Button/colors/font_color = Color(0.90, 0.88, 0.81, 1)
+Button/colors/font_disabled_color = Color(0.36, 0.36, 0.33, 1)
+Button/colors/font_hover_color = Color(0.96, 0.78, 0.45, 1)
+Button/colors/font_pressed_color = Color(0.043, 0.051, 0.043, 1)
+Button/colors/font_focus_color = Color(0.96, 0.78, 0.45, 1)
+Button/font_sizes/font_size = 15
 Button/styles/normal = SubResource("Button")
 Button/styles/disabled = SubResource("Disabled")
 Button/styles/hover = SubResource("Hover")
 Button/styles/pressed = SubResource("Pressed")
 Button/styles/focus = SubResource("Focus")
-VBoxContainer/constants/separation = 8
-HBoxContainer/constants/separation = 16
+VBoxContainer/constants/separation = 6
+HBoxContainer/constants/separation = 12
 HSeparator/styles/separator = SubResource("Rule")
 VScrollBar/styles/scroll = SubResource("Track")
 VScrollBar/styles/grabber = SubResource("Grabber")

@@ -1,141 +1,161 @@
 class_name MenuBackdrop
 extends Control
 
-## The title screen's scene, drawn rather than painted: a dithered dusk sky
-## over the northern ridges, the Kesla plain, and a lit capital on the
-## horizon. Everything is blocks of `MapPalette.DUSK` on an 8 px grid, so the
-## menu is the same world the map is.
+## The title screen: Vashtera across the water at dusk, framed like a newsreel
+## still — a low horizon, the parliament dome and its spire as the one strong
+## subject, ridges in haze behind, works smoke drifting, the city's lights
+## shattered into streaks on the bay. It is drawn as a smooth picture and
+## shown through `AsciiConvert`, which turns every frame into glyphs.
 ##
-## Deterministic by construction — the skyline comes from a fixed seed, so the
-## title screen is the same picture every launch.
+## Deterministic by construction: the skyline comes from a fixed seed, so the
+## title screen is the same place every launch; only time moves it.
 
-const CELL := 8
 const SEED := 19930601   # Ardenia, June 1993
+const HORIZON := 0.66
 
 var _rng := RandomNumberGenerator.new()
+var _clock := 0.0
+var _ascii: AsciiConvert
+var _blocks: Array[Dictionary] = []
+var _lights: Array[Vector3] = []
+var _stars: Array[Vector3] = []
+var _built_for := Vector2.ZERO
 
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-func _draw() -> void:
-	var cols := int(ceil(size.x / CELL))
-	var rows := int(ceil(size.y / CELL))
-	if cols <= 0 or rows <= 0:
-		return
+func _ready() -> void:
+	_ascii = AsciiConvert.cover(self, "dusk")
+	_ascii.set_water_from(HORIZON + 0.012)
+
+
+func _process(delta: float) -> void:
+	_clock += delta
+	queue_redraw()
+
+
+## The title reveal ends on this: the whole picture burns white and settles.
+func burst() -> void:
+	if _ascii != null:
+		_ascii.burst(Vector2(0.5, HORIZON - 0.12), 2.8)
+
+
+func _layout() -> void:
+	_built_for = size
 	_rng.seed = SEED
-
-	var pal := MapPalette.DUSK
-	draw_rect(Rect2(Vector2.ZERO, size), UiPalette.WINDOW, true)
-
-	# Sky: three dusk bands, dithered where they meet so the step reads as
-	# deliberate texture instead of a seam.
-	var horizon := int(rows * 0.74)
-	var bands := [pal[MapPalette.DEEP_SEA], pal[MapPalette.SEA], pal[MapPalette.WAVE]]
-	for row in horizon:
-		var t := float(row) / maxf(1.0, float(horizon))
-		var band := mini(bands.size() - 1, int(t * bands.size()))
-		for col in cols:
-			var color: Color = bands[band]
-			if _dither(col, row) and band + 1 < bands.size():
-				color = bands[band + 1]
-			draw_rect(Rect2(col * CELL, row * CELL, CELL, CELL), color, true)
-
-	# A few stars in the upper band only.
-	for _i in 28:
-		var sx := _rng.randi_range(0, maxi(0, cols - 1))
-		var sy := _rng.randi_range(0, maxi(0, int(horizon * 0.45)))
-		draw_rect(Rect2(sx * CELL + 3, sy * CELL + 3, 2, 2), pal[MapPalette.SNOW_SHADE], true)
-
-	# Northern ridges: three layers receding into haze, the far ones paler and
-	# taller, so the north reads as mountains rather than hills.
-	_ridge(cols, horizon, 6, 0.46, pal[MapPalette.ROCK], true)
-	_ridge(cols, horizon, 5, 0.32, pal[MapPalette.ROCK_DARK], true)
-	_ridge(cols, horizon, 4, 0.18, pal[MapPalette.HILL_DARK], false)
-
-	_capital(cols, horizon, pal)
-	_plain(cols, rows, horizon, pal)
+	_blocks.clear()
+	_lights.clear()
+	_stars.clear()
+	var horizon := size.y * HORIZON
+	var x := size.x * 0.22
+	while x < size.x * 0.80:
+		var w := _rng.randf_range(10.0, 34.0)
+		var centre := 1.0 - absf((x - size.x * 0.5) / (size.x * 0.3))
+		var h := _rng.randf_range(12.0, 30.0) + centre * _rng.randf_range(20.0, 70.0)
+		_blocks.append({"x": x, "w": w, "h": h})
+		for wy in range(int(horizon - h + 5), int(horizon - 3), 6):
+			for wx in range(int(x + 3), int(x + w - 3), 5):
+				if _rng.randf() < 0.32:
+					_lights.append(Vector3(wx, wy, _rng.randf() * TAU))
+		x += w + (_rng.randf_range(2.0, 14.0) if _rng.randf() < 0.3 else 0.0)
+	for i in 120:
+		_stars.append(Vector3(_rng.randf() * size.x, _rng.randf() * horizon * 0.55, _rng.randf() * TAU))
 
 
-## Checkerboard dither on the cell grid — the cheapest texture that still
-## reads as deliberate at 8 px.
-func _dither(col: int, row: int) -> bool:
-	return (col + row) % 2 == 0
+func _draw() -> void:
+	if size.x <= 0 or size.y <= 0:
+		return
+	if _built_for != size:
+		_layout()
+	var t := _clock
+	var horizon := size.y * HORIZON
+	var w := size.x
+
+	# Sky: deep navy overhead falling to a burnt dusk at the horizon, its warmth
+	# breathing slowly.
+	var warm := 0.5 + 0.5 * sin(t * 0.05)
+	_vgrad(0.0, horizon, Color(0.03, 0.05, 0.11), Color(0.42, 0.19, 0.08).lerp(Color(0.55, 0.26, 0.10), warm))
+	for st in _stars:
+		draw_rect(Rect2(st.x, st.y, 1.5, 1.5), Color(0.9, 0.9, 1.0, 0.25 + 0.3 * sin(t * 1.1 + st.z * 4.0)), true)
+	# The moon, with a faint halo.
+	var moon := Vector2(w * 0.18, size.y * 0.16)
+	for r in [40.0, 26.0, 16.0]:
+		draw_circle(moon, r, Color(0.7, 0.72, 0.8, 0.05))
+	draw_circle(moon, 10.0, Color(0.88, 0.86, 0.78))
+
+	# Cloud banks drifting east.
+	for i in 5:
+		var cx := fposmod(i * w * 0.27 + t * (4.0 + i), w + 400.0) - 200.0
+		var cy := size.y * (0.12 + 0.07 * i)
+		draw_set_transform(Vector2(cx, cy), 0.0, Vector2(1.0, 0.22))
+		for k in 4:
+			draw_circle(Vector2(k * 60.0, sin(k * 1.7 + i) * 20.0), 90.0, Color(0.50, 0.30, 0.24, 0.025))
+		draw_set_transform(Vector2.ZERO)
+
+	# Ridges in haze: the far one paler, the near one darker.
+	_ridge(horizon - size.y * 0.12, size.y * 0.10, Color(0.20, 0.17, 0.20), 3)
+	_ridge(horizon - size.y * 0.04, size.y * 0.05, Color(0.11, 0.10, 0.12), 7)
+	for k in 3:
+		draw_rect(Rect2(0, horizon - 24.0 + k * 8.0, w, 10.0), Color(0.60, 0.32, 0.18, 0.04), true)
+
+	# The capital in silhouette, the parliament at its heart.
+	var ink := Color(0.07, 0.065, 0.075)
+	for b in _blocks:
+		draw_rect(Rect2(float(b["x"]), horizon - float(b["h"]), float(b["w"]), float(b["h"])), ink, true)
+	var dome := Vector2(w * 0.5, horizon - 70.0)
+	draw_rect(Rect2(dome.x - 60.0, horizon - 52.0, 120.0, 52.0), ink.lightened(0.05), true)
+	draw_circle(dome, 28.0, ink.lightened(0.08))
+	draw_rect(Rect2(dome.x - 2.0, dome.y - 70.0, 4.0, 46.0), ink.lightened(0.08), true)
+	draw_rect(Rect2(dome.x - 26.0, dome.y + 8.0, 52.0, 4.0), Color(0.55, 0.42, 0.28), true)
+	for c in range(-50, 51, 14):
+		draw_rect(Rect2(dome.x + c - 2.0, horizon - 44.0, 4.0, 36.0), Color(0.42, 0.34, 0.26), true)
+	var beacon := 0.5 + 0.5 * sin(t * 2.2)
+	draw_circle(Vector2(dome.x, dome.y - 70.0), 2.5, Color(0.95, 0.35, 0.2, 0.4 + 0.6 * beacon))
+	for l in _lights:
+		var a := 0.55 + 0.45 * sin(t * 0.4 + l.z * 5.0)
+		draw_rect(Rect2(l.x, l.y, 2.0, 3.0), Color(0.98, 0.76, 0.42, a), true)
+
+	# Works chimneys on the right, smoke rolling up and away.
+	for s in 2:
+		var sx := w * (0.74 + s * 0.03)
+		draw_rect(Rect2(sx, horizon - 96.0, 6.0, 96.0), ink, true)
+		for i in 14:
+			var age := fposmod(t * 0.05 + float(i) / 14.0 + s * 0.3, 1.0)
+			var p := Vector2(sx + 3.0 + age * 140.0 + sin(age * 5.0 + i) * 8.0, horizon - 98.0 - age * 150.0)
+			draw_circle(p, 5.0 + age * 34.0, Color(0.40, 0.36, 0.36, (1.0 - age) * 0.22))
+
+	# The bay: dark water, the city's lights broken into drifting streaks.
+	_vgrad(horizon, size.y, Color(0.10, 0.09, 0.12), Color(0.02, 0.03, 0.05))
+	for l in _lights:
+		if int(l.z * 10.0) % 2 != 0:
+			continue
+		var depth := horizon - l.y
+		for row in 6:
+			var y := horizon + depth * 0.6 + row * 6.0
+			var wob := sin(t * 1.3 + row * 1.1 + l.x * 0.05) * (2.0 + row * 1.5)
+			var len := 4.0 + 3.0 * sin(t * 1.7 + row + l.x)
+			draw_rect(Rect2(l.x + wob, y, len, 1.5), Color(0.95, 0.72, 0.40, 0.45 * (1.0 - row / 6.0)), true)
+	for row in range(0, int(size.y - horizon), 5):
+		var y := horizon + row
+		var k := float(row) / maxf(1.0, size.y - horizon)
+		var wx := fposmod(w * 0.5 + sin(t * 0.7 + row * 0.4) * 30.0, w)
+		draw_rect(Rect2(wx - 40.0 * (1.0 + k), y, 80.0 * (1.0 + k), 1.5), Color(0.6, 0.45, 0.35, 0.12 * (1.0 - k)), true)
 
 
-## One mountain layer. `rise` is its height as a fraction of the sky, so the
-## far layers sit highest and the near ones overlap them.
-func _ridge(cols: int, horizon: int, amplitude: int, rise: float, color: Color, capped: bool) -> void:
-	var base := horizon - int(horizon * rise)
-	var peak := base
-	for col in cols:
-		# Random walk, clamped — mountains, not a sawtooth.
-		peak += _rng.randi_range(-1, 1)
-		peak = clampi(peak, base - amplitude, base + amplitude)
-		for row in range(peak, horizon):
-			draw_rect(Rect2(col * CELL, row * CELL, CELL, CELL), color, true)
-		# Snow on the tallest cells only, so the caps mean altitude.
-		if capped and peak <= base - amplitude + 1:
-			draw_rect(Rect2(col * CELL, peak * CELL, CELL, CELL), MapPalette.DUSK[MapPalette.SNOW_SHADE], true)
+func _vgrad(y0: float, y1: float, top: Color, low: Color) -> void:
+	draw_polygon(PackedVector2Array([Vector2(0, y0), Vector2(size.x, y0), Vector2(size.x, y1), Vector2(0, y1)]),
+		PackedColorArray([top, top, low, low]))
 
 
-## The Kesla plain: fields rather than a lawn. Blocks of farm and grass on a
-## coarse grid, a river running to the coast, and a road to the capital.
-func _plain(cols: int, rows: int, horizon: int, pal: PackedColorArray) -> void:
-	var field_w := 7
-	var field_h := 3
-	for row in range(horizon, rows):
-		for col in cols:
-			# Fields are blocks, not per-cell noise, so the land reads as
-			# worked rather than static.
-			var fx := col / field_w
-			var fy := (row - horizon) / field_h
-			var kind := (fx * 7 + fy * 13 + SEED) % 5
-			var ground: Color = pal[MapPalette.GRASS_DARK]
-			match kind:
-				0, 1:
-					ground = pal[MapPalette.FARM_DARK] if _dither(col, row) else pal[MapPalette.FARM]
-				2:
-					ground = pal[MapPalette.GRASS] if _dither(col, row) else pal[MapPalette.GRASS_DARK]
-				3:
-					ground = pal[MapPalette.FARM_GREEN]
-				_:
-					ground = pal[MapPalette.GRASS_DARK]
-			draw_rect(Rect2(col * CELL, row * CELL, CELL, CELL), ground, true)
-
-	# The Kesla, widening as it nears the viewer.
-	var river_col := float(cols) * 0.30
-	for row in range(horizon, rows):
-		var depth := float(row - horizon) / maxf(1.0, float(rows - horizon))
-		river_col -= 0.55
-		var width := 1 + int(depth * 3.0)
-		for w in width:
-			var col := int(river_col) + w
-			if col >= 0 and col < cols:
-				draw_rect(Rect2(col * CELL, row * CELL, CELL, CELL), pal[MapPalette.RIVER], true)
-
-	# A road from the foreground up to the capital on the horizon.
-	var road_col := float(cols) * 0.62
-	for row in range(horizon, rows):
-		road_col += 0.42
-		var col := int(road_col)
-		if col >= 0 and col < cols:
-			draw_rect(Rect2(col * CELL, row * CELL, CELL, CELL), pal[MapPalette.ROAD], true)
-
-
-## A low skyline on the horizon with lit windows — Vashtera at dusk.
-func _capital(cols: int, horizon: int, pal: PackedColorArray) -> void:
-	var start := int(cols * 0.56)
-	var span := maxi(8, int(cols * 0.18))
-	for i in span:
-		var col := start + i
-		if col >= cols:
-			break
-		var tall := _rng.randi_range(1, 3)
-		if i == int(span * 0.4):
-			tall = 5   # one tower, so the skyline has a subject
-		for row in range(horizon - tall, horizon):
-			draw_rect(Rect2(col * CELL, row * CELL, CELL, CELL), pal[MapPalette.WALL], true)
-			if _rng.randf() < 0.45:
-				draw_rect(Rect2(col * CELL + 2, row * CELL + 2, 3, 3), MapPalette.DAY[MapPalette.LIT], true)
+## A silhouette from summed sines with a fixed seed: irregular, natural, stable.
+func _ridge(base: float, amp: float, color: Color, salt: int) -> void:
+	var pts := PackedVector2Array([Vector2(0, size.y * HORIZON + 1.0)])
+	var x := 0.0
+	while x <= size.x + 8.0:
+		var y := base - amp * (0.55 + 0.25 * sin(x * 0.006 + salt) + 0.15 * sin(x * 0.019 + salt * 2.0) + 0.05 * sin(x * 0.07 + salt))
+		pts.append(Vector2(x, y))
+		x += 8.0
+	pts.append(Vector2(size.x, size.y * HORIZON + 1.0))
+	draw_colored_polygon(pts, color)

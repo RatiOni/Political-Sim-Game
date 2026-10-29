@@ -16,8 +16,21 @@ var to_physical: Callable
 var region_size := 8
 var city_scale := 1
 static var _fonts: Dictionary = {}
-var _region_font := crisp(REGION_FONT)
-var _city_font := crisp(CITY_FONT)
+## The terminal face, like the rest of the desk; the pixel fonts above stay
+## loadable through `crisp` for anything still drawn in tiles.
+var _region_font: Font = mono()
+var _city_font: Font = mono()
+## Monospace stops being readable below these sizes, whatever the zoom.
+const REGION_MIN := 11
+const CITY_MIN := 10
+
+
+static func mono() -> Font:
+	if not _fonts.has("mono"):
+		var font := SystemFont.new()
+		font.font_names = PackedStringArray(["Consolas", "Lucida Console", "Courier New", "Monospace"])
+		_fonts["mono"] = font
+	return _fonts["mono"]
 
 
 static func crisp(path: String) -> FontFile:
@@ -40,13 +53,14 @@ func _ready() -> void:
 func _draw() -> void:
 	if not to_physical.is_valid():
 		return
-	var region_font := _region_font if region_size >= PIXEL_FONT_MIN else _city_font
+	var region_font := _region_font
+	var label_size := maxi(REGION_MIN, region_size)
 	for id in region_points:
-		var text := String(id).to_upper()
+		var text := " ".join(String(id).to_upper().split(""))
 		var at: Vector2 = to_physical.call(region_points[id])
-		var width := region_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, region_size).x
-		_outlined(region_font, (at - Vector2(width / 2.0, REGION_LIFT * region_size / 16.0)).round(), text, region_size, MapPalette.DAY[MapPalette.SNOW])
-	var city_size := CITY_SIZE * city_scale
+		var width := region_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, label_size).x
+		_outlined(region_font, (at - Vector2(width / 2.0, REGION_LIFT * label_size / 16.0)).round(), text, label_size, UiPalette.TEXT)
+	var city_size := maxi(CITY_MIN, CITY_SIZE * city_scale)
 	for city in cities:
 		var dot: Vector2 = (to_physical.call(city["point"]) as Vector2).round()
 		var marker := float(MARKER * city_scale)

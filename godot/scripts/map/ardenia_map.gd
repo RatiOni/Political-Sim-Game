@@ -29,6 +29,8 @@ var zoom := 1
 var terrain_layer := TileMapLayer.new()
 var growth_layer := TileMapLayer.new()
 var smoke_layer := TileMapLayer.new()
+## What the player sees: the tile layers rendered as a living character grid.
+var ascii := AsciiTerrain.new()
 var smoke_desired: Dictionary = {}
 var growth_desired: Dictionary = {}
 var growth_tween: Tween
@@ -116,10 +118,20 @@ func _build_nodes() -> void:
 	_physical.show_behind_parent = true
 	_physical.name = "Physical"
 	add_child(_physical)
+	# After the picture, behind the map's own chrome: buttons stay crisp.
+	var glass := CrtGlass.cover(self)
+	glass.show_behind_parent = true
+	(glass.material as ShaderMaterial).set_shader_parameter("dim", 0.9)
+	(glass.material as ShaderMaterial).set_shader_parameter("desaturate", 0.25)
 	_physical.add_child(_canvas)
 	for layer in [terrain_layer, growth_layer, smoke_layer]:
 		layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		_canvas.add_child(layer)
+	# The tile layers stay the model the growth painter and tests work on;
+	# `ascii` draws them, so they are kept but not shown.
+	for layer in [terrain_layer, growth_layer, smoke_layer]:
+		layer.self_modulate = Color(1, 1, 1, 0)
+	_canvas.add_child(ascii)
 	terrain_layer.name = "Terrain"
 	growth_layer.name = "Growth"
 	smoke_layer.name = "Smoke"
@@ -135,6 +147,7 @@ func _build_nodes() -> void:
 	smoke_timer.wait_time = GrowthPainter.SMOKE_SECONDS
 	smoke_timer.timeout.connect(func() -> void: GrowthPainter.step_smoke(self))
 	add_child(smoke_timer)
+
 	_labels.name = "Labels"
 	_physical.add_child(_labels)
 	_notice.name = "Unavailable"
@@ -191,6 +204,7 @@ func _load() -> bool:
 	if not _fill_terrain():
 		push_error("ArdeniaMap: the tile file holds no Ardenian cells")
 		return false
+	ascii.build(self, _tiles)
 	_centres = _region_centres()
 	_labels.cities = _geo.cities
 	_labels.region_points = _centres
@@ -255,6 +269,7 @@ func set_dusk(on: bool) -> void:
 	dusk_button.text = DAY_LABEL if on else DUSK_LABEL
 	for px in _tilesets:
 		_source(_tilesets[px]).texture = _dusk_textures[px] if on else _day_textures[px]
+	ascii.set_dusk(on)
 	_apply_lines()
 	GrowthPainter.refresh_lights(self)
 
@@ -319,6 +334,7 @@ func _set_level(px: int) -> void:
 		_apply_lines()
 	zoom = level_zoom(physical_size().x, tile_px)
 	_canvas.scale = Vector2(zoom, zoom)
+	ascii.set_level(tile_px, tile_px * zoom * screen_transform().get_scale().x)
 	_labels.region_size = 2 * tile_px * zoom
 	_labels.city_scale = zoom
 	zoom_in_button.disabled = tile_px == DETAIL

@@ -1,30 +1,28 @@
 class_name UiPalette
 extends RefCounted
 
-## The dashboard's colours, drawn from the same VGA set as the map
-## (`MapPalette.DAY`) so chrome and cartography cannot drift apart.
-## Indices below are into that array — never hardcode a hex here that the
-## map does not already use, or the two art directions split again.
+## The dashboard's colours: a Third Bloc-style control-room terminal.
+## Mirrored in `theme/ardenia_theme.tres`; change one, change the other.
 
-# Surfaces: a dark ramp under the map's ink, wide enough that a panel reads
-# as a panel. Four steps, each a clear value apart.
-static var WINDOW := Color8(8, 8, 16)        # MapPalette INK — the room
-static var PANEL := Color8(20, 22, 34)       # card surface
-static var RAISED := Color8(32, 34, 50)      # controls, hovered rows
-static var EDGE := Color8(72, 76, 100)       # hairline borders
-static var TRACK := Color8(14, 14, 24)       # behind a bar fill
+# Surfaces: control-room glass. Panels are outlined, not filled; the
+# frame line is what separates them (see `TerminalFrame`).
+static var WINDOW := Color(0.043, 0.051, 0.043)  # the room
+static var PANEL := Color(0.051, 0.059, 0.051)   # panel glass
+static var RAISED := Color(0.09, 0.10, 0.09)     # hovered rows
+static var EDGE := Color(0.39, 0.40, 0.37)       # frame lines
+static var TRACK := Color(0.16, 0.17, 0.15)      # empty gauge cells
 
-# Ink
-static var TEXT := Color8(232, 236, 244)     # MapPalette SNOW
-static var TEXT_DIM := Color8(176, 188, 208) # MapPalette SNOW_SHADE
-static var TEXT_FAINT := Color8(120, 124, 148)
+# Ink: cream values, dim keys.
+static var TEXT := Color(0.90, 0.88, 0.81)
+static var TEXT_DIM := Color(0.55, 0.55, 0.50)
+static var TEXT_FAINT := Color(0.36, 0.36, 0.33)
 
-# Accent + state. GOLD and the ceasefire red are literally the map's.
-static var GOLD := Color8(232, 184, 56)      # MapPalette GOLD
-static var GOLD_DARK := Color8(152, 104, 24) # MapPalette GOLD_DARK
-static var GOOD := Color8(108, 152, 64)      # MapPalette GRASS_LIGHT
-static var WARN := Color8(232, 184, 56)
-static var BAD := Color8(208, 40, 40)        # MapPalette CEASEFIRE
+# State. Amber says "this is the live thing"; red is reserved for alarm.
+static var GOLD := Color(0.89, 0.60, 0.23)       # amber
+static var GOLD_DARK := Color(0.55, 0.36, 0.13)
+static var GOOD := Color(0.56, 0.66, 0.38)
+static var WARN := Color(0.89, 0.60, 0.23)
+static var BAD := Color(0.83, 0.32, 0.25)
 
 ## Party colours in the content are web hex (`#3b7dd8`) and look wrong beside
 ## VGA tiles. Snap each to the nearest of a party-safe set taken from the same
