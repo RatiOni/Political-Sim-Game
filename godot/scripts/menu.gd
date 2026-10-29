@@ -9,6 +9,9 @@ func _ready() -> void:
 	%OppositionCampaignButton.pressed.connect(_new_campaign.bind("opposition"))
 	%ContinueButton.pressed.connect(_continue_campaign)
 	%QuitButton.pressed.connect(_quit)
+	# Keyboard first: the title screen opens with a focused entry so arrows
+	# and Enter work without touching the mouse.
+	%NewCampaignButton.grab_focus()
 
 func _sfx_cue(cue: String) -> void:
 	if _sfx != null and _sfx.has_method(cue):

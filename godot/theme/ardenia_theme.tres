@@ -99,6 +99,21 @@ content_margin_top = 2.0
 content_margin_right = 2.0
 content_margin_bottom = 2.0
 
+; The title-screen plate: a DOS dialog box sat over the scene. Opaque, so
+; the backdrop never muddies the type, with a gold rule to match the map's
+; region borders.
+[sub_resource type="StyleBoxFlat" id="Plate"]
+content_margin_left = 40.0
+content_margin_top = 28.0
+content_margin_right = 40.0
+content_margin_bottom = 28.0
+bg_color = Color(0.043, 0.047, 0.078, 0.961)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.910, 0.722, 0.220, 1)
+
 [sub_resource type="StyleBoxFlat" id="Grabber"]
 bg_color = Color(0.282, 0.298, 0.392, 1)
 
@@ -111,6 +126,12 @@ default_font_size = 16
 App/base_type = &"PanelContainer"
 App/styles/panel = SubResource("Background")
 PanelContainer/styles/panel = SubResource("Panel")
+Plate/base_type = &"PanelContainer"
+Plate/styles/panel = SubResource("Plate")
+Masthead/base_type = &"Label"
+Masthead/fonts/font = ExtResource("DisplayFont")
+Masthead/colors/font_color = Color(0.910, 0.722, 0.220, 1)
+Masthead/font_sizes/font_size = 56
 Label/colors/font_color = Color(0.910, 0.925, 0.957, 1)
 Label/font_sizes/font_size = 16
 Muted/base_type = &"Label"

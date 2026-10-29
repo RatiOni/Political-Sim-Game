@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/menu.gd" id="1"]
 [ext_resource type="Theme" path="res://theme/ardenia_theme.tres" id="2"]
+[ext_resource type="Script" path="res://scripts/ui/menu_backdrop.gd" id="3"]
 
 [node name="Menu" type="PanelContainer"]
 anchors_preset = 15
@@ -13,50 +14,69 @@ theme = ExtResource("2")
 theme_type_variation = &"App"
 script = ExtResource("1")
 
+[node name="Backdrop" type="Control" parent="."]
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("3")
+
 [node name="Center" type="CenterContainer" parent="."]
 layout_mode = 2
 
-[node name="Layout" type="VBoxContainer" parent="Center"]
+[node name="Plate" type="PanelContainer" parent="Center"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_type_variation = &"Plate"
 
-[node name="Title" type="Label" parent="Center/Layout"]
+[node name="Layout" type="VBoxContainer" parent="Center/Plate"]
 layout_mode = 2
-theme_type_variation = &"Title"
-text = "ARDENIA — MINISTERIAL WIRE"
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Center/Plate/Layout"]
+layout_mode = 2
+theme_type_variation = &"Masthead"
+text = "ARDENIA"
 horizontal_alignment = 1
 
-[node name="Subtitle" type="Label" parent="Center/Layout"]
+[node name="Subtitle" type="Label" parent="Center/Plate/Layout"]
 layout_mode = 2
-theme_type_variation = &"Muted"
-text = "Vertical-slice presentation build"
+theme_type_variation = &"Section"
+text = "MINISTERIAL WIRE  ·  JUNE 1993"
 horizontal_alignment = 1
 
-[node name="Spacer" type="Control" parent="Center/Layout"]
-custom_minimum_size = Vector2(0, 12)
+[node name="Rule" type="HSeparator" parent="Center/Plate/Layout"]
 layout_mode = 2
 
-[node name="NewCampaignButton" type="Button" parent="Center/Layout"]
+[node name="Spacer" type="Control" parent="Center/Plate/Layout"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="NewCampaignButton" type="Button" parent="Center/Plate/Layout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(280, 48)
+custom_minimum_size = Vector2(360, 48)
 layout_mode = 2
 text = "New Campaign"
 
-[node name="OppositionCampaignButton" type="Button" parent="Center/Layout"]
+[node name="OppositionCampaignButton" type="Button" parent="Center/Plate/Layout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(280, 48)
+custom_minimum_size = Vector2(360, 48)
 layout_mode = 2
 text = "New Campaign in Opposition"
 tooltip_text = "Begin as Leader of the Opposition, with another party in government"
 
-[node name="ContinueButton" type="Button" parent="Center/Layout"]
+[node name="ContinueButton" type="Button" parent="Center/Plate/Layout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(280, 48)
+custom_minimum_size = Vector2(360, 48)
 layout_mode = 2
 text = "Continue"
 
-[node name="QuitButton" type="Button" parent="Center/Layout"]
+[node name="QuitButton" type="Button" parent="Center/Plate/Layout"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(280, 48)
+custom_minimum_size = Vector2(360, 48)
 layout_mode = 2
 text = "Quit"
+
+[node name="Footer" type="Label" parent="."]
+layout_mode = 2
+size_flags_vertical = 8
+theme_type_variation = &"Muted"
+text = "A republic four years old, and every account still open."
+horizontal_alignment = 1
