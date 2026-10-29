@@ -85,6 +85,17 @@ func _test_the_contract_round_trips_through_a_binary_save(t) -> void:
 	_wipe()
 	var state := _state()
 	var g := state.foreign.gas
+	var floats := ["price", "reference_price", "contracted_volume", "annual_demand", "arrears", "take_or_pay", "cut", "sabotage", "storage", "storage_capacity", "storage_target", "second_line_volume", "spot_pending"]
+	var ints := ["term_end", "cut_until", "last_cut_turn", "last_demand_turn", "storage_started", "second_line_started", "last_renegotiated", "demands", "threats", "cuts"]
+	t.equal(floats, GasContract.FLOAT_FIELDS, "the float field list is the one pinned here")
+	t.equal(ints, GasContract.INT_FIELDS, "the int field list is the one pinned here")
+	var n := 1
+	for field in floats:
+		g.set(field, 0.1 * float(n))
+		n += 1
+	for field in ints:
+		g.set(field, n)
+		n += 1
 	g.cut = 0.25
 	g.cut_until = 3
 	g.threat = {"turn": 0, "due": 1, "share": 0.2}
@@ -97,7 +108,16 @@ func _test_the_contract_round_trips_through_a_binary_save(t) -> void:
 	t.truth(SaveStore.save_slot(SLOT, state).get("ok", false), "the contract saves")
 	var loaded: Dictionary = SaveStore.load_slot(SLOT)
 	t.truth(loaded.get("ok", false), "and loads")
-	t.equal((loaded["state"] as GameState).foreign.gas.to_dict(), g.to_dict(), "every contract field survives the round trip")
+	var back := (loaded["state"] as GameState).foreign.gas
+	t.equal(back.to_dict(), g.to_dict(), "every contract field survives the round trip")
+	for field in floats + ints:
+		t.equal(back.get(field), g.get(field), "%s survives the round trip" % field)
+		t.truth(g.get(field) != GasContract.new().get(field), "%s is set to a non-default value" % field)
+	t.equal(back.supplier_id, g.supplier_id, "the supplier survives")
+	t.equal(back.threat, g.threat, "the threat survives")
+	t.equal(back.concessions, g.concessions, "the concessions survive")
+	t.equal(back.paid, g.paid, "the payment history survives")
+	t.equal(back.last_flow, g.last_flow, "the last flow survives")
 	_wipe()
 
 
@@ -175,6 +195,9 @@ func _test_the_validator_rejects_impossible_contracts(t) -> void:
 	s = _state()
 	s.foreign.gas.paid[0] = -1.0
 	_rejects(t, s, "gas payment history is impossible", "a negative payment is rejected")
+	s = _state()
+	s.foreign.gas.concessions.append("transit")
+	t.truth(StateValidator.validate(s).is_empty(), "a catalogued concession is accepted")
 	s = _state()
 	s.foreign.gas.concessions.append("souls")
 	_rejects(t, s, "unknown gas concession 'souls'", "an unknown concession is rejected")

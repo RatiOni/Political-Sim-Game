@@ -788,7 +788,7 @@ static func _validate_gas(state: GameState, errors: Array[String]) -> void:
 	if g.paid.size() > GasContract.PAID_MONTHS or g.paid.any(func(p: float) -> bool: return not is_finite(p) or p < 0.0):
 		errors.append("gas payment history is impossible")
 	for c in g.concessions:
-		if not (c in ["transit"]):
+		if not (c in GasSim.catalog().get("concessions", [])):
 			errors.append("unknown gas concession '%s'" % c)
 	if state.foreign.reached.has("union_member") and g.price > GasSim.union_cap(g) + 0.000001:
 		errors.append("gas price breaks the Union cap")
