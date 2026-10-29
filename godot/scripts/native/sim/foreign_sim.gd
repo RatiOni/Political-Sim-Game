@@ -65,6 +65,8 @@ static func milestone_name(id: String) -> String:
 static func ensure(state: GameState) -> void:
 	var f := state.foreign
 	if f.seeded:
+		if GasSim.ensure(state):
+			update_spine(state)
 		return
 	for p in catalog().get("powers", []):
 		f.gas_share[String(p["id"])] = float(p.get("gas_share", 0.0))
@@ -79,6 +81,7 @@ static func ensure(state: GameState) -> void:
 		f.members[String(b["id"])] = ids
 	f.isf = ForeignState.default_isf()
 	f.seeded = true
+	GasSim.ensure(state)
 	update_spine(state)
 
 

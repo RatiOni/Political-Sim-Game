@@ -6,6 +6,7 @@
     "catalogs/budget.json",
     "catalogs/difficulties.json",
     "catalogs/dispatch_pools.json",
+    "catalogs/energy.json",
     "catalogs/events.json",
     "catalogs/foreign_orientation.json",
     "catalogs/household_groups.json",

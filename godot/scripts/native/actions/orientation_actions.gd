@@ -184,6 +184,7 @@ static func _reach(state: GameState, verb: String) -> String:
 		"meridian_guarantee":
 			state.stability_value = minf(STABILITY_CEILING, state.stability_value + GUARANTEE_STABILITY)
 		"union_member":
+			GasSim.cap_to_union(state)
 			state.modifiers.append(_phased(verb, "Krasovan Economic Union", UNION_GROWTH, UNION_GROWTH_RAMP))
 			var rescheduling := OrientationSim.timed_modifier("union_rescheduling", "Union debt rescheduling",
 				"budget_expenditure", -UNION_RESCHEDULING, UNION_RESCHEDULING_MONTHS - 1, false)

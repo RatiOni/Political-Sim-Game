@@ -11,6 +11,7 @@ var western_qualifying_months: int = 0
 var union_left_turn: int = -1
 var hostile_log: Array = []
 var seeded: bool = false
+var gas: GasContract = GasContract.new()
 
 
 static func default_isf() -> Dictionary:
@@ -29,6 +30,7 @@ func to_dict() -> Dictionary:
 		"union_left_turn": union_left_turn,
 		"hostile_log": hostile_log.duplicate(true),
 		"seeded": seeded,
+		"gas": gas.to_dict(),
 	}
 
 
@@ -94,4 +96,8 @@ static func from_dict(data: Variant) -> ForeignState:
 			"relation": float(entry.get("relation", 0.0)), "economy": float(entry.get("economy", 0.0)),
 			"stability": float(entry.get("stability", 0.0))})
 	out.seeded = bool(d.get("seeded", false))
+	out.gas = GasContract.from_dict(d.get("gas", null))
+	if out.gas == null:
+		push_error("ForeignState.from_dict: malformed gas contract")
+		return null
 	return out
