@@ -109,6 +109,8 @@ static func _isf_review(state: GameState, notes: Array[String]) -> void:
 		state.modifiers.append(timed_modifier("isf_confidence_%d" % state.turn, "ISF review failed",
 			"gdp_growth", ISF_CONFIDENCE_LOSS, ISF_CONFIDENCE_LOSS_MONTHS, true))
 		notes.append(line("isf_fail"))
+		if state.player.in_government:
+			ForeignArcs.schedule(state, "isf_review_crisis", "")
 
 
 static func _western_discipline(state: GameState) -> void:

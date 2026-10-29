@@ -402,6 +402,130 @@ func _test_paying_stops_at_the_line(t) -> void:
 	t.near(g.arrears, 0.0, 1e-6, "arrears left exactly at the line still owe a tranche")
 
 
+func _test_a_failed_review_puts_the_fund_on_the_desk_in_the_review_month(t) -> void:
+	var state := _state()
+	while state.month != 12:
+		NativeGameScript.next_month(state)
+	state.pending_situations.clear()
+	state.scheduled_events.clear()
+	state.country.economy.inflation = 0.5
+	NativeGameScript.next_month(state)
+	t.equal(state.month, 1, "sanity: January, a review month")
+	t.equal(String(state.foreign.isf["last_result"]), "failed", "sanity: the review fails")
+	t.truth(state.pending_situations.any(func(s: Situation) -> bool: return s.event_id == "isf_review_crisis"), "the crisis is on the desk in the review month")
+	var passed := _state()
+	while passed.month != 12:
+		NativeGameScript.next_month(passed)
+	passed.pending_situations.clear()
+	passed.scheduled_events.clear()
+	passed.country.economy.inflation = 0.0
+	passed.country.economy.budget.expenditure = passed.country.economy.budget.revenue
+	NativeGameScript.next_month(passed)
+	t.equal(String(passed.foreign.isf["last_result"]), "passed", "sanity: a disciplined government passes")
+	t.truth(not passed.pending_situations.any(func(s: Situation) -> bool: return s.event_id == "isf_review_crisis"), "and no crisis follows a pass")
+
+
+func _test_renegotiating_from_the_crisis_is_the_orientation_desks_renegotiation(t) -> void:
+	var state := _state()
+	state.foreign.isf["suspended"] = true
+	state.player.political_capital = 100.0
+	_force(state, "isf_review_crisis", "")
+	var held := int(state.foreign.isf["renegotiations"])
+	t.truth(EventActions.resolve(state, "isf_review_crisis", "renegotiate").get("ok", false), "the fund can be renegotiated from the crisis")
+	t.equal(int(state.foreign.isf["renegotiations"]), held + 1, "the ledger records it")
+	t.equal(String(EventsSim.event_by_id("isf_review_crisis")["default_option_id"]), "blame_the_fund", "blaming the fund is the default")
+
+
+func _test_the_delegation_needs_an_application_and_no_union_step(t) -> void:
+	var state := _state()
+	t.truth(state.foreign.reached.has("concert_application"), "sanity: Ardenia has applied")
+	t.truth(EventsSim.condition_met(state, "concert_delegation_due"), "the Concert sends a delegation to an applicant")
+	state.foreign.reached["union_observer"] = state.turn
+	t.truth(not EventsSim.condition_met(state, "concert_delegation_due"), "but not to a Union observer")
+	state.foreign.reached.erase("union_observer")
+	state.foreign.reached["concert_agreement"] = state.turn
+	t.truth(not EventsSim.condition_met(state, "concert_delegation_due"), "nor once the agreement is signed")
+
+
+func _test_embracing_the_conditions_counts_toward_the_agreement_and_caps(t) -> void:
+	var state := _state()
+	state.player.political_capital = 100.0
+	state.foreign.western_qualifying_months = 10
+	_force(state, "concert_delegation", ForeignArcs.resolve_target(state, "__western__"))
+	EventActions.resolve(state, "concert_delegation", "embrace")
+	t.equal(state.foreign.western_qualifying_months, 10 + ForeignArcs.DELEGATION_MONTHS, "the conditions count as months of discipline")
+	state.foreign.western_qualifying_months = OrientationActions.QUALIFYING_MONTHS_FOR_AGREEMENT - 1
+	_force(state, "concert_delegation", ForeignArcs.resolve_target(state, "__western__"))
+	EventActions.resolve(state, "concert_delegation", "embrace")
+	t.equal(state.foreign.western_qualifying_months, OrientationActions.QUALIFYING_MONTHS_FOR_AGREEMENT, "but never past what the agreement needs")
+
+
+func _test_the_union_invites_only_a_tolerable_neighbour(t) -> void:
+	var state := _state()
+	var anchor := ForeignArcs.resolve_target(state, "__union_anchor__")
+	_set_score(state, anchor, OrientationActions.OBSERVER_WARMTH)
+	t.truth(EventsSim.condition_met(state, "union_invites"), "at exactly the observer line the Union invites")
+	_set_score(state, anchor, OrientationActions.OBSERVER_WARMTH - 0.01)
+	t.truth(not EventsSim.condition_met(state, "union_invites"), "just colder and it does not")
+	_set_score(state, anchor, 0.0)
+	state.foreign.union_left_turn = state.turn
+	state.turn += OrientationActions.UNION_REJOIN_MONTHS - 1
+	t.truth(not EventsSim.condition_met(state, "union_invites"), "a country that walked out waits out the bar")
+	state.turn += 1
+	t.truth(EventsSim.condition_met(state, "union_invites"), "and is invited again the month it ends")
+	state.foreign.reached["union_observer"] = state.turn
+	t.truth(not EventsSim.condition_met(state, "union_invites"), "an observer is not invited twice")
+
+
+func _test_accepting_the_invitation_takes_observer_status(t) -> void:
+	var state := _state()
+	state.player.political_capital = 100.0
+	_force(state, "union_invitation", ForeignArcs.resolve_target(state, "__union_anchor__"))
+	t.truth(EventActions.resolve(state, "union_invitation", "accept_observer").get("ok", false), "the invitation can be accepted")
+	t.truth(state.foreign.reached.has("union_observer"), "and Ardenia is an observer")
+
+
+func _test_union_pressure_lands_on_members_and_compliance_cools_the_west(t) -> void:
+	var state := _state()
+	t.truth(not EventsSim.condition_met(state, "union_member_pressed"), "a non-member is not pressed")
+	state.foreign.reached["union_member"] = state.turn
+	t.truth(EventsSim.condition_met(state, "union_member_pressed"), "a member is")
+	var west := ForeignArcs.resolve_target(state, "__western__")
+	var anchor := ForeignArcs.resolve_target(state, "__union_anchor__")
+	_force(state, "union_pressure", anchor)
+	var w0 := _score(state, west)
+	var a0 := _score(state, anchor)
+	EventActions.resolve(state, "union_pressure", "comply")
+	t.near(_score(state, west), w0 + ForeignArcs.COMPLY_WEST, 1e-9, "complying costs the West")
+	t.near(_score(state, anchor), a0 + 0.03, 1e-9, "and pleases the Union")
+	t.equal(String(EventsSim.event_by_id("union_pressure")["default_option_id"]), "comply", "a member that looks away complies")
+
+
+func _test_western_aid_needs_a_strained_treasury_and_comes_with_conditions(t) -> void:
+	var state := _state()
+	var limit := float(OrientationSim.isf_targets(state)["deficit"])
+	state.foreign.isf["suspended"] = false
+	var budget := state.country.economy.budget
+	budget.expenditure = budget.revenue
+	t.truth(not EventsSim.condition_met(state, "western_aid_offered"), "a balanced, compliant treasury gets no aid offer")
+	state.foreign.isf["suspended"] = true
+	t.truth(EventsSim.condition_met(state, "western_aid_offered"), "a suspended programme does")
+	state.foreign.reached["union_member"] = state.turn
+	t.truth(not EventsSim.condition_met(state, "western_aid_offered"), "a Union member does not")
+	state.foreign.reached.erase("union_member")
+	state.foreign.isf["suspended"] = false
+	budget.expenditure = budget.revenue + limit * state.country.economy.gdp + 1.0
+	t.truth(EventsSim.condition_met(state, "western_aid_offered"), "nor does a deficit above the fund's target go unnoticed")
+	_force(state, "western_aid_strings", ForeignArcs.resolve_target(state, "__western__"))
+	var debt := state.country.economy.public_debt_pct
+	EventActions.resolve(state, "western_aid_strings", "accept_aid")
+	t.near(state.country.economy.public_debt_pct, debt - 0.004, 1e-9, "the aid relieves debt")
+	var row: Array = state.scheduled_events.filter(func(r: Dictionary) -> bool: return r["event_id"] == "aid_conditions_due")
+	t.equal(row.size(), 1, "and its conditions are set in motion")
+	t.equal(int(row[0]["due_turn"]), state.turn + 6, "six months out")
+	t.equal(String(row[0]["target_country_id"]), ForeignArcs.resolve_target(state, "__western__"), "owed to the same capital")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_every_sentinel_names_a_live_country(t)
@@ -426,4 +550,12 @@ func _initialize() -> void:
 	_test_the_windfall_can_fund_storage(t)
 	_test_the_valve_threat_closes_the_month_it_is_made(t)
 	_test_paying_stops_at_the_line(t)
+	_test_a_failed_review_puts_the_fund_on_the_desk_in_the_review_month(t)
+	_test_renegotiating_from_the_crisis_is_the_orientation_desks_renegotiation(t)
+	_test_the_delegation_needs_an_application_and_no_union_step(t)
+	_test_embracing_the_conditions_counts_toward_the_agreement_and_caps(t)
+	_test_the_union_invites_only_a_tolerable_neighbour(t)
+	_test_accepting_the_invitation_takes_observer_status(t)
+	_test_union_pressure_lands_on_members_and_compliance_cools_the_west(t)
+	_test_western_aid_needs_a_strained_treasury_and_comes_with_conditions(t)
 	quit(t.finish())

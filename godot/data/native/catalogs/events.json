@@ -4083,6 +4083,70 @@
       "cooldown": 24,
       "audience": "government",
       "portfolio": "Finance"
+    },
+    {
+      "id": "isf_review_crisis", "title": "The Fund Says No",
+      "description": "The ISF mission has failed the quarterly review. The disbursement is suspended, the Bank's governor is not taking calls, and the markets have done the arithmetic. The mission chief is still in the capital.",
+      "category": "Economic", "condition": "never", "chance": 0.0, "stale_after": 1,
+      "options": [
+        {"id": "renegotiate", "label": "Renegotiate the programme", "description": "The tranche comes back, the targets tighten, and the bank condition moves later. Everyone will know who asked.", "effects": {}, "relation_deltas": {}, "pc_cost": 0, "follow_up": null, "on_apply": "isf_crisis_renegotiate", "requires": {"orientation_verb": "isf_renegotiate"}},
+        {"id": "spending_freeze", "label": "Announce a spending freeze", "description": "A year of frozen budgets, to show the mission before it leaves.", "effects": {"faction_loyalty_deltas": {"@labour": -0.05, "@business": 0.03}, "modifiers": [{"id": "isf_spending_freeze", "target": "budget_expenditure", "magnitude": -40.0, "ramp_duration": 1, "hold_duration": 12, "decay_duration": 0, "institutional": true}]}, "relation_deltas": {}, "pc_cost": 6, "follow_up": null, "on_apply": null, "requires": null},
+        {"id": "blame_the_fund", "label": "Blame the Fund", "description": "Foreign accountants who have never wintered here. It plays well at home.", "effects": {"faction_loyalty_deltas": {"@nationalist": 0.04, "@reform": -0.03}}, "relation_deltas": {}, "pc_cost": 0, "follow_up": null, "on_apply": null, "requires": null}
+      ],
+      "default_option_id": "blame_the_fund", "once": false, "cooldown": 0, "audience": "government", "portfolio": "Finance"
+    },
+    {
+      "id": "concert_delegation", "title": "The Concert Sends a Delegation",
+      "description": "Six officials, two interpreters and a list. The Concert wants procurement law, a court that answers to nobody, and a budget that adds up. In return it will say, in a communique, that Ardenia is on the right road.",
+      "category": "Diplomatic", "condition": "concert_delegation_due", "chance": 0.05, "target": "__western__",
+      "options": [
+        {"id": "embrace", "label": "Embrace the list", "description": "Promise all of it, on camera, and start on the easy half.", "effects": {"faction_loyalty_deltas": {"@labour": -0.03, "@reform": 0.04}}, "relation_deltas": {"__western__": 0.04}, "pc_cost": 6, "follow_up": null, "on_apply": "concert_embrace", "requires": null},
+        {"id": "push_back", "label": "Push back on sovereignty", "description": "Ardenia did not leave one union to take dictation from another.", "effects": {"faction_loyalty_deltas": {"@nationalist": 0.04}}, "relation_deltas": {"__western__": -0.05}, "pc_cost": 0, "follow_up": null, "on_apply": null, "requires": null},
+        {"id": "note_politely", "label": "Thank them and file it", "description": "A good lunch, a firm handshake, no dates.", "effects": {}, "relation_deltas": {}, "pc_cost": 0, "follow_up": null, "on_apply": null, "requires": null}
+      ],
+      "default_option_id": "note_politely", "once": false, "cooldown": 24, "audience": "government", "portfolio": "Foreign Affairs"
+    },
+    {
+      "id": "union_invitation", "title": "An Invitation From the East",
+      "description": "The Union's secretariat has sent a letter, in two languages, inviting Ardenia to sit in as an observer. Cheaper gas is mentioned in the second paragraph. The word 'sovereignty' is not mentioned at all.",
+      "category": "Diplomatic", "condition": "union_invites", "chance": 0.05, "target": "__union_anchor__",
+      "options": [
+        {"id": "accept_observer", "label": "Take the observer's seat", "description": "A chair at the table, a flag in the corridor, and a Western ambassador who stops returning calls.", "effects": {}, "relation_deltas": {}, "pc_cost": 0, "follow_up": null, "on_apply": "union_accept", "requires": {"orientation_verb": "union_observer"}},
+        {"id": "play_both_sides", "label": "Show the letter to the West", "description": "Let the Concert read it first. Nothing makes a suitor attentive like a rival.", "effects": {"faction_loyalty_deltas": {"@reform": 0.02}}, "relation_deltas": {"__union_anchor__": -0.05}, "pc_cost": 5, "follow_up": null, "on_apply": "union_play_west", "requires": null},
+        {"id": "decline", "label": "Decline with thanks", "description": "A polite reply that says not now and means not ever.", "effects": {}, "relation_deltas": {"__union_anchor__": -0.03}, "pc_cost": 0, "follow_up": null, "on_apply": null, "requires": null}
+      ],
+      "default_option_id": "decline", "once": false, "cooldown": 36, "audience": "government", "portfolio": "Foreign Affairs"
+    },
+    {
+      "id": "union_pressure", "title": "The Union Expects",
+      "description": "The Union's council has a vote coming and a view on how Ardenia will cast it. The message arrived through the energy ministry, which is how everyone knows it is serious.",
+      "category": "Diplomatic", "condition": "union_member_pressed", "chance": 0.08, "target": "__union_anchor__",
+      "options": [
+        {"id": "resist", "label": "Vote with conscience", "description": "Cast the vote Ardenia would cast anyway, and wait for the bill.", "effects": {"faction_loyalty_deltas": {"@nationalist": 0.04}}, "relation_deltas": {"__union_anchor__": -0.08}, "pc_cost": 6, "follow_up": null, "on_apply": null, "requires": null},
+        {"id": "threaten_exit", "label": "Mention the door", "description": "Remind them that members can leave, and that leaving would be expensive for everyone.", "effects": {"faction_loyalty_deltas": {"@reform": 0.03}}, "relation_deltas": {"__union_anchor__": -0.12}, "pc_cost": 10, "follow_up": null, "on_apply": null, "requires": null},
+        {"id": "comply", "label": "Vote as expected", "description": "It is one vote. It will not be the last one.", "effects": {"faction_loyalty_deltas": {"@nationalist": -0.04}}, "relation_deltas": {"__union_anchor__": 0.03}, "pc_cost": 0, "follow_up": null, "on_apply": "union_comply", "requires": null}
+      ],
+      "default_option_id": "comply", "once": false, "cooldown": 18, "audience": "government", "portfolio": "Foreign Affairs"
+    },
+    {
+      "id": "western_aid_strings", "title": "Aid, Conditions Attached",
+      "description": "A Western finance minister arrives with a cheque and a binder. The cheque relieves the debt. The binder is the price, and it is due in six months.",
+      "category": "Economic", "condition": "western_aid_offered", "chance": 0.05, "target": "__western__",
+      "options": [
+        {"id": "accept_aid", "label": "Take the money", "description": "Relief now, conditions later. Later always arrives.", "effects": {"one_time_debt_pct_delta": -0.004}, "relation_deltas": {"__western__": 0.03}, "pc_cost": 0, "follow_up": {"event_id": "aid_conditions_due", "delay": 6, "chance": 1.0}, "on_apply": null, "requires": null},
+        {"id": "decline", "label": "Decline the binder", "description": "Ardenia will balance its own books, thank you.", "effects": {}, "relation_deltas": {}, "pc_cost": 0, "follow_up": null, "on_apply": null, "requires": null}
+      ],
+      "default_option_id": "decline", "once": false, "cooldown": 36, "audience": "government", "portfolio": "Finance"
+    },
+    {
+      "id": "aid_conditions_due", "title": "The Binder Comes Due",
+      "description": "Six months on, the donors want to see the conditions met: pension indexation suspended, the state holding company audited, the customs service purged. Their ambassador has a calendar.",
+      "category": "Economic", "condition": "never", "chance": 0.0,
+      "options": [
+        {"id": "deliver", "label": "Deliver the conditions", "description": "Do what was promised, and own every word of it in the regions.", "effects": {"faction_loyalty_deltas": {"@labour": -0.05, "@business": 0.03}}, "relation_deltas": {"__western__": 0.04}, "pc_cost": 8, "follow_up": null, "on_apply": null, "requires": null},
+        {"id": "stall", "label": "Stall", "description": "Commissions, consultations, a working group. The donors have seen it before and claw back half.", "effects": {"one_time_debt_pct_delta": 0.002}, "relation_deltas": {"__western__": -0.06}, "pc_cost": 0, "follow_up": null, "on_apply": null, "requires": null}
+      ],
+      "default_option_id": "stall", "once": false, "cooldown": 0, "audience": "government", "portfolio": "Finance"
     }
   ],
   "ardenia_only_events": [

@@ -499,6 +499,23 @@ from what happened, never from a roll.
   re-measured after the fiscal fix and the gas bill (same procedure, 9:1
   blend). AI parties that win power are returned 12 of 27, the 1997 steady
   government 6 of 12 and the opposition start's opening government 8 of 12.
+- **36-seed calibration (owner's rulings, 2026-10-29).** Twelve seeds proved
+  too few. Adding the foreign situations shifted the event stream, and with
+  no change in behaviour the 1997 steady result moved from 6/12 to 10/12;
+  on 24 fresh seeds the content made no systematic difference (14/24 vs
+  13/24). Every election band now runs on 36 calendar-true seeds
+  (`CALIBRATION_SEEDS`, 11 to 396). The journeys are split across
+  `test_polls.gd`, `test_election_steady.gd`, `test_election_strong.gd` and
+  `test_election_calibration.gd` so that each file stays under 180s.
+  Measured: steady player 142/206 (band 0.40–0.72); player from opposition
+  88/107 (≥0.25); AI that won power 56/91 (0.30–0.70); strong cabinet
+  159/171 (≥0.60) and 0.93 vs 0.55 for steady (gap ≥0.15); never-funded 0/44
+  and austerity 4/105 (≤0.35); 1997 steady 23/36; schemer answered 33/36
+  (gap ≥0.15); opposition start's opening government 27/36. The owner widened
+  two bands to the measured reality, with the reason "36-seed measurement;
+  incumbents favored when governing steadily": 1997 steady to 0.40–0.68
+  (`FIRST_TERM_STEADY_RULING`) and the opening government to 0.30–0.80
+  (`OPENING_GOVERNMENT_RULING`). Every other band is unchanged.
 - **Ruling costs.** The ruling party also pays about 2.2 points of support a
   term (`RULING_COST_PER_TERM`), multiplied up by trouble in the last year:
   each defeated government bill (`DEFEAT_WEIGHT` 1), corruption scandal

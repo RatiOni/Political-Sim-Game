@@ -5,9 +5,12 @@ extends RefCounted
 const TARGETS := ["__supplier__", "__rival__", "__western__", "__union_anchor__",
 	"__in_civil_war__", "__fragile__", "__concert_foe__", "__warmest__"]
 const HANDLERS: Array[String] = ["valve_pay", "valve_cargo", "valve_appeal_west", "transit_concede",
-	"transit_arbitrate", "windfall_storage"]
-const CONDITIONS: Array[String] = ["transit_dispute_ripe", "transit_windfall_due"]
-const EVENT_IDS: Array[String] = ["valve_threat", "transit_dispute", "transit_windfall"]
+	"transit_arbitrate", "windfall_storage", "isf_crisis_renegotiate", "concert_embrace", "union_accept",
+	"union_play_west", "union_comply"]
+const CONDITIONS: Array[String] = ["transit_dispute_ripe", "transit_windfall_due", "concert_delegation_due",
+	"union_invites", "union_member_pressed", "western_aid_offered"]
+const EVENT_IDS: Array[String] = ["valve_threat", "transit_dispute", "transit_windfall", "isf_review_crisis",
+	"concert_delegation", "union_invitation", "union_pressure", "western_aid_strings", "aid_conditions_due"]
 const GATES := ["energy_verb", "orientation_verb", "diplomacy_verb"]
 const COUP_STABILITY := 0.3
 const COUP_MAX_WAR_RISK := 0.5
@@ -17,6 +20,9 @@ const TRANSIT_WARMTH := -0.3
 const GAS_SITUATION_TURN := 12
 const WEST_APPEAL := 0.03
 const ARBITRATION_GOODWILL := 0.03
+const DELEGATION_MONTHS := 3
+const PLAY_WEST := 0.03
+const COMPLY_WEST := -0.03
 
 static var probes: Dictionary = {}
 
@@ -132,6 +138,22 @@ static func condition_met(state: GameState, rule_id: String) -> bool:
 			return _transit_open(state) and GasSim.supplier_warmth(state) < TRANSIT_WARMTH
 		"transit_windfall_due":
 			return _transit_open(state) and GasSim.supplier_warmth(state) >= TRANSIT_WARMTH
+		"concert_delegation_due":
+			var r := state.foreign.reached
+			return state.player.in_government and r.has("concert_application") and not r.has("concert_agreement") \
+				and not r.has("union_observer") and not r.has("union_member")
+		"union_invites":
+			var r := state.foreign.reached
+			var left := state.foreign.union_left_turn
+			return state.player.in_government and not r.has("union_observer") and not r.has("union_member") \
+				and _score(state, resolve_target(state, "__union_anchor__")) >= OrientationActions.OBSERVER_WARMTH \
+				and (left < 0 or state.turn - left >= OrientationActions.UNION_REJOIN_MONTHS)
+		"union_member_pressed":
+			return state.player.in_government and state.foreign.reached.has("union_member")
+		"western_aid_offered":
+			var strained := bool(state.foreign.isf.get("suspended", false)) \
+				or state.country.economy.deficit_share_of_gdp() > float(OrientationSim.isf_targets(state)["deficit"])
+			return state.player.in_government and not state.foreign.reached.has("union_member") and strained
 	return false
 
 
@@ -162,6 +184,20 @@ static func run(state: GameState, handler_id: String, target: String) -> String:
 			return "The dispute goes to a panel in a Western capital."
 		"windfall_storage":
 			return _through(EnergyActions.act(state, "gas_storage"))
+		"isf_crisis_renegotiate":
+			return _through(OrientationActions.act(state, "isf_renegotiate"))
+		"concert_embrace":
+			state.foreign.western_qualifying_months = mini(OrientationActions.QUALIFYING_MONTHS_FOR_AGREEMENT,
+				state.foreign.western_qualifying_months + DELEGATION_MONTHS)
+			return "The Concert's list becomes the government's programme."
+		"union_accept":
+			return _through(OrientationActions.act(state, "union_observer"))
+		"union_play_west":
+			shift(state, "__western__", PLAY_WEST)
+			return "The Western embassies read the Union's letter with interest."
+		"union_comply":
+			shift(state, "__western__", COMPLY_WEST)
+			return "Ardenia votes as the Union expects."
 	return ""
 
 

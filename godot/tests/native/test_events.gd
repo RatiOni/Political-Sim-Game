@@ -47,7 +47,7 @@ static func _faction(state: GameState, id: String) -> Faction:
 
 func _test_catalog_integrity(t) -> void:
 	var events := EventsSim.catalog()
-	t.equal(events.size(), 49, "all 49 authored events load")
+	t.equal(events.size(), 55, "all 55 authored events load")
 	var defaults_ok := true
 	var gated_default := ""
 	for e in events:

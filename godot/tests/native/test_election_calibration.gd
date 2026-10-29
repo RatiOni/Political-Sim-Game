@@ -12,11 +12,6 @@ func _test_a_poor_government_mostly_loses(t) -> void:
 	t.truth(Polls.rate(austere, "player") <= 0.35, "and so does one that cuts every year (%d of %d)" % [austere["player_kept"], austere["player_held"]])
 
 
-func _test_a_strong_government_mostly_wins(t) -> void:
-	var strong: Dictionary = Polls.journeys(["government"], 0.0, true, true)
-	t.truth(Polls.rate(strong, "player") >= 0.6, "an able, loyal cabinet on a steady budget mostly wins (%d of %d)" % [strong["player_kept"], strong["player_held"]])
-
-
 static func ruling_share(policy_step: float, able: bool, scale: float, seeds: Array = [11, 22, 33, 44, 55, 66]) -> float:
 	PollsSim.record_scale = scale
 	var total := 0.0
@@ -55,18 +50,9 @@ func _test_a_strong_record_never_hurts(t) -> void:
 		t.truth(on > off, "seed %d: a strong government's record raises its party's share (%.3f vs %.3f)" % [seed, on, off])
 
 
-func _test_strong_beats_steady(t) -> void:
-	var steady: Dictionary = Polls.journeys(["government"], 0.0, true)
-	var strong: Dictionary = Polls.journeys(["government"], 0.0, true, true)
-	t.truth(Polls.rate(strong, "player") - Polls.rate(steady, "player") >= 0.15,
-		"an able cabinet is worth at least fifteen points of re-election (%.2f vs %.2f)" % [Polls.rate(strong, "player"), Polls.rate(steady, "player")])
-
-
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_a_poor_government_mostly_loses(t)
-	_test_a_strong_government_mostly_wins(t)
 	_test_the_record_moves_the_result(t)
-	_test_strong_beats_steady(t)
 	_test_a_strong_record_never_hurts(t)
 	quit(t.finish())
