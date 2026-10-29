@@ -66,10 +66,10 @@ func _test_dependence_share_reads_the_contract(t) -> void:
 
 func _test_joining_the_union_caps_the_price(t) -> void:
 	var state := _state()
-	GasSim.cap_to_union(state)
+	GasSim.on_union_join(state)
 	t.near(state.foreign.gas.price, 35.0, 0.000001, "joining the Union caps the price at seventy percent of the reference")
 	state.foreign.gas.price = 20.0
-	GasSim.cap_to_union(state)
+	GasSim.on_union_join(state)
 	t.equal(state.foreign.gas.price, 20.0, "and never raises a cheaper one")
 
 
