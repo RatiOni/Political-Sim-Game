@@ -84,14 +84,14 @@ static func stability_breakdown(state: GameState) -> Dictionary:
 		var loyalty_sum := 0.0
 		var cohesion_sum := 0.0
 		for faction in members:
-			loyalty_sum += faction.loyalty
+			loyalty_sum += faction.loyalty if not opposition else ai_government_loyalty(state, faction)
 			cohesion_sum += faction.cohesion()
 		coalition_loyalty = loyalty_sum / float(members.size())
 		cohesion = cohesion_sum / float(members.size())
-	var coalition_component := 0.5 if opposition else (coalition_loyalty + 1.0) * 0.5
-	var cabinet_component := 0.5 if opposition else _cabinet_component(state)
-	var risk := 0.0 if opposition else _cabinet_risk_fraction(state)
-	var approval_component := 0.5 if opposition else state.player.approval
+	var coalition_component := (coalition_loyalty + 1.0) * 0.5
+	var cabinet_component := _cabinet_component(state)
+	var risk := _cabinet_risk_fraction(state)
+	var approval_component := PollsSim.government_approval(state) if opposition else state.player.approval
 	var seats := 0
 	var coalition_seats := 0
 	for faction in state.country.factions:
@@ -114,6 +114,14 @@ static func stability_breakdown(state: GameState) -> Dictionary:
 		"Coalition cohesion": -(1.0 - cohesion) * 0.08,
 		"State presence": -(1.0 - _mean_delivery(state)) * STATE_PRESENCE_WEIGHT,
 	}
+
+
+const AI_RULING_LOYALTY := 0.6
+const AI_PARTNER_LOYALTY := 0.4
+
+
+static func ai_government_loyalty(state: GameState, faction: Faction) -> float:
+	return AI_RULING_LOYALTY if faction.id == state.ruling_faction_id else AI_PARTNER_LOYALTY
 
 
 static func _mean_delivery(state: GameState) -> float:

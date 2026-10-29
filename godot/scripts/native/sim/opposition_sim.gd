@@ -35,7 +35,7 @@ const RELATED_PLEDGE_WEIGHT := 0.65
 
 const EDGE_FLOOR := -0.06
 const EDGE_CEILING := 0.08
-const EMPTY_PLATFORM_EDGE := -0.03
+const EMPTY_PLATFORM_EDGE := -0.015
 
 const RETREAT_WINDOW_MONTHS := 3
 const BY_ELECTION_EARLIEST_TURN := 6
@@ -75,17 +75,33 @@ static func own_party(state: GameState) -> Faction:
 	return _faction(state, state.player.faction_id)
 
 
-static func choose_bill(state: GameState) -> Law:
-	var best: Law = null
-	var best_score := -INF
+const PROGRAMME_SHORTLIST := 3
+
+
+static func ranked_bills(state: GameState) -> Array:
+	var scored: Array = []
 	for law in LawActions.catalog_laws():
-		if not _government_may_bring(state, law):
-			continue
-		var score := pressure_score(state, law)
-		if best == null or score > best_score or (is_equal_approx(score, best_score) and law.id < best.id):
-			best = law
-			best_score = score
-	return best
+		if _government_may_bring(state, law) and material_relief(state, law) >= 0.0:
+			scored.append([pressure_score(state, law), law.id])
+	scored.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0] or (a[0] == b[0] and String(a[1]) < String(b[1])))
+	return scored.slice(0, PROGRAMME_SHORTLIST).map(func(row: Array) -> String: return String(row[1]))
+
+
+static func choose_bill(state: GameState) -> Law:
+	var shortlist := ranked_bills(state)
+	if shortlist.is_empty():
+		return null
+	var total := 0
+	for i in range(shortlist.size()):
+		total += shortlist.size() - i
+	var pick := state.rng.next_float() * total
+	var chosen: String = shortlist[-1]
+	for i in range(shortlist.size()):
+		pick -= shortlist.size() - i
+		if pick < 0.0:
+			chosen = shortlist[i]
+			break
+	return _catalog_law(chosen)
 
 
 static func pressure_score(state: GameState, law: Law) -> float:
@@ -113,6 +129,13 @@ static func material_relief(state: GameState, law: Law) -> float:
 		relief += 0.75
 	if state.civil_war_risk >= SECURITY_ALARM and law.portfolio == "Defense":
 		relief += 1.0
+	if econ.inflation >= INFLATION_ALARM and _effect(law, "inflation_delta", "inflation") > 0.0:
+		relief -= 1.0
+	if econ.unemployment >= UNEMPLOYMENT_ALARM and _effect(law, "unemployment_delta", "unemployment") > 0.0:
+		relief -= 0.75
+	if econ.budget.is_deficit() and (_effect(law, "budget_expenditure_delta", "budget_expenditure") > 0.0 \
+			and _effect(law, "budget_revenue_delta", "budget_revenue") <= 0.0):
+		relief -= 0.75
 	return relief
 
 
@@ -141,7 +164,7 @@ static func leave_office(state: GameState) -> void:
 	state.player.in_government = false
 	state.player.title = OPPOSITION_TITLE
 	if BudgetSim.is_emergency(state):
-		BudgetSim.activate(state, BudgetSim.government_ai_budget(state))
+		BudgetSim.enact_ai_budget(state)
 	Elections.staff_cabinet(state, [] as Array[Minister])
 	_carry_unfinished_pledges(state)
 	opp.mandate_start_turn = -1

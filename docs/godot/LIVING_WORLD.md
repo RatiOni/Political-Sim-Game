@@ -385,34 +385,76 @@ from what happened, never from a roll.
   another party in power.
 
 - **The polls move with the record** (`sim/polls_sim.gd`). Each month the
-  ruling party gains or loses with approval (×0.012), household confidence
-  (×0.010) and misery — inflation plus unemployment above their structural
-  levels (×0.06) — each read against what a steady, ordinary government
-  measures in play — a player government against approval 0.464,
-  confidence 0.432, misery 0.0034, stability 0.503, an AI government
-  against approval 0.42, confidence 0.425, misery 0.004, stability 0.44
-  (`PollsSim.ORDINARY_PLAYER_GOVERNMENT` / `ORDINARY_AI_GOVERNMENT`,
-  measured on calendar-true 20-year journeys; the AI set sits below the
-  all-terms AI mean because AI governments usually take over a failing
-  government's country); coalition partners take half. Turnout reads the
-  same references. A government's first term is free; each further
-  consecutive term costs its party 0.12 of turnout, up to 3 terms
-  (`GOVERNMENT_FATIGUE`, `FATIGUE_TERM_CAP`) — the price of the structural
-  lead a large party's support base gives it. Terms count from the
-  election a party took power (`ElectionResult.previous_ruling_faction_id`). The
-  opposition takes what the government loses, more for parties nearer the
-  public mood (the support-weighted average ideology). Every party is pulled
-  1% a month back toward its starting share, no party moves more than a
-  point a month or falls below 1%, and shares stay normalised. Campaigns,
+  ruling party gains or loses with approval (×0.025), household confidence
+  (×0.02) and misery — inflation plus unemployment above their structural
+  levels (×0.06) — read against what an ordinary elected government
+  measures (`ORDINARY_GOVERNMENT`: approval 0.45, confidence 0.42, misery
+  −0.009, stability 0.496, the mean over every month governed by a party
+  that won power at an election, player or AI, on twelve calendar-true
+  seeds in both starting roles). A government is not blamed for the
+  country it inherits: the expected figures start at what it took over and
+  close on the ordinary case over `INHERITANCE_FADE_MONTHS` (72). Coalition
+  partners take half. Turnout reads the same expected figures.
+- **Ruling costs.** The ruling party also pays about 2.2 points of support a
+  term (`RULING_COST_PER_TERM`), multiplied up by trouble in the last year:
+  each defeated government bill (`DEFEAT_WEIGHT` 1), corruption scandal
+  (`SCANDAL_WEIGHT` 0.75), broken pledge (`BROKEN_PLEDGE_WEIGHT` 0.5) and an
+  unfunded year (`EMERGENCY_WEIGHT` 2). There is no election-day fatigue
+  (`GOVERNMENT_FATIGUE` 0); terms still count from the election a party took
+  power.
+- **The base realigns.** After every election each party's base moves a
+  quarter of the way to its result (`BASE_REALIGNMENT`), so a lasting lead
+  must be won again rather than inherited from 1993. The opposition takes
+  what the government loses, more for parties nearer the public mood. Every
+  party is pulled 3% a month back toward its base, no party moves more than
+  a point a month or falls below 1%, and shares stay normalised. Campaigns,
   situations and by-elections still move support on top. Regions follow
   through the count's national swing while keeping their own character, and
   the monthly report carries a poll line.
 
-Calendar-true, over twenty years on six seeds: a steady player government
-is returned 58% of the time, an ordinary AI government 50%, a strong player
-government (able, loyal cabinet) 75%, an austerity one 33% and one that
-never passes a budget never. Governments that fell averaged lower approval
-than those returned, and seeds write different histories.
+Households no longer decay under a steady government: income and price
+indices rebase together once either passes 2.0 (they used to hit fixed caps
+after about fifteen years of inflation), and incomes recover lost purchasing
+power at `REAL_INCOME_CATCH_UP` (a year). The ordinary case is now a measured
+path, `ORDINARY_TRAJECTORY` (two-year periods over twenty years, every
+governing month on twelve seeds from both starts, with an ordinary
+legislative programme and neutral budgets), because misery genuinely falls
+over a campaign. The opening government is measured against that path from
+its own 1993 figures without fading, and stability now enters the record
+(`STABILITY_WEIGHT` 0.03). Sweep: fade 12–240 months and approval/confidence
+weights 0.018–0.035; chosen 24 months and 0.025/0.02, the only setting that
+held both the steady and AI-won bands. Base realignment is 0.2.
+
+Calendar-true over twelve seeds, with every player and AI government running
+an ordinary programme:
+
+| Government | Returned |
+|---|---|
+| Steady player | 32 of 64 (0.50) |
+| Strong player | 34 of 48 (0.71) |
+| Austerity player | 0 of 34 |
+| No-budget player | 0 of 15 |
+| AI party that won power | 26 of 44 (0.59) |
+| Player who won from opposition | 23 of 36 (0.64) |
+| Opening government | 0 of 24 (pending) |
+
+The opening government still loses its first election: in opposition starts
+it is the smaller party against an eight-point Liberal Democrat base, and in
+government starts the authored cabinet carries the schemer, whose cabinet
+dysfunction a passive test government never answers.
+
+**AI governments govern.** Their budget passes through the same division as
+the player's, with the coalition whipped; a defeated plan leaves the state on
+a continuing budget and the government tries again monthly. The plan keeps
+the composition it inherited and tilts it toward the ruling party's
+priorities and the country's pressing needs (welfare under household
+distress, jobs under high unemployment), within 5% of each share, and its
+total grows with revenue. Its programme bills come from a shortlist of its
+three best-scored bills, picked through the saved stream, and never a bill
+that worsens a pressing problem. Its ministers are the ablest of three drawn
+for each post, and its stability reads its own cabinet and coalition rather
+than the player's party loyalties. Laws an earlier government passed cost the
+player no upkeep.
 
 **No unfunded AI years.** An AI government enacts its restrained plan every
 January and at once if it inherits an emergency (including the month the

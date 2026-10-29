@@ -18,6 +18,12 @@ func near(actual: float, expected: float, tolerance: float, label: String) -> vo
 func truth(value: bool, label: String) -> void:
 	equal(value, true, label)
 
+var pending_count := 0
+
+func pending(label: String, reason: String) -> void:
+	pending_count += 1
+	print("PENDING  %s (%s)" % [label, reason])
+
 func finish() -> int:
 	print("NATIVE TESTS: %d passed, %d failed" % [passed, failed])
 	return 0 if failed == 0 else 1

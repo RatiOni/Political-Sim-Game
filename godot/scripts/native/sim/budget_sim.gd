@@ -151,14 +151,50 @@ static func government_ai_budget(state: GameState) -> AnnualBudget:
 	b.status = "active"
 	b.source = "government_ai"
 	b.proposed_by = state.ruling_faction_id
+	b.economy_basis = active.economy_basis if active.economy_basis > 0.0 else active.forecast_revenue
 	b.forecast_revenue = state.country.economy.budget.revenue
 	b.votes_for = votes_for
 	b.votes_against = votes_against
 	return b
 
 
+const AI_COALITION_WHIP := 0.16
+const AI_RULING_WHIP := 0.28
+
+
+static func enact_ai_budget(state: GameState) -> bool:
+	var plan := government_ai_budget(state)
+	plan.status = "proposed"
+	for f in state.country.factions:
+		if f.in_coalition:
+			plan.lobbying_bonus[f.id] = AI_COALITION_WHIP
+	plan.lobbying_bonus[state.ruling_faction_id] = AI_RULING_WHIP
+	var division := BudgetActions.projection(state, plan)
+	plan.votes_for = int(division["votes_for"])
+	plan.votes_against = int(division["votes_against"])
+	if bool(division["passed"]):
+		activate(state, plan)
+		return true
+	if not state.budget_history.any(func(b: AnnualBudget) -> bool: return b.source == "government_ai" and b.status == "rejected" and b.year == plan.year):
+		plan.status = "rejected"
+		state.budget_history.append(plan)
+	if not is_emergency(state):
+		state.active_budget = activate(state, _emergency_resolution(state))
+	return false
+
+
 static func _reference_allocations(state: GameState) -> Dictionary:
-	return default_allocations(_envelopes(), state.country.economy.structural_expenditure)
+	var reference: Variant = state.campaign_meta.get("ai_budget_reference", {})
+	if not (reference is Dictionary) or String(reference.get("party", "")) != state.ruling_faction_id:
+		var total := 0.0
+		for v in state.active_budget.allocations.values():
+			total += float(v)
+		var shares := {}
+		for key in state.active_budget.allocations:
+			shares[key] = float(state.active_budget.allocations[key]) / maxf(total, 1.0)
+		reference = {"party": state.ruling_faction_id, "shares": shares}
+		state.campaign_meta["ai_budget_reference"] = reference
+	return reference["shares"]
 
 
 static func process_fiscal_year(state: GameState) -> void:
@@ -166,7 +202,7 @@ static func process_fiscal_year(state: GameState) -> void:
 	if state.month == 1 and active.year < state.year:
 		_open_fiscal_year(state)
 	elif is_emergency(state) and not state.player.in_government:
-		activate(state, government_ai_budget(state))
+		enact_ai_budget(state)
 	elif is_emergency(state):
 		_emergency_month(state)
 
@@ -179,8 +215,8 @@ static func _open_fiscal_year(state: GameState) -> void:
 		return
 
 	if not state.player.in_government:
-		activate(state, government_ai_budget(state))
 		state.pending_budget = null
+		enact_ai_budget(state)
 		return
 
 	state.pending_budget = null

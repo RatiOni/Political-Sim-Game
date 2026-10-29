@@ -50,6 +50,8 @@ static func validate(state: GameState) -> PackedStringArray:
 	_validate_press(state, errors)
 	_validate_elections(state, errors)
 	_validate_support_base(state, errors)
+	if state.campaign_meta.has(PollsSim.INHERITANCE_KEY) and not PollsSim.valid_inheritance(state.campaign_meta[PollsSim.INHERITANCE_KEY], state):
+		errors.append("campaign_meta.inheritance is malformed")
 	_validate_opposition_out_of_government(state, errors)
 
 	if state.player != null:
@@ -414,7 +416,7 @@ static func _validate_budget(budget: AnnualBudget, label: String, container: Str
 		var enacted_ok := budget.status == "active" \
 			and budget.source in ["player", "government_ai", "continuing"] \
 			and budget.year <= current_year
-		var rejected_ok := budget.status == "rejected" and budget.source == "player" \
+		var rejected_ok := budget.status == "rejected" and budget.source in ["player", "government_ai"] \
 			and budget.year <= current_year + 1
 		if not enacted_ok and not rejected_ok:
 			errors.append("%s has an impossible historical lifecycle" % label)

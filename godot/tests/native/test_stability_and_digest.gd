@@ -61,16 +61,23 @@ func _test_opposition_contract(t, content: Dictionary) -> void:
 		faction.loyalty = -1.0
 	for faction in right.country.factions:
 		faction.loyalty = 1.0
-	for minister in left.ministers:
-		minister.loyalty = 0.0
-	for minister in right.ministers:
-		minister.loyalty = 1.0
 	StabilitySimScript.update_approval(left)
 	StabilitySimScript.update_approval(right)
 	StabilitySimScript.update_stability(left)
 	StabilitySimScript.update_stability(right)
 	t.near(left.player.approval, right.player.approval, 0.000001, "opposition approval neutralises player-relative loyalty")
-	t.near(left.stability_value, right.stability_value, 0.000001, "opposition stability neutralises stale cabinet and player loyalty")
+	t.near(left.stability_value, right.stability_value, 0.000001, "opposition stability neutralises player-relative party loyalty")
+	var loyal := _state(content)
+	var restive := _state(content)
+	for s in [loyal, restive]:
+		s.player.in_government = false
+	for minister in loyal.ministers:
+		minister.loyalty = 1.0
+	for minister in restive.ministers:
+		minister.loyalty = 0.0
+	StabilitySimScript.update_stability(loyal)
+	StabilitySimScript.update_stability(restive)
+	t.truth(loyal.stability_value > restive.stability_value, "but a sitting AI government's own cabinet still steadies or shakes it")
 
 
 func _test_digest_is_pure_and_material(t, content: Dictionary) -> void:

@@ -132,6 +132,8 @@ func _test_household_confidence_judges_the_sitting_party(t) -> void:
 	HouseholdsSim.ensure_households(content)
 	HouseholdsSim.ensure_households(hurting)
 	t.truth(not content.households.is_empty(), "Ardenia's households are counted")
+	PollsSim.inheritance(content)
+	PollsSim.inheritance(hurting)
 	for g in content.households.values():
 		(g as HouseholdGroupState).confidence = 0.85
 	for g in hurting.households.values():

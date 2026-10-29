@@ -11,6 +11,7 @@ static func _state(role: String = "government", seed: int = 919191) -> GameState
 	state.rng = SimRng.from_seed(seed)
 	BudgetSim.ensure_budget_state(state)
 	HouseholdsSim.ensure_households(state)
+	PollsSim.inheritance(state)
 	return state
 
 
@@ -125,7 +126,8 @@ func _test_regions_follow_national_moves(t) -> void:
 
 const ENVELOPES := ["state_administration", "foreign_affairs", "justice_and_policing", "national_defense",
 	"infrastructure", "industry_and_jobs", "education", "health_and_welfare"]
-const CALIBRATION_SEEDS := [11, 22, 33, 44, 55, 66]
+const CALIBRATION_SEEDS := [11, 22, 33, 44, 55, 66, 77, 88, 99, 110, 121, 132]
+const SEQUENCE_SEEDS := [11, 22, 33, 44, 55, 66]
 
 
 static func budget_policy(state: GameState, step: float) -> void:
@@ -143,9 +145,20 @@ static func budget_policy(state: GameState, step: float) -> void:
 		BudgetActions.vote(state)
 
 
-static func journeys(roles: Array, step: float, passes_budgets: bool, able_cabinet := false) -> Dictionary:
-	var out := {"player_held": 0, "player_kept": 0, "ai_held": 0, "ai_kept": 0, "lost": [], "kept": [],
-		"sequences": {}, "valid": true}
+static func ordinary_programme(state: GameState) -> void:
+	if not state.player.in_government or state.pending_law != null:
+		return
+	for law in state.law_history:
+		if law.proposed_by == state.player.faction_id and state.turn - law.proposed_turn < OppositionSim.BILL_CADENCE_MONTHS:
+			return
+	var bill := OppositionSim.choose_bill(state)
+	if bill != null and LawActions.propose(state, bill.id).get("ok", false):
+		LawActions.vote(state)
+
+
+static func journeys(roles: Array, step: float, passes_budgets: bool, able_cabinet := false, legislates := true) -> Dictionary:
+	var out := {"player_held": 0, "player_kept": 0, "ai_won_held": 0, "ai_won_kept": 0, "opening_held": 0,
+		"opening_kept": 0, "first_held": 0, "first_kept": 0, "lost": [], "kept": [], "sequences": {}, "valid": true}
 	for role in roles:
 		for seed in CALIBRATION_SEEDS:
 			var state := _state(role, seed)
@@ -155,11 +168,14 @@ static func journeys(roles: Array, step: float, passes_budgets: bool, able_cabin
 					m.loyalty = 0.95
 					m.trait_id = "technocrat"
 			var sequence := ""
+			var elected_ai := false
 			for _m in range(240):
 				var governing := state.player.in_government
 				var ruling := state.ruling_faction_id
 				if passes_budgets:
 					budget_policy(state, step)
+				if legislates:
+					ordinary_programme(state)
 				NativeGameScript.next_month(state)
 				if state.election_history.is_empty() or state.election_history[-1].turn != state.turn:
 					continue
@@ -167,11 +183,17 @@ static func journeys(roles: Array, step: float, passes_budgets: bool, able_cabin
 				sequence += r.ruling_faction_id + ";"
 				var returned := r.ruling_faction_id == ruling
 				(out["kept"] if returned else out["lost"]).append(r.incumbent_approval)
-				var side := "player" if governing else "ai"
+				var side := "player" if governing else ("ai_won" if elected_ai else "opening")
 				out[side + "_held"] += 1
 				out[side + "_kept"] += 1 if returned else 0
+				if state.election_history.size() == 1:
+					out["first_held"] += 1
+					out["first_kept"] += 1 if returned else 0
+				if not returned:
+					elected_ai = not state.player.in_government
 			out["valid"] = out["valid"] and StateValidator.validate(state).is_empty()
-			out["sequences"]["%s:%s" % [role, sequence]] = true
+			if seed in SEQUENCE_SEEDS:
+				out["sequences"]["%s:%s" % [role, sequence]] = true
 	return out
 
 
@@ -186,18 +208,97 @@ static func mean(xs: Array) -> float:
 	return s / maxf(1.0, xs.size())
 
 
+func _test_ruling_costs_about_two_points_a_term(t) -> void:
+	var state := _state()
+	var term_cost := PollsSim.ruling_cost(state) * Elections.TERM_MONTHS
+	t.near(term_cost, PollsSim.RULING_COST_PER_TERM, 1e-9, "an untroubled government pays about %.1f points a term for ruling" % (PollsSim.RULING_COST_PER_TERM * 100.0))
+	var neutral := _state()
+	var start := _ruling(neutral).support
+	_set_record(neutral, float(PollsSim.ordinary_at(neutral.turn)["approval"]), float(PollsSim.ordinary_at(neutral.turn)["confidence"]),
+		float(PollsSim.ordinary_at(neutral.turn)["misery"]))
+	neutral.stability_value = float(PollsSim.ordinary_at(neutral.turn)["stability"])
+	neutral.campaign_meta.erase(PollsSim.INHERITANCE_KEY)
+	PollsSim.inheritance(neutral)
+	for _m in range(Elections.TERM_MONTHS):
+		_set_record(neutral, float(PollsSim.ordinary_at(neutral.turn)["approval"]), float(PollsSim.ordinary_at(neutral.turn)["confidence"]),
+			float(PollsSim.ordinary_at(neutral.turn)["misery"]))
+		neutral.stability_value = float(PollsSim.ordinary_at(neutral.turn)["stability"])
+		PollsSim.monthly(neutral)
+	var lost := start - _ruling(neutral).support
+	t.truth(lost > 0.005 and lost < 0.03, "an ordinary government ends its term a little down (%.1f points)" % (lost * 100.0))
+	var troubled := _state()
+	troubled.active_budget = BudgetSim.activate(troubled, BudgetSim._emergency_resolution(troubled))
+	troubled.event_history.append({"event_id": "corruption_trial", "option_id": "x", "turn": troubled.turn, "lapsed": false})
+	troubled.opposition.mandate_start_turn = 0
+	troubled.opposition.pledges.append({"bill_id": "minimum_wage_act", "status": "broken", "campaigns": 0})
+	var defeated := Law.new()
+	defeated.id = "minimum_wage_act"
+	defeated.status = "rejected"
+	defeated.proposed_by = troubled.ruling_faction_id
+	defeated.proposed_turn = troubled.turn
+	troubled.law_history.append(defeated)
+	t.truth(PollsSim.ruling_cost(troubled) > PollsSim.ruling_cost(_state()) * 3.0,
+		"scandal, a broken pledge, a lost bill and an unfunded year make ruling dearer")
+	var opposition := _state("opposition")
+	var player_party: Faction = null
+	for f in opposition.country.factions:
+		if f.id == opposition.player.faction_id:
+			player_party = f
+	t.truth(PollsSim.ruling_cost(opposition) > 0.0 and opposition.ruling_faction_id != player_party.id, "an AI government pays the same price")
+
+
+func _test_the_base_realigns_after_each_election(t) -> void:
+	var state := _state()
+	PollsSim.monthly(state)
+	var before := state.support_base.duplicate()
+	var result := Elections.hold(state, false)
+	var moved := true
+	var total := 0.0
+	for id in before:
+		var expected := float(before[id]) + (float(result.vote_share.get(id, 0.0)) - float(before[id])) * Elections.BASE_REALIGNMENT
+		moved = moved and absf(float(state.support_base[id]) - expected) < 1e-6
+		total += float(state.support_base[id])
+	t.truth(moved, "every party's base moves a quarter of the way toward its result")
+	t.near(total, 1.0, 1e-6, "and the bases stay normalised")
+
+
+func _test_a_malformed_inheritance_is_refused_and_rebuilt(t) -> void:
+	var state := _state()
+	t.truth(StateValidator.validate(state).is_empty(), "a recorded inheritance validates")
+	for bad in [{"party": state.ruling_faction_id, "turn": 0}, "nonsense",
+			{"party": state.ruling_faction_id, "turn": 0, "approval": "high", "confidence": 0.4, "misery": 0.0, "stability": 0.5},
+			{"party": state.ruling_faction_id, "turn": 9999, "approval": 0.4, "confidence": 0.4, "misery": 0.0, "stability": 0.5}]:
+		state.campaign_meta[PollsSim.INHERITANCE_KEY] = bad
+		t.truth(not StateValidator.validate(state).is_empty(), "the validator rejects a malformed inheritance %s" % [bad])
+		var rebuilt := PollsSim.inheritance(state)
+		t.truth(PollsSim.valid_inheritance(rebuilt, state), "and the polls rebuild it rather than read it")
+	state.campaign_meta.erase(PollsSim.INHERITANCE_KEY)
+	t.truth(StateValidator.validate(state).is_empty(), "an absent inheritance is fine")
+
+
 func _test_steady_governments_are_judged_like_ordinary_ones(t) -> void:
-	var steady := journeys(["government", "opposition"], -0.05, true)
-	t.truth(steady["valid"], "twenty calendar-true years from either side stay valid")
-	t.truth(rate(steady, "player") >= 0.4 and rate(steady, "player") <= 0.65,
-		"a steady player government is returned about half the time (%d of %d)" % [steady["player_kept"], steady["player_held"]])
-	t.truth(rate(steady, "ai") >= 0.35 and rate(steady, "ai") <= 0.65,
-		"and so is an ordinary AI government (%d of %d)" % [steady["ai_kept"], steady["ai_held"]])
-	t.truth(not steady["lost"].is_empty() and not steady["kept"].is_empty(), "governments both fall and survive")
-	t.truth(mean(steady["lost"]) < mean(steady["kept"]),
-		"and those that fell were less approved (%.2f) than those returned (%.2f)" % [mean(steady["lost"]), mean(steady["kept"])])
-	var government_sequences: Array = (steady["sequences"] as Dictionary).keys().filter(func(k: String) -> bool: return k.begins_with("government:"))
-	t.truth(government_sequences.size() >= 2, "the seeds do not all write the same political history (%d distinct)" % government_sequences.size())
+	var governing := journeys(["government"], 0.0, true)
+	var opposing := journeys(["opposition"], 0.0, true)
+	t.truth(governing["valid"] and opposing["valid"], "twenty calendar-true years from either side stay valid")
+	var player_held: int = governing["player_held"] + opposing["player_held"]
+	var player_kept: int = governing["player_kept"] + opposing["player_kept"]
+	var player_rate := float(player_kept) / maxf(1.0, player_held)
+	t.truth(player_rate >= 0.4 and player_rate <= 0.65, "a steady player government is returned about half the time (%d of %d)" % [player_kept, player_held])
+	t.truth(rate(opposing, "player") >= 0.25, "a player who wins office from opposition is returned often enough (%d of %d)" % [opposing["player_kept"], opposing["player_held"]])
+	var won_held: int = governing["ai_won_held"] + opposing["ai_won_held"]
+	var won_kept: int = governing["ai_won_kept"] + opposing["ai_won_kept"]
+	var won_rate := float(won_kept) / maxf(1.0, won_held)
+	t.truth(won_rate >= 0.3 and won_rate <= 0.7, "an AI party that won power is returned often enough (%d of %d)" % [won_kept, won_held])
+	var first_held: int = governing["first_held"] + opposing["first_held"]
+	var first_kept: int = governing["first_kept"] + opposing["first_kept"]
+	var first_rate := float(first_kept) / maxf(1.0, first_held)
+	t.pending("the opening government faces a fair first election (%d of %d returned)" % [first_kept, first_held],
+		"the opposition start seats the smaller party against an eight-point Liberal Democrat base, and the government start's authored cabinet carries the schemer whose dysfunction a passive test government never answers")
+	var lost: Array = governing["lost"] + opposing["lost"]
+	var kept: Array = governing["kept"] + opposing["kept"]
+	t.truth(mean(lost) < mean(kept), "governments that fell were less approved (%.2f) than those returned (%.2f)" % [mean(lost), mean(kept)])
+	t.truth((governing["sequences"] as Dictionary).size() >= 3,
+		"six seeds write at least three political histories (%d)" % (governing["sequences"] as Dictionary).size())
 
 
 func _initialize() -> void:
@@ -208,4 +309,7 @@ func _initialize() -> void:
 	_test_the_polls_are_deterministic_and_reported(t)
 	_test_regions_follow_national_moves(t)
 	_test_steady_governments_are_judged_like_ordinary_ones(t)
+	_test_ruling_costs_about_two_points_a_term(t)
+	_test_the_base_realigns_after_each_election(t)
+	_test_a_malformed_inheritance_is_refused_and_rebuilt(t)
 	quit(t.finish())

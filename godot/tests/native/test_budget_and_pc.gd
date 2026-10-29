@@ -305,10 +305,11 @@ func _test_upkeep_counts_enacted_laws(t, content: Dictionary) -> void:
 		var law := Law.new()
 		law.id = id
 		law.status = "enacted"
+		law.proposed_by = state.player.faction_id
 		state.enacted_laws.append(law)
 	var breakdown: Dictionary = PoliticalCapitalScript.upkeep(state)
 	t.near(float(breakdown.get("laws", -1.0)), 2.0 * PoliticalCapitalScript.PC_UPKEEP_LAW, 0.0001,
-		"each enacted native law consumes monthly governing capacity")
+		"each law the government enacted consumes monthly governing capacity")
 
 func _test_upkeep_counts_sanctions_and_treaties(t, content: Dictionary) -> void:
 	var state: GameState = GameFactoryScript.new_campaign(content, _base_config())
