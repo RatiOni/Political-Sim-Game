@@ -1,6 +1,7 @@
 extends SceneTree
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
+const NativeGameScript = preload("res://scripts/native/native_game.gd")
 
 
 static func _state() -> GameState:
@@ -108,6 +109,67 @@ func _test_fit_respects_prerequisite_and_rival_bloc(t) -> void:
 	t.truth(OrientationSim.bloc_rejects(state, veldoria, ForeignSim.bloc("concert")), "and a Union member is rejected by it")
 
 
+func _test_the_bloc_pass_runs_once_in_january_on_the_real_calendar(t) -> void:
+	var state := _state()
+	var veldoria := DiplomacySim.world_country(state, "veldoria")
+	veldoria.stability = 0.9
+	_between(veldoria, DiplomacySim.world_country(state, "solheim"), 0.9)
+	state.year = 1995
+	state.month = 11
+	state.day = 1
+	NativeGameScript.next_month(state)
+	t.equal(state.month, 12, "the calendar reaches December")
+	t.truth(not _in(state, "concert", "veldoria"), "no bloc pass runs in December")
+	NativeGameScript.next_month(state)
+	t.equal(state.month, 1, "the calendar rolls into January")
+	t.truth(_in(state, "concert", "veldoria"), "the bloc pass runs in January")
+	(state.foreign.members["concert"] as Array).erase("veldoria")
+	NativeGameScript.next_month(state)
+	t.equal(state.month, 2, "the calendar reaches February")
+	t.truth(not _in(state, "concert", "veldoria"), "no bloc pass runs in February")
+
+
+func _test_a_cold_stable_non_member_stays_out(t) -> void:
+	var state := _state()
+	var veldoria := DiplomacySim.world_country(state, "veldoria")
+	veldoria.stability = 0.7
+	_between(veldoria, DiplomacySim.world_country(state, "solheim"), 0.05)
+	state.month = 1
+	OrientationSim.monthly(state)
+	t.truth(not _in(state, "concert", "veldoria"), "warmth below the bar keeps a stable democratic trader out")
+	_between(veldoria, DiplomacySim.world_country(state, "solheim"), 0.6)
+	OrientationSim.monthly(state)
+	t.truth(_in(state, "concert", "veldoria"), "and warmth above the bar lets it in")
+
+
+func _test_members_leave_on_collapse_or_civil_war(t) -> void:
+	var state := _state()
+	var veldoria := DiplomacySim.world_country(state, "veldoria")
+	veldoria.stability = 0.7
+	_between(veldoria, DiplomacySim.world_country(state, "solheim"), 0.6)
+	state.month = 1
+	OrientationSim.monthly(state)
+	t.truth(_in(state, "concert", "veldoria"), "a stable warm member sits in the Concert")
+	veldoria.stability = 0.2
+	OrientationSim.monthly(state)
+	t.truth(not _in(state, "concert", "veldoria"), "a collapsing member leaves")
+	veldoria.stability = 0.7
+	OrientationSim.monthly(state)
+	t.truth(_in(state, "concert", "veldoria"), "and returns once steady")
+	veldoria.in_civil_war = true
+	OrientationSim.monthly(state)
+	t.truth(not _in(state, "concert", "veldoria"), "a member in civil war leaves")
+
+
+func _test_a_member_losing_a_required_bloc_is_rejected(t) -> void:
+	var state := _state()
+	var veldoria := DiplomacySim.world_country(state, "veldoria")
+	var synthetic := {"id": "meridian", "requires": "concert", "excludes": [], "leave_stability": 0.0, "leave_warmth": -1.0}
+	t.truth(OrientationSim.bloc_rejects(state, veldoria, synthetic), "no Concert seat means no alliance seat")
+	(state.foreign.members["concert"] as Array).append("veldoria")
+	t.truth(not OrientationSim.bloc_rejects(state, veldoria, synthetic), "with the seat the alliance keeps it")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_democratic_traders_drift_into_the_concert(t)
@@ -117,4 +179,8 @@ func _initialize() -> void:
 	_test_an_anchor_never_leaves_its_bloc(t)
 	_test_no_country_sits_on_both_sides(t)
 	_test_fit_respects_prerequisite_and_rival_bloc(t)
+	_test_the_bloc_pass_runs_once_in_january_on_the_real_calendar(t)
+	_test_a_cold_stable_non_member_stays_out(t)
+	_test_members_leave_on_collapse_or_civil_war(t)
+	_test_a_member_losing_a_required_bloc_is_rejected(t)
 	quit(t.finish())

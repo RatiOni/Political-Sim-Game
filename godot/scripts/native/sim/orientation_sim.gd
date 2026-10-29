@@ -156,7 +156,7 @@ static func bloc_fits(state: GameState, c: Country, b: Dictionary) -> bool:
 static func bloc_rejects(state: GameState, c: Country, b: Dictionary) -> bool:
 	var anchor := _anchor(String(b["id"]))
 	return c.in_civil_war or c.stability < float(b.get("leave_stability", 0.0)) \
-		or _warmth(c, anchor) < float(b.get("leave_warmth", 0.0)) or _in_excluded(state, c, b)
+		or _warmth(c, anchor) < float(b.get("leave_warmth", 0.0)) or _in_excluded(state, c, b) or _lacks_required(state, c, b)
 
 
 static func _world_blocs(state: GameState, notes: Array[String]) -> void:
@@ -174,3 +174,8 @@ static func _world_blocs(state: GameState, notes: Array[String]) -> void:
 			if stays != member:
 				notes.append(line("bloc_join" if stays else "bloc_leave", {"country": c.name, "bloc": bloc_name}))
 		state.foreign.members[bloc_id] = next
+
+
+static func _lacks_required(state: GameState, c: Country, b: Dictionary) -> bool:
+	var requires := String(b.get("requires", ""))
+	return requires != "" and not (c.id in state.foreign.members.get(requires, []))
