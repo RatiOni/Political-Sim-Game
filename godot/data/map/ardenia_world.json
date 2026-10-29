@@ -1,11 +1,12 @@
 {
   "extent_m": [16800, 10000],
   "regions": {
-    "vetrenka": [0.13, 0.30], "anera": [0.27, 0.27], "karsen": [0.47, 0.24],
-    "orvena": [0.25, 0.50], "vashtera": [0.56, 0.45], "kelvet": [0.17, 0.72],
-    "sela": [0.49, 0.67], "zavost": [0.75, 0.38], "darev": [0.88, 0.62]
+    "vetrenka": [0.13, 0.30], "anera": [0.27, 0.27], "karsen": [0.50, 0.22],
+    "orvena": [0.25, 0.50], "vashtera": [0.57, 0.48], "kelvet": [0.21, 0.74],
+    "sela": [0.47, 0.69], "zavost": [0.73, 0.33], "darev": [0.85, 0.63]
   },
-  "weights": {"anera": 1.15, "sela": 1.12, "zavost": 1.08},
+  "weights": {"anera": 1.15, "sela": 1.12, "zavost": 1.0, "karsen": 1.06,
+    "vashtera": 0.92, "darev": 1.10, "kelvet": 1.10, "orvena": 1.0},
   "cities": [
     {"name": "Vashtera", "region": "vashtera", "point": [0.585, 0.475], "capital": true},
     {"name": "Tavri", "region": "kelvet", "point": [0.23, 0.82], "capital": false},

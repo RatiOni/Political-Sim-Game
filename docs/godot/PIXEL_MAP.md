@@ -43,6 +43,46 @@ photographic, nothing smoothed. New art follows this, always.
   and is never blurred (`TEXTURE_FILTER_NEAREST`).
 - Native image at detail: 1344 x 800.
 
+## The borders
+
+Both the silhouette and the internal lines are baked in `MapBaker`, and both
+are deliberately *not* one smooth family of curves — that is what made the
+earlier map read as a generated blob.
+
+- **The silhouette** gives each frontier its own hand, because each has its
+  own history. The north is a folded mountain wall with three passes pushed
+  out as salients and one lost valley notched back in. The east is the
+  Krasovan line, surveyed under the Union: two genuinely straight segments
+  meeting at one corner, and the only edge that takes **no** warp — a surveyed
+  border is straight or it is not a surveyed border. The south wanders until
+  `MEROVA_SURVEY_U`, where the Merova settlement rules it dead straight. The
+  west is a worked coast: a headland, the Orvena bay (deep enough to leave a
+  waist behind it) and the Kesla estuary.
+- **The internal borders are not drawn.** Each region *grows* outward from its
+  seed across the country it can actually administer (`_grow_regions`, a
+  multi-source Dijkstra over a quarter-resolution cost field). Crossing a
+  ridge costs `RIDGE_COST` scaled by elevation, crossing the Kesla costs
+  `RIVER_COST`, crossing the ceasefire line costs `FRONT_COST`, and a broad
+  low-frequency `WANDER` field gives cheap valleys and expensive country. The
+  border is wherever two growths meet, so it lands on ridgelines, on the river
+  and on the front. Growth from a single seed is connected by construction, so
+  no region can fragment.
+  Travel is eight-way: four-way growth meets along axis-aligned staircases
+  (the L1 equidistance locus) and looks gridded. The wander field is low
+  frequency on purpose — high-frequency noise averages out along a Dijkstra
+  path and leaves the line straight.
+- **`_crook`** then displaces the coarse ownership map by a domain warp, which
+  adds the small jogs a real line has, and two majority passes remove anything
+  it strands, so no boundary speckles at tile size. `_absorb_fragments`
+  returns any islet the coast cut loose to the sea.
+- Everything is seeded from `MapBaker.SEED` (1993). Two bakes produce
+  byte-identical `height.exr`, `region_ids.png`, `borders.json` and
+  `tiles.json`.
+
+`ardenia_world.json`'s `regions` seeds and `weights` are the tuning knobs:
+they are presentation data, and the canon adjacency table in
+`tests/map/test_map_baker.gd` is what keeps them honest.
+
 ## The palette
 
 `MapPalette` holds three sets and nothing on the map is coloured from
