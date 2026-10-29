@@ -1837,6 +1837,7 @@
       "category": "Diplomatic",
       "condition": "neighbour_in_civil_war",
       "chance": 0.3,
+      "target": "__in_civil_war__",
       "options": [
         {
           "id": "open_borders",
@@ -1857,7 +1858,7 @@
             "modifiers": [],
             "one_time_debt_pct_delta": 0.0
           },
-          "relation_deltas": {},
+          "relation_deltas": {"__in_civil_war__": 0.05},
           "pc_cost": 8,
           "follow_up": {
             "event_id": "integration_debate",
@@ -1922,7 +1923,7 @@
             ],
             "one_time_debt_pct_delta": 0.0
           },
-          "relation_deltas": {},
+          "relation_deltas": {"__in_civil_war__": -0.04},
           "pc_cost": 4,
           "follow_up": null,
           "on_apply": null,
@@ -4147,6 +4148,49 @@
         {"id": "stall", "label": "Stall", "description": "Commissions, consultations, a working group. The donors have seen it before and claw back half.", "effects": {"one_time_debt_pct_delta": 0.002}, "relation_deltas": {"__western__": -0.06}, "pc_cost": 0, "follow_up": null, "on_apply": null, "requires": null}
       ],
       "default_option_id": "stall", "once": false, "cooldown": 0, "audience": "government", "portfolio": "Finance"
+    },
+    {
+      "id": "neighbour_coup", "title": "Tanks at a Neighbour's Parliament",
+      "description": "Overnight, soldiers took the radio station and the parliament of a fragile neighbour. A general read a statement about order. Every embassy in the capital wants to know what Ardenia will say.",
+      "category": "Diplomatic", "condition": "neighbour_coup_ripe", "chance": 0.06, "target": "__fragile__",
+      "options": [
+        {"id": "recognise", "label": "Recognise the new authorities", "description": "Order on the border is worth more than a constitution that did not hold.", "effects": {"faction_loyalty_deltas": {"@nationalist": 0.02, "@reform": -0.04}}, "relation_deltas": {"__fragile__": 0.05}, "pc_cost": 0, "follow_up": null, "on_apply": "coup_recognise", "requires": null},
+        {"id": "condemn", "label": "Condemn the coup", "description": "Ardenia knows what it costs when soldiers decide. Say so.", "effects": {"faction_loyalty_deltas": {"@reform": 0.04}}, "relation_deltas": {"__fragile__": -0.08}, "pc_cost": 4, "follow_up": null, "on_apply": "coup_condemn", "requires": null},
+        {"id": "wait_and_see", "label": "Wait and see", "description": "Coups have a way of ending in a second coup. Say nothing until it is clear who is answering the phone.", "effects": {}, "relation_deltas": {}, "pc_cost": 0, "follow_up": null, "on_apply": "coup_wait", "requires": null}
+      ],
+      "default_option_id": "wait_and_see", "once": false, "cooldown": 24, "audience": "government", "portfolio": "Foreign Affairs"
+    },
+    {
+      "id": "sanctions_coalition", "title": "The Concert Is Counting Votes",
+      "description": "The Concert is assembling a sanctions coalition against a state it has run out of patience with, and has asked Ardenia, politely and in writing, which side of the table it sits on.",
+      "category": "Diplomatic", "condition": "sanctions_coalition_forming", "chance": 0.05, "target": "__concert_foe__",
+      "options": [
+        {"id": "join", "label": "Join the coalition", "description": "Stand with the Concert and pay for it in trade.", "effects": {}, "relation_deltas": {}, "pc_cost": 0, "follow_up": null, "on_apply": "sanctions_join", "requires": {"diplomacy_verb": "impose_sanctions"}},
+        {"id": "speak_against", "label": "Speak against sanctions", "description": "Ardenia has lived under other people's embargoes. It will not join one.", "effects": {"faction_loyalty_deltas": {"@nationalist": 0.02}}, "relation_deltas": {"__concert_foe__": 0.05}, "pc_cost": 0, "follow_up": null, "on_apply": "sanctions_oppose", "requires": null},
+        {"id": "abstain", "label": "Abstain", "description": "A small country's privilege: to be absent from the room.", "effects": {}, "relation_deltas": {}, "pc_cost": 0, "follow_up": null, "on_apply": "sanctions_abstain", "requires": null}
+      ],
+      "default_option_id": "abstain", "once": false, "cooldown": 24, "audience": "government", "portfolio": "Foreign Affairs"
+    },
+    {
+      "id": "arms_offer", "title": "An Offer of Arms",
+      "description": "A friendly government has offered rifles, radios and armoured cars on easy terms. The Defense Ministry has already drafted the thank-you letter. The Finance Ministry has not.",
+      "category": "Security", "condition": "arms_offer_open", "chance": 0.05, "target": "__warmest__",
+      "options": [
+        {"id": "buy", "label": "Accept the arms", "description": "The army gets what it has asked for since 1992, and somebody across the line notices.", "effects": {"one_time_debt_pct_delta": 0.003, "faction_loyalty_deltas": {"@nationalist": 0.05}}, "relation_deltas": {"__warmest__": 0.05}, "pc_cost": 5, "follow_up": null, "on_apply": "arms_buy", "requires": null},
+        {"id": "decline", "label": "Decline politely", "description": "The army will make do. It always has.", "effects": {}, "relation_deltas": {}, "pc_cost": 0, "follow_up": null, "on_apply": null, "requires": null}
+      ],
+      "default_option_id": "decline", "once": false, "cooldown": 30, "audience": "government", "portfolio": "Defense"
+    },
+    {
+      "id": "rival_interests", "title": "Our Neighbour's \"Legitimate Interests\"",
+      "description": "After its latest move against Ardenia, the old imperial neighbour has sent a note listing its 'legitimate interests': the language of the border districts, the pipeline's ownership, and who Ardenia may sign treaties with. It asks for a reply that recognises them.",
+      "category": "Diplomatic", "condition": "rival_presses_interests", "chance": 0.06, "target": "__rival__",
+      "options": [
+        {"id": "acknowledge", "label": "Acknowledge their interests", "description": "Words cost little, and these words buy quiet. They also tell the West something.", "effects": {"faction_loyalty_deltas": {"@nationalist": -0.06}}, "relation_deltas": {"__rival__": 0.08}, "pc_cost": 0, "follow_up": null, "on_apply": "interests_acknowledge", "requires": null},
+        {"id": "take_it_to_the_concert", "label": "Publish the note in the West", "description": "Let the Concert read what is being demanded of an applicant.", "effects": {"faction_loyalty_deltas": {"@reform": 0.03}}, "relation_deltas": {"__rival__": -0.06}, "pc_cost": 8, "follow_up": null, "on_apply": "interests_internationalise", "requires": null},
+        {"id": "reject", "label": "Reject the note", "description": "Ardenia's interests are Ardenia's. Send it back unanswered.", "effects": {"faction_loyalty_deltas": {"@nationalist": 0.03}}, "relation_deltas": {"__rival__": -0.03}, "pc_cost": 0, "follow_up": null, "on_apply": null, "requires": null}
+      ],
+      "default_option_id": "reject", "once": false, "cooldown": 30, "audience": "government", "portfolio": "Foreign Affairs"
     }
   ],
   "ardenia_only_events": [

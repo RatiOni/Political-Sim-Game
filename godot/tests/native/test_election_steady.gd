@@ -17,15 +17,11 @@ func _test_steady_governments_are_judged_like_ordinary_ones(t) -> void:
 	var won_kept: int = governing["ai_won_kept"] + opposing["ai_won_kept"]
 	var won_rate := float(won_kept) / maxf(1.0, won_held)
 	t.truth(won_rate >= 0.3 and won_rate <= 0.7, "an AI party that won power is returned often enough (%d of %d)" % [won_kept, won_held])
-	var first_held: int = governing["first_held"] + opposing["first_held"]
-	var first_kept: int = governing["first_kept"] + opposing["first_kept"]
-	var first_rate := float(first_kept) / maxf(1.0, first_held)
 	var lost: Array = governing["lost"] + opposing["lost"]
 	var kept: Array = governing["kept"] + opposing["kept"]
 	t.truth(Polls.mean(lost) < Polls.mean(kept), "governments that fell were less approved (%.2f) than those returned (%.2f)" % [Polls.mean(lost), Polls.mean(kept)])
 	t.truth((governing["sequences"] as Dictionary).size() >= 3,
 		"six seeds write at least three political histories (%d)" % (governing["sequences"] as Dictionary).size())
-
 
 
 func _initialize() -> void:

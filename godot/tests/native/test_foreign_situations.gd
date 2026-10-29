@@ -526,6 +526,177 @@ func _test_western_aid_needs_a_strained_treasury_and_comes_with_conditions(t) ->
 	t.equal(String(row[0]["target_country_id"]), ForeignArcs.resolve_target(state, "__western__"), "owed to the same capital")
 
 
+func _test_a_spending_freeze_is_a_timed_cut(t) -> void:
+	var state := _state()
+	state.player.political_capital = 100.0
+	_force(state, "isf_review_crisis")
+	var mods0 := state.modifiers.size()
+	EventActions.resolve(state, "isf_review_crisis", "spending_freeze")
+	t.equal(state.modifiers.size(), mods0 + 1, "the freeze is a modifier")
+	var m: Modifier = state.modifiers[-1]
+	t.equal(m.id, "isf_spending_freeze", "named for the freeze")
+	t.equal(m.target, "budget_expenditure", "on spending")
+	t.near(m.magnitude, -40.0, 1e-9, "cutting it")
+	t.equal(m.hold_duration, 12, "for a year")
+	t.near(state.player.political_capital, 94.0, 1e-9, "at a political price")
+
+
+func _test_the_aid_conditions_are_delivered_or_clawed_back(t) -> void:
+	var state := _state()
+	var west := ForeignArcs.resolve_target(state, "__western__")
+	state.player.political_capital = 100.0
+	_force(state, "aid_conditions_due", west)
+	var w0 := _score(state, west)
+	EventActions.resolve(state, "aid_conditions_due", "deliver")
+	t.near(_score(state, west), w0 + 0.04, 1e-9, "delivering pleases the donors")
+	t.near(state.player.political_capital, 92.0, 1e-9, "and costs capital")
+	state = _state()
+	west = ForeignArcs.resolve_target(state, "__western__")
+	_force(state, "aid_conditions_due", west)
+	w0 = _score(state, west)
+	var debt := state.country.economy.public_debt_pct
+	EventActions.resolve(state, "aid_conditions_due", "stall")
+	t.near(_score(state, west), w0 - 0.06, 1e-9, "stalling cools the donors")
+	t.near(state.country.economy.public_debt_pct, debt + 0.002, 1e-9, "and half the aid is clawed back")
+	t.equal(String(EventsSim.event_by_id("aid_conditions_due")["default_option_id"]), "stall", "stalling is the default")
+
+
+func _test_playing_both_sides_moves_both_capitals(t) -> void:
+	var state := _state()
+	var west := ForeignArcs.resolve_target(state, "__western__")
+	var anchor := ForeignArcs.resolve_target(state, "__union_anchor__")
+	state.player.political_capital = 100.0
+	_force(state, "union_invitation", anchor)
+	var w0 := _score(state, west)
+	var a0 := _score(state, anchor)
+	EventActions.resolve(state, "union_invitation", "play_both_sides")
+	t.near(_score(state, west), w0 + ForeignArcs.PLAY_WEST, 1e-9, "the West grows attentive")
+	t.near(_score(state, anchor), a0 - 0.05, 1e-9, "the Union notices")
+	t.near(state.player.political_capital, 95.0, 1e-9, "and it costs capital")
+
+
+func _ripe_neighbour(state: GameState) -> Country:
+	for c in state.world:
+		c.in_civil_war = false
+		c.stability = 0.8
+		c.civil_war_risk = 0.0
+	var c := state.world_country(ForeignArcs.resolve_target(state, "__warmest__"))
+	c.regime_type = "hybrid_regime"
+	c.stability = 0.2
+	return c
+
+
+func _test_a_coup_happens_whatever_ardenia_says(t) -> void:
+	for option in ["recognise", "condemn", "wait_and_see"]:
+		var state := _state()
+		var c := _ripe_neighbour(state)
+		t.truth(EventsSim.condition_met(state, "neighbour_coup_ripe"), "sanity: a fragile neighbour")
+		_force(state, "neighbour_coup", c.id)
+		state.player.political_capital = 100.0
+		EventActions.resolve(state, "neighbour_coup", option)
+		t.equal(c.regime_type, ForeignArcs.COUP_REGIME, "%s: the generals hold the capital" % option)
+		t.near(c.stability, ForeignArcs.COUP_ORDER, 1e-9, "%s: and impose their order" % option)
+		t.truth(not EventsSim.condition_met(state, "neighbour_coup_ripe"), "%s: and the same country has no second coup" % option)
+	var state := _state()
+	var c := _ripe_neighbour(state)
+	c.stability = 0.29
+	_force(state, "neighbour_coup", c.id)
+	EventActions.resolve(state, "neighbour_coup", "wait_and_see")
+	t.near(c.stability, ForeignArcs.COUP_ORDER, 1e-9, "a neighbour just under the line is lifted to the generals' order")
+
+
+func _test_condemning_a_coup_pleases_the_west(t) -> void:
+	var state := _state()
+	var c := _ripe_neighbour(state)
+	var west := ForeignArcs.resolve_target(state, "__western__")
+	_force(state, "neighbour_coup", c.id)
+	var w0 := _score(state, west)
+	var c0 := _score(state, c.id)
+	EventActions.resolve(state, "neighbour_coup", "condemn")
+	t.near(_score(state, c.id), c0 - 0.08, 1e-9, "the junta hears the condemnation")
+	t.near(_score(state, west), w0 + ForeignArcs.COUP_CONDEMN_WEST + (0.0 if c.id != west else -0.08), 1e-9, "and the West approves")
+
+
+func _test_joining_a_coalition_is_a_real_sanction_on_the_target(t) -> void:
+	var state := _state()
+	var west := ForeignArcs.resolve_target(state, "__western__")
+	var foe := ForeignArcs.resolve_target(state, "__rival__")
+	var foe_c := state.world_country(foe)
+	DiplomacySim.shift_between(foe_c, state.world_country(west), -1.0)
+	t.equal(ForeignArcs.resolve_target(state, "__concert_foe__"), foe, "sanity: the rival is the Concert's foe")
+	state.player.political_capital = 100.0
+	_force(state, "sanctions_coalition", foe)
+	var w0 := _score(state, west)
+	t.truth(EventActions.resolve(state, "sanctions_coalition", "join").get("ok", false), "Ardenia can join (%s)" % EventActions.option_reason(state, EventsSim.option_by_id(EventsSim.event_by_id("sanctions_coalition"), "join"), foe))
+	t.truth((state.country.relations[foe] as Country.BilateralRelation).sanctioned, "the target is sanctioned, by the diplomacy desk")
+	t.near(state.player.political_capital, 100.0 - float(DiplomacyActions.COSTS["impose_sanctions"]), 1e-9, "charged once")
+	t.near(_score(state, west), w0 + ForeignArcs.SANCTIONS_WEST, 1e-9, "and the Concert is grateful")
+	t.equal(String(EventsSim.event_by_id("sanctions_coalition")["default_option_id"]), "abstain", "abstaining is the default")
+
+
+func _test_an_arms_offer_needs_a_threat(t) -> void:
+	var state := _state()
+	var rival := ForeignArcs.resolve_target(state, "__rival__")
+	state.insurgency_pressure = 0.0
+	_set_score(state, rival, ForeignArcs.ARMS_RIVAL_LINE + 0.01)
+	t.truth(not EventsSim.condition_met(state, "arms_offer_open"), "no insurgency and a tolerable rival, no arms offer")
+	_set_score(state, rival, ForeignArcs.ARMS_RIVAL_LINE)
+	t.truth(EventsSim.condition_met(state, "arms_offer_open"), "a rival at the line brings one")
+	_set_score(state, rival, 0.0)
+	state.insurgency_pressure = ForeignArcs.ARMS_INSURGENCY
+	t.truth(EventsSim.condition_met(state, "arms_offer_open"), "so does an insurgency at its line")
+	_force(state, "arms_offer", ForeignArcs.resolve_target(state, "__warmest__"))
+	state.player.political_capital = 100.0
+	EventActions.resolve(state, "arms_offer", "buy")
+	t.near(state.insurgency_pressure, ForeignArcs.ARMS_INSURGENCY - ForeignArcs.ARMS_CALM, 1e-9, "the arms quieten the insurgency")
+
+
+func _test_the_rival_presses_its_interests_after_pressing_ardenia(t) -> void:
+	var state := _state()
+	state.turn = 30
+	var rival := ForeignArcs.resolve_target(state, "__rival__")
+	_set_score(state, rival, ForeignArcs.INTERESTS_LINE)
+	state.foreign.hostile_log.clear()
+	t.truth(not EventsSim.condition_met(state, "rival_presses_interests"), "no recent move, no demand")
+	state.foreign.hostile_log.append({"turn": state.turn - ForeignArcs.INTERESTS_MEMORY, "actor": rival, "relation": -0.05, "economy": 0.0, "stability": 0.0})
+	t.truth(EventsSim.condition_met(state, "rival_presses_interests"), "a move a year ago still counts")
+	state.foreign.hostile_log[0]["turn"] = state.turn - ForeignArcs.INTERESTS_MEMORY - 1
+	t.truth(not EventsSim.condition_met(state, "rival_presses_interests"), "a move older than that does not")
+	state.foreign.hostile_log[0]["turn"] = state.turn
+	_set_score(state, rival, ForeignArcs.INTERESTS_LINE + 0.01)
+	t.truth(not EventsSim.condition_met(state, "rival_presses_interests"), "a rival warmer than the line makes no demand")
+
+
+func _test_the_refugee_flow_is_about_the_warring_neighbour(t) -> void:
+	var state := _state()
+	for c in state.world:
+		c.in_civil_war = false
+	var war := state.world_country(ForeignArcs.resolve_target(state, "__western__"))
+	war.in_civil_war = true
+	var notes: Array[String] = []
+	EventsSim._arrive(state, EventsSim.event_by_id("refugee_crisis"), "", notes)
+	var s: Situation = state.pending_situations[-1]
+	t.equal(s.target_country_id, war.id, "the refugees come from the country at war")
+	var before := _score(state, war.id)
+	state.player.political_capital = 100.0
+	EventActions.resolve(state, "refugee_crisis", "open_borders")
+	t.near(_score(state, war.id), before + 0.05, 1e-9, "and opening the border is felt there")
+
+
+func _test_no_foreign_event_names_a_country(t) -> void:
+	var ids := {}
+	for c in ContentRepository.load_all().get("countries", {}):
+		ids[String(c)] = true
+	for id in ForeignArcs.EVENT_IDS + ["refugee_crisis"]:
+		var e := EventsSim.event_by_id(id)
+		t.truth(not e.is_empty(), "%s exists" % id)
+		t.truth(not ids.has(String(e.get("target", ""))), "%s declares no literal target" % id)
+		for o in e.get("options", []):
+			for key in o.get("relation_deltas", {}):
+				t.truth(String(key) in EventsSim.TARGET_KEYS, "%s/%s moves only a sentinel (%s)" % [id, o["id"], key])
+		t.truth(not (id in ContentRepository.load_all()["catalogs"]["events"]["ardenia_only_events"]), "%s is not bespoke content" % id)
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_every_sentinel_names_a_live_country(t)
@@ -558,4 +729,14 @@ func _initialize() -> void:
 	_test_accepting_the_invitation_takes_observer_status(t)
 	_test_union_pressure_lands_on_members_and_compliance_cools_the_west(t)
 	_test_western_aid_needs_a_strained_treasury_and_comes_with_conditions(t)
+	_test_a_spending_freeze_is_a_timed_cut(t)
+	_test_the_aid_conditions_are_delivered_or_clawed_back(t)
+	_test_playing_both_sides_moves_both_capitals(t)
+	_test_a_coup_happens_whatever_ardenia_says(t)
+	_test_condemning_a_coup_pleases_the_west(t)
+	_test_joining_a_coalition_is_a_real_sanction_on_the_target(t)
+	_test_an_arms_offer_needs_a_threat(t)
+	_test_the_rival_presses_its_interests_after_pressing_ardenia(t)
+	_test_the_refugee_flow_is_about_the_warring_neighbour(t)
+	_test_no_foreign_event_names_a_country(t)
 	quit(t.finish())

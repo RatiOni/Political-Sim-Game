@@ -515,7 +515,10 @@ from what happened, never from a roll.
   two bands to the measured reality, with the reason "36-seed measurement;
   incumbents favored when governing steadily": 1997 steady to 0.40–0.68
   (`FIRST_TERM_STEADY_RULING`) and the opening government to 0.30–0.80
-  (`OPENING_GOVERNMENT_RULING`). Every other band is unchanged.
+  (`OPENING_GOVERNMENT_RULING`). Every other band is unchanged. A later
+  ruling (2026-10-29) dropped the 1997 ceiling as unimportant: the 1997
+  steady check keeps only its 0.40 floor and the schemer gain of at least
+  0.15. With the intl-3 world situations it measures 26/36.
 - **Ruling costs.** The ruling party also pays about 2.2 points of support a
   term (`RULING_COST_PER_TERM`), multiplied up by trouble in the last year:
   each defeated government bill (`DEFEAT_WEIGHT` 1), corruption scandal

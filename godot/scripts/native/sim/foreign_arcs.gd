@@ -6,11 +6,14 @@ const TARGETS := ["__supplier__", "__rival__", "__western__", "__union_anchor__"
 	"__in_civil_war__", "__fragile__", "__concert_foe__", "__warmest__"]
 const HANDLERS: Array[String] = ["valve_pay", "valve_cargo", "valve_appeal_west", "transit_concede",
 	"transit_arbitrate", "windfall_storage", "isf_crisis_renegotiate", "concert_embrace", "union_accept",
-	"union_play_west", "union_comply"]
+	"union_play_west", "union_comply", "coup_recognise", "coup_condemn", "coup_wait", "sanctions_join",
+	"sanctions_abstain", "sanctions_oppose", "arms_buy", "interests_acknowledge", "interests_internationalise"]
 const CONDITIONS: Array[String] = ["transit_dispute_ripe", "transit_windfall_due", "concert_delegation_due",
-	"union_invites", "union_member_pressed", "western_aid_offered"]
+	"union_invites", "union_member_pressed", "western_aid_offered", "neighbour_coup_ripe",
+	"sanctions_coalition_forming", "arms_offer_open", "rival_presses_interests"]
 const EVENT_IDS: Array[String] = ["valve_threat", "transit_dispute", "transit_windfall", "isf_review_crisis",
-	"concert_delegation", "union_invitation", "union_pressure", "western_aid_strings", "aid_conditions_due"]
+	"concert_delegation", "union_invitation", "union_pressure", "western_aid_strings", "aid_conditions_due",
+	"neighbour_coup", "sanctions_coalition", "arms_offer", "rival_interests"]
 const GATES := ["energy_verb", "orientation_verb", "diplomacy_verb"]
 const COUP_STABILITY := 0.3
 const COUP_MAX_WAR_RISK := 0.5
@@ -23,6 +26,19 @@ const ARBITRATION_GOODWILL := 0.03
 const DELEGATION_MONTHS := 3
 const PLAY_WEST := 0.03
 const COMPLY_WEST := -0.03
+const COUP_REGIME := "authoritarian"
+const COUP_ORDER := 0.35
+const COUP_CONDEMN_WEST := 0.02
+const SANCTIONS_WEST := 0.05
+const ABSTAIN_WEST := -0.03
+const OPPOSE_WEST := -0.06
+const ARMS_INSURGENCY := 0.2
+const ARMS_RIVAL_LINE := -0.5
+const ARMS_CALM := 0.05
+const ARMS_RIVAL := -0.04
+const INTERESTS_LINE := -0.4
+const INTERESTS_MEMORY := 12
+const INTERESTS_WEST := 0.04
 
 static var probes: Dictionary = {}
 
@@ -154,6 +170,20 @@ static func condition_met(state: GameState, rule_id: String) -> bool:
 			var strained := bool(state.foreign.isf.get("suspended", false)) \
 				or state.country.economy.deficit_share_of_gdp() > float(OrientationSim.isf_targets(state)["deficit"])
 			return state.player.in_government and not state.foreign.reached.has("union_member") and strained
+		"neighbour_coup_ripe":
+			return state.player.in_government and resolve_target(state, "__fragile__") != ""
+		"sanctions_coalition_forming":
+			return state.player.in_government and resolve_target(state, "__concert_foe__") != ""
+		"arms_offer_open":
+			var rival := resolve_target(state, "__rival__")
+			var threatened := state.insurgency_pressure >= ARMS_INSURGENCY 				or (rival != "" and _score(state, rival) <= ARMS_RIVAL_LINE)
+			return state.player.in_government and threatened and resolve_target(state, "__warmest__") != ""
+		"rival_presses_interests":
+			var rival := resolve_target(state, "__rival__")
+			if not state.player.in_government or rival == "" or _score(state, rival) > INTERESTS_LINE:
+				return false
+			return state.foreign.hostile_log.any(func(r: Dictionary) -> bool:
+				return String(r.get("actor", "")) == rival and state.turn - int(r.get("turn", -999)) <= INTERESTS_MEMORY)
 	return false
 
 
@@ -198,7 +228,42 @@ static func run(state: GameState, handler_id: String, target: String) -> String:
 		"union_comply":
 			shift(state, "__western__", COMPLY_WEST)
 			return "Ardenia votes as the Union expects."
+		"coup_recognise", "coup_wait":
+			return _coup(state, target)
+		"coup_condemn":
+			var line := _coup(state, target)
+			shift(state, "__western__", COUP_CONDEMN_WEST)
+			return line
+		"sanctions_join":
+			var line := _through(DiplomacyActions.act(state, "impose_sanctions", target))
+			shift(state, "__western__", SANCTIONS_WEST)
+			return line
+		"sanctions_abstain":
+			shift(state, "__western__", ABSTAIN_WEST)
+			return "Ardenia abstains, and the Concert notes who did."
+		"sanctions_oppose":
+			shift(state, "__western__", OPPOSE_WEST)
+			return "Ardenia speaks against the coalition."
+		"arms_buy":
+			state.insurgency_pressure = clampf(state.insurgency_pressure - ARMS_CALM, 0.0, 1.0)
+			shift(state, "__rival__", ARMS_RIVAL)
+			return "The arms arrive by rail, and the border hears about it."
+		"interests_acknowledge":
+			shift(state, "__western__", -INTERESTS_WEST)
+			return "Ardenia's reply recognises its neighbour's interests. The West reads it twice."
+		"interests_internationalise":
+			shift(state, "__western__", INTERESTS_WEST)
+			return "The note is published in the Western press."
 	return ""
+
+
+static func _coup(state: GameState, target: String) -> String:
+	var c := state.world_country(target)
+	if c == null or not _fragile(c):
+		return ""
+	c.regime_type = COUP_REGIME
+	c.stability = maxf(c.stability, COUP_ORDER)
+	return "The generals hold %s's capital." % c.name
 
 
 static func _through(result: Dictionary) -> String:
