@@ -155,6 +155,39 @@ func _test_malformed_fields_are_refused_without_crashing(t) -> void:
 	t.truth(ForeignState.from_dict(bad_members) == null, "a bloc roster that is not an Array is refused")
 
 
+func _test_the_validator_covers_the_remaining_ledger_rules(t) -> void:
+	var a := _state()
+	a.foreign.isf["reviews_held"] = 1
+	a.foreign.isf["passed"] = 2
+	_rejects(t, a, "isf ledger is impossible", "passed 2 of 1 held is rejected")
+	var b := _state()
+	b.foreign.isf["reviews_held"] = 1
+	b.foreign.isf["failed"] = 0
+	b.foreign.isf["passed"] = 0
+	_rejects(t, b, "isf ledger is impossible", "a held review that neither passed nor failed is rejected")
+	var c := _state()
+	c.foreign.isf["last_result"] = "maybe"
+	_rejects(t, c, "isf ledger is impossible", "an unknown last_result is rejected")
+	var d := _state()
+	d.foreign.union_left_turn = -2
+	_rejects(t, d, "foreign counters are impossible", "union_left_turn below -1 is rejected")
+	var e := _state()
+	e.foreign.union_left_turn = e.turn + 1
+	_rejects(t, e, "foreign counters are impossible", "union_left_turn in the future is rejected")
+	var f := _state()
+	f.foreign.powers["krasova"] = {"dependence": NAN, "commitment": 0.0, "leverage": 0.0}
+	_rejects(t, f, "dependence out of range", "a NAN gauge is rejected")
+	var g := _state()
+	g.foreign.powers["krasova"] = {"dependence": 0.0, "commitment": INF, "leverage": 0.0}
+	_rejects(t, g, "commitment out of range", "an infinite gauge is rejected")
+	var h := _state()
+	h.foreign.powers["krasova"] = 5
+	_rejects(t, h, "is malformed", "a power row that is not a Dictionary is rejected")
+	var i := _state()
+	i.foreign.reached["union_observer"] = -1
+	_rejects(t, i, "reached before the campaign", "a milestone reached at a negative turn is rejected")
+
+
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_the_catalog_is_coherent(t)
@@ -164,4 +197,5 @@ func _initialize() -> void:
 	_test_an_old_save_gains_the_ledger_on_load(t)
 	_test_the_validator_rejects_impossible_ledgers(t)
 	_test_malformed_fields_are_refused_without_crashing(t)
+	_test_the_validator_covers_the_remaining_ledger_rules(t)
 	quit(t.finish())

@@ -727,6 +727,8 @@ static func _validate_foreign(state: GameState, errors: Array[String]) -> void:
 	for id in f.reached:
 		if not (String(id) in milestones):
 			errors.append("unknown milestone '%s'" % id)
+		elif int(f.reached[id]) < 0:
+			errors.append("milestone '%s' reached before the campaign" % id)
 		elif int(f.reached[id]) > state.turn:
 			errors.append("milestone '%s' reached in the future" % id)
 	if f.reached.has("union_member"):
