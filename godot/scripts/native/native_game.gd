@@ -442,6 +442,7 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 			"unemployment": region.unemployment,
 			"state_reach": region.state_reach,
 			"population": region.population,
+			"population_share": RegionsSimScript.population_weight(state, region.id),
 			"development": region.development,
 			"control": region.control,
 			"insurgency": state.insurgency_pressure if region.id == "vetrenka" else 0.0,
@@ -558,7 +559,35 @@ static func _decisions(state: GameState) -> Array:
 
 
 static func _budget_snapshot(state: GameState) -> Dictionary:
-	return BudgetActionsScript.read_model(state).duplicate(true)
+	var model: Dictionary = BudgetActionsScript.read_model(state).duplicate(true)
+	if model.get("ok", false):
+		model["revenue_sources"] = _revenue_sources(state)
+		model["debt_service"] = state.country.economy.debt_service
+	return model
+
+
+## Read-only split of `economy.budget.revenue` into the same terms
+## `EconomySim._update_budget_lines` sums: structural revenue, customs on
+## trade, and each `budget_revenue` modifier grouped by label. Rows add up to
+## the live revenue figure; modifier rows may be negative.
+static func _revenue_sources(state: GameState) -> Array:
+	var econ := state.country.economy
+	var rows: Array = [
+		{"name": "Taxes and domestic revenue", "value": econ.structural_revenue},
+		{"name": "Customs on trade", "value": econ.trade_revenue_contribution},
+	]
+	var by_label := {}
+	for m: Modifier in state.modifiers:
+		if m.target != "budget_revenue":
+			continue
+		var value := m.current_value()
+		if m.institutional:
+			value *= EconomySim._implementation_quality_for(state, m.portfolio)
+		by_label[m.source] = float(by_label.get(m.source, 0.0)) + value
+	for label: String in by_label:
+		if not is_zero_approx(float(by_label[label])):
+			rows.append({"name": label, "value": float(by_label[label])})
+	return rows
 
 
 static func _ministries_snapshot(state: GameState) -> Dictionary:

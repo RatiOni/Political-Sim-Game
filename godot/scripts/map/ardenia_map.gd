@@ -159,7 +159,9 @@ func _build_nodes() -> void:
 	add_child(_notice)
 	_build_zoom_button(zoom_in_button, "ZoomIn", "+", "Zoom in to detail (+ or mouse wheel)", zoom_in)
 	_build_zoom_button(zoom_out_button, "ZoomOut", "-", "Zoom out to the overview (- or mouse wheel)", zoom_out)
-	_build_zoom_button(dusk_button, "Dusk", DUSK_LABEL, "Toggle between day and dusk", func() -> void: set_dusk(not _dusk))
+	_build_zoom_button(dusk_button, "Dusk", DUSK_LABEL, "Skip ahead to day or night (the cycle runs on its own)", func() -> void:
+		DayCycle.skip()
+		set_dusk(DayCycle.is_night()))
 	dusk_button.add_theme_font_size_override("font_size", 16)
 
 
@@ -256,6 +258,12 @@ func atlas_texture() -> Texture2D:
 	if terrain_layer.tile_set == null:
 		return null
 	return _source(terrain_layer.tile_set).texture
+
+
+## Day and night follow the shared clock as time passes.
+func _process(_delta: float) -> void:
+	if not unavailable and DayCycle.is_night() != _dusk:
+		set_dusk(not _dusk)
 
 
 func is_dusk() -> bool:

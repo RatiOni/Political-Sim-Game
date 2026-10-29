@@ -46,19 +46,39 @@ static func bake(s: RegionScene) -> Image:
 	var img := Image.create_empty(s.cols, s.h, false, Image.FORMAT_RGBA8)
 	s.rng.seed = hash([s.id, "bake"])
 	_sky(img, s)
+	var sky := img.get_data()
 	_ridges(img, s)
 	_skyline(img, s)
+	_towers(img, s)
 	_land(img, s)
 	_landmark(img, s)
 	for b in s.buildings:
 		_building(img, s, b)
 	_street(img, s)
 	_foreground(img, s)
-	if s.programme:
+	if s.crane_at >= 0:
 		_scaffold(img, s)
 	if s.trouble > 0.45:
 		_barricades(img, s)
+	s.sky_mask = _sky_mask(img, sky, s)
 	return img
+
+
+## Where open sky remains in each column after everything is painted: the
+## day grade turns exactly these pixels into day sky and nothing else.
+## One pixel per column, value = sky bottom / height.
+static func _sky_mask(img: Image, sky: PackedByteArray, s: RegionScene) -> Image:
+	var done := img.get_data()
+	var mask := Image.create_empty(s.cols, 1, false, Image.FORMAT_L8)
+	for x in s.cols:
+		var y := 0
+		while y < s.horizon:
+			var i := (y * s.cols + x) * 4
+			if done[i] != sky[i] or done[i + 1] != sky[i + 1] or done[i + 2] != sky[i + 2]:
+				break
+			y += 1
+		mask.set_pixel(x, 0, Color(float(y) / s.h, 0, 0))
+	return mask
 
 
 # --- primitives ----------------------------------------------------------
@@ -159,7 +179,7 @@ static func _ridges(img: Image, s: RegionScene) -> void:
 ## A far town on the horizon: low blocks with a scatter of lit windows. It
 ## gives the picture depth, and its lights thin out with the economy.
 static func _skyline(img: Image, s: RegionScene) -> void:
-	var density := clampf(s.development * 0.8 + s.population * 0.3, 0.1, 1.0)
+	var density := clampf(s.development * 0.7 + s.population * 0.45 + (0.15 if s.capital else 0.0), 0.1, 1.0)
 	var x := 0
 	while x < s.cols:
 		var w := s.rng.randi_range(4, 14)
@@ -174,6 +194,27 @@ static func _skyline(img: Image, s: RegionScene) -> void:
 		if hgt > 16 and s.rng.randf() < 0.3:
 			fill(img, x + w / 2, s.horizon - hgt - 5, 1, 5, SKYLINE)
 		x += w + (s.rng.randi_range(2, 10) if s.rng.randf() < 0.25 else 0)
+
+
+## High-rises between the far skyline and the street, window grids lit by
+## occupancy; some carry a crown and an aviation light.
+static func _towers(img: Image, s: RegionScene) -> void:
+	for tw in s.towers:
+		var x := int(tw["x"])
+		var w := int(tw["w"])
+		var hgt := int(tw["h"])
+		var top := s.ground - hgt
+		var body := SKYLINE.lightened(0.10)
+		fill(img, x, top, w, hgt, body)
+		fill(img, x + w - 2, top, 2, hgt, body.darkened(0.3))
+		for wy in range(top + 3, s.ground - 3, 4):
+			for wx in range(x + 2, x + w - 3, 3):
+				var lit := s.rng.randf() < 0.45 * (1.0 - s.unemployment) * (0.6 + s.development * 0.5)
+				dot(img, wx, wy, LIT_COOL.darkened(0.2) if lit and s.rng.randf() < 0.3 else (LIT if lit else DARK_GLASS))
+		if bool(tw["crown"]):
+			fill(img, x + 2, top - 4, w - 4, 4, body.lightened(0.05))
+			fill(img, x + w / 2, top - 14, 1, 10, IRON.lightened(0.2))
+			s.beacons.append(Vector2i(x + w / 2, top - 14))
 
 
 static func _land(img: Image, s: RegionScene) -> void:

@@ -41,6 +41,13 @@ var trouble := 0.0
 var works_running := true
 var paved := true
 var programme := false
+var program_id := ""
+## The capital stands out: the largest skyline, towers, the busiest street.
+var capital := false
+## Set by the bake: open sky per column, for the day grade.
+var sky_mask: Image
+## Mid-ground high-rises: {x, w, h}. Their number grows with the city.
+var towers: Array[Dictionary] = []
 
 # Layout.
 var buildings: Array[Dictionary] = []
@@ -97,11 +104,19 @@ func setup(region_data: Dictionary, width: int, height: int) -> void:
 	reach = f(region, "state_reach", 0.5)
 	pressure = f(region, "pressure")
 	unemployment = f(region, "unemployment", 0.1)
-	population = clampf(float(region.get("population", 1000.0)) / 3000.0, 0.15, 1.0)
+	capital = id == "vashtera"
+	# Size is relative to the nation: a region's share of the population,
+	# scaled so today's capital sits near 0.9. Growth (or decline) shows.
+	if region.has("population_share"):
+		population = clampf(float(region["population_share"]) / 0.22 * 0.9, 0.15, 1.3)
+	else:
+		population = clampf(float(region.get("population", 1000.0)) / 3000.0, 0.15, 1.0)
 	trouble = clampf(maxf(pressure, f(region, "insurgency")) + (0.25 if bool(region.get("civil_war", false)) else 0.0), 0.0, 1.0)
 	works_running = unemployment < 0.18
 	paved = development >= 0.55
 	programme = region.get("active_program") != null
+	if programme and region["active_program"] is Dictionary:
+		program_id = String((region["active_program"] as Dictionary).get("program_id", ""))
 	water_top = front + 4 if land in [Land.COAST, Land.BASIN] else -1
 	_layout()
 
@@ -183,8 +198,9 @@ func _town() -> void:
 			var b: Dictionary = buildings[-1]
 			chimneys.append({"x": x + w - 6, "y": ground - int(b["h"]) - int(w * 0.45) + 1, "kind": "house"})
 		x += w + (rng.randi_range(10, 24) if rng.randf() < 0.2 else rng.randi_range(1, 4))
-	if programme:
+	if programme and program_id in ["industrial_recovery", ""]:
 		crane_at = 12
+	_towers()
 	match land:
 		Land.FRONTIER: searchlight_at = Vector2i(landmark_x - 3, ground - 48)
 		Land.PLAIN: mill_at = Vector2i(landmark_x + 70, horizon + 8)
@@ -192,6 +208,20 @@ func _town() -> void:
 		for k in 3:
 			chimneys.append({"x": landmark_x - 40 + k * 22 + 4, "y": ground - 128, "kind": "stack"})
 			beacons.append(Vector2i(landmark_x - 40 + k * 22 + 3, ground - 126))
+
+
+## Towers behind the street. A city earns them by size and modernisation;
+## the capital always has a cluster around its centre.
+func _towers() -> void:
+	var count := int(population * development * 7.0) + (4 if capital else 0)
+	var spread := cols * (0.42 if capital else 0.6)
+	for i in count:
+		var x := int(landmark_x + (rng.randf() - 0.5) * spread)
+		if absi(x - landmark_x) < 34:
+			x += 70 if x >= landmark_x else -70
+		var tall := (40.0 + 60.0 * population * development) * (1.25 if capital else 1.0)
+		towers.append({"x": x, "w": rng.randi_range(12, 22), "h": int(tall * rng.randf_range(0.55, 1.0)),
+			"crown": rng.randf() < 0.4})
 
 
 func _add(x: int, w: int, kind: int, storeys: int) -> void:
@@ -221,7 +251,7 @@ func _pick(built: float) -> int:
 			if r < 0.55: return Build.WAREHOUSE
 			return Build.TOWNHOUSE
 		Land.BASIN:
-			if r < 0.4 * built: return Build.BLOCK
+			if r < (0.4 + (0.25 if capital else 0.0)) * built: return Build.BLOCK
 			if r < 0.62: return Build.TOWNHOUSE
 			if r < 0.78: return Build.SHOP
 			return Build.COTTAGE
@@ -244,7 +274,7 @@ func _street() -> void:
 ## People on the pavement: more where there is life, a crowd where there is
 ## anger. Walkers keep their own pace and direction; idlers stand and shift.
 func _crowd() -> void:
-	var count := int(4 + population * 10 + development * 8)
+	var count := int(4 + population * 14 + development * 8) + (10 if capital else 0)
 	for i in count:
 		var dir := 1.0 if rng.randf() < 0.5 else -1.0
 		people.append({"x": rng.randf() * cols, "speed": dir * rng.randf_range(6.0, 11.0),
@@ -259,7 +289,7 @@ func _crowd() -> void:
 
 
 func _traffic() -> void:
-	var count := 1 + int((1.0 - unemployment) * development * 5.0)
+	var count := 1 + int((1.0 - unemployment) * development * 5.0 * maxf(population, 0.5)) + (3 if capital else 0)
 	for i in count:
 		var lane := i % 2
 		var bus := development > 0.45 and rng.randf() < 0.18

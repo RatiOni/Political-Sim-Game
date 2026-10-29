@@ -24,6 +24,8 @@ var origin := Vector2.ZERO
 var px := 2.0
 ## The camera: drift and push-in applied to everything drawn.
 var base := Transform2D.IDENTITY
+## 1 at night, 0 by day (`DayCycle`): night-only light fades with it.
+var night := 1.0
 
 
 func _blk(x: float, y: float, w: float, h: float, c: Color) -> void:
@@ -67,6 +69,7 @@ func draw(s: RegionScene, t: float) -> void:
 	_lamps(s, t)
 	_people(s, t)
 	_cars(s, t)
+	RegionProjects.draw(self, s, t)
 	_fires(s, t)
 	_water(s, t)
 
@@ -96,7 +99,7 @@ func _haze(s: RegionScene, t: float) -> void:
 
 func _stars(s: RegionScene, t: float) -> void:
 	for st in s.stars:
-		var a := 0.35 + 0.35 * sin(t * 1.3 + st.z * 3.0)
+		var a := (0.35 + 0.35 * sin(t * 1.3 + st.z * 3.0)) * night
 		_blk(st.x, st.y, 1, 1, Color(0.85, 0.87, 0.95, a))
 
 
@@ -265,10 +268,10 @@ func _lamps(s: RegionScene, t: float) -> void:
 		var flicker := 1.0
 		if s.trouble > 0.5 and i % 4 == 1:
 			flicker = 0.0 if sin(t * 13.0 + i) > 0.6 else 1.0   # a dying tube
-		var strength := (0.16 + 0.02 * sin(t * 3.0 + i)) * flicker
+		var strength := (0.16 + 0.02 * sin(t * 3.0 + i)) * flicker * night
 		_beam(head, Vector2(lx - 11, s.road_top + 3), Vector2(lx + 11, s.road_top + 3), LAMP, strength)
 		var pool := LAMP
-		pool.a = 0.10 * flicker
+		pool.a = 0.10 * flicker * night
 		canvas.draw_set_transform_matrix(base * Transform2D(0.0, Vector2(1.0, 0.3), 0.0, origin + Vector2(lx, s.road_top) * px))
 		canvas.draw_circle(Vector2.ZERO, 12.0 * px, pool)
 		canvas.draw_set_transform_matrix(base)
@@ -320,7 +323,7 @@ func _cars(s: RegionScene, t: float) -> void:
 		var body: Color = CAR_TONES[int(c["tone"])]
 		var nose := x + length if forward else x
 		var reach := 26.0 * (1.0 if forward else -1.0)
-		_beam(Vector2(nose, y + 3), Vector2(nose + reach, y - 1), Vector2(nose + reach, y + 8), LAMP, 0.18)
+		_beam(Vector2(nose, y + 3), Vector2(nose + reach, y - 1), Vector2(nose + reach, y + 8), LAMP, 0.18 * night)
 		if bool(c["bus"]):
 			_blk(x, y - 6, length, 10, Color(0.62, 0.50, 0.22))
 			for wx in range(2, int(length) - 3, 4):
@@ -379,7 +382,7 @@ func _water(s: RegionScene, t: float) -> void:
 			if w < 1.0:
 				continue
 			var col := LAMP
-			col.a = (0.55 if lamp else 0.28) * (1.0 - k)
+			col.a = (0.55 if lamp else 0.28) * (1.0 - k) * (0.25 + 0.75 * night)
 			_blk(src.x + wob - w * 0.5, s.water_top + row, w, 1, col)
 	for b in s.boats:
 		var bx := fposmod(float(b["x"]) + t * 1.5, s.cols + 40.0) - 20.0

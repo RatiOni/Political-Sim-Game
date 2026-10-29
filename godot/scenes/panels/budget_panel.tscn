@@ -1,4 +1,6 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/budget_chart.gd" id="1_chart"]
 
 [node name="BudgetPanel" type="PanelContainer"]
 visible = false
@@ -27,27 +29,94 @@ text = "Close"
 [node name="BudgetIntro" type="Label" parent="Content"]
 layout_mode = 2
 theme_type_variation = &"Muted"
-text = "Set each envelope from the authorised steps, then inspect the simulation's fiscal and parliamentary projection."
+text = "DRAG EACH ENVELOPE; THE SIMULATION ACCEPTS ITS AUTHORISED STEPS. THEN TABLE THE PLAN."
 autowrap_mode = 3
 
 [node name="Rule" type="HSeparator" parent="Content"]
 layout_mode = 2
 
-[node name="EnvelopeScroll" type="ScrollContainer" parent="Content"]
+[node name="FiscalHeader" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+
+[node name="RevenueFigure" type="Label" parent="Content/FiscalHeader"]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+text = "REVENUE —"
+
+[node name="SpendFigure" type="Label" parent="Content/FiscalHeader"]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+text = "SPENDING —"
+
+[node name="FreeFigure" type="Label" parent="Content/FiscalHeader"]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+size_flags_horizontal = 3
+clip_text = true
+text = "FREE —"
+
+[node name="ChartBar" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+
+[node name="ChartLabel" type="Label" parent="Content/ChartBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"Muted"
+text = "CHART"
+
+[node name="ChartTypeChoice" type="OptionButton" parent="Content/ChartBar"]
+custom_minimum_size = Vector2(168, 44)
+layout_mode = 2
+
+[node name="BudgetTabs" type="TabContainer" parent="Content"]
+layout_mode = 2
+size_flags_vertical = 3
+current_tab = 0
+
+[node name="SPENDING" type="VBoxContainer" parent="Content/BudgetTabs"]
+layout_mode = 2
+metadata/_tab_index = 0
+
+[node name="SpendingChart" type="Control" parent="Content/BudgetTabs/SPENDING"]
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+script = ExtResource("1_chart")
+
+[node name="EnvelopeScroll" type="ScrollContainer" parent="Content/BudgetTabs/SPENDING"]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
 
-[node name="BudgetRows" type="VBoxContainer" parent="Content/EnvelopeScroll"]
+[node name="BudgetRows" type="VBoxContainer" parent="Content/BudgetTabs/SPENDING/EnvelopeScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 8
+theme_override_constants/separation = 6
 
-[node name="EmptyRows" type="Label" parent="Content/EnvelopeScroll/BudgetRows"]
+[node name="INCOME" type="VBoxContainer" parent="Content/BudgetTabs"]
+visible = false
 layout_mode = 2
-text = "Awaiting the budget catalogue."
+metadata/_tab_index = 1
+
+[node name="IncomeChart" type="Control" parent="Content/BudgetTabs/INCOME"]
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+script = ExtResource("1_chart")
+
+[node name="IncomeScroll" type="ScrollContainer" parent="Content/BudgetTabs/INCOME"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="IncomeRows" type="Label" parent="Content/BudgetTabs/INCOME/IncomeScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
 autowrap_mode = 3
+text = "No revenue data."
 
 [node name="BudgetSummary" type="Label" parent="Content"]
 layout_mode = 2

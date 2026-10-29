@@ -112,7 +112,7 @@ func _run() -> void:
 				"Budget panel stays in viewport at " + str(dimensions)):
 			return
 		var budget_rows: VBoxContainer = scene.find_child("BudgetRows", true, false)
-		var envelope_choices := budget_rows.find_children("*", "OptionButton", true, false)
+		var envelope_choices := budget_rows.find_children("Adjustment_*", "HSlider", true, false)
 		if not _check(budget_rows.get_child_count() == 8 and envelope_choices.size() == 8,
 				"Budget panel renders all eight backend envelope controls at " + str(dimensions)):
 			return
@@ -124,22 +124,21 @@ func _run() -> void:
 					"Budget control is a bounded 44 px target: " + budget_control_name + " at " + str(dimensions)):
 				return
 		for envelope_choice in envelope_choices:
-			if not _check((envelope_choice as OptionButton).size.y >= 44.0,
+			if not _check((envelope_choice as HSlider).size.y >= 44.0,
 					"Envelope adjustment is a 44 px target at " + str(dimensions)):
 				return
 		if dimensions == Vector2i(1920, 1080):
-			var first_choice := envelope_choices[0] as OptionButton
-			if not _check(first_choice.item_count > 1, "Budget envelope exposes backend adjustment steps"):
+			var first_choice := envelope_choices[0] as HSlider
+			if not _check(first_choice.max_value > first_choice.min_value, "Budget envelope exposes backend adjustment steps"):
 				return
-			var original_index := first_choice.selected
-			var preview_index := (original_index + 1) % first_choice.item_count
+			var original_index := first_choice.value
+			var preview_index := first_choice.max_value
 			var native_before_preview: Dictionary = native_game.snapshot()
 			var summary_before_preview := str(scene.find_child("BudgetSummary", true, false).text)
 			var preview_signals := [0]
 			var on_preview_signal := func(_value: Dictionary) -> void: preview_signals[0] += 1
 			native_game.state_changed.connect(on_preview_signal)
-			first_choice.select(preview_index)
-			first_choice.item_selected.emit(preview_index)
+			first_choice.value = preview_index
 			await process_frame
 			if not _check(native_game.snapshot() == native_before_preview
 					and scene.snapshot == native_before_preview
@@ -158,9 +157,8 @@ func _run() -> void:
 					"Snapshot replacement invalidates a stale cached budget preview"):
 				native_game.state_changed.disconnect(on_preview_signal)
 				return
-			first_choice = scene.find_child("BudgetRows", true, false).find_children("*", "OptionButton", true, false)[0] as OptionButton
-			first_choice.select(original_index)
-			first_choice.item_selected.emit(original_index)
+			first_choice = scene.find_child("BudgetRows", true, false).find_children("Adjustment_*", "HSlider", true, false)[0] as HSlider
+			first_choice.value = original_index
 			await process_frame
 			native_game.state_changed.disconnect(on_preview_signal)
 			if not _check(native_game.snapshot() == native_before_preview and preview_signals[0] == 0,
@@ -501,8 +499,8 @@ func _run() -> void:
 			and float(scene.snapshot["player"]["political_capital"]) < proposal_pc_before,
 			"Real budget panel tables one proposal and spends engine-owned political capital"):
 		return
-	var tabled_choices: Array = scene.find_child("BudgetRows", true, false).find_children("*", "OptionButton", true, false)
-	if not _check(tabled_choices.all(func(control): return (control as OptionButton).disabled),
+	var tabled_choices: Array = scene.find_child("BudgetRows", true, false).find_children("Adjustment_*", "HSlider", true, false)
+	if not _check(tabled_choices.all(func(control): return not (control as HSlider).editable),
 			"Tabled settlement locks every draft control before the vote"):
 		return
 	var lobby_choice: OptionButton = scene.find_child("LobbyChoice", true, false)

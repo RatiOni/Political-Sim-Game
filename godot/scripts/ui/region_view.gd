@@ -1,7 +1,7 @@
 class_name RegionView
 extends Control
 
-## A living view of one region at evening — its land, its town, its people
+## A living view of one region by day or night (`DayCycle`) — its land, its town, its people
 ## and its mood — in the manner of a 2D city builder rather than a diagram.
 ##
 ## THREE THINGS ARE KEPT APART ON PURPOSE (see `RegionScene`):
@@ -28,6 +28,7 @@ var _scale := 2
 var _origin := Vector2.ZERO
 var _clock := 0.0
 var _ascii: AsciiConvert
+var _grade: ColorRect
 
 
 func _init() -> void:
@@ -39,6 +40,16 @@ func _init() -> void:
 func _ready() -> void:
 	clip_contents = true
 	# What reaches the screen is the ASCII conversion of the picture below.
+	# Day grade first (over the finished frame), then the ASCII conversion.
+	var copy := BackBufferCopy.new()
+	copy.copy_mode = BackBufferCopy.COPY_MODE_VIEWPORT
+	add_child(copy)
+	_grade = ColorRect.new()
+	_grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_grade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_grade.material = ShaderMaterial.new()
+	(_grade.material as ShaderMaterial).shader = preload("res://shaders/day_grade.gdshader")
+	add_child(_grade)
 	_ascii = AsciiConvert.cover(self)
 
 
@@ -51,6 +62,9 @@ func _process(delta: float) -> void:
 	if _region.is_empty() or not is_visible_in_tree():
 		return
 	_clock += delta
+	var m := _grade.material as ShaderMaterial
+	m.set_shader_parameter("daylight", DayCycle.daylight())
+
 	queue_redraw()
 
 
@@ -72,17 +86,22 @@ func _draw() -> void:
 	var used := Vector2(cols, rows) * _scale
 	_origin = ((size - used) * 0.5).floor()
 
-	var key := "%s|%d|%d|%.2f|%.2f|%.2f|%.2f|%.2f|%s|%s" % [
+	var key := "%s|%d|%d|%.2f|%.2f|%.2f|%.2f|%.2f|%s|%s|%.2f" % [
 		_region.get("id", ""), cols, rows, snappedf(RegionScene.f(_region, "development"), 0.02),
 		snappedf(RegionScene.f(_region, "state_reach"), 0.05), snappedf(RegionScene.f(_region, "pressure"), 0.05),
 		snappedf(RegionScene.f(_region, "unemployment"), 0.02), snappedf(RegionScene.f(_region, "insurgency"), 0.05),
-		_region.get("active_program") != null, _region.get("control", "full")]
+		str(_region.get("active_program", {}).get("program_id", "") if _region.get("active_program") is Dictionary else ""), _region.get("control", "full"),
+		snappedf(float(_region.get("population_share", 0.0)), 0.005)]
 	if key != _baked_key or _static_tex == null:
 		_baked_key = key
 		var before := _scene
 		_scene = RegionScene.new()
 		_scene.setup(_region, cols, rows)
 		_static_tex = ImageTexture.create_from_image(RegionBake.bake(_scene))
+		var m := _grade.material as ShaderMaterial
+		m.set_shader_parameter("sky_mask", ImageTexture.create_from_image(_scene.sky_mask))
+		m.set_shader_parameter("water_v", float(_scene.water_top) / _scene.h if _scene.water_top >= 0 else 2.0)
+		m.set_shader_parameter("scene_rect", Vector4(_origin.x / size.x, _origin.y / size.y, used.x / size.x, used.y / size.y))
 		_frame_scene(before, used)
 
 	# The camera breathes: a slow push-in and drift, never still, never fast.
@@ -97,6 +116,7 @@ func _draw() -> void:
 	_life.origin = _origin
 	_life.px = _scale
 	_life.base = camera
+	_life.night = 1.0 - DayCycle.daylight()
 	_life.draw(_scene, _clock)
 	draw_set_transform_matrix(Transform2D.IDENTITY)
 

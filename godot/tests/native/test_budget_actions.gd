@@ -113,7 +113,7 @@ func _test_preview_rejects_malformed_inputs_atomically(t, content: Dictionary) -
 	inf_value[good.keys()[0]] = INF
 	invalid_cases.append(inf_value)
 	var wrong_step := good.duplicate(true)
-	wrong_step[good.keys()[0]] = 0.01
+	wrong_step[good.keys()[0]] = 0.015
 	invalid_cases.append(wrong_step)
 	for malformed in invalid_cases:
 		var before := state.to_dict()
@@ -307,7 +307,7 @@ func _test_read_model_is_pure_detached_and_rule_complete(t, content: Dictionary)
 	if not model.get("ok", false):
 		return
 	t.equal(model["envelopes"].size(), 8, "read model exposes all eight authored envelopes")
-	t.equal(model["adjustments"].size(), 7, "read model exposes all seven authored adjustment steps")
+	t.equal(model["adjustments"].size(), 31, "read model exposes all 31 authored one-percent adjustment steps")
 	t.truth(model["pending"] != null and model["pending_preview"] != null,
 		"read model exposes pending budget and its engine preview")
 	t.truth(not model["actions"]["propose"]["eligible"],

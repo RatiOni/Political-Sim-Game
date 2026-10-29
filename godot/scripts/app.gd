@@ -65,6 +65,10 @@ func _ready() -> void:
 	%BudgetPanel.find_child("WithdrawBudgetButton").pressed.connect(_withdraw_budget)
 	%BudgetPanel.find_child("LobbyButton").pressed.connect(_lobby_budget)
 	%BudgetPanel.find_child("LobbyChoice").item_selected.connect(_on_budget_lobby_selected)
+	var chart_choice: OptionButton = %BudgetPanel.find_child("ChartTypeChoice")
+	for chart_name: String in BudgetChart.MODE_NAMES:
+		chart_choice.add_item(chart_name)
+	chart_choice.item_selected.connect(_on_budget_chart_type)
 	%LegislationButton.pressed.connect(_open_legislation)
 	%LegislationPanel.find_child("CloseLegislationButton").pressed.connect(_close_legislation)
 	%LegislationPanel.find_child("BillChoice").item_selected.connect(_on_bill_choice_selected)
@@ -422,10 +426,10 @@ func _refresh_budget() -> void:
 	var actions: Dictionary = model.get("actions", {})
 	var preview_action: Dictionary = actions.get("preview", {})
 	var rows: VBoxContainer = %BudgetPanel.find_child("BudgetRows")
-	for child in rows.get_children():
-		rows.remove_child(child)
-		child.queue_free()
 	if not model.get("ok", false):
+		for child in rows.get_children():
+			rows.remove_child(child)
+			child.queue_free()
 		var unavailable := Label.new()
 		unavailable.text = str(model.get("error", "Budget data is unavailable."))
 		unavailable.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -433,41 +437,9 @@ func _refresh_budget() -> void:
 		_set_budget_status(unavailable.text)
 		_apply_budget_actions({})
 		return
-
-	for envelope in model.get("envelopes", []):
-		var envelope_id := str(envelope.get("id", ""))
-		var row := VBoxContainer.new()
-		row.name = "BudgetRow_%s" % envelope_id
-		var top := HBoxContainer.new()
-		var label := Label.new()
-		label.text = "%s  ·  %.0f M" % [envelope.get("name", envelope_id.capitalize()), envelope.get("current", 0.0)]
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		var choice := OptionButton.new()
-		choice.name = "Adjustment_%s" % envelope_id
-		choice.custom_minimum_size = Vector2(168, 44)
-		var selected_index := 0
-		var selected_step := float(_budget_adjustments.get(envelope_id, 0.0))
-		for step_value in envelope.get("allowed_adjustments", []):
-			var step := float(step_value)
-			var index := choice.item_count
-			choice.add_item(_signed_adjustment(step))
-			choice.set_item_metadata(index, step)
-			if is_equal_approx(step, selected_step):
-				selected_index = index
-		choice.select(selected_index)
-		choice.disabled = not bool(preview_action.get("eligible", false))
-		choice.tooltip_text = str(preview_action.get("disabled_reason", ""))
-		choice.item_selected.connect(_on_budget_adjustment.bind(envelope_id, choice))
-		top.add_child(label)
-		top.add_child(choice)
-		row.add_child(top)
-		var body := Label.new()
-		body.text = str(envelope.get("body", ""))
-		body.theme_type_variation = &"Muted"
-		body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		row.add_child(body)
-		rows.add_child(row)
+	_sync_budget_sliders(rows, model.get("envelopes", []), bool(preview_action.get("eligible", false)),
+		str(preview_action.get("disabled_reason", "")))
+	_display_income(model)
 
 	var lobby_choice: OptionButton = %BudgetPanel.find_child("LobbyChoice")
 	var keep_budget_lobby := _selected_id(lobby_choice)
@@ -500,14 +472,73 @@ func _refresh_budget() -> void:
 		_set_budget_status("Adjust the authorised envelopes, then table the plan.")
 
 
-func _on_budget_adjustment_selected(index: int, envelope_id: String, choice: OptionButton) -> void:
-	_sfx_cue("selection")
-	_on_budget_adjustment(index, envelope_id, choice)
+## Slider rows are kept alive across snapshots (rebuilding them mid-drag
+## would drop the drag); only a change of envelope ids rebuilds them.
+func _sync_budget_sliders(rows: VBoxContainer, envelopes: Array, editable: bool, reason: String) -> void:
+	var ids: Array[String] = []
+	for envelope: Dictionary in envelopes:
+		ids.append(str(envelope.get("id", "")))
+	var existing: Array[String] = []
+	for child in rows.get_children():
+		existing.append(String(child.get_meta("envelope_id", "")))
+	if existing != ids:
+		for child in rows.get_children():
+			rows.remove_child(child)
+			child.queue_free()
+		for envelope: Dictionary in envelopes:
+			rows.add_child(_budget_slider_row(envelope))
+	for envelope: Dictionary in envelopes:
+		var envelope_id := str(envelope.get("id", ""))
+		var row := rows.find_child("BudgetRow_%s" % envelope_id, false, false)
+		var slider: HSlider = row.find_child("Adjustment_%s" % envelope_id, true, false)
+		slider.set_value_no_signal(float(_budget_adjustments.get(envelope_id, 0.0)))
+		slider.editable = editable
+		slider.tooltip_text = reason
+		row.set_meta("current", float(envelope.get("current", 0.0)))
 
-func _on_budget_adjustment(index: int, envelope_id: String, choice: OptionButton) -> void:
-	if index < 0 or index >= choice.item_count:
-		return
-	var step := float(choice.get_item_metadata(index))
+
+func _budget_slider_row(envelope: Dictionary) -> VBoxContainer:
+	var envelope_id := str(envelope.get("id", ""))
+	var steps: Array[float] = []
+	for value in envelope.get("allowed_adjustments", [0.0]):
+		steps.append(float(value))
+	steps.sort()
+	var row := VBoxContainer.new()
+	row.name = "BudgetRow_%s" % envelope_id
+	row.set_meta("envelope_id", envelope_id)
+	row.add_theme_constant_override("separation", 0)
+	var top := HBoxContainer.new()
+	var label := Label.new()
+	label.name = "EnvelopeName"
+	label.text = str(envelope.get("name", envelope_id.capitalize())).to_upper()
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.clip_text = true
+	label.tooltip_text = str(envelope.get("body", ""))
+	label.mouse_filter = Control.MOUSE_FILTER_PASS
+	var amount := Label.new()
+	amount.name = "EnvelopeAmount"
+	amount.custom_minimum_size = Vector2(220, 0)
+	amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	amount.clip_text = true
+	top.add_child(label)
+	top.add_child(amount)
+	row.add_child(top)
+	var slider := HSlider.new()
+	slider.name = "Adjustment_%s" % envelope_id
+	slider.custom_minimum_size = Vector2(0, 44)
+	slider.min_value = steps[0]
+	slider.max_value = steps[-1]
+	# ponytail: uniform step from the catalogue; the sim only accepts its listed steps.
+	slider.step = steps[1] - steps[0] if steps.size() > 1 else 1.0
+	slider.tick_count = steps.size()
+	slider.ticks_on_borders = true
+	slider.value_changed.connect(_on_budget_slider.bind(envelope_id))
+	row.add_child(slider)
+	return row
+
+
+func _on_budget_slider(value: float, envelope_id: String) -> void:
+	var step := snappedf(value, 0.0001)
 	if is_zero_approx(step):
 		_budget_adjustments.erase(envelope_id)
 	else:
@@ -520,12 +551,54 @@ func _on_budget_adjustment(index: int, envelope_id: String, choice: OptionButton
 	_display_budget_preview(_budget_preview)
 
 
+func _on_budget_chart_type(index: int) -> void:
+	_sfx_cue("selection")
+	for chart_name in ["SpendingChart", "IncomeChart"]:
+		(%BudgetPanel.find_child(chart_name) as BudgetChart).mode = index as BudgetChart.Mode
+
+
+## Income tab: the read-only `revenue_sources` split from the snapshot.
+func _display_income(model: Dictionary) -> void:
+	var sources: Array = model.get("revenue_sources", [])
+	(%BudgetPanel.find_child("IncomeChart") as BudgetChart).set_items(sources)
+	var total := 0.0
+	for source: Dictionary in sources:
+		total += float(source.get("value", 0.0))
+	var lines: Array[String] = []
+	for source: Dictionary in sources:
+		var value := float(source.get("value", 0.0))
+		lines.append("%s  %+.0f M  %.1f%%" % [str(source.get("name", "")).to_upper(), value,
+			100.0 * value / total if total > 0.0 else 0.0])
+	lines.append("TOTAL REVENUE  %.0f M" % total)
+	lines.append("DEBT SERVICE (OUTSIDE ENVELOPES)  %.0f M" % float(model.get("debt_service", 0.0)))
+	%BudgetPanel.find_child("IncomeRows").text = "\n".join(lines)
+
+
 func _display_budget_preview(preview: Dictionary) -> void:
 	if preview.is_empty():
 		%BudgetPanel.find_child("BudgetSummary").text = "No fiscal preview available."
 		%BudgetPanel.find_child("BudgetProjection").text = "No parliamentary projection available."
 		return
 	var plan: Dictionary = preview.get("plan", {})
+	var total := float(preview.get("total", 0.0))
+	var free := float(preview.get("forecast_balance", 0.0))
+	%BudgetPanel.find_child("RevenueFigure").text = "REVENUE %.0f M" % float(preview.get("forecast_revenue", 0.0))
+	%BudgetPanel.find_child("SpendFigure").text = "SPENDING %.0f M" % total
+	var free_label: Label = %BudgetPanel.find_child("FreeFigure")
+	free_label.text = ("FREE %+.0f M" if free >= 0.0 else "DEFICIT %+.0f M") % free
+	free_label.add_theme_color_override("font_color", UiPalette.GOOD if free >= 0.0 else UiPalette.BAD)
+	var chart_rows: Array = []
+	var rows: VBoxContainer = %BudgetPanel.find_child("BudgetRows")
+	for line: Dictionary in preview.get("rows", []):
+		var proposed := float(line.get("proposed", 0.0))
+		chart_rows.append({"name": line.get("name", ""), "value": proposed})
+		var row := rows.find_child("BudgetRow_%s" % line.get("id", ""), false, false)
+		if row == null:
+			continue
+		var current := float(line.get("current", 0.0))
+		(row.find_child("EnvelopeAmount", true, false) as Label).text = "%.0f M %+.0f%%  %4.1f%%" % [
+			proposed, 100.0 * (proposed - current) / maxf(1.0, current), 100.0 * proposed / maxf(1.0, total)]
+	(%BudgetPanel.find_child("SpendingChart") as BudgetChart).set_items(chart_rows)
 	%BudgetPanel.find_child("BudgetSummary").text = "FY %s  ·  active %.0f M  ·  proposed %.0f M  ·  revenue %.0f M  ·  balance %+.0f M  ·  %.0f PC" % [
 		plan.get("year", "—"), preview.get("active_total", 0.0), preview.get("total", 0.0),
 		preview.get("forecast_revenue", 0.0), preview.get("forecast_balance", 0.0),
