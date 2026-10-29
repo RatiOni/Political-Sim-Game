@@ -880,6 +880,7 @@ func _on_country_selected(index: int) -> void:
 
 func _refresh_diplomacy() -> void:
 	_refresh_orientation()
+	_refresh_energy()
 	var rows: Array = snapshot.get("diplomacy", [])
 	var panel = %DiplomacyPanel
 	var choice: OptionButton = panel.find_child("CountryChoice")
