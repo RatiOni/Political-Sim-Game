@@ -4,6 +4,9 @@ extends RefCounted
 
 const PAYMENT_SHARE := 0.85
 const WINTER_WEIGHT := 1.5
+const STORAGE_MONTHS := 24
+const SECOND_LINE_MONTHS := 48
+const SECOND_LINE_OPENING := -0.1
 const UNION_PRICE_SHARE := 0.7
 const INJECTION_SHARE := 0.25
 const SHORTFALL_NOTE := 0.05
@@ -111,6 +114,7 @@ static func monthly(state: GameState) -> Array[String]:
 	_renew(state, notes)
 	_restore(state, notes)
 	_mature_threat(state, notes)
+	_advance_projects(state, notes)
 	coerce(state, state.world_country(gas(state).supplier_id), notes)
 	flow(state)
 	write_share(state)
@@ -324,3 +328,17 @@ static func _log_harm(state: GameState, actor_id: String, relation: float, econo
 		"relation": relation, "economy": economy, "stability": 0.0})
 	while state.foreign.hostile_log.size() > WorldSim.HOSTILE_LOG_LIMIT:
 		state.foreign.hostile_log.pop_front()
+
+
+static func _advance_projects(state: GameState, notes: Array[String]) -> void:
+	var g := gas(state)
+	if g.storage_started >= 0 and g.storage_capacity < g.storage_target:
+		var built := clampf(float(state.turn - g.storage_started) / float(STORAGE_MONTHS), 0.0, 1.0)
+		g.storage_capacity = g.storage_target * built
+		if built >= 1.0:
+			notes.append(line("storage_ready"))
+	if g.second_line_started >= 0 and g.second_line_volume <= 0.0 \
+			and state.turn - g.second_line_started >= SECOND_LINE_MONTHS:
+		g.second_line_volume = float(catalog().get("second_line", {}).get("volume", 0.0))
+		DiplomacySim.shift(state, g.supplier_id, SECOND_LINE_OPENING, "Ardenia opened a gas line around Krasova.")
+		notes.append(line("second_line_open"))

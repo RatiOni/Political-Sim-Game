@@ -203,6 +203,10 @@ func orientation_act(verb: String) -> Dictionary:
 	return _guarded(func() -> Dictionary: return OrientationActions.act(_state, verb))
 
 
+func energy_act(verb: String) -> Dictionary:
+	return _guarded(func() -> Dictionary: return EnergyActions.act(_state, verb))
+
+
 func resolve_situation(event_id: String, option_id: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "another NativeGame operation is already in flight"}

@@ -52,6 +52,7 @@ static func monthly(state: GameState) -> Array[String]:
 	var notes: Array[String] = []
 	if state.player.in_government:
 		return notes
+	EnergyActions.ai_policy(state)
 	var opp := state.opposition
 	for m in opp.shadow_cabinet:
 		m.competence = minf(SHADOW_CEILING, m.competence + SHADOW_EXPERIENCE)
