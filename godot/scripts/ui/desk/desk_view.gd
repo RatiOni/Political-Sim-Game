@@ -32,6 +32,11 @@ const ALARM := Color(0.85, 0.25, 0.18)
 var painter: Callable
 var data: Dictionary = {}
 var palette := "night"
+## The authoring space fitted to the control. Rooms keep `SPACE`; a wider
+## picture (the regional city scenes) sets its own.
+var space := SPACE
+## The converter laid over the picture, once the view is in the tree.
+var ascii: AsciiConvert
 
 ## Visible authoring x at the panel's left and right edges (see above).
 var left := 0.0
@@ -51,7 +56,7 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	AsciiConvert.cover(self, palette)
+	ascii = AsciiConvert.cover(self, palette)
 	_overlay = Control.new()
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -72,10 +77,10 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), INK, true)
 	# Fit the height, but never crop the core composition by more than 60
 	# units a side: a tall narrow room letterboxes instead (dark bands).
-	_scale = minf(size.y / SPACE.y, size.x / (SPACE.x - 80.0))
-	_origin = ((size - SPACE * _scale) * 0.5).floor()
+	_scale = minf(size.y / space.y, size.x / (space.x - 80.0))
+	_origin = ((size - space * _scale) * 0.5).floor()
 	left = -_origin.x / _scale
-	right = SPACE.x + _origin.x / _scale
+	right = space.x + _origin.x / _scale
 	_labels.clear()
 	if painter.is_valid():
 		painter.call(self, _clock, data)
