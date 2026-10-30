@@ -121,8 +121,8 @@ func _build_nodes() -> void:
 	# After the picture, behind the map's own chrome: buttons stay crisp.
 	var glass := CrtGlass.cover(self)
 	glass.show_behind_parent = true
-	(glass.material as ShaderMaterial).set_shader_parameter("dim", 0.9)
-	(glass.material as ShaderMaterial).set_shader_parameter("desaturate", 0.25)
+	(glass.material as ShaderMaterial).set_shader_parameter("dim", 1.0)
+	(glass.material as ShaderMaterial).set_shader_parameter("desaturate", 0.0)
 	_physical.add_child(_canvas)
 	for layer in [terrain_layer, growth_layer, smoke_layer]:
 		layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -321,7 +321,9 @@ func physical_size() -> Vector2:
 func default_tile_px() -> int:
 	var panel := physical_size()
 	var detail := Vector2(TileBaker.GRID * DETAIL * level_zoom(panel.x, DETAIL))
-	return DETAIL if detail.x <= panel.x and (_country.size * detail).y <= panel.y else OVERVIEW
+	# Judge by the country, not the whole grid: the sea and foreign margin may
+	# crop (the map pans) as long as Ardenia itself fits at the sharper level.
+	return DETAIL if (_country.size * detail).x <= panel.x and (_country.size * detail).y <= panel.y else OVERVIEW
 
 
 func _layout() -> void:

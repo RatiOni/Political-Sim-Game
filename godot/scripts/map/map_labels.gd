@@ -21,8 +21,8 @@ static var _fonts: Dictionary = {}
 var _region_font: Font = mono()
 var _city_font: Font = mono()
 ## Monospace stops being readable below these sizes, whatever the zoom.
-const REGION_MIN := 11
-const CITY_MIN := 10
+const REGION_MIN := 16
+const CITY_MIN := 13
 
 
 static func mono() -> Font:
@@ -63,13 +63,13 @@ func _draw() -> void:
 	var city_size := maxi(CITY_MIN, CITY_SIZE * city_scale)
 	for city in cities:
 		var dot: Vector2 = (to_physical.call(city["point"]) as Vector2).round()
-		var marker := float(MARKER * city_scale)
+		var marker := float(MARKER * city_scale + (4 if city["capital"] else 2))
 		var corner := (dot - Vector2(marker, marker) / 2.0).round()
 		var colour := MapPalette.DAY[MapPalette.GOLD if city["capital"] else MapPalette.WALL]
 		draw_rect(Rect2(corner - Vector2.ONE, Vector2(marker, marker) + Vector2.ONE * 2), MapPalette.DAY[MapPalette.INK])
 		draw_rect(Rect2(corner, Vector2(marker, marker)), colour)
 		var baseline := corner + Vector2(marker + CITY_GAP * city_scale, marker / 2.0 + _city_font.get_ascent(city_size) / 2.0)
-		_outlined(_city_font, baseline.round(), String(city["name"]), city_size, MapPalette.DAY[MapPalette.WALL])
+		_outlined(_city_font, baseline.round(), String(city["name"]), city_size + (2 if city["capital"] else 0), MapPalette.DAY[MapPalette.GOLD if city["capital"] else MapPalette.SNOW])
 
 
 func _outlined(font: Font, at: Vector2, text: String, font_size: int, colour: Color) -> void:

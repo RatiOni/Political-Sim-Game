@@ -46,6 +46,7 @@ var program_id := ""
 var capital := false
 ## Set by the bake: open sky per column, for the day grade.
 var sky_mask: Image
+var front_top := PackedInt32Array()   # per column, top of the street buildings
 ## Mid-ground high-rises: {x, w, h}. Their number grows with the city.
 var towers: Array[Dictionary] = []
 

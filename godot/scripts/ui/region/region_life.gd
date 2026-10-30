@@ -35,7 +35,8 @@ func _blk(x: float, y: float, w: float, h: float, c: Color) -> void:
 
 
 func _glow(x: float, y: float, r: float, c: Color, strength: float) -> void:
-	strength *= 0.15 + 0.85 * night   # light that blooms at night barely shows by day
+	return   # bloom dropped at the owner's request; callers keep their call sites
+	strength *= 0.15 + 0.85 * night
 	for i in 4:
 		var k := 1.0 - i / 4.0
 		var col := c
@@ -45,12 +46,28 @@ func _glow(x: float, y: float, r: float, c: Color, strength: float) -> void:
 
 ## A soft beam: full strength at the source, fading to nothing at the far edge.
 func _beam(from: Vector2, a: Vector2, b: Vector2, c: Color, strength: float) -> void:
+	return   # soft light beams dropped along with the bloom
 	var near := c
 	near.a = strength * (0.1 + 0.9 * night)
 	var far := c
 	far.a = 0.0
 	canvas.draw_polygon(PackedVector2Array([origin + from * px, origin + a * px, origin + b * px]),
 		PackedColorArray([near, far, far]))
+
+
+## A block drawn behind the street: columns where a building rises above
+## its top are left out, so the train passes behind spires, not over them.
+func _behind(s: RegionScene, x: float, y: float, w: float, h: float, c: Color) -> void:
+	if s.front_top.is_empty():
+		_blk(x, y, w, h, c)
+		return
+	for i in int(w):
+		var col := int(x) + i
+		if col < 0 or col >= s.cols:
+			continue
+		var clip := minf(h, float(s.front_top[col]) - y)
+		if clip > 0.0:
+			_blk(col, y, 1, clip, c)
 
 
 func draw(s: RegionScene, t: float) -> void:
@@ -154,14 +171,14 @@ func _landmark(s: RegionScene, t: float) -> void:
 		"viaduct":
 			var deck := float(s.horizon - 20)
 			var x := fposmod(t * 22.0, s.cols + 220.0) - 200.0
-			_blk(x + 170, deck - 9, 26, 9, Color(0.16, 0.16, 0.17))
-			_blk(x + 190, deck - 13, 4, 4, Color(0.16, 0.16, 0.17))
-			_blk(x + 192, deck - 7, 3, 3, Color(1.0, 0.9, 0.6))
+			_behind(s, x + 170, deck - 9, 26, 9, Color(0.16, 0.16, 0.17))
+			_behind(s, x + 190, deck - 13, 4, 4, Color(0.16, 0.16, 0.17))
+			_behind(s, x + 192, deck - 7, 3, 3, Color(1.0, 0.9, 0.6))
 			for car in 6:
 				var c := x + car * 28.0
-				_blk(c, deck - 8, 25, 8, Color(0.30, 0.22, 0.16))
+				_behind(s, c, deck - 8, 25, 8, Color(0.30, 0.22, 0.16))
 				for w in range(2, 22, 5):
-					_blk(c + w, deck - 6, 3, 3, Color(1.0, 0.80, 0.45, 0.9))
+					_behind(s, c + w, deck - 6, 3, 3, Color(1.0, 0.80, 0.45, 0.9))
 			for i in 8:
 				var age := fposmod(t * 0.4 + i / 8.0, 1.0)
 				var col := Color(0.70, 0.70, 0.72, (1.0 - age) * 0.35)

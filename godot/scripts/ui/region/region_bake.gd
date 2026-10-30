@@ -52,8 +52,10 @@ static func bake(s: RegionScene) -> Image:
 	_towers(img, s)
 	_land(img, s)
 	_landmark(img, s)
+	var behind := img.get_data()
 	for b in s.buildings:
 		_building(img, s, b)
+	s.front_top = _front_top(img, behind, s)
 	_street(img, s)
 	_foreground(img, s)
 	if s.crane_at >= 0:
@@ -79,6 +81,23 @@ static func _sky_mask(img: Image, sky: PackedByteArray, s: RegionScene) -> Image
 			y += 1
 		mask.set_pixel(x, 0, Color(float(y) / s.h, 0, 0))
 	return mask
+
+
+## Per column, the highest row the street buildings painted: anything the
+## life layer draws behind them (the train on the viaduct) hides below it.
+static func _front_top(img: Image, behind: PackedByteArray, s: RegionScene) -> PackedInt32Array:
+	var done := img.get_data()
+	var top := PackedInt32Array()
+	top.resize(s.cols)
+	for x in s.cols:
+		var y := 0
+		while y < s.ground:
+			var i := (y * s.cols + x) * 4
+			if done[i] != behind[i] or done[i + 1] != behind[i + 1] or done[i + 2] != behind[i + 2]:
+				break
+			y += 1
+		top[x] = y
+	return top
 
 
 # --- primitives ----------------------------------------------------------
@@ -264,10 +283,10 @@ static func _landmark(img: Image, s: RegionScene) -> void:
 			fill(img, cx - 40, g - 92, 80, 22, stone.lightened(0.08))
 			for c in range(cx - 36, cx + 36, 8):
 				_window(img, s, c, g - 88, 3, 10, c * 7)
-			_dome(img, cx, g - 92, 38, stone.lightened(0.15))
-			fill(img, cx - 4, g - 140, 8, 10, stone.lightened(0.2))
-			fill(img, cx, g - 162, 1, 22, IRON.lightened(0.4))
-			s.flag_at = Vector2i(cx, g - 162)
+			_dome(img, cx, g - 92, 30, stone.lightened(0.15))
+			fill(img, cx - 4, g - 128, 8, 8, stone.lightened(0.2))
+			fill(img, cx, g - 140, 1, 12, IRON.lightened(0.4))
+			s.flag_at = Vector2i(cx, g - 140)
 			# Floodlight wash at the foot of the colonnade.
 			for y in range(g - 66, g):
 				for x in range(cx - 84, cx + 84, 1):
