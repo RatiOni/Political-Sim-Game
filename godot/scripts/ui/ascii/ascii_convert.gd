@@ -86,18 +86,6 @@ func set_gain(gain: float) -> void:
 	_param("gain", gain)
 
 
-## Opt-in crisper print (see the shader): dim tones from `solid_from` up print
-## as solid tiles, and with `seam` > 0 the dark gutter only outlines a change
-## of colour; a higher `tone_weight` lets brightness, not only hue, pick the
-## palette colour; `medoid` prints each cell in a real source colour rather
-## than a blend. Unset, a picture prints exactly as before.
-func set_shape(solid_from: float, seam: float, tone_weight: float = 0.6, medoid: bool = false) -> void:
-	_param("solid_from", solid_from)
-	_param("seam", seam)
-	_param("tone_weight", tone_weight)
-	_param("medoid", 1.0 if medoid else 0.0)
-
-
 ## The big-moment effect, centred on `at` (local UV).
 func burst(at: Vector2 = Vector2(0.5, 0.5), seconds: float = 2.4) -> void:
 	if _tween != null and _tween.is_valid():

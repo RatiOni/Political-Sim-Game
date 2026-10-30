@@ -8,32 +8,24 @@ extends RefCounted
 ## headlights, searchlights) is soft on purpose: drawn as translucent cones
 ## and pools over the hard-edged scene, it is what makes it read as evening.
 
-## Coats and car bodies sit on distinct palette colours (rust, navy, sand,
-## olive, ochre, stone) so a figure or a car prints as its own tile colour,
-## outlined against the wall or road behind it, not as one more grey.
 const COATS: Array[Color] = [
-	Color(0.55, 0.26, 0.18), Color(0.12, 0.15, 0.26), Color(0.62, 0.52, 0.34),
-	Color(0.32, 0.36, 0.22), Color(0.80, 0.56, 0.26), Color(0.48, 0.46, 0.42),
+	Color(0.28, 0.25, 0.22), Color(0.16, 0.18, 0.24), Color(0.36, 0.30, 0.22),
+	Color(0.22, 0.24, 0.20), Color(0.40, 0.18, 0.15), Color(0.50, 0.48, 0.44),
 ]
 const CAR_TONES: Array[Color] = [
-	Color(0.62, 0.22, 0.16), Color(0.24, 0.36, 0.54), Color(0.80, 0.76, 0.64),
-	Color(0.34, 0.40, 0.24), Color(0.80, 0.58, 0.26),
+	Color(0.45, 0.16, 0.13), Color(0.20, 0.30, 0.42), Color(0.55, 0.53, 0.48),
+	Color(0.24, 0.32, 0.22), Color(0.50, 0.42, 0.20),
 ]
 const SKIN := Color(0.62, 0.50, 0.40)
 ## People are faceless pictograms in one flat tone, read by posture.
-const FIGURE := Color(0.86, 0.81, 0.68)
-## The view prints in 4x5-pixel cells, two scene pixels to a cell column:
-## a figure must span several cells to read, so people and vehicles are
-## drawn this much larger than the buildings' own scale.
-const FIGURE_SCALE := 1.5
-const CAR_SCALE := 1.3
-const FIGURE_H := 14.0 * FIGURE_SCALE
+const FIGURE := Color(0.62, 0.59, 0.52)
+const FIGURE_H := 14.0
 const LAMP := Color(1.0, 0.80, 0.48)
 
 var canvas: CanvasItem
 var origin := Vector2.ZERO
 var px := 2.0
-## The camera transform applied to everything drawn (held still by RegionView).
+## The camera: drift and push-in applied to everything drawn.
 var base := Transform2D.IDENTITY
 ## 1 at night, 0 by day (`DayCycle`): night-only light fades with it.
 var night := 1.0
@@ -43,11 +35,6 @@ func _blk(x: float, y: float, w: float, h: float, c: Color) -> void:
 	# Not snapped: the source moves continuously and the ASCII pass does the
 	# quantising, so motion steps gradually through the shading ramp.
 	canvas.draw_rect(Rect2(origin + Vector2(x, y) * px, Vector2(w, h) * px), c, true)
-
-
-## A block in a sprite's own units, scaled by `k` about the sprite's origin.
-func _part(ox: float, oy: float, k: float, dx: float, dy: float, w: float, h: float, c: Color) -> void:
-	_blk(ox + dx * k, oy + dy * k, w * k, h * k, c)
 
 
 func _glow(x: float, y: float, r: float, c: Color, strength: float) -> void:
@@ -91,25 +78,24 @@ func _behind(s: RegionScene, x: float, y: float, w: float, h: float, c: Color) -
 ## a protester with fists up).
 func pictogram(x: float, foot: float, tone: Color, stride: int, arms_up: bool = false) -> void:
 	var y := foot - FIGURE_H
-	var k := FIGURE_SCALE
-	_part(x, y, k, 0, 0, 3, 3, tone)                       # head
-	_part(x, y, k, -0.5, 4, 4, 5, tone)                    # torso
+	_blk(x, y, 3, 3, tone)                       # head
+	_blk(x - 0.5, y + 4, 4, 5, tone)             # torso
 	if arms_up:
-		_part(x, y, k, -2, -1, 1, 6, tone)
-		_part(x, y, k, 4, -1, 1, 6, tone)
+		_blk(x - 2, y - 1, 1, 6, tone)
+		_blk(x + 4, y - 1, 1, 6, tone)
 	else:
-		_part(x, y, k, -1.5, 4, 1, 4, tone)
-		_part(x, y, k, 3.5, 4, 1, 4, tone)
+		_blk(x - 1.5, y + 4, 1, 4, tone)
+		_blk(x + 3.5, y + 4, 1, 4, tone)
 	match stride:
 		0:
-			_part(x, y, k, -1, 9, 1.5, 5, tone)
-			_part(x, y, k, 2.5, 9, 1.5, 5, tone)
+			_blk(x - 1, y + 9, 1.5, 5, tone)
+			_blk(x + 2.5, y + 9, 1.5, 5, tone)
 		1:
-			_part(x, y, k, 0, 9, 1.5, 5, tone)
-			_part(x, y, k, 1.5, 9, 1.5, 5, tone)
+			_blk(x, y + 9, 1.5, 5, tone)
+			_blk(x + 1.5, y + 9, 1.5, 5, tone)
 		_:
-			_part(x, y, k, 0, 9, 1.5, 5, tone)
-			_part(x, y, k, 2, 9, 1.5, 5, tone)
+			_blk(x, y + 9, 1.5, 5, tone)
+			_blk(x + 2, y + 9, 1.5, 5, tone)
 
 
 func draw(s: RegionScene, t: float) -> void:
@@ -370,25 +356,24 @@ func _people(s: RegionScene, t: float) -> void:
 		var protest := bool(p.get("protest", false))
 		# Coat in colour, head pale: the figure reads as a person in a coat
 		# rather than as a light blob, and a street of them reads as a crowd.
-		var coat: Color = COATS[int(p["coat"])]
+		var coat: Color = COATS[int(p["coat"])].lightened(0.30)
 		if bool(p.get("uniform", false)):
 			coat = Color(0.30, 0.34, 0.22)
 		var still := bool(p["idle"])
-		var k := FIGURE_SCALE
 		pictogram(x, foot - bob, coat, (stride % 2) if not still else -1, protest and int(p["coat"]) % 3 == 0)
-		_part(x, y, k, 0, 0, 3, 3, FIGURE)
+		_blk(x, y, 3, 3, FIGURE)
 		if bool(p.get("uniform", false)):
-			_part(x, y, k, -0.5, -1, 4, 1.5, coat.darkened(0.3))          # the cap
-			_part(x, y, k, 4, 2, 1, 9, Color(0.10, 0.10, 0.10))           # the rifle, slung
+			_blk(x - 0.5, y - 1, 4, 1.5, coat.darkened(0.3))          # the cap
+			_blk(x + 4, y + 2, 1, 9, Color(0.10, 0.10, 0.10))         # the rifle, slung
 		elif not still and int(p["coat"]) == 2:
-			_part(x, y, k, 3.5, 7, 2, 3, Color(0.28, 0.20, 0.14))         # a bag
+			_blk(x + 3.5, y + 7, 2, 3, Color(0.28, 0.20, 0.14))       # a bag
 		elif int(p["coat"]) == 5:
-			_part(x, y, k, -1, -0.5, 5, 1, Color(0.12, 0.12, 0.14))       # a hat
-			_part(x, y, k, 0, -2, 3, 1.5, Color(0.12, 0.12, 0.14))
+			_blk(x - 1, y - 0.5, 5, 1, Color(0.12, 0.12, 0.14))       # a hat
+			_blk(x, y - 2, 3, 1.5, Color(0.12, 0.12, 0.14))
 		if bool(p.get("placard", false)):
 			var lift := floorf(1.5 + 1.5 * sin(t * 2.5 + float(p["phase"])))
-			_part(x, y, k, 1, -6 - lift, 1, 7, Color(0.30, 0.22, 0.14))
-			_part(x, y, k, -2, -10 - lift, 7, 4, Color(0.85, 0.82, 0.72))
+			_blk(x + 1, y - 6 - lift, 1, 7, Color(0.30, 0.22, 0.14))
+			_blk(x - 2, y - 10 - lift, 7, 4, Color(0.85, 0.82, 0.72))
 
 
 ## Far lane first, then the tram on the crown, then the near lane.
@@ -396,46 +381,44 @@ func _cars(s: RegionScene, t: float, lane: int) -> void:
 	for c in s.cars:
 		if int(c["lane"]) != lane:
 			continue
-		# Drawn in the car's own units (`length` long), scaled by CAR_SCALE
-		# about its origin so it spans enough cells to read.
 		var length := float(c["len"])
-		var k := CAR_SCALE
-		var span := length * k
-		var x := fposmod(float(c["x"]) + t * float(c["speed"]), s.cols + span * 2.0) - span
+		var x := fposmod(float(c["x"]) + t * float(c["speed"]), s.cols + length * 2.0) - length
 		var forward := float(c["speed"]) > 0.0
 		var y := float(s.road_top + 3 + int(c["lane"]) * int(s.road_h * 0.45))
 		var body: Color = CAR_TONES[int(c["tone"])]
-		var nose := length if forward else 0.0
+		var nose := x + length if forward else x
+		var reach := 26.0 * (1.0 if forward else -1.0)
+		_beam(Vector2(nose, y + 3), Vector2(nose + reach, y - 1), Vector2(nose + reach, y + 8), LAMP, 0.18 * night)
 		if bool(c["bus"]):
-			_part(x, y, k, 0, -6, length, 10, Color(0.62, 0.50, 0.22))
-			_part(x, y, k, 0, -1, length, 1, Color(0.40, 0.30, 0.12))
+			_blk(x, y - 6, length, 10, Color(0.62, 0.50, 0.22))
+			_blk(x, y - 1, length, 1, Color(0.40, 0.30, 0.12))
 			for wx in range(2, int(length) - 3, 4):
-				_part(x, y, k, wx, -5, 3, 3, Color(1.0, 0.85, 0.55, 0.9))
+				_blk(x + wx, y - 5, 3, 3, Color(1.0, 0.85, 0.55, 0.9))
 		elif bool(c.get("truck", false)):
 			# A lorry: a canvas-tilt or box body and a cab at the nose end.
 			var army := s.land == RegionScene.Land.FRONTIER
 			var load := Color(0.30, 0.34, 0.22) if army else body.darkened(0.25)
 			var cab := Color(0.24, 0.28, 0.18) if army else body
-			var cab_x := length - 8.0 if forward else 0.0
-			var box_x := 0.0 if forward else 8.0
-			_part(x, y, k, box_x, -7, length - 8, 11, load)
-			_part(x, y, k, box_x, -7, length - 8, 1, load.lightened(0.3))
+			var cab_x := x + length - 8 if forward else x
+			var box_x := x if forward else x + 8
+			_blk(box_x, y - 7, length - 8, 11, load)
+			_blk(box_x, y - 7, length - 8, 1, load.lightened(0.3))
 			for rib in range(3, int(length) - 9, 5):
-				_part(x, y, k, box_x + rib, -6, 1, 9, load.darkened(0.3))
-			_part(x, y, k, cab_x, -4, 8, 8, cab)
-			_part(x, y, k, cab_x + (3.0 if forward else 1.0), -3, 4, 3, Color(0.10, 0.12, 0.16))
+				_blk(box_x + rib, y - 6, 1, 9, load.darkened(0.3))
+			_blk(cab_x, y - 4, 8, 8, cab)
+			_blk(cab_x + (3 if forward else 1), y - 3, 4, 3, Color(0.10, 0.12, 0.16))
 		else:
-			_part(x, y, k, 0, 0, length, 5, body)
-			_part(x, y, k, length * 0.25, -3, length * 0.5, 3, body.lightened(0.15))
-			_part(x, y, k, length * 0.3, -2, length * 0.4, 2, Color(0.10, 0.12, 0.16))
-		var tail := 0.0 if forward else length - 1.5
-		_part(x, y, k, tail, 1, 1.5, 2, Color(1.0, 0.2, 0.15))
-		_part(x, y, k, nose - (1.5 if forward else 0.0), 1, 1.5, 2, Color(1.0, 0.92, 0.7))
+			_blk(x, y, length, 5, body)
+			_blk(x + length * 0.25, y - 3, length * 0.5, 3, body.lightened(0.15))
+			_blk(x + length * 0.3, y - 2, length * 0.4, 2, Color(0.10, 0.12, 0.16))
+		var tail := x if forward else x + length - 1
+		_blk(tail, y + 1, 1, 2, Color(1.0, 0.2, 0.15))
+		_blk(nose - (1.0 if forward else 0.0), y + 1, 1, 2, Color(1.0, 0.92, 0.7))
 		# Wheels with a hub that turns with the distance covered.
 		var spin := int(absf(t * float(c["speed"])) / 2.0) % 2
-		for wx in [2.0, length - 5.0]:
-			_part(x, y, k, wx, 4, 3, 3, Color(0.04, 0.04, 0.05))
-			_part(x, y, k, wx + spin, 5, 1, 1, Color(0.45, 0.45, 0.45))
+		for wx in [x + 2.0, x + length - 5.0]:
+			_blk(wx, y + 4, 3, 3, Color(0.04, 0.04, 0.05))
+			_blk(wx + spin, y + 5, 1, 1, Color(0.45, 0.45, 0.45))
 
 
 ## The tram: two-tone cars on the rails down the crown of the road, a lit

@@ -436,9 +436,7 @@ static func _house(img: Image, s: RegionScene, b: Dictionary) -> void:
 	var top := s.ground - hgt
 	var wall: Color = WALLS[int(b["tint"])]
 	if s.development < 0.35:
-		# Weathered render, but still the lit mass of the picture: any darker
-		# and it prints the same olive as the hillside behind it.
-		wall = wall.lerp(Color(0.36, 0.30, 0.22), 0.6)
+		wall = wall.lerp(Color(0.26, 0.22, 0.17), 0.6)
 	fill(img, x, top, w, hgt, wall)
 	fill(img, x, top, 1, hgt, wall.lightened(0.14))             # moonlit edge
 	fill(img, x + w - 3, top, 3, hgt, wall.darkened(0.35))      # shaded flank

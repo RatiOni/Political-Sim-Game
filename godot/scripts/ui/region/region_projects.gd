@@ -112,7 +112,7 @@ static func _offices(l: RegionLife, s: RegionScene, t: float) -> void:
 	# A queue at the door, shuffling forward; clerks crossing with files.
 	for k in 8:
 		var shuffle := fposmod(t * 0.8 + k, 1.0) * 0.8
-		_figure(l, door - 6.0 - k * 7.0 + shuffle, float(s.ground + 2), RegionLife.FIGURE, t, false, k)
+		_figure(l, door - 6.0 - k * 4.0 + shuffle, float(s.ground + 2), RegionLife.FIGURE, t, false, k)
 	for k in 2:
 		var cx := fposmod(door + t * 9.0 * (1.0 if k == 0 else -1.0) + k * 60.0, float(s.cols))
 		_figure(l, cx, float(s.ground + 4), Color(0.18, 0.20, 0.26), t, true, k)
@@ -173,5 +173,5 @@ static func _patrols(l: RegionLife, s: RegionScene, t: float) -> void:
 			l._blk(wx, y + 4, 4, 3, Color(0.04, 0.04, 0.05))
 	# A foot patrol in step.
 	for k in 4:
-		var x := fposmod(float(s.cols) * 0.2 + t * 7.0 + k * 9.0, float(s.cols) + 20.0) - 10.0
+		var x := fposmod(float(s.cols) * 0.2 + t * 7.0 + k * 6.0, float(s.cols) + 20.0) - 10.0
 		_figure(l, x, foot + 2.0, OLIVE, t, true, 0.0)
