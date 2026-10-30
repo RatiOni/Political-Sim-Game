@@ -161,6 +161,8 @@ static func routes(geo: MapGeometry, palette: PackedColorArray, tile_px: int = T
 	if not tiles.is_empty():
 		for harbour in MapDetails.harbours(tiles, geo):
 			_harbour(img, _px(harbour[0], tile_px), harbour[1], pale, palette[MapPalette.INK], s)
+	for fort in MapDetails.FORTS:
+		_fort(img, _px(fort, tile_px), pale, palette[MapPalette.INK], s)
 	return img
 
 
@@ -233,22 +235,26 @@ static func _bank(p: Vector2, river: PackedVector2Array, towns: Array[Vector2], 
 	return p + normal * (BANK_TILES - depth) * ease * fade
 
 
-## Bridges: every place a drawn route crosses the Kesla, away from the towns
-## that sit on the river (their own markers cover the crossing there).
+## Bridges: every place a drawn route crosses the Kesla or a lesser river,
+## away from the towns that sit on the water (their own markers cover the
+## crossing there).
 static func _crossings(line: PackedVector2Array, geo: MapGeometry, tile_px: int, half: float) -> Array:
 	var out: Array = []
-	var river := _pxs(geo.kesla, tile_px)
 	var clear := 2.5 * tile_px
-	for i in line.size() - 1:
-		for j in river.size() - 1:
-			var hit: Variant = Geometry2D.segment_intersects_segment(line[i], line[i + 1], river[j], river[j + 1])
-			if hit == null:
-				continue
-			var near_town := false
-			for city in geo.cities:
-				near_town = near_town or _px(city["point"], tile_px).distance_to(hit) < clear
-			if not near_town:
-				out.append([hit, (line[i + 1] - line[i]).normalized(), half])
+	var waters: Array = [geo.kesla]
+	waters.append_array(MapDetails.RIVERS)
+	for water in waters:
+		var river := _pxs(PackedVector2Array(water), tile_px)
+		for i in line.size() - 1:
+			for j in river.size() - 1:
+				var hit: Variant = Geometry2D.segment_intersects_segment(line[i], line[i + 1], river[j], river[j + 1])
+				if hit == null:
+					continue
+				var near_town := false
+				for city in geo.cities:
+					near_town = near_town or _px(city["point"], tile_px).distance_to(hit) < clear
+				if not near_town:
+					out.append([hit, (line[i + 1] - line[i]).normalized(), half])
 	return out
 
 
@@ -277,6 +283,18 @@ static func _harbour(img: Image, shore: Vector2, sea: Vector2, deck: Color, ink:
 		_stroke(img, line, 0.5 * s, deck, 0.0, 0.0, none)
 	# The harbour light.
 	_dab(img, tip + sea * 2.5 * s, 1.0 * s, Color8(255, 220, 96), none)
+
+
+## An old fortress: a square keep with a corner tower on each angle.
+static func _fort(img: Image, at: Vector2, wall: Color, ink: Color, s: float) -> void:
+	var none := func(_p: Vector2) -> bool: return false
+	var half := 2.2 * s
+	var ring := PackedVector2Array([at + Vector2(-half, -half), at + Vector2(half, -half), at + Vector2(half, half), at + Vector2(-half, half), at + Vector2(-half, -half)])
+	_stroke(img, ring, 1.0 * s, ink, 0.0, 0.0, none)
+	_stroke(img, ring, 0.45 * s, wall, 0.0, 0.0, none)
+	for corner in ring.slice(0, 4):
+		_dab(img, corner, 1.3 * s, ink, none)
+		_dab(img, corner, 0.8 * s, wall, none)
 
 
 static func _put(img: Image, p: Vector2, colour: Color) -> void:

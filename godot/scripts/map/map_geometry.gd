@@ -7,6 +7,8 @@ var extent_m := Vector2.ZERO
 var region_ids: Array[String] = []
 var seeds: Dictionary = {}
 var weights: Dictionary = {}
+## Extra growth points for a region beyond its seed: id -> Array of Vector2.
+var anchors: Dictionary = {}
 var cities: Array[Dictionary] = []
 var routes: Array[Dictionary] = []
 var ceasefire := PackedVector2Array()
@@ -30,6 +32,8 @@ static func load_world(path: String = WORLD_PATH) -> MapGeometry:
 		geo.seeds[String(id)] = _vec(data["regions"][id])
 	for id in data.get("weights", {}):
 		geo.weights[String(id)] = float(data["weights"][id])
+	for id in data.get("anchors", {}):
+		geo.anchors[String(id)] = Array(_line(data["anchors"][id]))
 	for c in data["cities"]:
 		geo.cities.append({"name": String(c["name"]), "region": String(c["region"]),
 			"point": _vec(c["point"]), "capital": bool(c.get("capital", false))})

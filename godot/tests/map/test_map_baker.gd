@@ -12,6 +12,10 @@ const CANON_BORDERS := {
 	"orvena": ["anera", "vashtera", "sela", "kelvet", "vetrenka"],
 	"vetrenka": ["anera", "orvena"],
 }
+## Pairs the canon table lists from one side only that the map draws anyway.
+## Together with the canon pairs these are every internal border, exactly.
+const DRAWN_ONE_SIDED := ["anera|karsen", "anera|orvena", "anera|vashtera"]
+const COASTAL := ["kelvet", "orvena", "vetrenka"]
 
 
 func _initialize() -> void:
@@ -27,6 +31,14 @@ func _initialize() -> void:
 	var plain := _max_row(height, int(MapBaker.RESOLUTION.y * 0.60))
 	t.truth(ridge > plain * 2.0, "the northern wall stands far above the plains (%.0f m vs %.0f m)" % [ridge, plain])
 	t.truth(ridge <= MapBaker.MAX_HEIGHT_M, "and never exceeds the height ceiling")
+	var southern := 0.0
+	for x in range(int(MapBaker.RESOLUTION.x * 0.12), int(MapBaker.RESOLUTION.x * 0.45)):
+		var row := int((MapBaker.southern_edge(float(x) / MapBaker.RESOLUTION.x) - 0.04) * MapBaker.RESOLUTION.y)
+		southern = maxf(southern, height.get_pixel(x, row).r)
+	var basin := 0.0
+	for x in range(int(MapBaker.RESOLUTION.x * 0.40), int(MapBaker.RESOLUTION.x * 0.60)):
+		basin = maxf(basin, height.get_pixel(x, int(MapBaker.RESOLUTION.y * 0.48)).r)
+	t.truth(southern > basin * 2.0 and southern < ridge * 0.8, "a lower southern range stands between the basin and the northern wall (%.0f m)" % southern)
 
 	var regions := MapBaker.bake_regions(geo, height)
 	for id in geo.region_ids:
@@ -57,7 +69,30 @@ func _initialize() -> void:
 		t.truth(pairs.has(pair), "canon adjacency %s is present" % pair)
 	for pair in _canon_pairs(false):
 		t.truth(not pairs.has(pair), "%s do not touch, as the canon says" % pair)
+	var drawn: Array = _canon_pairs(true) + DRAWN_ONE_SIDED
+	drawn.sort()
+	var found: Array = pairs.keys()
+	found.sort()
+	t.equal(found, drawn, "the map draws exactly the expected internal borders")
+	t.equal(_coastal(regions, geo), COASTAL, "only Vetrenka, Orvena and Kelvet touch the sea")
 	quit(t.finish())
+
+
+static func _coastal(regions: Image, geo: MapGeometry) -> Array:
+	var data := regions.get_data()
+	var w := MapBaker.RESOLUTION.x
+	var found := {}
+	for y in range(1, MapBaker.RESOLUTION.y - 1):
+		for x in range(1, w - 1):
+			var a := data[y * w + x]
+			if a >= geo.region_ids.size():
+				continue
+			for q in [y * w + x + 1, y * w + x - 1, (y + 1) * w + x, (y - 1) * w + x]:
+				if data[q] == MapBaker.SEA_REGION:
+					found[geo.region_ids[a]] = true
+	var out := found.keys()
+	out.sort()
+	return out
 
 
 static func _max_row(img: Image, y: int) -> float:

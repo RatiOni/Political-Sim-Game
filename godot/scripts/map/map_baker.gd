@@ -29,18 +29,49 @@ static func _noise(frequency: float, octaves: int, seed_offset: int, type := Fas
 	return n
 
 
-# The silhouette is deliberately not one smooth family of sines. Each frontier
-# has its own history, so each gets a different hand:
-#   north — a mountain wall with passes: folded, with salients and a lost valley.
+# The silhouette is Georgia's outline turned upside down: the owner's
+# reference map, flipped north-to-south, with the coast kept on the west. What
+# was the Black Sea coast runs down Ardenia's west side and swings south-west
+# into a long coastal tail; what was the Turkish and Armenian frontier is now
+# the northern wall, with the Karsen plateau standing out of it as one high
+# salient; what was the Caucasus crest is the southern frontier, falling from
+# the tail toward the narrow east. Every frontier is then given its own hand,
+# so it reads as a country rather than a tracing:
+#   north — the mountain wall: one folded crease over the profile.
 #   east  — the Krasovan line, surveyed under the Union: genuinely straight,
 #           two segments meeting at one awkward corner, and never warped.
-#   south — a wandering lowland edge west of the ruled Merova survey line.
-#   west  — a worked coast: a headland, the Orvena bay, the Kesla estuary.
-const EAST_CORNER_V := 0.46
-const EAST_NORTH_TOP := 0.900
-const EAST_CORNER_U := 0.962
-const EAST_SOUTH_BOTTOM := 0.840
-const MEROVA_SURVEY_U := 0.70
+#   south — the lower southern range's watershed, folded more gently.
+#   west  — a worked coast: Ostrena's cape, the Selvara bay, the Kesla estuary
+#           and the cape at the end of the tail.
+# Profiles are in map units: (v, u) pairs for the coast and the east line,
+# (u, v) pairs for the north and south edges, interpolated linearly.
+const COAST_PROFILE: Array[Vector2] = [
+	Vector2(0.000, 0.300), Vector2(0.204, 0.2775), Vector2(0.249, 0.2625), Vector2(0.340, 0.255),
+	Vector2(0.408, 0.260), Vector2(0.449, 0.265), Vector2(0.521, 0.246), Vector2(0.588, 0.215),
+	Vector2(0.622, 0.200), Vector2(0.701, 0.171), Vector2(0.757, 0.1275), Vector2(0.802, 0.090),
+	Vector2(0.825, 0.071), Vector2(0.864, 0.0425), Vector2(1.000, -0.030),
+]
+const NORTH_PROFILE: Array[Vector2] = [
+	Vector2(0.000, 0.204), Vector2(0.2775, 0.204), Vector2(0.3025, 0.209), Vector2(0.340, 0.204),
+	Vector2(0.390, 0.177), Vector2(0.4275, 0.148), Vector2(0.465, 0.118), Vector2(0.5025, 0.091),
+	Vector2(0.5275, 0.087), Vector2(0.5525, 0.109), Vector2(0.570, 0.148), Vector2(0.590, 0.193),
+	Vector2(0.6275, 0.227), Vector2(0.6775, 0.245), Vector2(0.7275, 0.238), Vector2(0.7775, 0.222),
+	Vector2(0.8275, 0.193), Vector2(0.8775, 0.159), Vector2(0.9275, 0.146), Vector2(1.000, 0.150),
+]
+const SOUTH_PROFILE: Array[Vector2] = [
+	Vector2(0.000, 0.870), Vector2(0.0425, 0.864), Vector2(0.065, 0.882), Vector2(0.1025, 0.900),
+	Vector2(0.1525, 0.893), Vector2(0.2025, 0.886), Vector2(0.2525, 0.859), Vector2(0.3025, 0.814),
+	Vector2(0.3525, 0.780), Vector2(0.390, 0.758), Vector2(0.440, 0.735), Vector2(0.4775, 0.712),
+	Vector2(0.5275, 0.690), Vector2(0.565, 0.667), Vector2(0.6025, 0.651), Vector2(0.6525, 0.629),
+	Vector2(0.6775, 0.638), Vector2(0.7275, 0.611), Vector2(0.790, 0.584), Vector2(0.8275, 0.543),
+	Vector2(0.865, 0.487), Vector2(0.9025, 0.448), Vector2(0.940, 0.419), Vector2(0.965, 0.400),
+	Vector2(1.000, 0.390),
+]
+const EAST_PROFILE: Array[Vector2] = [
+	Vector2(0.00, 0.952), Vector2(0.15, 0.954), Vector2(0.27, 0.972), Vector2(0.42, 0.960), Vector2(1.00, 0.960),
+]
+## The lower southern range dies out into the eastern steppe between these.
+const SOUTH_RANGE_FADE := Vector2(0.50, 0.66)
 
 static var _edge_cache := {}
 
@@ -65,50 +96,51 @@ static func _fold(offset: int, t: float, scale: float, octaves: int = 3) -> floa
 	return absf(_edge_noise(offset, octaves).get_noise_1d(t * scale)) * 2.0 - 0.5
 
 
+static func _profile(points: Array[Vector2], t: float) -> float:
+	if t <= points[0].x:
+		return points[0].y
+	for i in range(1, points.size()):
+		if t <= points[i].x:
+			var a := points[i - 1]
+			var b := points[i]
+			return lerpf(a.y, b.y, (t - a.x) / (b.x - a.x))
+	return points[points.size() - 1].y
+
+
+static func _bump(t: float, centre: float, width: float) -> float:
+	return exp(-pow((t - centre) / width, 2.0))
+
+
 static func northern_edge(u: float) -> float:
-	var base := 0.125 + 0.052 * u
-	# One single-octave fold, for the same reason as the coast below: these
-	# edges run the long axis, so a three-octave fold at scale 7 creased every
-	# three tiles and one at scale 10 every two — under the floor the tile grid
-	# can draw, which it rendered as a sawtooth. Scale 7 at one octave creases
-	# roughly every twelve tiles; the second fold's weight folds into the first.
-	var fold := _fold(21, u, 7.0, 1) * 0.038
-	var passes := -0.030 * exp(-pow((u - 0.30) / 0.045, 2.0)) \
-		- 0.022 * exp(-pow((u - 0.52) / 0.035, 2.0)) \
-		- 0.026 * exp(-pow((u - 0.80) / 0.055, 2.0))
-	var lost_valley := 0.052 * exp(-pow((u - 0.645) / 0.034, 2.0))
-	return base + fold + passes + lost_valley
+	# One single-octave fold: these edges run the long axis, and a
+	# three-octave fold creased every two or three tiles — under the floor the
+	# tile grid can draw, which it rendered as a sawtooth.
+	return _profile(NORTH_PROFILE, u) + _fold(21, u, 7.0, 1) * 0.022
 
 
 static func southern_edge(u: float) -> float:
-	if u >= MEROVA_SURVEY_U:
-		return 0.845 - (u - MEROVA_SURVEY_U) * 0.56
-	var base := 0.878 - 0.050 * exp(-pow((u - 0.44) / 0.10, 2.0))
-	return base + _fold(23, u, 7.0, 1) * 0.020 + sin(u * 13.0 + 2.0) * 0.008
+	return _profile(SOUTH_PROFILE, u) + _fold(23, u, 7.0, 1) * 0.016 + sin(u * 13.0 + 2.0) * 0.005
 
 
 static func coastline(v: float) -> float:
-	var base := 0.072 + (v - 0.15) * 0.145
-	# One fold, and a coarse single-octave one. The coast runs along the short
-	# axis — a hundred tiles — so the old pair of three-octave folds creased
-	# every row and a half, well under the tile floor, and the grid could only
-	# draw that as a ±1 tile wobble in and out of the sea. Scale six at one
-	# octave creases every eight rows, which it can draw; the second fold's
-	# weight is folded into the first rather than kept as detail nothing can
-	# render. The headland, bay and estuary below are Gaussians and untouched.
-	var crinkle := _fold(24, v, 6.0, 1) * 0.021
-	var headland := -0.044 * exp(-pow((v - 0.215) / 0.042, 2.0))
-	# The Orvena bay cuts deep enough to leave a waist behind it: the only
-	# land route from Vetrenka's coast to the south is a few tiles wide.
-	var bay := 0.062 * exp(-pow((v - 0.400) / 0.055, 2.0))
-	var estuary := 0.030 * exp(-pow((v - 0.845) / 0.035, 2.0))
-	return base + crinkle + headland + bay + estuary
+	# One coarse single-octave fold. The coast runs along the short axis — a
+	# hundred tiles — so anything finer creased every row and the grid could
+	# only draw that as a ±1 tile wobble in and out of the sea. The capes, the
+	# bay and the estuary are Gaussians and are what the eye reads.
+	var crinkle := _fold(24, v, 6.0, 1) * 0.014
+	# Ostrena's cape: the Vetrenka coast juts out under the northern wall.
+	var ostrena := -0.034 * _bump(v, 0.300, 0.028)
+	# The Selvara bay cuts deep enough to leave a waist behind it: the only
+	# land route from Vetrenka's coast to the south is narrow.
+	var bay := 0.040 * _bump(v, 0.462, 0.030)
+	var estuary := 0.022 * _bump(v, 0.690, 0.018)
+	# The cape at the end of the Kelvet tail.
+	var tail_cape := -0.026 * _bump(v, 0.790, 0.020)
+	return _profile(COAST_PROFILE, v) + crinkle + ostrena + bay + estuary + tail_cape
 
 
 static func eastern_edge(v: float) -> float:
-	if v <= EAST_CORNER_V:
-		return EAST_NORTH_TOP + (v / EAST_CORNER_V) * (EAST_CORNER_U - EAST_NORTH_TOP)
-	return EAST_CORNER_U - ((v - EAST_CORNER_V) / (1.0 - EAST_CORNER_V)) * (EAST_CORNER_U - EAST_SOUTH_BOTTOM)
+	return _profile(EAST_PROFILE, v)
 
 
 # The edge profiles are sampled a million times a bake and each costs a fistful
@@ -161,12 +193,20 @@ static func bake_height(_geo: MapGeometry) -> Image:
 			if is_sea(u, v, w):
 				img.set_pixel(x, y, Color(-40.0 - (coastline(v) - u) * 900.0, 0, 0))
 				continue
-			var crest := exp(-pow((v - northern_edge(u) - 0.01) / 0.075, 2.0))
-			var lesser := exp(-pow((v - 0.84) / 0.07, 2.0)) * maxf(0.0, 1.0 - absf(u - 0.33) * 2.4)
-			var lowland := exp(-pow(Vector2((u - 0.16) * 1.2, v - 0.55).length() / 0.16, 2.0))
-			var plain := exp(-pow(Vector2((u - 0.58) * 0.9, v - 0.55).length() / 0.18, 2.0))
+			var crest := exp(-pow((v - northern_edge(u) - 0.012) / 0.07, 2.0))
+			# The lower southern range follows the southern frontier a little
+			# inside it, never snow-capped, and dies out into the eastern steppe.
+			var fade := 1.0 - smoothstep(SOUTH_RANGE_FADE.x, SOUTH_RANGE_FADE.y, u)
+			var lesser := exp(-pow((v - southern_edge(u) + 0.04) / 0.055, 2.0)) * fade
+			# Basins: the wet coastal lowland behind the Selvara bay, the Kesla's
+			# central plain, the delta below Tavri and the dry eastern steppe.
+			var lowland := _bump(Vector2((u - 0.29) * 1.2, v - 0.53).length(), 0.0, 0.10)
+			var plain := _bump(Vector2((u - 0.50) * 0.8, v - 0.50).length(), 0.0, 0.13)
+			var delta := _bump(Vector2(u - 0.20, v - 0.70).length(), 0.0, 0.06)
+			var steppe := _bump(Vector2((u - 0.84) * 0.9, v - 0.33).length(), 0.0, 0.09)
 			var r := (ridged.get_noise_2d(x, y) + 1.0) * 0.5
-			var h := 0.12 + crest * (0.18 + 0.82 * r) + lesser * 0.35 * r + hills.get_noise_2d(x, y) * 0.08 - lowland * 0.08 - plain * 0.06
+			var h := 0.12 + crest * (0.18 + 0.82 * r) + lesser * (0.22 + 0.36 * r) + hills.get_noise_2d(x, y) * 0.08 \
+				- lowland * 0.10 - plain * 0.07 - delta * 0.08 - steppe * 0.05
 			img.set_pixel(x, y, Color(clampf(h, 0.01, 1.0) * MAX_HEIGHT_M, 0, 0))
 	return img
 
@@ -323,12 +363,16 @@ static func _grow_regions(geo: MapGeometry, height: Image, gw: int, gh: int) -> 
 	var heap_cost := PackedFloat32Array()
 	var heap_cell := PackedInt32Array()
 	for i in count:
-		var s: Vector2 = geo.seeds[geo.region_ids[i]]
-		var c := Vector2i(clampi(int(s.x * gw), 0, gw - 1), clampi(int(s.y * gh), 0, gh - 1))
-		var index := c.y * gw + c.x
-		best[index] = 0.0
-		owner[index] = i
-		_heap_push(heap_cost, heap_cell, 0.0, index * 16 + i)
+		# A long region (the Sela's plain, the coastal tail) grows from its seed
+		# and from any extra anchors along its length, so it keeps its shape.
+		var starts: Array = [geo.seeds[geo.region_ids[i]]]
+		starts.append_array(geo.anchors.get(geo.region_ids[i], []))
+		for s: Vector2 in starts:
+			var c := Vector2i(clampi(int(s.x * gw), 0, gw - 1), clampi(int(s.y * gh), 0, gh - 1))
+			var index := c.y * gw + c.x
+			best[index] = 0.0
+			owner[index] = i
+			_heap_push(heap_cost, heap_cell, 0.0, index * 16 + i)
 	while not heap_cell.is_empty():
 		var top := _heap_pop(heap_cost, heap_cell)
 		var d: float = top[0]

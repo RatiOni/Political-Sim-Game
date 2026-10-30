@@ -20,50 +20,83 @@ const LAND_KINDS: Array[int] = [3, 4, 5, 6, 7, 8]
 ## Canon towns (geography.py CITIES not in the world file). `coast` snaps the
 ## point onto the shore so a port really sits on the water.
 const TOWNS: Array[Dictionary] = [
-	{"name": "Ostrena", "point": Vector2(0.08, 0.25), "coast": true, "harbour": true},
-	{"name": "Kavor", "point": Vector2(0.245, 0.355)},
-	{"name": "Karvel", "point": Vector2(0.455, 0.19)},
-	{"name": "Lestara", "point": Vector2(0.535, 0.31)},
-	{"name": "Ordel", "point": Vector2(0.28, 0.42)},
-	{"name": "Rovets", "point": Vector2(0.53, 0.71)},
-	{"name": "Meradin", "point": Vector2(0.925, 0.69)},
-	{"name": "Azren", "point": Vector2(0.94, 0.49)},
+	{"name": "Ostrena", "point": Vector2(0.262, 0.300), "coast": true, "harbour": true},
+	{"name": "Kavor", "point": Vector2(0.388, 0.272)},
+	{"name": "Karvel", "point": Vector2(0.505, 0.130)},
+	{"name": "Lestara", "point": Vector2(0.528, 0.272)},
+	{"name": "Ordel", "point": Vector2(0.365, 0.415)},
+	{"name": "Rovets", "point": Vector2(0.640, 0.565)},
+	{"name": "Meradin", "point": Vector2(0.905, 0.405)},
+	{"name": "Azren", "point": Vector2(0.935, 0.300)},
 ]
 
 ## Ports on the existing city list (by name).
-const HARBOUR_CITIES: Array[String] = ["Tavri"]
+const HARBOUR_CITIES: Array[String] = ["Tavri", "Selvara"]
 
 ## Secondary roads: the country's ordinary road net between the trunk routes.
 const ROADS: Array = [
-	[Vector2(0.74, 0.40), Vector2(0.765, 0.51), Vector2(0.85, 0.58)],
-	[Vector2(0.85, 0.58), Vector2(0.89, 0.65), Vector2(0.925, 0.69)],
-	[Vector2(0.85, 0.58), Vector2(0.90, 0.52), Vector2(0.94, 0.49)],
-	[Vector2(0.85, 0.58), Vector2(0.70, 0.66), Vector2(0.53, 0.71), Vector2(0.42, 0.68)],
-	[Vector2(0.585, 0.475), Vector2(0.56, 0.60), Vector2(0.53, 0.71)],
-	[Vector2(0.48, 0.28), Vector2(0.455, 0.19)],
-	[Vector2(0.48, 0.28), Vector2(0.535, 0.31)],
-	[Vector2(0.48, 0.28), Vector2(0.60, 0.30), Vector2(0.74, 0.40)],
-	[Vector2(0.29, 0.31), Vector2(0.38, 0.265), Vector2(0.48, 0.28)],
-	[Vector2(0.29, 0.31), Vector2(0.245, 0.355)],
-	[Vector2(0.245, 0.355), Vector2(0.17, 0.35), Vector2(0.12, 0.33)],
-	[Vector2(0.12, 0.33), Vector2(0.08, 0.25)],
-	[Vector2(0.27, 0.53), Vector2(0.24, 0.66), Vector2(0.23, 0.82)],
-	[Vector2(0.27, 0.53), Vector2(0.35, 0.62), Vector2(0.42, 0.68)],
+	# The east: Duvinsk to Darev and out to the frontier towns.
+	[Vector2(0.705, 0.385), Vector2(0.785, 0.365), Vector2(0.865, 0.325)],
+	[Vector2(0.865, 0.325), Vector2(0.885, 0.37), Vector2(0.905, 0.405)],
+	[Vector2(0.865, 0.325), Vector2(0.90, 0.305), Vector2(0.935, 0.300)],
+	# The Sela's plain road, under the southern hills.
+	[Vector2(0.865, 0.325), Vector2(0.80, 0.45), Vector2(0.72, 0.53), Vector2(0.640, 0.565), Vector2(0.515, 0.620)],
+	[Vector2(0.465, 0.415), Vector2(0.50, 0.52), Vector2(0.515, 0.620)],
+	[Vector2(0.515, 0.620), Vector2(0.45, 0.66), Vector2(0.37, 0.705), Vector2(0.29, 0.745), Vector2(0.205, 0.705)],
+	# The north: the pass roads and the plateau.
+	[Vector2(0.545, 0.215), Vector2(0.505, 0.130)],
+	[Vector2(0.545, 0.215), Vector2(0.60, 0.27), Vector2(0.65, 0.33), Vector2(0.705, 0.385)],
+	[Vector2(0.415, 0.255), Vector2(0.48, 0.225), Vector2(0.545, 0.215)],
+	[Vector2(0.415, 0.255), Vector2(0.44, 0.33), Vector2(0.465, 0.415)],
+	# The west: the closed road into Vetrenka, the coast road south, the tail.
+	[Vector2(0.415, 0.255), Vector2(0.388, 0.272), Vector2(0.355, 0.30), Vector2(0.320, 0.330)],
+	[Vector2(0.320, 0.330), Vector2(0.29, 0.31), Vector2(0.265, 0.300)],
+	[Vector2(0.318, 0.468), Vector2(0.285, 0.55), Vector2(0.245, 0.63), Vector2(0.205, 0.705)],
+	[Vector2(0.205, 0.705), Vector2(0.16, 0.765), Vector2(0.12, 0.81), Vector2(0.085, 0.815)],
+	[Vector2(0.318, 0.468), Vector2(0.38, 0.53), Vector2(0.515, 0.620)],
 ]
 
-## Water bodies: [centre, radius in tiles]. A hydro reservoir on the upper
-## Kesla (Karsen's hydro stations), a highland tarn, a steppe lake in Darev.
-const LAKES: Array = [
-	[Vector2(0.51, 0.243), Vector2(3.2, 1.8)],
-	[Vector2(0.355, 0.235), Vector2(2.4, 1.6)],
-	[Vector2(0.78, 0.71), Vector2(3.0, 1.8)],
-	[Vector2(0.64, 0.58), Vector2(1.8, 1.2)],
+## Lesser rivers, all falling from high ground toward the western sea: the
+## Orvena water down from the Anera highlands to the Selvara bay, the eastern
+## river that drains the Darev steppe into the Kesla, and a short torrent off
+## the southern hills across the Kelvet tail.
+const RIVERS: Array = [
+	[Vector2(0.405, 0.195), Vector2(0.395, 0.27), Vector2(0.375, 0.35), Vector2(0.345, 0.425), Vector2(0.315, 0.455), Vector2(0.285, 0.465)],
+	[Vector2(0.925, 0.225), Vector2(0.86, 0.265), Vector2(0.78, 0.32), Vector2(0.69, 0.43), Vector2(0.60, 0.46), Vector2(0.52, 0.47), Vector2(0.443, 0.48)],
+	[Vector2(0.275, 0.815), Vector2(0.215, 0.80), Vector2(0.16, 0.785), Vector2(0.105, 0.775)],
 ]
-## Reed marsh: the Kesla delta below Tavri and a wet bend in the Sela.
+
+## Water bodies: [centre, radius in tiles]. The hydro reservoir on the upper
+## Kesla, the plateau lakes of Karsen, the coastal lagoon behind the Selvara
+## bay, a reservoir under the Sela hills, a mountain lake in the Kelvet tail
+## and a steppe lake in Darev.
+const LAKES: Array = [
+	[Vector2(0.553, 0.150), Vector2(3.0, 1.6)],
+	[Vector2(0.488, 0.135), Vector2(2.2, 1.4)],
+	[Vector2(0.612, 0.232), Vector2(2.0, 1.3)],
+	[Vector2(0.282, 0.515), Vector2(2.6, 1.8)],
+	[Vector2(0.590, 0.615), Vector2(2.2, 1.2)],
+	[Vector2(0.200, 0.835), Vector2(1.8, 1.2)],
+	[Vector2(0.755, 0.455), Vector2(2.8, 1.6)],
+]
+## Reed marsh: the Kesla delta by Tavri, the coastal wetland behind the
+## Selvara lagoon, and a wet bend of the Kesla below the capital.
 const MARSHES: Array = [
-	[Vector2(0.17, 0.855), Vector2(6.0, 3.0)],
-	[Vector2(0.35, 0.735), Vector2(4.5, 2.2)],
-	[Vector2(0.46, 0.655), Vector2(3.0, 1.6)],
+	[Vector2(0.175, 0.735), Vector2(4.5, 2.2)],
+	[Vector2(0.285, 0.565), Vector2(4.5, 2.6)],
+	[Vector2(0.395, 0.585), Vector2(3.0, 1.6)],
+]
+## Protected woodland: forest kept whole in the Kelvet hills, the Anera
+## highlands and the Sela uplands.
+const PARKS: Array = [
+	[Vector2(0.235, 0.805), Vector2(5.5, 2.4)],
+	[Vector2(0.435, 0.205), Vector2(4.0, 2.0)],
+	[Vector2(0.430, 0.700), Vector2(4.5, 2.0)],
+]
+## Old fortresses: the Karvel pass fort, the Kavor monastery walls, the
+## Meradin frontier citadel and the sea fort on the cape of the tail.
+const FORTS: Array[Vector2] = [
+	Vector2(0.495, 0.112), Vector2(0.398, 0.243), Vector2(0.925, 0.395), Vector2(0.080, 0.808),
 ]
 
 const VILLAGE_SPACING := 5
@@ -152,6 +185,7 @@ static func villages(tiles: Dictionary, geo: MapGeometry) -> PackedVector2Array:
 		places.append(Vector2(city["point"]) * Vector2(TileBaker.GRID))
 	for town in TOWNS:
 		places.append(Vector2(town["point"]) * Vector2(TileBaker.GRID))
+	var streams := river_cells()
 	var out := PackedVector2Array()
 	for by in range(0, TileBaker.GRID.y, VILLAGE_SPACING):
 		for bx in range(0, TileBaker.GRID.x, VILLAGE_SPACING):
@@ -166,8 +200,17 @@ static func villages(tiles: Dictionary, geo: MapGeometry) -> PackedVector2Array:
 			var clear := true
 			for p in places:
 				clear = clear and p.distance_to(Vector2(cell)) > VILLAGE_CLEARANCE
-			if clear and not _in_any(Vector2(cell), LAKES) and not _in_any(Vector2(cell), MARSHES):
+			if clear and not _in_any(Vector2(cell), LAKES) and not _in_any(Vector2(cell), MARSHES) and not streams.has(cell):
 				out.append((Vector2(cell) + Vector2(0.5, 0.5)) / Vector2(TileBaker.GRID))
+	return out
+
+
+## Every cell the lesser rivers run through.
+static func river_cells() -> Dictionary:
+	var out := {}
+	for river in RIVERS:
+		for cell in TileBaker.line_tiles(PackedVector2Array(river)):
+			out[cell] = true
 	return out
 
 
@@ -191,6 +234,7 @@ static func dress(image: Image, tiles: Dictionary, offset: Vector2i) -> void:
 	noise.seed = 11
 	noise.frequency = 0.14
 	var grid := TileBaker.GRID
+	var streams := river_cells()
 	for y in grid.y:
 		for x in grid.x:
 			var cell := Vector2i(x, y)
@@ -218,7 +262,14 @@ static func dress(image: Image, tiles: Dictionary, offset: Vector2i) -> void:
 					out = KIND_GRASS
 				else:
 					variant = 40 if pick < 0.62 else 230
-			if kind in LAND_KINDS:
+			if kind in LAND_KINDS and _shape_depth(Vector2(cell), PARKS) <= 1.0 and kind != KIND_FARM:
+				# Protected woods stay whole: no thinned fringe, no clearings.
+				out = KIND_FOREST
+			if streams.has(cell) and not is_water(kind):
+				# A lesser river runs down from the heights, so it cuts
+				# mountain and snow as well as the lowland it reaches.
+				out = KIND_RIVER
+			elif kind in LAND_KINDS:
 				var lake := _shape_depth(Vector2(cell), LAKES)
 				if lake <= 1.0:
 					out = KIND_SEA if lake < 0.6 else KIND_SHALLOWS

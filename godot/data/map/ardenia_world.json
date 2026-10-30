@@ -1,32 +1,34 @@
 {
   "extent_m": [16800, 10000],
   "regions": {
-    "vetrenka": [0.13, 0.30], "anera": [0.27, 0.27], "karsen": [0.50, 0.22],
-    "orvena": [0.25, 0.50], "vashtera": [0.57, 0.48], "kelvet": [0.21, 0.74],
-    "sela": [0.47, 0.69], "zavost": [0.73, 0.33], "darev": [0.85, 0.63]
+    "vetrenka": [0.300, 0.300], "anera": [0.420, 0.235], "karsen": [0.535, 0.165],
+    "orvena": [0.310, 0.500], "vashtera": [0.470, 0.400], "kelvet": [0.180, 0.770],
+    "sela": [0.530, 0.620], "zavost": [0.710, 0.330], "darev": [0.870, 0.320]
   },
-  "weights": {"anera": 1.15, "sela": 1.12, "zavost": 1.0, "karsen": 1.06,
-    "vashtera": 0.92, "darev": 1.10, "kelvet": 1.10, "orvena": 1.0},
+  "weights": {"anera": 1.0, "sela": 1.0, "zavost": 1.0, "karsen": 1.0,
+    "vashtera": 1.0, "darev": 1.0, "kelvet": 1.0, "orvena": 1.0},
+  "anchors": {"sela": [[0.38, 0.70], [0.62, 0.585], [0.70, 0.565], [0.775, 0.535]], "kelvet": [[0.28, 0.76]], "zavost": [[0.645, 0.40]], "darev": [[0.835, 0.475]]},
   "cities": [
-    {"name": "Vashtera", "region": "vashtera", "point": [0.585, 0.475], "capital": true},
-    {"name": "Tavri", "region": "kelvet", "point": [0.23, 0.82], "capital": false},
-    {"name": "Duvinsk", "region": "zavost", "point": [0.74, 0.40], "capital": false},
-    {"name": "Selvara", "region": "orvena", "point": [0.27, 0.53], "capital": false},
-    {"name": "Karsen", "region": "karsen", "point": [0.48, 0.28], "capital": false},
-    {"name": "Anera", "region": "anera", "point": [0.29, 0.31], "capital": false},
-    {"name": "Darev", "region": "darev", "point": [0.85, 0.58], "capital": false},
-    {"name": "Sela", "region": "sela", "point": [0.42, 0.68], "capital": false},
-    {"name": "Vetrenka", "region": "vetrenka", "point": [0.12, 0.33], "capital": false}
+    {"name": "Vashtera", "region": "vashtera", "point": [0.465, 0.415], "capital": true},
+    {"name": "Tavri", "region": "kelvet", "point": [0.205, 0.705], "capital": false},
+    {"name": "Duvinsk", "region": "zavost", "point": [0.705, 0.385], "capital": false},
+    {"name": "Selvara", "region": "orvena", "point": [0.318, 0.468], "capital": false},
+    {"name": "Karsen", "region": "karsen", "point": [0.545, 0.215], "capital": false},
+    {"name": "Anera", "region": "anera", "point": [0.415, 0.255], "capital": false},
+    {"name": "Darev", "region": "darev", "point": [0.865, 0.325], "capital": false},
+    {"name": "Sela", "region": "sela", "point": [0.515, 0.620], "capital": false},
+    {"name": "Vetrenka", "region": "vetrenka", "point": [0.320, 0.330], "capital": false}
   ],
   "routes": [
-    {"kind": "rail", "points": [[0.585, 0.475], [0.66, 0.43], [0.74, 0.40]]},
-    {"kind": "road", "points": [[0.585, 0.475], [0.50, 0.58], [0.42, 0.68], [0.30, 0.78], [0.23, 0.82]]},
-    {"kind": "rail", "points": [[0.585, 0.475], [0.50, 0.60], [0.35, 0.74], [0.23, 0.82]]},
-    {"kind": "pipeline", "points": [[0.98, 0.45], [0.85, 0.58], [0.74, 0.40], [0.585, 0.475]]},
-    {"kind": "road", "points": [[0.585, 0.475], [0.48, 0.28]]},
-    {"kind": "road", "points": [[0.27, 0.53], [0.585, 0.475]]},
-    {"kind": "road", "points": [[0.29, 0.31], [0.27, 0.53]]}
+    {"kind": "rail", "points": [[0.465, 0.415], [0.55, 0.40], [0.63, 0.395], [0.705, 0.385]]},
+    {"kind": "road", "points": [[0.465, 0.415], [0.44, 0.49], [0.41, 0.56], [0.36, 0.62], [0.30, 0.66], [0.205, 0.705]]},
+    {"kind": "rail", "points": [[0.465, 0.415], [0.44, 0.49], [0.41, 0.56], [0.36, 0.62], [0.30, 0.66], [0.24, 0.69], [0.205, 0.705]]},
+    {"kind": "pipeline", "points": [[0.99, 0.28], [0.865, 0.325], [0.705, 0.385], [0.465, 0.415]]},
+    {"kind": "road", "points": [[0.465, 0.415], [0.49, 0.36], [0.52, 0.29], [0.545, 0.215]]},
+    {"kind": "road", "points": [[0.318, 0.468], [0.38, 0.44], [0.465, 0.415]]},
+    {"kind": "road", "points": [[0.415, 0.255], [0.365, 0.415], [0.318, 0.468]]},
+    {"kind": "rail", "points": [[0.465, 0.415], [0.49, 0.36], [0.52, 0.29], [0.528, 0.272]]}
   ],
-  "ceasefire": [[0.20, 0.17], [0.21, 0.24], [0.19, 0.31], [0.21, 0.37], [0.18, 0.44]],
-  "kesla": [[0.50, 0.24], [0.54, 0.33], [0.585, 0.475], [0.50, 0.60], [0.42, 0.68], [0.30, 0.78], [0.19, 0.84], [0.15, 0.87]]
+  "ceasefire": [[0.365, 0.215], [0.370, 0.270], [0.355, 0.330], [0.325, 0.385], [0.285, 0.425]],
+  "kesla": [[0.555, 0.115], [0.548, 0.170], [0.545, 0.215], [0.52, 0.29], [0.49, 0.36], [0.465, 0.415], [0.44, 0.49], [0.41, 0.56], [0.36, 0.62], [0.30, 0.66], [0.24, 0.69], [0.205, 0.705], [0.165, 0.715]]
 }
