@@ -21,6 +21,8 @@ const NIGHT := Color(0.08, 0.11, 0.19)   # the sky through the high windows
 const BOARD := Rect2(196, 26, 248, 132)
 const TIMBER := Color(0.44, 0.41, 0.37)  # oak, kept off the rust that alarm snaps to
 const RUST := Color(0.42, 0.25, 0.18)    # a few old calf bindings
+## The clerks' coats: black, navy and grey, so faces and shirt fronts read.
+const COATS := [Color(0.12, 0.12, 0.13), Color(0.18, 0.21, 0.30), Color(0.32, 0.32, 0.33), Color(0.14, 0.16, 0.20)]
 
 
 ## What the room shows, read from the app snapshot.
@@ -60,9 +62,9 @@ static func paint(v: DeskView, t: float, d: Dictionary) -> void:
 	_desk_row(v, t, 360.0, 1.5, 0.0, 2)
 	_counter(v, t)
 	v.label(Vector2(BOARD.position.x + 4, 12), "THE BOARD · FISCAL YEAR")
-	v.label(Vector2(48, 20), "LEDGERS", Vector2(90, 46))
+	v.label(Vector2(maxf(48.0, v.left + 8.0), 20), "LEDGERS", Vector2(90, 46))
 	v.label(Vector2(492, 70), "THE VAULT", Vector2(520, 106))
-	v.label(Vector2(48, 392), "COUNTING HALL", Vector2(120, 352))
+	v.label(Vector2(maxf(12.0, v.left + 8.0), 414), "COUNTING HALL")
 
 
 static func _span(v: DeskView, step: float, offset: float) -> Array:
@@ -282,13 +284,13 @@ static func _vault(v: DeskView, t: float) -> void:
 ## courses widen toward the viewer.
 static func _floor(v: DeskView) -> void:
 	var w := v.right - v.left
-	v.rect(v.left, FLOOR, w, 420 - FLOOR, DeskView.WALL.darkened(0.66))
+	v.rect(v.left, FLOOR, w, 420 - FLOOR, DeskView.WALL.darkened(0.7))
 	var ys: Array[float] = [FLOOR + 2.0]
 	var step := 7.0
 	while ys[-1] < 420.0:
 		ys.append(ys[-1] + step)
 		step *= 1.3
-	var lit := DeskView.WALL.darkened(0.42)
+	var lit := DeskView.WALL.darkened(0.58)
 	for r in ys.size() - 1:
 		var f0 := (ys[r] - VP.y) / (420.0 - VP.y)
 		var f1 := (ys[r + 1] - VP.y) / (420.0 - VP.y)
@@ -326,16 +328,20 @@ static func _desk_row(v: DeskView, t: float, top: float, s: float, dim: float, r
 
 static func _desk(v: DeskView, t: float, x: float, top: float, s: float, dim: float, i: int) -> void:
 	var w := 84.0 * s
-	var h := 24.0 * s
+	var h := 28.0 * s
 	var u := h / 18.0
-	var tone := DeskView.FIGURE.lightened(0.1).darkened(dim + 0.08 * (i % 2))
 	for k in 2:
 		var cx := x + 12 * s + k * 50 * s
 		var shift := 1.0 if sin(t * 0.45 + i * 2.7 + k * 1.3) > 0.94 else 0.0
-		v.figure(cx, top + 6 * u - shift, tone, "sit", t, h)
+		var coat: Color = COATS[posmod(i * 2 + k, COATS.size())]
+		v.figure(cx, top + 6 * u - shift, coat.darkened(dim), "sit", t, h, DeskView.SKIN.darkened(dim))
+		# The white shirt front and, when writing, a pen hand on the ledger.
+		v.rect(cx + 1.2 * u, top - 7 * u - shift, 1.6 * u, 2.5 * u, DeskView.PAPER.darkened(dim))
 	var wood := TIMBER.darkened(dim * 0.8)
 	v.rect(x, top, w, 3 * s, wood.lightened(0.25))
-	v.rect(x + 2 * s, top + 3 * s, w - 4 * s, 14 * s, wood.darkened(0.72))
+	v.rect(x + 2 * s, top + 3 * s, w - 4 * s, 14 * s, Color(0.10, 0.08, 0.07))
+	# The lamp's warm pool on the desk top, under the shade.
+	v.rect(x + w - 34 * s, top - 0.5 * s, 30 * s, 3 * s, DeskView.LAMP.darkened(0.35 + dim * 0.5))
 	v.rect(x + 2 * s, top + 3 * s, w - 4 * s, 1.5, DeskView.INK)
 	for k in 2:
 		v.rect(x + 8 * s + k * 50 * s, top + 7 * s, 14 * s, 6 * s, wood.darkened(0.5))

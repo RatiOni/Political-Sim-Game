@@ -14,8 +14,10 @@ extends RefCounted
 
 const SHADE := Color(0.22, 0.36, 0.26)
 ## Oak and buckram: kept off the rust end of the palette, which is the alarm.
-const OAK := Color(0.40, 0.36, 0.25)
+const OAK := Color(0.40, 0.37, 0.33)
 const RUNNER := Color(0.1, 0.1, 0.09)
+const POOL := Color(0.19, 0.16, 0.11)
+const CONE := Color(1.0, 0.86, 0.6, 0.04)
 ## The room in its own 3-D units, projected by `_p`: x across the aisle,
 ## y up (eye height 0), z away from the viewer.
 const VP := Vector2(320, 188)
@@ -52,6 +54,7 @@ static func paint(v: DeskView, t: float, d: Dictionary) -> void:
 	_vault(v)
 	_back_wall(v, t)
 	_floor(v)
+	_pools(v, t)
 	for side: float in [-1.0, 1.0]:
 		_stacks(v, side, fill)
 	_lamps(v, t)
@@ -64,6 +67,7 @@ static func paint(v: DeskView, t: float, d: Dictionary) -> void:
 	_floor_boxes(v)
 	_card_index(v, t)
 	_reading_desk(v, t)
+	_porter(v, t)
 	v.label(Vector2(24, 26), "THE STACKS", _p(-HALF, 70, 1.9))
 	v.label(Vector2(540, 120), "MEZZANINE", _p(HALF - 20, CAT_Y + 30, 1.5))
 	v.label(Vector2(26, 300), "CARD INDEX", Vector2(90, 330))
@@ -154,7 +158,7 @@ static func _back_wall(v: DeskView, t: float) -> void:
 		pts.append(_p(HALF * cos(a), TOP_Y + (CROWN_Y - TOP_Y) * sin(a), z))
 	v.poly(pts, DeskView.WALL.darkened(0.35))
 	# The tall window, its light a cold dim grey, mullioned and arched.
-	var glass := DeskView.PAPER.darkened(0.62)
+	var glass := Color(0.42, 0.46, 0.52)
 	var win := PackedVector2Array([_p(-70, -40, z), _p(70, -40, z)])
 	for s in range(0, 13):
 		var a := PI * s / 12.0
@@ -185,7 +189,7 @@ static func _floor(v: DeskView) -> void:
 	for x in range(-int(HALF), int(HALF), 52):
 		for k in zs.size() - 1:
 			if (col + k) % 2 == 0:
-				_flat(v, x, x + 52, FLOOR_Y, zs[k], zs[k + 1], _dim(DeskView.STONE.darkened(0.56), zs[k]))
+				_flat(v, x, x + 52, FLOOR_Y, zs[k], zs[k + 1], _dim(DeskView.STONE.darkened(0.7), zs[k]))
 		col += 1
 	var joint := DeskView.STONE.darkened(0.3)
 	for x in range(-int(HALF), int(HALF) + 1, 52):
@@ -220,7 +224,7 @@ static func _stacks(v: DeskView, side: float, fill: float) -> void:
 					var zb := lerpf(z0, z1, (s + 0.92) / spines)
 					var hh := LEVEL_H * (0.62 + 0.25 * _order(n * 7 + s * 3))
 					var tone: Color = tones[(n + s) % tones.size()]
-					_side(v, face, y0, y0 + hh, za, zb, _dim(tone.darkened(0.5), za))
+					_side(v, face, y0, y0 + hh, za, zb, _dim(tone.darkened(0.3), za))
 					var mid := _p(face, y0 + hh * 0.62, (za + zb) * 0.5)
 					if absf(_p(face, 0, za).x - _p(face, 0, zb).x) > 5.0:
 						v.rect(mid.x - 1, mid.y, 2, 2.5, _dim(DeskView.PAPER.lightened(0.2), za * 0.8))
@@ -388,7 +392,7 @@ static func _card_index(v: DeskView, t: float) -> void:
 	# A box of cards on top.
 	_face(v, -200, -170, top, top + 10, z + 0.06, OAK)
 	var foot := _p(-102, FLOOR_Y, 1.06)
-	v.figure(foot.x, foot.y, DeskView.FIGURE, "point" if open > 0.5 else "stand", t, MAN / 1.06)
+	v.figure(foot.x, foot.y, Color(0.40, 0.32, 0.26), "point" if open > 0.5 else "stand", t, MAN / 1.06, DeskView.SKIN)
 
 
 ## The reading desk: the archivist, the open volume, and the lamp — the
@@ -404,7 +408,7 @@ static func _reading_desk(v: DeskView, t: float) -> void:
 	# The archivist, seated behind the desk; now and then they lean in.
 	var lean := 1.5 if sin(t * 0.4) > 0.85 else 0.0
 	var seat := _p(112 + o, top + 2, zb + 0.12)
-	v.figure(seat.x, seat.y + lean, DeskView.FIGURE.lightened(0.08), "sit", t, MAN / (zb + 0.12))
+	v.figure(seat.x, seat.y + lean, Color(0.30, 0.33, 0.28), "sit", t, MAN / (zb + 0.12), DeskView.SKIN)
 	_flat(v, x0, x1, top, zf, zb, wood.darkened(0.35))
 	_face(v, x0, x1, top - 6, top, zf, wood.darkened(0.15))
 	v.line(_p(x0, top, zf), _p(x1, top, zf), DeskView.PAPER.darkened(0.2), 2.0)
@@ -443,3 +447,31 @@ static func _reading_desk(v: DeskView, t: float) -> void:
 	_face(v, 154 + o, 192 + o, top + 6, top + 26, cz, wood.darkened(0.45))
 	for x: float in [150.0 + o, 190.0 + o]:
 		_face(v, x, x + 6, FLOOR_Y, top + 2, cz, wood.darkened(0.65))
+
+
+## Warm pools of light on the floor under the pendants and a faint cone down
+## to each, so the aisle reads as lit bays receding into the dark.
+static func _pools(v: DeskView, t: float) -> void:
+	var i := 0
+	for z: float in [1.3, 2.05, 3.05]:
+		for x: float in [-118.0, 118.0]:
+			var pulse := 0.9 + 0.1 * sin(t * 0.55 + i * 1.7)
+			var pool := _dim(POOL, z) * Color(pulse, pulse, pulse)
+			_flat(v, x - 70, x + 70, FLOOR_Y, z - 0.12 * z, z + 0.16 * z, pool)
+			_flat(v, x - 40, x + 40, FLOOR_Y, z - 0.07 * z, z + 0.09 * z, pool.lightened(0.12))
+			var bulb := _p(x, 58, z)
+			v.poly(PackedVector2Array([bulb + Vector2(-3, 2), bulb + Vector2(3, 2), _p(x + 60, FLOOR_Y, z), _p(x - 60, FLOOR_Y, z)]), CONE)
+			i += 1
+
+
+## Nearest us, a porter carries a box of files across the aisle and back.
+static func _porter(v: DeskView, t: float) -> void:
+	var s := _ease_cycle(t + 20.0, 54.0)
+	var moving := s > 0.0 and s < 1.0
+	var z := 0.8
+	var foot := _p(lerpf(-170.0, 150.0, s), FLOOR_Y, z)
+	var h := MAN / z
+	var u := h / 18.0
+	v.figure(foot.x, foot.y, Color(0.22, 0.25, 0.33), "walk" if moving else "stand", t, h, DeskView.SKIN)
+	v.rect(foot.x - 1 * u, foot.y - 13 * u, 7 * u, 5 * u, DeskView.PAPER.darkened(0.3))
+	v.rect(foot.x - 1 * u, foot.y - 13 * u, 7 * u, 1 * u, DeskView.PAPER)

@@ -24,6 +24,9 @@ const GLASS := Color(0.09, 0.12, 0.20)
 const GRID := Color(0.18, 0.24, 0.34)
 const TRACE := Color(0.88, 0.85, 0.74)
 const CONSOLE := Color(0.22, 0.23, 0.25)
+const SCREEN_GLOW := Color(0.22, 0.32, 0.46)
+const UNIFORMS := [Color(0.50, 0.46, 0.36), Color(0.66, 0.64, 0.58), Color(0.36, 0.38, 0.27), Color(0.56, 0.50, 0.38)]
+const LAND := Color(0.12, 0.17, 0.28)
 
 ## The country's silhouette, normalised to the screen's map area.
 const OUTLINE := [
@@ -170,6 +173,10 @@ static func _screen(v: DeskView, t: float, markers: Array) -> void:
 		v.rect(s.end.x - 52 + k * 8, s.position.y + 4, 5, 4, DeskView.LAMP.darkened(0.15) if on else GRID)
 	# The country: outline in a bright trace, regions, river, cities.
 	var n := OUTLINE.size()
+	var land := PackedVector2Array()
+	for p: Vector2 in OUTLINE:
+		land.append(_on_map(p))
+	v.poly(land, LAND)
 	for i in n:
 		v.line(_on_map(OUTLINE[i]), _on_map(OUTLINE[(i + 1) % n]), TRACE, 2.0)
 	for b in BORDERS:
@@ -203,12 +210,13 @@ static func _markers(v: DeskView, t: float, markers: Array) -> void:
 		var urgent := bool(m.get("urgent", false))
 		var tone := DeskView.ALARM if urgent else DeskView.LAMP
 		var pulse := fmod(t * 0.5 + (seed % 97) / 97.0, 1.0)
-		var r := 3.0 + pulse * 8.0
+		var r := 5.0 + pulse * 10.0
 		var ring := tone.darkened(0.25 + 0.6 * pulse)
 		for c in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
 			v.line(at + c * r, at + c * r - Vector2(c.x * 3, 0), ring, 1.5)
 			v.line(at + c * r, at + c * r - Vector2(0, c.y * 3), ring, 1.5)
-		v.rect(at.x - 2.5, at.y - 2.5, 5, 5, tone)
+		v.rect(at.x - 4.5, at.y - 4.5, 9, 9, DeskView.INK)
+		v.rect(at.x - 3.5, at.y - 3.5, 7, 7, tone)
 		# A callout: leader line to a small block of data rows.
 		var side := 1.0 if at.x < SCREEN.end.x - 70 else -1.0
 		var tag := at + Vector2(side * 14, -10)
@@ -300,9 +308,9 @@ static func _clock(v: DeskView, t: float) -> void:
 static func _command(v: DeskView, t: float) -> void:
 	# The Prime Minister before the screen, pointing at it, aides at hand.
 	var lean := 0.8 * sin(t * 0.3)
-	v.figure(176 + lean, 252, DeskView.PAPER, "point", t, 40.0)
-	v.figure(146, 252, DeskView.FIGURE.darkened(0.05), "stand", t, 37.0)
-	v.figure(124, 254, DeskView.FIGURE.darkened(0.15), "stand", t, 36.0)
+	v.figure(176 + lean, 252, Color(0.70, 0.68, 0.62), "point", t, 40.0, DeskView.SKIN)
+	v.figure(146, 252, Color(0.26, 0.28, 0.36), "stand", t, 37.0, DeskView.SKIN)
+	v.figure(124, 254, Color(0.36, 0.34, 0.32), "stand", t, 36.0, DeskView.SKIN)
 	var walk := 0.5 - 0.5 * cos(t * 0.2)
 	v.figure(430 + walk * 34.0, 252, DeskView.FIGURE.darkened(0.1), "walk", t * 0.6, 36.0)
 	v.rect(434 + walk * 34.0 + 6, 228, 6, 8, DeskView.PAPER.darkened(0.1))   # a folder
@@ -323,11 +331,11 @@ static func _console_row(v: DeskView, t: float, r: int) -> void:
 		var outer: float = v.left - 10 if side < 0 else v.right + 10
 		var x0: float = minf(inner, outer)
 		var x1: float = maxf(inner, outer)
-		# The long desk: a sloped console face, its top edge lit.
-		v.rect(x0, y - 4 * s, x1 - x0, 12 * s, CONSOLE)
-		v.rect(x0, y - 4 * s, x1 - x0, 2, DeskView.METAL.lightened(0.1))
-		v.rect(x0, y + 8 * s, x1 - x0, 3 * s, CONSOLE.darkened(0.4))
-		# Monitors and officers, stepping out from the aisle.
+		# The long desk: a dark sloped face under a lit top edge.
+		v.rect(x0, y - 4 * s, x1 - x0, 12 * s, CONSOLE.darkened(0.45))
+		v.rect(x0, y - 4 * s, x1 - x0, 2.5 * s, DeskView.METAL.lightened(0.05))
+		v.rect(x0, y + 8 * s, x1 - x0, 3 * s, DeskView.INK)
+		# Monitors, then the officers in front of them, stepping out from the aisle.
 		var k := 0
 		var x: float = inner + side * pitch * 0.55
 		while (side < 0 and x > v.left - 20) or (side > 0 and x < v.right + 20):
@@ -336,21 +344,28 @@ static func _console_row(v: DeskView, t: float, r: int) -> void:
 			k += 1
 
 
+## One duty station: a monitor glowing on the desk and its officer, seen from
+## behind, silhouetted against the screen.
 static func _station(v: DeskView, t: float, x: float, y: float, s: float, id: int) -> void:
-	# The monitor: a box on the desk with a small lit screen and a lamp.
-	var mw := 20.0 * s
-	var mh := 15.0 * s
-	v.rect(x - mw * 0.5, y - 4 * s - mh, mw, mh, CONSOLE.lightened(0.08))
-	v.rect(x - mw * 0.5 + 2, y - 4 * s - mh + 2, mw - 4, mh - 5, GLASS)
+	var mw := 22.0 * s
+	var mh := 16.0 * s
+	var top := y - 4 * s - mh
+	v.rect(x - mw * 0.5, top, mw, mh, CONSOLE.lightened(0.05))
+	v.rect(x - mw * 0.5 + 2, top + 2, mw - 4, mh - 5, SCREEN_GLOW)
 	var flick := sin(t * 0.35 + id * 1.9) > -0.7
-	v.rect(x - mw * 0.5 + 4, y - 4 * s - mh + 4, (mw - 8) * (0.4 + 0.5 * absf(sin(id * 0.7))), 1.5, TRACE.darkened(0.2) if flick else GRID)
-	v.rect(x - mw * 0.5 + 4, y - 4 * s - mh + 7, (mw - 8) * 0.6, 1.5, TRACE.darkened(0.45))
-	v.rect(x + mw * 0.5 - 4, y - 7 * s, 2, 2, DeskView.LAMP if (id % 3) else DeskView.LAMP.darkened(0.4))
-	# The officer, seen from behind, in a chair a little nearer than the desk.
+	for k in 3:
+		var span := (mw - 8) * (0.35 + 0.55 * absf(sin(id * 0.7 + k * 1.3)))
+		v.rect(x - mw * 0.5 + 4, top + 4 + k * 3.0 * s, span, 1.5, TRACE.darkened(0.1) if flick or k > 0 else GRID)
+	v.rect(x + mw * 0.5 - 5, y - 7 * s, 2, 2, DeskView.LAMP if (id % 3) else DeskView.ALARM)
+	# A mug or a stack of signals by the screen.
+	if id % 4 == 1:
+		v.rect(x - mw * 0.5 - 6 * s, y - 9 * s, 4 * s, 5 * s, DeskView.PAPER.darkened(0.2))
+	elif id % 4 == 3:
+		v.rect(x + mw * 0.5 + 2 * s, y - 6 * s, 8 * s, 2 * s, DeskView.PAPER)
 	var shift := 1.0 if sin(t * 0.5 + id * 2.3) > 0.95 else 0.0
-	var h := 30.0 * s
-	v.rect(x - 8 * s, y + 6 * s, 16 * s, 16 * s, DeskView.WALL.darkened(0.2))   # chair back
-	v.figure(x - 2 * s, y - 3 * s + h - shift, DeskView.FIGURE.darkened(0.12 - s * 0.1), "sit", t, h)
+	var h := 34.0 * s
+	var coat: Color = UNIFORMS[id % UNIFORMS.size()]
+	v.figure(x - 2.0 * h / 18.0, y + 9.5 * s - shift, coat, "sit_back", t, h)
 
 
 static func _foreground(v: DeskView, t: float) -> void:

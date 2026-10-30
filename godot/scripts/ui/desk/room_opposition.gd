@@ -27,8 +27,21 @@ const ROWS := [1.44, 1.3, 1.18, 1.07, 0.97, 0.88, 0.8, 0.73]
 ## Seat blocks between the aisles: [x0, x1].
 const BLOCKS := [[-560.0, -300.0], [-250.0, -45.0], [45.0, 250.0], [300.0, 560.0]]
 const SEAT := 40.0
-const OAK := Color(0.40, 0.36, 0.25)
+const OAK := Color(0.40, 0.37, 0.33)
 const FLASH := Color(1.0, 0.98, 0.9)
+const BOARD_CLOTH := Color(0.08, 0.10, 0.17)
+const SLOGAN := "A NEW ARDENIA"
+const SLOGAN_INK := Color(0.14, 0.18, 0.30)
+## Reporters' jackets, seen from behind.
+const JACKETS := [Color(0.16, 0.20, 0.32), Color(0.30, 0.30, 0.31), Color(0.20, 0.20, 0.21),
+	Color(0.52, 0.50, 0.45), Color(0.24, 0.28, 0.36), Color(0.32, 0.17, 0.14)]
+## Three-by-five capitals for the banner.
+const GLYPHS := {
+	"A": ["010", "101", "111", "101", "101"], "N": ["101", "111", "111", "111", "101"],
+	"E": ["111", "100", "110", "100", "111"], "W": ["101", "101", "111", "111", "101"],
+	"R": ["110", "101", "110", "101", "101"], "D": ["110", "101", "101", "101", "110"],
+	"I": ["111", "010", "010", "010", "111"], " ": [],
+}
 
 
 ## What the room shows, read from the app snapshot.
@@ -140,47 +153,40 @@ static func _hall(v: DeskView, t: float) -> void:
 	v.rect(ex.x, ex.y, 6, 2.5, DeskView.ALARM)
 
 
-## The campaign backdrop: a long banner of blank cell stripes over a
-## step-and-repeat board, with flags on poles to either side.
+## The campaign backdrop: a cream banner lettered with the party's slogan
+## beside its emblem, over a step-and-repeat board of emblems, with flags on
+## poles to either side.
 static func _backdrop(v: DeskView) -> void:
 	var z := BACK_Z
-	# The board behind the line-up, its emblem repeated as small dots.
-	_face(v, -400, 400, STAGE_Y, 70, z, DeskView.WALL.darkened(0.55))
-	for r in 5:
-		for c in 15:
-			var x := -370.0 + c * 53.0 + (26.0 if r % 2 == 1 else 0.0)
+	# The board behind the line-up: navy cloth printed with the emblem.
+	_face(v, -400, 400, STAGE_Y, 70, z, BOARD_CLOTH)
+	for r in 6:
+		for c in 13:
+			var x := -360.0 + c * 60.0 + (30.0 if r % 2 == 1 else 0.0)
 			if x > 380.0:
 				continue
-			var y := 40.0 - r * 50.0
-			var p := _p(x, y, z)
-			v.rect(p.x - 1.5, p.y - 1, 3, 3, DeskView.STONE.darkened(0.1))
-	for sx in range(-400, 401, 160):
-		v.line(_p(sx, STAGE_Y, z), _p(sx, 70, z), DeskView.WALL.darkened(0.2), 1.5)
+			var p := _p(x, 52.0 - r * 44.0, z)
+			v.rect(p.x - 3, p.y - 3, 6, 6, DeskView.PAPER.darkened(0.25))
+			v.rect(p.x - 1.5, p.y - 1.5, 3, 3, DeskView.ALARM.darkened(0.2))
 	v.line(_p(-400, 70, z), _p(400, 70, z), DeskView.METAL.darkened(0.1), 1.5)
-	# A slogan strap across the board, again only stripes of cells.
-	_face(v, -300, 300, 22, 50, z, DeskView.STONE.darkened(0.3))
-	var sx := -280.0
-	var sk := 0
-	while sx < 270.0:
-		var sw := 14.0 + 30.0 * _hash(sk, 8.0)
-		_face(v, sx, minf(sx + sw, 280.0), 30, 42, z, DeskView.PAPER.darkened(0.3))
-		sx += sw + 10.0
-		sk += 1
-	# The banner: cream cloth, its lettering only stripes of cells.
-	_face(v, -430, 430, 110, 222, z, DeskView.PAPER.darkened(0.12))
-	_face(v, -430, 430, 110, 118, z, DeskView.ALARM.darkened(0.25))
-	_face(v, -430, 430, 214, 222, z, DeskView.ALARM.darkened(0.25))
-	var ink := DeskView.INK.lightened(0.12)
-	v.disc(_p(-360, 166, z), 34.0 / z, ink)
-	v.disc(_p(-360, 166, z), 20.0 / z, DeskView.PAPER.darkened(0.12))
-	var x := -300.0
+	v.line(_p(-400, STAGE_Y, z), _p(-400, 70, z), DeskView.METAL.darkened(0.3), 1.5)
+	v.line(_p(400, STAGE_Y, z), _p(400, 70, z), DeskView.METAL.darkened(0.3), 1.5)
+	# The banner: cream cloth, a red hem, the emblem and the slogan.
+	_face(v, -430, 430, 110, 222, z, DeskView.PAPER.darkened(0.08))
+	_face(v, -430, 430, 110, 119, z, DeskView.ALARM.darkened(0.2))
+	_face(v, -430, 430, 213, 222, z, DeskView.ALARM.darkened(0.2))
+	_emblem(v, _p(-360, 166, z), 22.0)
+	_emblem(v, _p(360, 166, z), 22.0)
+	_lettering(v, _p(0, 170, z), SLOGAN, Vector2(5.2, 6.2), SLOGAN_INK)
+	# A line of small print under the slogan: marks, not words.
+	var sub := _p(-280, 126, z)
 	var k := 0
-	while x < 380.0:
-		var w := 22.0 + 46.0 * _hash(k, 2.0)
-		_face(v, x, minf(x + w, 390.0), 176, 200, z, ink)
-		x += w + 12.0 + (24.0 if _hash(k, 5.0) > 0.7 else 0.0)
+	var x := 0.0
+	while x < 266.0:
+		var w := 6.0 + 10.0 * _hash(k, 11.0)
+		v.rect(sub.x + x, sub.y, w, 2, SLOGAN_INK.lightened(0.25))
+		x += w + 3.0
 		k += 1
-	_face(v, -300, 120, 132, 146, z, ink.lightened(0.2))
 	for xx: float in [-425.0, 425.0]:
 		v.line(_p(xx, 222, z), _p(xx, 300, z), DeskView.METAL.darkened(0.2), 1.5)
 	# Flags on poles, hanging in folds.
@@ -190,8 +196,36 @@ static func _backdrop(v: DeskView) -> void:
 		v.disc(_p(px, 204, z - 0.05), 3.0, DeskView.LAMP.darkened(0.25))
 		for f in 4:
 			var fx := px - side * (6.0 + f * 9.0)
-			var tone := DeskView.STONE.darkened(0.05) if f % 2 == 0 else DeskView.STONE.darkened(0.4)
+			var tone := DeskView.ALARM.darkened(0.15) if f % 2 == 0 else DeskView.ALARM.darkened(0.45)
 			_face(v, minf(fx, fx - side * 9.0), maxf(fx, fx - side * 9.0), 40.0 + f * 6.0, 190, z - 0.05, tone)
+		_face(v, px - side * 42.0 if side > 0 else px + 6.0, px - 6.0 if side > 0 else px + side * -42.0, 150, 190, z - 0.05, DeskView.PAPER.darkened(0.2))
+
+
+## The party emblem: a ring around a rising sun over a bar.
+static func _emblem(v: DeskView, c: Vector2, r: float) -> void:
+	v.disc(c, r, SLOGAN_INK)
+	v.disc(c, r * 0.78, DeskView.PAPER.darkened(0.08))
+	v.disc(c + Vector2(0, r * 0.12), r * 0.42, DeskView.ALARM.darkened(0.1))
+	v.rect(c.x - r * 0.6, c.y + r * 0.12, r * 1.2, r * 0.5, DeskView.PAPER.darkened(0.08))
+	v.rect(c.x - r * 0.55, c.y + r * 0.2, r * 1.1, r * 0.16, SLOGAN_INK)
+	for k in 5:
+		var a := PI + PI * (k + 0.5) / 5.0
+		v.line(c + Vector2(cos(a), sin(a)) * r * 0.5 + Vector2(0, r * 0.12), c + Vector2(cos(a), sin(a)) * r * 0.68 + Vector2(0, r * 0.12), DeskView.ALARM.darkened(0.1), 1.5)
+
+
+## Blocky capitals from `GLYPHS`, centred on `c`; `px` is one glyph pixel.
+static func _lettering(v: DeskView, c: Vector2, text: String, px: Vector2, ink: Color) -> void:
+	var advance := px.x * 4.0
+	var x := c.x - (text.length() * advance - px.x) * 0.5
+	var y := c.y - px.y * 2.5
+	for ch in text:
+		var rows: Array = GLYPHS.get(ch, [])
+		for r in rows.size():
+			var bits: String = rows[r]
+			for b in 3:
+				if bits[b] == "1":
+					v.rect(x + b * px.x, y + r * px.y, px.x, px.y, ink)
+		x += advance
 
 
 ## The lighting truss across the front of the stage, its lamps trained
@@ -252,7 +286,7 @@ static func _stage(v: DeskView, t: float, shadow: int) -> void:
 		var sway := 1.2 * sin(t * 0.35 + i * 2.1)
 		var p := _p(x + sway, STAGE_Y, 1.95)
 		var h := MAN * 1.1 / 1.95
-		v.figure(p.x - h * 0.12, p.y, DeskView.FIGURE.darkened(0.12), "stand", t, h)
+		v.figure(p.x - h * 0.12, p.y, [Color(0.20, 0.22, 0.30), Color(0.28, 0.28, 0.30), Color(0.34, 0.18, 0.15)][i % 3], "stand", t, h, DeskView.SKIN)
 	# The leader at the microphones, gesturing in slow turns: the hero.
 	var phase := fposmod(t * 0.12, 1.0)
 	var pose := "point" if phase < 0.4 else ("arms_up" if phase < 0.55 else "stand")
@@ -260,7 +294,7 @@ static func _stage(v: DeskView, t: float, shadow: int) -> void:
 	_flat(v, -70, 70, STAGE_Y, 1.62, 1.86, DeskView.STONE.darkened(0.1))
 	var lp := _p(0, STAGE_Y, 1.72)
 	var lh := MAN * 1.18 / 1.72
-	v.figure(lp.x - lh * 0.12, lp.y, DeskView.PAPER.lightened(0.45), pose, t, lh)
+	v.figure(lp.x - lh * 0.12, lp.y, Color(0.62, 0.60, 0.56), pose, t, lh, DeskView.SKIN.lightened(0.1))
 	# The podium, its emblem plate catching the lamps.
 	var pz := 1.63
 	_flat(v, -30, 30, -158, pz, pz + 0.06, OAK.lightened(0.1))
@@ -324,22 +358,31 @@ static func _press(v: DeskView, t: float, fill: float) -> void:
 				k += 1
 
 
-## A seat seen from behind; if taken, a reporter in it, now and then
-## shifting or bending to a notebook.
+## A seat seen from behind; if taken, a reporter in it — head and shoulders
+## over the chair back — now and then shifting, writing, or putting a hand
+## up for a question.
 static func _seat(v: DeskView, t: float, x: float, z: float, taken: bool, n: int) -> void:
-	var col := _dim(DeskView.FIGURE.darkened(0.22), z)
-	var back := DeskView.WALL.darkened(0.2)
+	var back := _dim(Color(0.13, 0.11, 0.10), z)
 	if taken:
 		var shift := 1.0 if sin(t * 0.5 + n * 1.9) > 0.96 else 0.0
-		var h := MAN * 0.62 / z
+		var h := MAN * 0.8 / z
 		var p := _p(x + SEAT * 0.5, FLOOR_Y, z + 0.02)
-		var tone := col.darkened(0.15) if _hash(n, 4.0) < 0.35 else col
-		v.figure(p.x - h * 0.12, p.y + shift, tone, "sit", t, h)
-	# The chair back covers the lower torso.
-	_face(v, x + 5, x + SEAT - 5, FLOOR_Y + 14, FLOOR_Y + 27, z, back)
-	v.line(_p(x + 5, FLOOR_Y + 27, z), _p(x + SEAT - 5, FLOOR_Y + 27, z), _dim(DeskView.METAL.darkened(0.2), z), 1.5)
+		var u := h / 18.0
+		var coat := _dim(JACKETS[int(_hash(n, 4.0) * JACKETS.size()) % JACKETS.size()], z)
+		var fx := p.x - 2.0 * u + (_hash(n, 6.0) - 0.5) * 2.0
+		v.figure(fx, p.y + shift, coat, "sit_back", t, h)
+		# A hand up for a question, or a notebook on a shoulder.
+		var ask := _hash(n, 12.0)
+		if ask < 0.07 and sin(t * 0.3 + n) > 0.2:
+			v.rect(fx + 5.2 * u, p.y - 19.0 * u, 1.6 * u, 7.0 * u, coat)
+			v.rect(fx + 5.2 * u, p.y - 20.5 * u, 1.6 * u, 1.6 * u, DeskView.SKIN.darkened(clampf((z - 0.8) / 2.0, 0.0, 0.4)))
+		elif ask < 0.3:
+			v.rect(fx + 4.5 * u, p.y - 9.0 * u, 3.0 * u, 2.0 * u, _dim(DeskView.PAPER, z))
+		return
+	# An empty chair: its back and legs.
+	_face(v, x + 6, x + SEAT - 6, FLOOR_Y + 12, FLOOR_Y + 30, z, back)
 	for lx: float in [x + 8, x + SEAT - 10]:
-		_face(v, lx, lx + 2.5, FLOOR_Y, FLOOR_Y + 14, z, back)
+		_face(v, lx, lx + 2.5, FLOOR_Y, FLOOR_Y + 12, z, back)
 
 
 ## Camera positions in the aisles, more as interest grows: (x, z).

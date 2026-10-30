@@ -106,37 +106,100 @@ func disc(centre: Vector2, r: float, c: Color) -> void:
 	draw_circle(at(centre), r * _scale, c)
 
 
-## A faceless figure in one tone, `h` tall, feet at `foot`. Poses:
-## "stand", "walk" (two steps by `t`), "sit" (at a desk, legs hidden),
-## "arms_up", "point" (one arm out toward +x).
-func figure(x: float, foot: float, tone: Color = FIGURE, pose: String = "stand", t: float = 0.0, h: float = 18.0) -> void:
+## Faces and hands; dimmed with the figure's own tone (see `_skin`).
+const SKIN := Color(0.80, 0.66, 0.50)
+const HAIR := [Color(0.12, 0.10, 0.09), Color(0.30, 0.24, 0.18), Color(0.52, 0.50, 0.47)]
+## Hair seen from behind is the whole head, so it runs lighter than the room.
+const HAIR_BACK := [Color(0.08, 0.07, 0.07), Color(0.13, 0.11, 0.10), Color(0.50, 0.50, 0.50), Color(0.10, 0.09, 0.08), Color(0.62, 0.56, 0.44)]
+const CHAIR := Color(0.13, 0.11, 0.10)
+
+
+## A small figure, `h` tall when standing, feet at `foot`, in `tone`
+## (clothes) with a face in `skin` (default: a skin tone dimmed to match
+## `tone`, so a far grey figure does not grow a glowing head). Head, a
+## shoulder line wider than the head, darker trousers with a gap between the
+## legs: enough to read as a person at three or four cells wide.
+## Poses: "stand", "walk" (two steps by `t`), "sit" (at a desk, legs hidden),
+## "arms_up", "point" (one arm out toward +x), "seated" (on a chair seen from
+## the front: chair back behind the shoulders, knees and shins), "back"
+## (standing, seen from behind: all hair, no face), "sit_back" (seated, seen
+## from behind: head and shoulders over a chair back).
+func figure(x: float, foot: float, tone: Color = FIGURE, pose: String = "stand", t: float = 0.0, h: float = 18.0, skin: Color = Color(0, 0, 0, 0)) -> void:
 	var u := h / 18.0
 	var y := foot - h
-	rect(x, y, 4 * u, 4 * u, tone)                          # head
-	rect(x - 1 * u, y + 5 * u, 6 * u, 7 * u, tone)          # torso
+	if pose == "seated" or pose == "sit_back":
+		y = foot - 14.0 * u if pose == "seated" else foot - 13.0 * u
+	var face := skin if skin.a > 0.0 else _skin(tone)
+	var hair: Color = HAIR[posmod(int(x * 0.37 + h), HAIR.size())]
+	hair = hair.darkened(clampf(0.5 - tone.get_luminance(), 0.0, 0.4))
+	var legs := tone.darkened(0.38)
+	var chair := CHAIR.lerp(tone.darkened(0.7), 0.3)
+	if pose == "seated":
+		rect(x - 3 * u, y + 3 * u, 10 * u, 9 * u, chair)            # chair back
+	var back := pose == "back" or pose == "sit_back"
+	if back:
+		hair = (HAIR_BACK[posmod(int(x * 0.53 + h * 3.0), HAIR_BACK.size())] as Color).darkened(clampf(0.45 - tone.get_luminance(), 0.0, 0.3))
+		rect(x + 1 * u, y + 3.6 * u, 2 * u, 1.6 * u, face)              # the nape
+	# Head: a face with a cap of hair, or all hair from behind.
+	rect(x, y, 4 * u, 4 * u, hair if back else face)
+	if not back and h >= 22.0:
+		rect(x, y, 4 * u, 1.3 * u, hair)
+	# Shoulders run wider than the head; the torso narrows under them.
+	rect(x - 2.5 * u, y + 5 * u, 9 * u, 2 * u, tone)
+	rect(x - 1 * u, y + 7 * u, 6 * u, 5 * u, tone)
+	if back:
+		# Seen from behind we face the room's light: a rim along the crown
+		# and the shoulders keeps a dark head legible on a dark room.
+		rect(x + 0.5 * u, y - 0.2 * u, 3 * u, 1.1 * u, hair.lightened(0.4))
+		rect(x - 2 * u, y + 5 * u, 8 * u, 1 * u, tone.lightened(0.28))
 	match pose:
 		"arms_up":
 			rect(x - 3 * u, y - 2 * u, 1.5 * u, 8 * u, tone)
 			rect(x + 5.5 * u, y - 2 * u, 1.5 * u, 8 * u, tone)
+			rect(x - 3 * u, y - 3 * u, 1.5 * u, 1.2 * u, face)
+			rect(x + 5.5 * u, y - 3 * u, 1.5 * u, 1.2 * u, face)
 		"point":
 			rect(x - 2.5 * u, y + 5 * u, 1.5 * u, 6 * u, tone)
 			rect(x + 5 * u, y + 5.5 * u, 7 * u, 1.5 * u, tone)
+			rect(x + 12 * u, y + 5.5 * u, 1.5 * u, 1.5 * u, face)
+		"sit_back":
+			pass
 		_:
-			rect(x - 2.5 * u, y + 5 * u, 1.5 * u, 6 * u, tone)
-			rect(x + 5 * u, y + 5 * u, 1.5 * u, 6 * u, tone)
-	if pose == "sit":
-		return
+			rect(x - 2.5 * u, y + 5 * u, 1.5 * u, 6 * u, tone.darkened(0.12))
+			rect(x + 5 * u, y + 5 * u, 1.5 * u, 6 * u, tone.darkened(0.12))
+			if not back and h >= 22.0:
+				rect(x - 2.5 * u, y + 11 * u, 1.5 * u, 1.2 * u, face)
+				rect(x + 5 * u, y + 11 * u, 1.5 * u, 1.2 * u, face)
+	match pose:
+		"sit":
+			return
+		"sit_back":
+			rect(x - 3 * u, y + 9.5 * u, 10 * u, 3.5 * u, chair)       # chair back
+			return
+		"seated":
+			rect(x - 1.5 * u, y + 11.5 * u, 7 * u, 2 * u, legs)        # lap, knees
+			rect(x - 0.5 * u, y + 13.5 * u, 2 * u, 4.5 * u, legs)
+			rect(x + 2.5 * u, y + 13.5 * u, 2 * u, 4.5 * u, legs)
+			rect(x - 3 * u, y + 12 * u, 1.2 * u, 6 * u, chair)
+			rect(x + 5.8 * u, y + 12 * u, 1.2 * u, 6 * u, chair)
+			return
 	var step := (int(t * 3.0) % 2) if pose == "walk" else -1
 	match step:
 		0:
-			rect(x - 0.5 * u, y + 12 * u, 2 * u, 6 * u, tone)
-			rect(x + 3 * u, y + 12 * u, 2 * u, 6 * u, tone)
+			rect(x - 1 * u, y + 12 * u, 2 * u, 6 * u, legs)
+			rect(x + 3 * u, y + 12 * u, 2 * u, 6 * u, legs)
 		1:
-			rect(x + 0.5 * u, y + 12 * u, 2 * u, 6 * u, tone)
-			rect(x + 1.8 * u, y + 12 * u, 2 * u, 6 * u, tone)
+			rect(x + 0.2 * u, y + 12 * u, 2 * u, 6 * u, legs)
+			rect(x + 2 * u, y + 12 * u, 2 * u, 6 * u, legs.darkened(0.2))
 		_:
-			rect(x, y + 12 * u, 2 * u, 6 * u, tone)
-			rect(x + 2.5 * u, y + 12 * u, 2 * u, 6 * u, tone)
+			rect(x - 0.3 * u, y + 12 * u, 2 * u, 6 * u, legs)
+			rect(x + 2.7 * u, y + 12 * u, 2 * u, 6 * u, legs)
+
+
+## A face tone matched to how lit the figure's clothes are.
+static func _skin(tone: Color) -> Color:
+	var k := clampf(tone.get_luminance() / 0.55, 0.3, 1.2)
+	return Color(SKIN.r * k, SKIN.g * k, SKIN.b * k)
 
 
 ## A small uppercase annotation, drawn crisp over the converted picture.
