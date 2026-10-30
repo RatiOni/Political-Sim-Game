@@ -249,7 +249,7 @@ func _run() -> void:
 		t.equal(map.region_at(map.map_to_local(city["point"])), city["region"], "%s hit-tests to %s" % [city["name"], city["region"]])
 	t.equal(map.region_at(map.map_to_local(Vector2(0.02, 0.5))), "", "a sea point belongs to no region")
 	t.truth(map.local_to_map(map.map_to_local(Vector2(0.3, 0.7))).distance_to(Vector2(0.3, 0.7)) < 1e-4, "map and local coordinates invert")
-	t.equal(map.polygons.size(), 9, "nine region polygons come from the outlines")
+	t.equal(map.polygons.size(), 10, "ten region polygons come from the outlines")
 	t.equal(map.terrain_layer.texture_filter, CanvasItem.TEXTURE_FILTER_NEAREST, "terrain tiles use nearest filtering")
 	t.equal(map.lines_rect.texture_filter, CanvasItem.TEXTURE_FILTER_NEAREST, "the line overlay uses nearest filtering")
 

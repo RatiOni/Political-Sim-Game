@@ -57,7 +57,7 @@
     },
     "sela": {
       "name": "Sela",
-      "population_weight": 0.16,
+      "population_weight": 0.1,
       "unemployment_gap": 0.025,
       "initial_unemployment": 0.135,
       "reach_offset": -0.2,
@@ -75,6 +75,27 @@
       "issue_id": "land_settlement",
       "issue_name": "The land settlement",
       "issue_body": "Farm titles, old collective holdings and access to the Kesla corridor are being argued together. A technical settlement will still choose winners."
+    },
+    "kostrel": {
+      "name": "Kostrel",
+      "population_weight": 0.06,
+      "unemployment_gap": 0.035,
+      "initial_unemployment": 0.145,
+      "reach_offset": -0.26,
+      "initial_state_reach": 0.48,
+      "initial_pressure": 0.55,
+      "pressure_bias": 0.1,
+      "control": "state",
+      "party_support": {
+        "liberal_democrats": 0.27,
+        "national_conservatives": 0.33,
+        "social_democrats": 0.14,
+        "agrarian_union": 0.23,
+        "workers_front": 0.03
+      },
+      "issue_id": "orchard_credit",
+      "issue_name": "Water and credit",
+      "issue_body": "Kostrel's orchards and vineyards depend on Union-era irrigation nobody now maintains, and on credit the new banks will not lend against disputed titles. Growers sell to whoever pays cash at the Rovets gates."
     },
     "anera": {
       "name": "Anera",
@@ -216,6 +237,10 @@
       "name": "The land settlement",
       "body": "Farm titles, old collective holdings and access to the Kesla corridor are being argued together. A technical settlement will still choose winners."
     },
+    "orchard_credit": {
+      "name": "Water and credit",
+      "body": "Kostrel's orchards and vineyards depend on Union-era irrigation nobody now maintains, and on credit the new banks will not lend against disputed titles. Growers sell to whoever pays cash at the Rovets gates."
+    },
     "absent_state": {
       "name": "The absent state",
       "body": "In the uplands the republic is often a distant tax notice, a thin police post and a road that has not been repaired. Local loyalties fill the gap."
@@ -323,6 +348,7 @@
         "karsen": 1.2,
         "darev": 1.15,
         "orvena": 1.1,
+        "kostrel": 1.05,
         "vashtera": 0.7,
         "vetrenka": 0.8
       },
@@ -355,6 +381,7 @@
       },
       "region_multipliers": {
         "sela": 1.15,
+        "kostrel": 1.15,
         "anera": 1.1,
         "karsen": 1.15,
         "orvena": 1.1,

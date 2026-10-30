@@ -1,7 +1,7 @@
 extends SceneTree
 
 const TestSupportScript = preload("res://scripts/native/testing/test_support.gd")
-const SIM_REGIONS := ["vashtera", "zavost", "sela", "anera", "kelvet", "vetrenka", "karsen", "orvena", "darev"]
+const SIM_REGIONS := ["vashtera", "zavost", "sela", "anera", "kelvet", "vetrenka", "karsen", "orvena", "darev", "kostrel"]
 
 
 func _initialize() -> void:
@@ -15,7 +15,7 @@ func _initialize() -> void:
 	ids.sort()
 	var expected := SIM_REGIONS.duplicate()
 	expected.sort()
-	t.equal(ids, expected, "the map defines exactly the nine simulated regions")
+	t.equal(ids, expected, "the map defines exactly the ten simulated regions")
 	t.truth(geo.extent_m.x > geo.extent_m.y * 1.5, "Ardenia is broad east-west and compressed north-south")
 	for p in [Vector2(0, 0), Vector2(1, 1), Vector2(0.3, 0.7)]:
 		t.truth(geo.world_to_map(geo.map_to_world(p)).distance_to(p) < 1e-6, "map and world coordinates invert exactly (%s)" % p)

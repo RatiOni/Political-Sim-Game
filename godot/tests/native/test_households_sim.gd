@@ -40,7 +40,7 @@ func _test_seeding(t, content: Dictionary) -> void:
 	t.equal(HouseholdsSimScript.hardest_hit(state).size(), 0, "empty hardest-hit list")
 	t.equal(state.to_dict(), before, "aggregate readers never seed or mutate an empty ledger")
 	HouseholdsSimScript.ensure_households(state)
-	t.equal(state.households.size(), 54, "six groups in nine regions")
+	t.equal(state.households.size(), 60, "six groups in ten regions")
 	var shares: Dictionary = content["catalogs"]["household_groups"]["regional_shares"]
 	var repeat := _seeded(content)
 	for rid in shares:
@@ -67,7 +67,7 @@ func _test_seeding(t, content: Dictionary) -> void:
 	var history := preserved.to_dict()
 	state.households.erase("darev:pensioners")
 	HouseholdsSimScript.ensure_households(state)
-	t.equal(state.households.size(), 54, "missing record backfilled")
+	t.equal(state.households.size(), 60, "missing record backfilled")
 	t.truth(state.households[preserved.id] == preserved, "existing object retained")
 	t.equal(preserved.to_dict(), history, "all accumulated history retained")
 	before = state.to_dict()
@@ -87,7 +87,7 @@ func _test_seeding(t, content: Dictionary) -> void:
 		t.truth(foreign.households.is_empty(), "foreign ledger stays empty: " + country_id)
 	var lazy := _campaign(content)
 	HouseholdsSimScript.simulate(lazy)
-	t.equal(lazy.households.size(), 54, "simulate seeds after regions exist")
+	t.equal(lazy.households.size(), 60, "simulate seeds after regions exist")
 	t.truth(lazy.households["vashtera:urban_workers"].living_cost_index != 1.0,
 		"first simulate also applies the monthly pulse")
 
@@ -229,7 +229,7 @@ func _test_history_bounds_and_roundtrip(t, content: Dictionary) -> void:
 	t.truth(restored != null, "GameState household roundtrip succeeds")
 	if restored == null:
 		return
-	t.equal(restored.households.size(), 54, "roundtrip retains all households")
+	t.equal(restored.households.size(), 60, "roundtrip retains all households")
 	for key in state.households:
 		_assert_household_roundtrip(t, restored.households[key], state.households[key], "all household fields roundtrip: " + key)
 	HouseholdsSimScript.simulate(state)

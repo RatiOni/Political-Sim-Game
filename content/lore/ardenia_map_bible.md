@@ -10,14 +10,15 @@ original. No real place name is used.
 
 Ardenia is broad east-to-west and compressed north-to-south, and it is not a
 rectangle: it is tallest in the west and narrows toward the east like a wedge.
-The west coast runs south from Ostrena's cape under the northern wall, past the
-Selvara bay, then swings south-west into a long coastal tail, the Kelvet coast,
+The west coast runs south from a narrow northern horn under the wall, past
+Ostrena's cape and the Selvara bay, then swings south-west into a long coastal tail, the Kelvet coast,
 which ends in a cape of its own. The northern frontier is a broken mountain
 wall that protects little and separates more; the Karsen plateau stands out of
 it as one high salient. The southern frontier follows a lower southern range,
 never snow-capped, that runs from the end of the tail along the Sela's southern
-edge and dies out into the dry eastern steppe of Darev. The eastern frontier is
-the short, straight Krasovan survey line.
+edge and dies out where the frontier drops away south into Kostrel: a broad,
+warm lobe of steppe, orchards and vineyards hanging below Zavost and Darev.
+The eastern frontier is the short, straight Krasovan survey line.
 
 The Kesla rises on the Karsen plateau, comes down past the Karsen reservoir and
 Lestara, crosses the capital basin at Vashtera, and runs south-west between
@@ -26,16 +27,17 @@ Lesser rivers fall the same way: the Orvena water from the Anera highlands to
 the Selvara bay, an eastern river from the Darev hills into the Kesla below the
 capital, and a short torrent off the southern hills across the tail. Lakes sit
 on the Karsen plateau, behind the Selvara bay as a coastal lagoon, under the
-Sela hills, in the tail's hills and on the Darev steppe. The only sea is west
+Sela hills, in the tail's hills and on the Darev steppe; Kostrel's orchard bowl
+lies low and warm around Rovets. The only sea is west
 and south-west: every other edge of the map is land, pass or frontier. The
 coast is warm, commercially useful and difficult for the state to police.
 
 Veldoria lies beyond the northern passes. Krasova is across the eastern border
 of Zavost and Darev, where the old Union industrial system and the Zovar energy
 line meet. Merova is beyond the southern hills and the south-eastern lowlands.
-The western coast is Ardenian in law; its Vetrenka section, the north-west
-corner between Ostrena's cape and the ceasefire line, is not under Vashtera's
-control in fact.
+The western coast is Ardenian in law; its Vetrenka section, the long coastal
+strip from the northern horn down past Ostrena's cape to the ceasefire line's
+end above the Selvara bay, is not under Vashtera's control in fact.
 
 ## Regional placement and adjacency
 
@@ -44,15 +46,16 @@ control in fact.
 | Anera | north-west highlands, inland of Vetrenka | Vashtera, Sela, Vetrenka | poor, devout, armed, weakly governed |
 | Karsen | north-central plateau and passes | Anera, Vashtera, Zavost | upper Kesla, garrisons and winter roads |
 | Vashtera | central Kesla basin, west of centre | Karsen, Zavost, Sela, Orvena | capital and administrative core |
-| Zavost | east, under the northern wall | Karsen, Vashtera, Sela, Darev, Krasova | plants, rail and unions |
-| Darev | far east: the narrow end of the wedge and its steppe | Zavost, Sela, Merova, Krasova | energy, garrisons and exposed frontiers |
-| Sela | the southern plain beneath the southern hills, from the tail to Darev | Vashtera, Zavost, Darev, Kelvet, Orvena | land, grain, roads and rural credit |
+| Zavost | east, under the northern wall | Karsen, Vashtera, Sela, Darev, Kostrel, Krasova | plants, rail and unions |
+| Darev | far east: the narrow end of the wedge and its steppe | Zavost, Kostrel, Merova, Krasova | energy, garrisons and exposed frontiers |
+| Sela | the southern plain beneath the southern hills, from the tail to Kostrel | Vashtera, Zavost, Kostrel, Kelvet, Orvena | land, grain, roads and rural credit |
+| Kostrel | the south-eastern lobe below Zavost and Darev; Rovets | Sela, Zavost, Darev, Merova | orchards, vineyards, irrigation and farm credit |
 | Kelvet | the south-western coastal tail | Sela, Orvena | Tavri, customs and legal/illegal trade |
 | Orvena | west-central coast and foothills, behind the Selvara bay | Anera, Vashtera, Sela, Kelvet, Vetrenka | loyalist corridor, displaced families and Selvara |
-| Vetrenka | north-western coast, Ostrena's cape | Anera, Orvena | separatist-held territory behind the ceasefire line |
+| Vetrenka | the long north-western coastal strip, Ostrena's cape | Anera, Orvena | separatist-held territory behind the ceasefire line |
 
 Only Vetrenka, Orvena and Kelvet touch the sea. As drawn, Anera also meets
-Karsen and Orvena and does not reach the Sela; the map's sixteen internal
+Karsen and Orvena and does not reach the Sela; the map's eighteen internal
 borders are pinned by `godot/tests/map/test_map_baker.gd`.
 
 The ceasefire line is **inside** Ardenia's recognised border. It is never to
@@ -83,5 +86,5 @@ be rendered as an international boundary or as a normal provincial border.
 - Region borders are useful administrative lines, not clean state-shaped
   blocks. Terrain, river, roads, rail and the ceasefire have equal visual
   importance.
-- The nine regional ids in `geography.py` are the stable identifiers for the
+- The ten regional ids in `geography.py` are the stable identifiers for the
   regional simulation. Map coordinates are presentation data only.

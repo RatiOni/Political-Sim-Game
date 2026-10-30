@@ -5,7 +5,7 @@
   },
   "concessions": ["transit"],
   "season": [1.5, 1.5, 1.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.5, 1.5, 1.5],
-  "exposure": {"zavost": 1.5, "darev": 1.3, "sela": 0.8, "anera": 0.8, "karsen": 0.8, "orvena": 0.8},
+  "exposure": {"zavost": 1.5, "darev": 1.3, "sela": 0.8, "kostrel": 0.8, "anera": 0.8, "karsen": 0.8, "orvena": 0.8},
   "industrial": ["zavost", "darev"],
   "second_line": {"name": "the southern interconnector", "volume": 2.0, "price_share": 1.2},
   "lines": {

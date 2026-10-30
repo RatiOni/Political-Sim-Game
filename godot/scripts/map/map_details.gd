@@ -25,7 +25,6 @@ const TOWNS: Array[Dictionary] = [
 	{"name": "Karvel", "point": Vector2(0.505, 0.130)},
 	{"name": "Lestara", "point": Vector2(0.528, 0.272)},
 	{"name": "Ordel", "point": Vector2(0.365, 0.415)},
-	{"name": "Rovets", "point": Vector2(0.640, 0.565)},
 	{"name": "Meradin", "point": Vector2(0.905, 0.405)},
 	{"name": "Azren", "point": Vector2(0.935, 0.300)},
 ]
@@ -39,8 +38,12 @@ const ROADS: Array = [
 	[Vector2(0.705, 0.385), Vector2(0.785, 0.365), Vector2(0.865, 0.325)],
 	[Vector2(0.865, 0.325), Vector2(0.885, 0.37), Vector2(0.905, 0.405)],
 	[Vector2(0.865, 0.325), Vector2(0.90, 0.305), Vector2(0.935, 0.300)],
-	# The Sela's plain road, under the southern hills.
-	[Vector2(0.865, 0.325), Vector2(0.80, 0.45), Vector2(0.72, 0.53), Vector2(0.640, 0.565), Vector2(0.515, 0.620)],
+	# The southern market road: Darev down into Kostrel, Rovets, then west
+	# under the hills across the Sela; and Rovets north to Duvinsk.
+	[Vector2(0.865, 0.325), Vector2(0.835, 0.45), Vector2(0.79, 0.57), Vector2(0.705, 0.700)],
+	[Vector2(0.705, 0.700), Vector2(0.65, 0.66), Vector2(0.59, 0.635), Vector2(0.515, 0.620)],
+	[Vector2(0.705, 0.700), Vector2(0.69, 0.58), Vector2(0.70, 0.47), Vector2(0.705, 0.385)],
+	[Vector2(0.705, 0.700), Vector2(0.72, 0.79), Vector2(0.725, 0.880)],
 	[Vector2(0.465, 0.415), Vector2(0.50, 0.52), Vector2(0.515, 0.620)],
 	[Vector2(0.515, 0.620), Vector2(0.45, 0.66), Vector2(0.37, 0.705), Vector2(0.29, 0.745), Vector2(0.205, 0.705)],
 	# The north: the pass roads and the plateau.
@@ -49,8 +52,10 @@ const ROADS: Array = [
 	[Vector2(0.415, 0.255), Vector2(0.48, 0.225), Vector2(0.545, 0.215)],
 	[Vector2(0.415, 0.255), Vector2(0.44, 0.33), Vector2(0.465, 0.415)],
 	# The west: the closed road into Vetrenka, the coast road south, the tail.
-	[Vector2(0.415, 0.255), Vector2(0.388, 0.272), Vector2(0.355, 0.30), Vector2(0.320, 0.330)],
-	[Vector2(0.320, 0.330), Vector2(0.29, 0.31), Vector2(0.265, 0.300)],
+	[Vector2(0.415, 0.255), Vector2(0.388, 0.272), Vector2(0.355, 0.31), Vector2(0.300, 0.345)],
+	[Vector2(0.300, 0.345), Vector2(0.28, 0.32), Vector2(0.265, 0.300)],
+	# Vetrenka's own coast road, up the strip under the wall.
+	[Vector2(0.265, 0.300), Vector2(0.285, 0.25), Vector2(0.300, 0.195), Vector2(0.305, 0.150)],
 	[Vector2(0.318, 0.468), Vector2(0.285, 0.55), Vector2(0.245, 0.63), Vector2(0.205, 0.705)],
 	[Vector2(0.205, 0.705), Vector2(0.16, 0.765), Vector2(0.12, 0.81), Vector2(0.085, 0.815)],
 	[Vector2(0.318, 0.468), Vector2(0.38, 0.53), Vector2(0.515, 0.620)],

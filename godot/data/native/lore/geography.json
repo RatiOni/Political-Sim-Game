@@ -33,7 +33,12 @@
     {
       "id": "sela",
       "name": "The Sela",
-      "body": "The central plain grows grain, sunflower and sugar beet. Its 340,000 hectares of collective farmland were legally dissolved in 1991 and have been physically contested ever since. This is Agrarian Union country; it votes on credit terms, fuel prices and roads, in that order, with little visible interest in anything else."
+      "body": "The central plain grows grain, sunflower and sugar beet. Its 340,000 hectares of collective farmland were legally dissolved in 1991 and have been physically contested ever since. East of it the land falls away into Kostrel. This is Agrarian Union country; it votes on credit terms, fuel prices and roads, in that order, with little visible interest in anything else."
+    },
+    {
+      "id": "kostrel",
+      "name": "Kostrel",
+      "body": "Kostrel is the warm southern salient below Zavost and Darev: steppe pasture, orchards, vineyards and the irrigation canals the Union dug and stopped maintaining. Its growers sell fruit, wine and grain through Rovets, borrow from whoever will lend against a disputed title, and judge every government by the price of water and diesel at harvest."
     },
     {
       "id": "anera",
@@ -83,8 +88,8 @@
     {
       "id": "rovets",
       "name": "Rovets",
-      "region_id": "sela",
-      "body": "The Sela's largest market town, about 95,000 people, is a grain exchange, a line of silos, and the Agrarian Union's real capital."
+      "region_id": "kostrel",
+      "body": "Kostrel's market town and the south's largest, about 95,000 people: a grain and fruit exchange, a line of silos and cold stores, wine cellars cut under the old town, and the Agrarian Union's real capital."
     },
     {
       "id": "kavor",

@@ -52,8 +52,10 @@ const COAST_PROFILE: Array[Vector2] = [
 	Vector2(0.825, 0.071), Vector2(0.864, 0.0425), Vector2(1.000, -0.030),
 ]
 const NORTH_PROFILE: Array[Vector2] = [
-	Vector2(0.000, 0.204), Vector2(0.2775, 0.204), Vector2(0.3025, 0.209), Vector2(0.340, 0.204),
-	Vector2(0.390, 0.177), Vector2(0.4275, 0.148), Vector2(0.465, 0.118), Vector2(0.5025, 0.091),
+	# The Vetrenka horn: the coast runs on north under the wall, so the
+	# separatist strip is long and narrow rather than a knot at the corner.
+	Vector2(0.000, 0.120), Vector2(0.2775, 0.120), Vector2(0.300, 0.128), Vector2(0.322, 0.150),
+	Vector2(0.345, 0.178), Vector2(0.390, 0.177), Vector2(0.4275, 0.148), Vector2(0.465, 0.118), Vector2(0.5025, 0.091),
 	Vector2(0.5275, 0.087), Vector2(0.5525, 0.109), Vector2(0.570, 0.148), Vector2(0.590, 0.193),
 	Vector2(0.6275, 0.227), Vector2(0.6775, 0.245), Vector2(0.7275, 0.238), Vector2(0.7775, 0.222),
 	Vector2(0.8275, 0.193), Vector2(0.8775, 0.159), Vector2(0.9275, 0.146), Vector2(1.000, 0.150),
@@ -62,9 +64,12 @@ const SOUTH_PROFILE: Array[Vector2] = [
 	Vector2(0.000, 0.870), Vector2(0.0425, 0.864), Vector2(0.065, 0.882), Vector2(0.1025, 0.900),
 	Vector2(0.1525, 0.893), Vector2(0.2025, 0.886), Vector2(0.2525, 0.859), Vector2(0.3025, 0.814),
 	Vector2(0.3525, 0.780), Vector2(0.390, 0.758), Vector2(0.440, 0.735), Vector2(0.4775, 0.712),
-	Vector2(0.5275, 0.690), Vector2(0.565, 0.667), Vector2(0.6025, 0.651), Vector2(0.6525, 0.629),
-	Vector2(0.6775, 0.638), Vector2(0.7275, 0.611), Vector2(0.790, 0.584), Vector2(0.8275, 0.543),
-	Vector2(0.865, 0.487), Vector2(0.9025, 0.448), Vector2(0.940, 0.419), Vector2(0.965, 0.400),
+	# The Kostrel lobe: east of the Sela the frontier drops far to the south
+	# and comes back up under Darev, a broad steppe-and-orchard salient.
+	Vector2(0.5275, 0.690), Vector2(0.565, 0.680), Vector2(0.592, 0.712), Vector2(0.610, 0.770),
+	Vector2(0.627, 0.835), Vector2(0.652, 0.885), Vector2(0.685, 0.912), Vector2(0.720, 0.918),
+	Vector2(0.755, 0.902), Vector2(0.783, 0.862), Vector2(0.803, 0.798), Vector2(0.818, 0.722), Vector2(0.835, 0.630),
+	Vector2(0.850, 0.545), Vector2(0.865, 0.487), Vector2(0.9025, 0.448), Vector2(0.940, 0.419), Vector2(0.965, 0.400),
 	Vector2(1.000, 0.390),
 ]
 const EAST_PROFILE: Array[Vector2] = [
@@ -204,9 +209,11 @@ static func bake_height(_geo: MapGeometry) -> Image:
 			var plain := _bump(Vector2((u - 0.50) * 0.8, v - 0.50).length(), 0.0, 0.13)
 			var delta := _bump(Vector2(u - 0.20, v - 0.70).length(), 0.0, 0.06)
 			var steppe := _bump(Vector2((u - 0.84) * 0.9, v - 0.33).length(), 0.0, 0.09)
+			# Kostrel's orchard bowl, low and warm in the southern lobe.
+			var orchard := _bump(Vector2((u - 0.71) * 1.1, v - 0.76).length(), 0.0, 0.08)
 			var r := (ridged.get_noise_2d(x, y) + 1.0) * 0.5
 			var h := 0.12 + crest * (0.18 + 0.82 * r) + lesser * (0.22 + 0.36 * r) + hills.get_noise_2d(x, y) * 0.08 \
-				- lowland * 0.10 - plain * 0.07 - delta * 0.08 - steppe * 0.05
+				- lowland * 0.10 - plain * 0.07 - delta * 0.08 - steppe * 0.05 - orchard * 0.06
 			img.set_pixel(x, y, Color(clampf(h, 0.01, 1.0) * MAX_HEIGHT_M, 0, 0))
 	return img
 

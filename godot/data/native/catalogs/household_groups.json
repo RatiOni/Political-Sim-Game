@@ -92,6 +92,14 @@
       "pensioners": 0.16,
       "insecure_households": 0.14
     },
+    "kostrel": {
+      "urban_workers": 0.08,
+      "salaried_middle": 0.07,
+      "small_business": 0.12,
+      "rural_households": 0.45,
+      "pensioners": 0.15,
+      "insecure_households": 0.13
+    },
     "anera": {
       "urban_workers": 0.07,
       "salaried_middle": 0.06,

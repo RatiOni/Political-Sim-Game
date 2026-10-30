@@ -127,7 +127,7 @@ func _test_seed_matches_catalogue(t: TestSupport, content: Dictionary) -> void:
 		return
 	var profiles: Dictionary = _catalogue_region_profiles(content)
 	t.truth(not profiles.is_empty(), "catalogue has region profiles to compare against")
-	t.equal(profiles.keys().size(), 9, "catalogue holds nine authored region profiles")
+	t.equal(profiles.keys().size(), 10, "catalogue holds ten authored region profiles")
 	var seeded_keys: Array = state.regions.keys()
 	seeded_keys.sort()
 	var profile_keys: Array = profiles.keys()
@@ -193,7 +193,7 @@ func _test_factory_seeds_regions(t: TestSupport, content: Dictionary) -> void:
 	t.truth(state != null, "campaign builds")
 	if state == null:
 		return
-	t.equal(state.regions.keys().size(), 9, "GameFactory.new_campaign seeds all nine regions")
+	t.equal(state.regions.keys().size(), 10, "GameFactory.new_campaign seeds all ten regions")
 
 
 func _test_non_ardenia_stays_empty(t: TestSupport, content: Dictionary) -> void:
@@ -224,7 +224,7 @@ func _test_simulate_on_empty_ardenia_seeds_then_ticks(t: TestSupport, content: D
 	state.regions = {}
 	state.country.economy.unemployment = 0.40
 	RegionsSimScript.simulate(state)
-	t.equal(state.regions.keys().size(), 9, "simulate on empty Ardenia seeds first, never bare-returns")
+	t.equal(state.regions.keys().size(), 10, "simulate on empty Ardenia seeds first, never bare-returns")
 	var vashtera: RegionState = state.regions["vashtera"]
 	var first_tick: float = vashtera.unemployment
 	RegionsSimScript.simulate(state)
@@ -566,7 +566,7 @@ func _test_save_reload_round_trip(t: TestSupport, content: Dictionary) -> void:
 	t.truth(restored != null, "state survives a to_dict/from_dict round trip")
 	if restored == null:
 		return
-	t.equal(restored.regions.keys().size(), 9, "all nine regions survive the round trip")
+	t.equal(restored.regions.keys().size(), 10, "all ten regions survive the round trip")
 	var kept: RegionState = restored.regions["vashtera"]
 	t.near(kept.unemployment, 0.123, 0.0000001, "live unemployment survives the round trip")
 	t.near(kept.state_reach, 0.81, 0.0000001, "live state_reach survives the round trip")

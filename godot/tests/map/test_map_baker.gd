@@ -5,9 +5,10 @@ const CANON_BORDERS := {
 	"anera": ["vashtera", "sela", "vetrenka"],
 	"karsen": ["anera", "vashtera", "zavost"],
 	"vashtera": ["karsen", "zavost", "sela", "orvena"],
-	"zavost": ["karsen", "vashtera", "sela", "darev"],
-	"darev": ["zavost", "sela"],
-	"sela": ["vashtera", "zavost", "darev", "kelvet", "orvena"],
+	"zavost": ["karsen", "vashtera", "sela", "darev", "kostrel"],
+	"darev": ["zavost", "kostrel"],
+	"sela": ["vashtera", "zavost", "kostrel", "kelvet", "orvena"],
+	"kostrel": ["sela", "darev", "zavost"],
 	"kelvet": ["sela", "orvena"],
 	"orvena": ["anera", "vashtera", "sela", "kelvet", "vetrenka"],
 	"vetrenka": ["anera", "orvena"],
@@ -58,7 +59,7 @@ func _initialize() -> void:
 	t.truth(_max_turn(line) < deg_to_rad(80.0), "borders are smooth curves, not pixel staircases")
 
 	var outlines := MapBaker.trace_outlines(regions, geo)
-	t.equal(outlines.size(), 9, "every region has an outline")
+	t.equal(outlines.size(), 10, "every region has an outline")
 	for id in geo.region_ids:
 		var ring: PackedVector2Array = outlines.get(id, PackedVector2Array())
 		t.truth(ring.size() > 3 and ring[0] == ring[ring.size() - 1], "%s's outline is a closed ring" % id)
