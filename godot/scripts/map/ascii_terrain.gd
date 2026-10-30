@@ -13,6 +13,9 @@ const REFRESH_SECONDS := 0.2
 ## Every glyph is drawn at exactly this many screen pixels, whatever the
 ## zoom: crisp, legible characters, with more of them as the map grows.
 const GLYPH_PX := Vector2(6, 8)
+## Tiles of mirrored, dimmed surroundings drawn around the grid so a panel
+## wider than the map shows more sea and frontier instead of empty bands.
+const PAD := Vector2i(96, 48)
 
 const OVERLAY := {
 	"house": 3, "house_lit": 4, "tower": 5, "capital": 6, "barricade": 7,
@@ -35,7 +38,7 @@ func _init() -> void:
 	mat.shader = SHADER
 	mat.set_shader_parameter("glyphs", ImageTexture.create_from_image(AsciiGlyphs.strip()))
 	mat.set_shader_parameter("glyph_count", float(AsciiGlyphs.ROWS.size()))
-	mat.set_shader_parameter("grid", Vector2(TileBaker.GRID))
+	mat.set_shader_parameter("grid", Vector2(TileBaker.GRID + PAD * 2))
 	material = mat
 
 
@@ -47,12 +50,29 @@ func build(map: ArdeniaMap, tiles: Dictionary) -> void:
 		_names_by_coords[Vector2i(index[key][0], index[key][1])] = key
 	var kinds: PackedByteArray = tiles["kinds"]
 	var variants: PackedByteArray = tiles["variants"]
-	_base = Image.create_empty(TileBaker.GRID.x, TileBaker.GRID.y, false, Image.FORMAT_RGBA8)
-	for y in TileBaker.GRID.y:
-		for x in TileBaker.GRID.x:
-			var i := y * TileBaker.GRID.x + x
-			var home := TileBaker.region_at_tile(tiles, Vector2i(x, y)) != MapBaker.FOREIGN_REGION
-			_base.set_pixel(x, y, Color8(kinds[i], (variants[i] * 64 + TileBaker.cell_hash(Vector2i(x, y))) % 256, 0, 255 if home else 0))
+	var grid := TileBaker.GRID
+	var home_count := map._geo.region_ids.size() if map._geo != null else MapBaker.FOREIGN_REGION
+	_base = Image.create_empty(grid.x + PAD.x * 2, grid.y + PAD.y * 2, false, Image.FORMAT_RGBA8)
+	for y in _base.get_height():
+		for x in _base.get_width():
+			# Outside the grid, mirror it back in; Ardenia's own land never
+			# repeats, so mirrored home cells are drawn as foreign ground.
+			var sx := _reflect(x - PAD.x, grid.x)
+			var sy := _reflect(y - PAD.y, grid.y)
+			var i := sy * grid.x + sx
+			var region := TileBaker.region_at_tile(tiles, Vector2i(sx, sy))
+			var inside := x - PAD.x == sx and y - PAD.y == sy
+			var home := region != MapBaker.FOREIGN_REGION and (inside or region >= home_count)
+			var kind := kinds[i]
+			if not inside and (kind == MapDetails.KIND_FARM or kind == MapDetails.KIND_FALLOW):
+				# Mirrored fields would read as stray stripes beyond the frontier.
+				kind = MapDetails.KIND_GRASS
+			if x < PAD.x:
+				# The only sea is west: open water all the way out.
+				kind = 0
+				home = true
+			_base.set_pixel(x, y, Color8(kind, (variants[i] * 64 + TileBaker.cell_hash(Vector2i(sx, sy))) % 256, 0, 255 if home else 0))
+	MapDetails.dress(_base, tiles, PAD)
 	_data = ImageTexture.create_from_image(_base)
 	(material as ShaderMaterial).set_shader_parameter("cells", _data)
 	var timer := Timer.new()
@@ -66,7 +86,8 @@ func build(map: ArdeniaMap, tiles: Dictionary) -> void:
 ## Match the tile level and on-screen zoom. Zooming in reveals more
 ## characters, not fatter ones.
 func set_level(tile_px: int, screen_px_per_tile: float) -> void:
-	size = Vector2(TileBaker.GRID * tile_px)
+	position = -Vector2(PAD * tile_px)
+	size = Vector2((TileBaker.GRID + PAD * 2) * tile_px)
 	(material as ShaderMaterial).set_shader_parameter("sub", Vector2.ONE * screen_px_per_tile / GLYPH_PX)
 
 
@@ -110,8 +131,28 @@ static func overlay_code(sprite: String) -> int:
 
 
 static func _mark(image: Image, cell: Vector2i, code: int) -> void:
-	if code == 0 or not Rect2i(Vector2i.ZERO, image.get_size()).has_point(cell):
+	if code == 0 or not Rect2i(Vector2i.ZERO, TileBaker.GRID).has_point(cell):
 		return
-	var c := image.get_pixel(cell.x, cell.y)
+	if code >= 8 and code <= 19:
+		# Routes are drawn as continuous lines by `MapLines.routes`, which
+		# reads the same growth state; a glyph copy would double them.
+		return
+	var at := cell + PAD
+	var c := image.get_pixelv(at)
+	if code == 1:
+		# Farmed land keeps its patchwork: some blocks show as green crop.
+		var block := Vector2i(floori((cell.x + (cell.y / 2) % 2 * 2) / 3.0), cell.y / 2)
+		if float(TileBaker.cell_hash(block, 67)) / TileBaker.HASH_MASK < 0.4:
+			c.r8 = MapDetails.KIND_FARM
+			c.g8 = 230
+			code = 0
 	c.b8 = code
-	image.set_pixel(cell.x, cell.y, c)
+	image.set_pixelv(at, c)
+
+
+static func _reflect(v: int, n: int) -> int:
+	if v < 0:
+		v = -v - 1
+	if v >= n:
+		v = 2 * n - v - 1
+	return clampi(v, 0, n - 1)

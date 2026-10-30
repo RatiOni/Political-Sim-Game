@@ -12,8 +12,17 @@ const SELECTION_WIDTH := 2.0
 const DRAG_THRESHOLD := 4.0
 const BUTTON_SIZE := Vector2(44, 44)
 const BUTTON_MARGIN := 8.0
-const DUSK_LABEL := "NITE"
-const DAY_LABEL := "DAY"
+## The day/night toggle shows where it will take you: a moon by day, a sun
+## by night (pixel icons, so they never depend on a font having the glyph).
+const MOON_ICON: Array[String] = [
+	"...#####...", ".#####.....", ".####......", "####.......", "####.......", "####.......",
+	"####.......", "####.......", ".####......", ".#####.....", "...#####...",
+]
+const SUN_ICON: Array[String] = [
+	".....#.....", ".#...#...#.", "..#.....#..", "....###....", "...#####...", "##.#####.##",
+	"...#####...", "....###....", "..#.....#..", ".#...#...#.", ".....#.....",
+]
+const ICON_SCALE := 2
 const ZOOM_IN_KEYS: Array[Key] = [KEY_EQUAL, KEY_PLUS, KEY_KP_ADD]
 const ZOOM_OUT_KEYS: Array[Key] = [KEY_MINUS, KEY_KP_SUBTRACT]
 const CORNERS: Array[Vector2i] = [Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]
@@ -156,10 +165,11 @@ func _build_nodes() -> void:
 	add_child(_notice)
 	_build_zoom_button(zoom_in_button, "ZoomIn", "+", "Zoom in to detail (+ or mouse wheel)", zoom_in)
 	_build_zoom_button(zoom_out_button, "ZoomOut", "-", "Zoom out to the overview (- or mouse wheel)", zoom_out)
-	_build_zoom_button(dusk_button, "Dusk", DUSK_LABEL, "Skip ahead to day or night (the cycle runs on its own)", func() -> void:
+	_build_zoom_button(dusk_button, "Dusk", "", "Skip ahead to day or night (the cycle runs on its own)", func() -> void:
 		DayCycle.skip()
 		set_dusk(DayCycle.is_night()))
-	dusk_button.add_theme_font_size_override("font_size", 16)
+	dusk_button.icon = _pixel_icon(MOON_ICON)
+	dusk_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 
 func _build_zoom_button(button: Button, id: String, label: String, tip: String, action: Callable) -> void:
@@ -206,9 +216,21 @@ func _load() -> bool:
 	ascii.build(self, _tiles)
 	_centres = _region_centres()
 	_labels.cities = _geo.cities
+	_labels.towns = MapDetails.towns(_tiles)
 	_labels.region_points = _centres
 	_labels.to_physical = _map_to_physical
+	_labels.region_of = func(p: Vector2) -> String: return region_at(_physical.position + p / _screen_scale)
 	return true
+
+
+static func _pixel_icon(rows: Array[String]) -> ImageTexture:
+	var image := Image.create_empty(rows[0].length() * ICON_SCALE, rows.size() * ICON_SCALE, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0, 0, 0, 0))
+	for y in rows.size():
+		for x in rows[y].length():
+			if rows[y][x] == "#":
+				image.fill_rect(Rect2i(x * ICON_SCALE, y * ICON_SCALE, ICON_SCALE, ICON_SCALE), MapPalette.DAY[MapPalette.SNOW])
+	return ImageTexture.create_from_image(image)
 
 
 static func _source(tileset: TileSet) -> TileSetAtlasSource:
@@ -271,7 +293,7 @@ func set_dusk(on: bool) -> void:
 	if unavailable:
 		return
 	_dusk = on
-	dusk_button.text = DAY_LABEL if on else DUSK_LABEL
+	dusk_button.icon = _pixel_icon(SUN_ICON if on else MOON_ICON)
 	for px in _tilesets:
 		_source(_tilesets[px]).texture = _dusk_textures[px] if on else _day_textures[px]
 	ascii.set_dusk(on)
@@ -299,7 +321,7 @@ func _apply_routes() -> void:
 		return
 	_routes_key = key
 	routes_builds += 1
-	var image := MapLines.routes(_geo, _palette(), tile_px, _covered, _locked_rails)
+	var image := MapLines.routes(_geo, _palette(), tile_px, _covered, _locked_rails, _tiles)
 	if routes_rect.texture is ImageTexture and Vector2i(routes_rect.texture.get_size()) == image.get_size():
 		(routes_rect.texture as ImageTexture).update(image)
 	else:
@@ -344,6 +366,7 @@ func _set_level(px: int) -> void:
 	ascii.set_level(tile_px, tile_px * zoom * screen_transform().get_scale().x)
 	_labels.region_size = 2 * tile_px * zoom
 	_labels.city_scale = zoom
+	_labels.detail = tile_px == DETAIL
 	zoom_in_button.disabled = tile_px == DETAIL
 	zoom_out_button.disabled = tile_px == OVERVIEW
 	_place()
@@ -365,13 +388,19 @@ func _place() -> void:
 	var wanted := Vector2.ZERO
 	for axis in 2:
 		if extent[axis] <= panel[axis]:
-			wanted[axis] = roundf(_base[axis] + (panel[axis] - extent[axis]) / 2.0)
+			# Centre the country, not the grid: the margins around it are
+			# drawn (sea and frontier), so the panel stays full either way.
+			wanted[axis] = roundf(_base[axis] + panel[axis] / 2.0 - _country.get_center()[axis] * extent[axis])
 		else:
 			var free := roundf(_base[axis] + panel[axis] / 2.0 - _focus[axis] * extent[axis])
 			wanted[axis] = clampf(free, ceilf(_base[axis] + panel[axis] - extent[axis]), floorf(_base[axis]))
 	_origin = wanted
 	_focus = (_base + panel / 2.0 - _origin) / extent
 	_canvas.position = _origin
+	_labels.bounds = Rect2(_base, panel)
+	_labels.blocked.clear()
+	for button in [zoom_in_button, zoom_out_button, dusk_button]:
+		_labels.blocked.append(Rect2(_base + button.position * _screen_scale, button.size * _screen_scale).grow(4))
 	polygons.clear()
 	for id in _outlines:
 		var ring := PackedVector2Array()

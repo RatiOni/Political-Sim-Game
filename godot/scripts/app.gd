@@ -149,7 +149,7 @@ func _resize_layout() -> void:
 	%RecordsPanel.visible = _records_open
 	%RegionPanel.visible = _region_panel_open
 	find_child("MapHint").visible = not compact and not _desk_open()
-	%MonthlyReport.custom_minimum_size.y = 88 if compact or _desk_open() else 192
+	%MonthlyReport.custom_minimum_size.y = 88 if compact or _desk_open() else 150
 	%RegionBrief.find_child("Details").custom_minimum_size.y = 48 if compact else 84
 	for name in ["Rule", "PressureHeading", "PressureValue", "Details"]:
 		%RegionBrief.find_child(name).visible = not compact
@@ -245,7 +245,11 @@ func apply_snapshot(value: Dictionary) -> void:
 	_refresh_rooms()
 	%DateLabel.text = "▌ %s ▌" % str(snapshot.get("date", {}).get("text", "Awaiting snapshot"))
 	var player: Dictionary = snapshot.get("player", {})
-	find_child("OfficeLabel").text = "%s / %s" % [player.get("title", "Office of government"), player.get("name", "—")]
+	# The header column is narrow beside eleven controls: the name always
+	# fits, the full office rides in the tooltip.
+	var office: Label = find_child("OfficeLabel")
+	office.text = str(player.get("name", "—"))
+	office.tooltip_text = "%s / %s" % [player.get("title", "Office of government"), player.get("name", "—")]
 	find_child("StabilityLabel").text = str(snapshot.get("headline", {}).get("stability", "—"))
 	var economy: Dictionary = snapshot.get("economy", {})
 	_refresh_vitals(player, economy, snapshot.get("headline", {}))
@@ -1857,7 +1861,9 @@ func _refresh_controls() -> void:
 	find_child("LoadButton").disabled = not ready
 
 func _set_status(message: String) -> void:
-	find_child("PreviewStatus").text = message
+	# The footer carries the full line; the header keeps only its last word
+	# ("READY", "PAUSED"…) so it never elides mid-phrase.
+	find_child("PreviewStatus").text = message.get_slice("/", message.get_slice_count("/") - 1).strip_edges()
 	find_child("Footer").text = "MINISTERIAL WIRE  /  %s" % message
 
 func _show_blocking_error(message: String) -> void:
