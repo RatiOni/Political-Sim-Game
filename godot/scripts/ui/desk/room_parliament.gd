@@ -24,6 +24,7 @@ const AISLE_GAP := 0.06             # radians
 const PITCH := 10.5                 # a member's width on the bench, at u = 1
 const WINDOWS := [64.0, 146.0, 228.0, 412.0, 494.0]
 const BOARD := Rect2(548, 46, 72, 96)
+const WELL_FOOT := 232.0            # the well ends here, clear above the innermost tier
 
 const GLASS := Color(0.07, 0.08, 0.10)
 const PANEL := Color(0.10, 0.10, 0.12)
@@ -63,8 +64,10 @@ static func paint(v: DeskView, t: float, d: Dictionary) -> void:
 	_board(v, t, division, ayes)
 	_floor(v)
 	_rostrum(v, t)
-	_benches(v, t, _seat_colours(d.get("factions", [])), division, ayes)
+	# The well sits in the open floor inside the innermost arc and is painted
+	# before the benches, so nothing in it can ever overprint a member.
 	_well(v, t)
+	_benches(v, t, d.get("factions", []), division, ayes)
 	_press_rail(v, t)
 	v.label(Vector2(368, 128), "THE ROSTRUM", Vector2(346, 150))
 	v.label(Vector2(16, 410), "PRESS GALLERY · FIXED")
@@ -252,42 +255,48 @@ static func _rostrum(v: DeskView, t: float) -> void:
 static func _well(v: DeskView, t: float) -> void:
 	# The well of the house: a green carpet before the dais, the clerks at
 	# their table, the Table of the House with the mace, an usher pacing.
+	# Everything stays above the innermost tier's floor (y ~235 at the centre,
+	# rising toward the ends), so the members' heads have clear floor above them.
 	var carpet := Color(0.11, 0.13, 0.10)
-	v.poly(PackedVector2Array([Vector2(262, 186), Vector2(378, 186), Vector2(408, 252), Vector2(232, 252)]), carpet)
-	v.poly(PackedVector2Array([Vector2(270, 190), Vector2(370, 190), Vector2(396, 248), Vector2(244, 248)]), carpet.darkened(0.3))
+	v.poly(PackedVector2Array([Vector2(266, 186), Vector2(374, 186), Vector2(356, WELL_FOOT), Vector2(284, WELL_FOOT)]), carpet)
+	v.poly(PackedVector2Array([Vector2(272, 189), Vector2(368, 189), Vector2(352, WELL_FOOT - 3), Vector2(288, WELL_FOOT - 3)]), carpet.darkened(0.3))
 	# The clerks, wigged, behind their table.
 	for i in 3:
-		var x := 291.0 + i * 24.0
+		var x := 294.0 + i * 22.0
 		var bob := 1.0 if sin(t * 0.5 + i * 2.2) > 0.9 else 0.0
-		v.figure(x, 206 + bob, Color(0.10, 0.10, 0.11), "sit", t, 19.0, DeskView.SKIN)
+		v.figure(x, 203 + bob, Color(0.10, 0.10, 0.11), "sit", t, 16.0, DeskView.SKIN)
 		v.rect(x, 187 + bob, 4, 1.5, DeskView.PAPER)
-	v.rect(278, 199, 84, 4, COLUMN)
-	v.rect(278, 199, 84, 1.5, DeskView.PAPER.darkened(0.15))
-	v.rect(282, 203, 76, 6, Color(0.12, 0.10, 0.09))
+	v.rect(282, 197, 76, 3.5, COLUMN)
+	v.rect(282, 197, 76, 1.5, DeskView.PAPER.darkened(0.15))
+	v.rect(285, 200.5, 70, 5, Color(0.12, 0.10, 0.09))
 	# Papers on the clerks' table, one turned now and then.
-	v.rect(286, 197, 8, 2, DeskView.PAPER)
-	v.rect(346, 197, 8, 2, DeskView.PAPER)
+	v.rect(288, 195, 8, 2, DeskView.PAPER)
+	v.rect(344, 195, 8, 2, DeskView.PAPER)
 	var turn := fmod(t * 0.25, 1.0)
 	if turn < 0.15:
-		v.line(Vector2(312, 198), Vector2(312 + 6 * cos(turn * PI / 0.15), 194), DeskView.PAPER, 1.5)
+		v.line(Vector2(312, 196), Vector2(312 + 6 * cos(turn * PI / 0.15), 192), DeskView.PAPER, 1.5)
 	else:
-		v.rect(308, 197, 8, 2, DeskView.PAPER.darkened(0.1))
+		v.rect(308, 195, 8, 2, DeskView.PAPER.darkened(0.1))
 	# The Table of the House: dispatch boxes and the gilt mace.
-	v.rect(288, 222, 64, 9, COLUMN.darkened(0.3))
-	v.rect(288, 222, 64, 2, DESK_TOP)
-	v.rect(292, 231, 3, 8, Color(0.12, 0.10, 0.09))
-	v.rect(345, 231, 3, 8, Color(0.12, 0.10, 0.09))
-	v.rect(296, 218, 9, 5, DeskView.PAPER.darkened(0.25))
-	v.rect(335, 218, 9, 5, DeskView.PAPER.darkened(0.25))
-	v.line(Vector2(306, 221), Vector2(334, 219), DeskView.LAMP, 2.5)
-	v.rect(331, 216, 5, 5, DeskView.LAMP)
+	v.rect(294, 213, 52, 7, COLUMN.darkened(0.3))
+	v.rect(294, 213, 52, 2, DESK_TOP)
+	v.rect(298, 220, 3, 6, Color(0.12, 0.10, 0.09))
+	v.rect(339, 220, 3, 6, Color(0.12, 0.10, 0.09))
+	v.rect(300, 209, 8, 4, DeskView.PAPER.darkened(0.25))
+	v.rect(332, 209, 8, 4, DeskView.PAPER.darkened(0.25))
+	v.line(Vector2(309, 212), Vector2(331, 210.5), DeskView.LAMP, 2.0)
+	v.rect(328, 207.5, 4, 4, DeskView.LAMP)
+	# The usher paces the carpet in front of the Table.
 	var pace := 0.5 - 0.5 * cos(t * 0.18)
-	v.figure(248 + pace * 136.0, 252, Color(0.12, 0.12, 0.13), "walk", t * 0.6, 22.0, DeskView.SKIN)
+	v.figure(290 + pace * 60.0, WELL_FOOT - 1, Color(0.12, 0.12, 0.13), "walk", t * 0.6, 16.0, DeskView.SKIN)
 
 
 # --- the benches ----------------------------------------------------------
 
-static func _seat_colours(factions: Array) -> Array:
+## Parties in chamber order, coloured exactly as the assembly strip does it
+## (`SeatStrip.set_factions`): government first, then by size, through
+## `UiPalette.party_colors`, so the room and the strip agree. [{color, seats}]
+static func _parties(factions: Array) -> Array:
 	var sorted := factions.duplicate()
 	sorted.sort_custom(func(a, b):
 		var ca := bool(a.get("in_coalition", false))
@@ -302,12 +311,71 @@ static func _seat_colours(factions: Array) -> Array:
 	var out: Array = []
 	for i in sorted.size():
 		# Party coats, a little muted so the chamber reads by bloc.
-		var c: Color = colours[i].lerp(SUIT, 0.3)
-		for s in int(sorted[i].get("seats", 0)):
-			out.append(c)
-	if out.is_empty():
-		for s in 100:
-			out.append(DeskView.FIGURE)
+		out.append({"color": colours[i].lerp(SUIT, 0.3), "seats": maxi(0, int(sorted[i].get("seats", 0)))})
+	return out
+
+
+## Largest-remainder apportionment of `n` drawn places among parties holding
+## `seats`, so the room shows each party's true share however many places the
+## benches hold. Sums to exactly `n` (all zeros when nobody holds a seat).
+static func allocate_seats(seats: Array, n: int) -> Array[int]:
+	var out: Array[int] = []
+	out.resize(seats.size())
+	out.fill(0)
+	var total := 0
+	for s in seats:
+		total += maxi(0, int(s))
+	if total <= 0 or n <= 0:
+		return out
+	var rest: Array = []
+	var given := 0
+	for i in seats.size():
+		var quota := float(maxi(0, int(seats[i]))) * n / total
+		out[i] = int(floorf(quota))
+		given += out[i]
+		rest.append([quota - out[i], int(seats[i]), i])
+	# Biggest fraction first; a tie goes to the bigger party, then the earlier.
+	rest.sort_custom(func(a, b):
+		if a[0] != b[0]:
+			return a[0] > b[0]
+		if a[1] != b[1]:
+			return a[1] > b[1]
+		return a[2] < b[2])
+	for k in n - given:
+		out[rest[k][2]] += 1
+	return out
+
+
+## One coat colour per drawn place, in left-to-right chamber order.
+static func _seat_colours(factions: Array, n: int) -> Array:
+	var parties := _parties(factions)
+	var seats: Array = []
+	for p in parties:
+		seats.append(p["seats"])
+	var counts := allocate_seats(seats, n)
+	var out: Array = []
+	for i in parties.size():
+		for _s in counts[i]:
+			out.append(parties[i]["color"])
+	while out.size() < n:
+		out.append(DeskView.FIGURE)        # no assembly figures yet
+	return out
+
+
+## Every member's place as Vector2(row, angle), row by row, far to near.
+static func _places() -> Array:
+	var out: Array = []
+	for r in ROWS:
+		var radius := INNER + r * STEP
+		var u := 1.2 + r / float(ROWS - 1) * 0.55
+		var a := ARC_FROM + 0.004
+		while a < ARC_TO:
+			var aisle := _aisle_at(a)
+			if aisle >= 0:
+				a = _aisle_angle(aisle) + AISLE_GAP * 0.5 + 0.002
+				continue
+			out.append(Vector2(r, a))
+			a += (PITCH * u) / _speed(a, radius)
 	return out
 
 
@@ -357,28 +425,52 @@ static func _arc_line(v: DeskView, radius: float, a0: float, a1: float, c: Color
 ## drawn far to near so each desk covers its own members' laps. Seats are
 ## coloured by party wedge, government on the left; aisles of steps cut the
 ## tiers into blocks.
-static func _benches(v: DeskView, t: float, seats: Array, division: bool, ayes: float) -> void:
-	var standing := ayes if division else 0.0
+static func _benches(v: DeskView, t: float, factions: Array, division: bool, ayes: float) -> void:
+	# Parties are wedges: every place in every tier is ranked left to right
+	# (by angle, the far tier first on a tie) and each party takes the next
+	# run of places, so the government holds the left, each party is
+	# contiguous, and each holds exactly its largest-remainder share.
+	var places := _places()
+	var n := places.size()
+	var order: Array = range(n)
+	order.sort_custom(func(i, j):
+		if places[i].y != places[j].y:
+			return places[i].y > places[j].y
+		return places[i].x < places[j].x)
+	var rank: Array[int] = []
+	rank.resize(n)
+	for k in n:
+		rank[order[k]] = k
+	var colours := _seat_colours(factions, n)
+	var standing := int(round(ayes * n)) if division else 0
+	# Floors and stairs go down first, under every member: the tier floors,
+	# dark, so heads and shoulders stand out on them, and the aisle stairs
+	# cut through every tier. Drawn after the members, the stairs used to
+	# clip the coats of the members sitting beside them.
+	for r in ROWS:
+		_strip(v, INNER + r * STEP - STEP * 0.75, ARC_FROM - 0.02, ARC_TO + 0.02, STEP * 0.75 * SQUASH + 3.0, TIER)
+	for i in AISLES:
+		var a := _aisle_angle(i)
+		var w := AISLE_GAP * 0.42
+		var outer := INNER + (ROWS - 1) * STEP + 12
+		v.poly(PackedVector2Array([_on_arc(a - w, INNER - 14), _on_arc(a + w, INNER - 14),
+				_on_arc(a + w, outer), _on_arc(a - w, outer)]), Color(0.10, 0.09, 0.09))
+		for s in ROWS * 2 + 1:
+			var rad := INNER - 12 + s * STEP * 0.5
+			v.line(_on_arc(a - w, rad), _on_arc(a + w, rad), DeskView.STONE.darkened(0.15 if s % 2 == 0 else 0.45), 1.0)
+	var index := 0
 	for r in ROWS:
 		var radius := INNER + r * STEP
 		var near := r / float(ROWS - 1)
 		var u := 1.2 + near * 0.55
 		var desk_h := 5.0 + near * 3.0
-		# The tier floor, dark, so heads and shoulders stand out on it.
-		_strip(v, radius - STEP * 0.75, ARC_FROM - 0.02, ARC_TO + 0.02, STEP * 0.75 * SQUASH + 3.0, TIER)
-		# Members along the arc, stepping by screen distance.
-		var a := ARC_FROM + 0.004
+		# Members along the arc, stepping by screen distance (see _places).
 		var k := 0
-		while a < ARC_TO:
-			var aisle := _aisle_at(a)
-			if aisle >= 0:
-				a = _aisle_angle(aisle) + AISLE_GAP * 0.5 + 0.002
-				continue
-			var frac := (ARC_TO - a) / (ARC_TO - ARC_FROM)
-			var index := clampi(int(frac * seats.size()), 0, seats.size() - 1)
+		while index < n and int(places[index].x) == r:
+			var seat := rank[index]
 			var shift := 1.0 if sin(t * 0.6 + r * 3.1 + k * 1.7) > 0.97 else 0.0
-			_member(v, _on_arc(a, radius), u, seats[index], frac < standing, shift, r * 131 + k)
-			a += (PITCH * u) / _speed(a, radius)
+			_member(v, _on_arc(places[index].y, radius), u, colours[seat], seat < standing, shift, r * 131 + k)
+			index += 1
 			k += 1
 		# The long desk of each block: a lit top edge over a panelled face.
 		for block in AISLES + 1:
@@ -398,16 +490,6 @@ static func _benches(v: DeskView, t: float, seats: Array, division: bool, ayes: 
 					2:
 						var glow := 0.85 + 0.15 * sin(t * 0.7 + s + r)
 						v.rect(q.x, q.y - 3, 1.5 + near, 2 + near, DeskView.LAMP * Color(glow, glow, glow))
-	# The aisle stairs, cut through every tier.
-	for i in AISLES:
-		var a := _aisle_angle(i)
-		var w := AISLE_GAP * 0.42
-		var outer := INNER + (ROWS - 1) * STEP + 12
-		v.poly(PackedVector2Array([_on_arc(a - w, INNER - 14), _on_arc(a + w, INNER - 14),
-				_on_arc(a + w, outer), _on_arc(a - w, outer)]), Color(0.10, 0.09, 0.09))
-		for s in ROWS * 2 + 1:
-			var rad := INNER - 12 + s * STEP * 0.5
-			v.line(_on_arc(a - w, rad), _on_arc(a + w, rad), DeskView.STONE.darkened(0.15 if s % 2 == 0 else 0.45), 1.0)
 
 
 ## One member: a face over a shoulder line in party colour, a head taller
