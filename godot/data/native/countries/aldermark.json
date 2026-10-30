@@ -1,0 +1,275 @@
+{
+  "id": "aldermark",
+  "name": "Aldermark",
+  "regime_type": "parliamentary_democracy",
+  "population": 81000000,
+  "bureaucratic_capacity": 0.88,
+  "national_traits": [
+    "industrial_powerhouse",
+    "export_economy",
+    "fiscal_hawk"
+  ],
+  "meta": {
+    "short_description": "The largest economy of the Western core and the Concert's paymaster. Aldermark builds the machines the basin wants, funds most of the International Stabilisation Fund, and expects every programme it pays for to balance its books.",
+    "difficulty": "normal",
+    "stability_value": 0.82,
+    "civil_war_risk": 0.02,
+    "capital": "Bernhold",
+    "strengths": [
+      "The strongest industry in the West",
+      "The ISF's largest funder",
+      "Deep, disciplined institutions"
+    ],
+    "weaknesses": [
+      "Dependent on Krasovan gas itself",
+      "A cautious public that hates risk",
+      "Reunification still being paid for"
+    ]
+  },
+  "economy": {
+    "gdp": 420000.0,
+    "growth_rate": 0.022,
+    "inflation": 0.03,
+    "unemployment": 0.08,
+    "public_debt_pct": 0.5,
+    "budget": {
+      "revenue": 98000.0,
+      "expenditure": 101000.0
+    },
+    "sectors": [
+      {
+        "id": "industry",
+        "name": "Engineering and Cars",
+        "gdp_share": 0.36,
+        "growth_rate": 0.025,
+        "employment_share": 0.32,
+        "aligned_faction_ids": [
+          "christian_union"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Services",
+        "gdp_share": 0.58,
+        "growth_rate": 0.022,
+        "employment_share": 0.62,
+        "aligned_faction_ids": [
+          "free_democrats"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.06,
+        "growth_rate": 0.005,
+        "employment_share": 0.06,
+        "aligned_faction_ids": [
+          "christian_union"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "christian_union",
+      "name": "Christian Union",
+      "ideology": {
+        "economic": 0.4,
+        "social": -0.3
+      },
+      "power": 0.75,
+      "loyalty": 0.65,
+      "seats": 40,
+      "in_coalition": true,
+      "support": 0.4,
+      "color": "#3a3a3a",
+      "role": "@establishment",
+      "leader": "Helmar Kolberg"
+    },
+    {
+      "id": "social_democrats_al",
+      "name": "Social Democratic Party",
+      "ideology": {
+        "economic": -0.4,
+        "social": 0.3
+      },
+      "power": 0.65,
+      "loyalty": 0.3,
+      "seats": 36,
+      "in_coalition": false,
+      "support": 0.36,
+      "color": "#d03030",
+      "role": "@labour",
+      "leader": "Rudolf Scharfen"
+    },
+    {
+      "id": "free_democrats",
+      "name": "Free Democrats",
+      "ideology": {
+        "economic": 0.8,
+        "social": 0.5
+      },
+      "power": 0.4,
+      "loyalty": 0.55,
+      "seats": 12,
+      "in_coalition": true,
+      "support": 0.12,
+      "color": "#e8c830",
+      "role": "@business",
+      "leader": "Klaus Kinkelmann"
+    },
+    {
+      "id": "greens_al",
+      "name": "Greens",
+      "ideology": {
+        "economic": -0.2,
+        "social": 0.85
+      },
+      "power": 0.3,
+      "loyalty": -0.1,
+      "seats": 12,
+      "in_coalition": false,
+      "support": 0.12,
+      "color": "#3aa03a",
+      "role": "@reform",
+      "leader": "Jost Fischbach"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "ald1",
+      "name": "Theo Waigand",
+      "portfolio": "Finance",
+      "faction_id": "christian_union",
+      "competence": 0.61,
+      "loyalty": 0.55,
+      "ambition": 0.35
+    },
+    {
+      "id": "ald2",
+      "name": "Manfred Kanther",
+      "portfolio": "Interior",
+      "faction_id": "christian_union",
+      "competence": 0.61,
+      "loyalty": 0.55,
+      "ambition": 0.25
+    },
+    {
+      "id": "ald3",
+      "name": "Hans Genschow",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "free_democrats",
+      "competence": 0.61,
+      "loyalty": 0.59,
+      "ambition": 0.5
+    },
+    {
+      "id": "ald4",
+      "name": "Volker Rühland",
+      "portfolio": "Defense",
+      "faction_id": "christian_union",
+      "competence": 0.61,
+      "loyalty": 0.75,
+      "ambition": 0.4
+    },
+    {
+      "id": "ald5",
+      "name": "Günter Rexrath",
+      "portfolio": "Economy",
+      "faction_id": "free_democrats",
+      "competence": 0.61,
+      "loyalty": 0.63,
+      "ambition": 0.3
+    },
+    {
+      "id": "ald6",
+      "name": "Sabine Leuthold",
+      "portfolio": "Justice",
+      "faction_id": "free_democrats",
+      "competence": 0.61,
+      "loyalty": 0.55,
+      "ambition": 0.55
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Helmar Kolberg",
+    "title": "Chancellor",
+    "faction_id": "christian_union",
+    "ideology_economic": 0.4,
+    "ideology_social": -0.3,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "trader",
+    "ally": "valcourt"
+  },
+  "neighbours": [
+    "valcourt",
+    "nordhaven",
+    "solheim"
+  ],
+  "default_relations": {
+    "ozmara": {
+      "score": 0.3,
+      "trade_volume": 2400.0
+    },
+    "borynia": {
+      "score": 0.2,
+      "trade_volume": 700.0
+    },
+    "kalvia": {
+      "score": 0.45,
+      "trade_volume": 600.0
+    },
+    "temirsk": {
+      "score": 0.15,
+      "trade_volume": 500.0
+    },
+    "turaz": {
+      "score": 0.2,
+      "trade_volume": 600.0
+    },
+    "selenne": {
+      "score": 0.55,
+      "trade_volume": 1800.0
+    },
+    "solheim": {
+      "score": 0.65,
+      "trade_volume": 4000.0
+    },
+    "valcourt": {
+      "score": 0.75,
+      "trade_volume": 4000.0
+    },
+    "nordhaven": {
+      "score": 0.65,
+      "trade_volume": 3500.0
+    },
+    "brisca": {
+      "score": 0.55,
+      "trade_volume": 4000.0
+    },
+    "columbria": {
+      "score": 0.55,
+      "trade_volume": 4000.0
+    },
+    "krasova": {
+      "score": -0.05,
+      "trade_volume": 3000.0
+    },
+    "veldoria": {
+      "score": 0.45,
+      "trade_volume": 1800.0
+    },
+    "ardenia": {
+      "score": 0.2,
+      "trade_volume": 500.0
+    },
+    "hanlin": {
+      "score": 0.15,
+      "trade_volume": 2500.0
+    }
+  }
+}

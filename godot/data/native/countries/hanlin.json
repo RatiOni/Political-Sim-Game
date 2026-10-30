@@ -1,0 +1,262 @@
+{
+  "id": "hanlin",
+  "name": "Hanlin",
+  "regime_type": "authoritarian",
+  "population": 1180000000,
+  "bureaucratic_capacity": 0.72,
+  "national_traits": [
+    "great_power",
+    "export_economy",
+    "single_party"
+  ],
+  "meta": {
+    "short_description": "The eastern great power beyond the steppe, growing faster than any economy on earth and patient enough to wait for the rest. Hanlin buys influence with loans, ports and railways rather than armies, and its bankers have already visited every capital in the basin.",
+    "difficulty": "normal",
+    "stability_value": 0.74,
+    "civil_war_risk": 0.04,
+    "capital": "Beiyuan",
+    "strengths": [
+      "A vast and fast-growing economy",
+      "Cheap state credit to lend",
+      "A government that plans in decades"
+    ],
+    "weaknesses": [
+      "Poverty in its interior",
+      "A leadership that fears its own people",
+      "Growth hungry for oil it lacks"
+    ]
+  },
+  "economy": {
+    "gdp": 560000.0,
+    "growth_rate": 0.11,
+    "inflation": 0.17,
+    "unemployment": 0.03,
+    "public_debt_pct": 0.22,
+    "budget": {
+      "revenue": 60000.0,
+      "expenditure": 66000.0
+    },
+    "sectors": [
+      {
+        "id": "industry",
+        "name": "Manufacturing",
+        "gdp_share": 0.46,
+        "growth_rate": 0.13,
+        "employment_share": 0.24,
+        "aligned_faction_ids": [
+          "central_committee"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.2,
+        "growth_rate": 0.04,
+        "employment_share": 0.54,
+        "aligned_faction_ids": [
+          "rural_cadres"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Services",
+        "gdp_share": 0.34,
+        "growth_rate": 0.1,
+        "employment_share": 0.22,
+        "aligned_faction_ids": [
+          "coastal_reformers"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "central_committee",
+      "name": "Central Committee",
+      "ideology": {
+        "economic": -0.25,
+        "social": -0.6
+      },
+      "power": 0.9,
+      "loyalty": 0.75,
+      "seats": 70,
+      "in_coalition": true,
+      "support": 0.7,
+      "color": "#c8202a",
+      "role": "@establishment",
+      "leader": "Jiang Zhemin"
+    },
+    {
+      "id": "coastal_reformers",
+      "name": "Coastal Reformers",
+      "ideology": {
+        "economic": 0.6,
+        "social": 0.25
+      },
+      "power": 0.5,
+      "loyalty": 0.6,
+      "seats": 18,
+      "in_coalition": true,
+      "support": 0.18,
+      "color": "#e0a03a",
+      "role": "@business",
+      "leader": "Zhu Rongjian"
+    },
+    {
+      "id": "rural_cadres",
+      "name": "Rural Cadres",
+      "ideology": {
+        "economic": -0.55,
+        "social": -0.35
+      },
+      "power": 0.3,
+      "loyalty": 0.5,
+      "seats": 10,
+      "in_coalition": true,
+      "support": 0.1,
+      "color": "#8a6a2a",
+      "role": "@agrarian",
+      "leader": "Li Pengfei"
+    },
+    {
+      "id": "democracy_wall",
+      "name": "Democracy Wall",
+      "ideology": {
+        "economic": 0.2,
+        "social": 0.75
+      },
+      "power": 0.05,
+      "loyalty": -0.8,
+      "seats": 2,
+      "in_coalition": false,
+      "support": 0.02,
+      "color": "#3a7ad0",
+      "role": "@reform",
+      "leader": "Wei Jingshan"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "han1",
+      "name": "Liu Zhongqi",
+      "portfolio": "Finance",
+      "faction_id": "coastal_reformers",
+      "competence": 0.73,
+      "loyalty": 0.75,
+      "ambition": 0.55
+    },
+    {
+      "id": "han2",
+      "name": "Tao Sijun",
+      "portfolio": "Interior",
+      "faction_id": "central_committee",
+      "competence": 0.73,
+      "loyalty": 0.55,
+      "ambition": 0.45
+    },
+    {
+      "id": "han3",
+      "name": "Qian Qichang",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "central_committee",
+      "competence": 0.73,
+      "loyalty": 0.55,
+      "ambition": 0.35
+    },
+    {
+      "id": "han4",
+      "name": "General Chi Haotang",
+      "portfolio": "Defense",
+      "faction_id": "central_committee",
+      "competence": 0.73,
+      "loyalty": 0.71,
+      "ambition": 0.25
+    },
+    {
+      "id": "han5",
+      "name": "Wu Yilan",
+      "portfolio": "Economy",
+      "faction_id": "coastal_reformers",
+      "competence": 0.73,
+      "loyalty": 0.63,
+      "ambition": 0.5
+    },
+    {
+      "id": "han6",
+      "name": "Xiao Yangdi",
+      "portfolio": "Justice",
+      "faction_id": "central_committee",
+      "competence": 0.73,
+      "loyalty": 0.63,
+      "ambition": 0.4
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Jiang Zhemin",
+    "title": "General Secretary",
+    "faction_id": "central_committee",
+    "ideology_economic": -0.25,
+    "ideology_social": -0.6,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "trader",
+    "ally": "temirsk"
+  },
+  "neighbours": [
+    "temirsk",
+    "krasova"
+  ],
+  "default_relations": {
+    "temirsk": {
+      "score": 0.4,
+      "trade_volume": 1500.0
+    },
+    "ulgar": {
+      "score": 0.25,
+      "trade_volume": 300.0
+    },
+    "turaz": {
+      "score": 0.25,
+      "trade_volume": 400.0
+    },
+    "aldermark": {
+      "score": 0.15,
+      "trade_volume": 2500.0
+    },
+    "ilmar": {
+      "score": 0.2,
+      "trade_volume": 600.0
+    },
+    "azhara": {
+      "score": 0.2,
+      "trade_volume": 1500.0
+    },
+    "columbria": {
+      "score": 0.0,
+      "trade_volume": 4000.0
+    },
+    "krasova": {
+      "score": 0.3,
+      "trade_volume": 2000.0
+    },
+    "solheim": {
+      "score": 0.1,
+      "trade_volume": 1500.0
+    },
+    "ardenia": {
+      "score": 0.05,
+      "trade_volume": 150.0
+    },
+    "qadir": {
+      "score": 0.2,
+      "trade_volume": 900.0
+    },
+    "yaskar": {
+      "score": 0.1,
+      "trade_volume": 100.0
+    }
+  }
+}

@@ -1,0 +1,238 @@
+{
+  "id": "ulgar",
+  "name": "Ulgar",
+  "regime_type": "authoritarian",
+  "population": 24000000,
+  "bureaucratic_capacity": 0.55,
+  "national_traits": [
+    "cotton_economy",
+    "personalist",
+    "centralized"
+  ],
+  "meta": {
+    "short_description": "A hot, crowded river republic south of Temirsk ruled by a president who writes the schoolbooks himself. Its creed is national rebirth, its economy is cotton picked by order, and it sits in the Krasovan Economic Union because nobody else would have it.",
+    "difficulty": "normal",
+    "stability_value": 0.6,
+    "civil_war_risk": 0.12,
+    "capital": "Tashkand",
+    "strengths": [
+      "A large, young population",
+      "Gold and cotton exports",
+      "A regime with no rivals at home"
+    ],
+    "weaknesses": [
+      "Forced labour in the cotton fields",
+      "Rivers drying into the desert",
+      "A succession run by the security service"
+    ]
+  },
+  "economy": {
+    "gdp": 24000.0,
+    "growth_rate": 0.03,
+    "inflation": 0.22,
+    "unemployment": 0.12,
+    "public_debt_pct": 0.25,
+    "budget": {
+      "revenue": 6000.0,
+      "expenditure": 6600.0
+    },
+    "sectors": [
+      {
+        "id": "agriculture",
+        "name": "Cotton and Fields",
+        "gdp_share": 0.32,
+        "growth_rate": 0.015,
+        "employment_share": 0.46,
+        "aligned_faction_ids": [
+          "mahalla_councils"
+        ]
+      },
+      {
+        "id": "resources",
+        "name": "Gold and Gas",
+        "gdp_share": 0.24,
+        "growth_rate": 0.035,
+        "employment_share": 0.08,
+        "aligned_faction_ids": [
+          "national_rebirth"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Bazaars and Services",
+        "gdp_share": 0.44,
+        "growth_rate": 0.03,
+        "employment_share": 0.46,
+        "aligned_faction_ids": [
+          "bazaar_guild"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "national_rebirth",
+      "name": "National Rebirth Party",
+      "ideology": {
+        "economic": -0.3,
+        "social": -0.75
+      },
+      "power": 0.9,
+      "loyalty": 0.75,
+      "seats": 70,
+      "in_coalition": true,
+      "support": 0.7,
+      "color": "#2f8a6a",
+      "role": "@nationalist",
+      "leader": "Islom Karimbek"
+    },
+    {
+      "id": "mahalla_councils",
+      "name": "Mahalla Councils",
+      "ideology": {
+        "economic": -0.5,
+        "social": -0.45
+      },
+      "power": 0.35,
+      "loyalty": 0.5,
+      "seats": 14,
+      "in_coalition": true,
+      "support": 0.14,
+      "color": "#9aa040",
+      "role": "@agrarian",
+      "leader": "Rustam Inoyatov"
+    },
+    {
+      "id": "bazaar_guild",
+      "name": "Bazaar Guild",
+      "ideology": {
+        "economic": 0.6,
+        "social": -0.2
+      },
+      "power": 0.25,
+      "loyalty": 0.2,
+      "seats": 10,
+      "in_coalition": false,
+      "support": 0.1,
+      "color": "#c48a3a",
+      "role": "@business",
+      "leader": "Gulnora Saidova"
+    },
+    {
+      "id": "unity_movement",
+      "name": "Unity Movement",
+      "ideology": {
+        "economic": 0.1,
+        "social": 0.55
+      },
+      "power": 0.1,
+      "loyalty": -0.7,
+      "seats": 6,
+      "in_coalition": false,
+      "support": 0.06,
+      "color": "#5a7fd0",
+      "role": "@reform",
+      "leader": "Abdurahim Pulatov"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "ulg1",
+      "name": "Rustam Azimov",
+      "portfolio": "Finance",
+      "faction_id": "national_rebirth",
+      "competence": 0.7,
+      "loyalty": 0.59,
+      "ambition": 0.5
+    },
+    {
+      "id": "ulg2",
+      "name": "Zokir Almatov",
+      "portfolio": "Interior",
+      "faction_id": "national_rebirth",
+      "competence": 0.7,
+      "loyalty": 0.71,
+      "ambition": 0.4
+    },
+    {
+      "id": "ulg3",
+      "name": "Abdulaziz Kamilov",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "national_rebirth",
+      "competence": 0.7,
+      "loyalty": 0.75,
+      "ambition": 0.3
+    },
+    {
+      "id": "ulg4",
+      "name": "General Rustam Ahmedov",
+      "portfolio": "Defense",
+      "faction_id": "national_rebirth",
+      "competence": 0.7,
+      "loyalty": 0.59,
+      "ambition": 0.55
+    },
+    {
+      "id": "ulg5",
+      "name": "Shavkat Mirzaev",
+      "portfolio": "Economy",
+      "faction_id": "national_rebirth",
+      "competence": 0.7,
+      "loyalty": 0.67,
+      "ambition": 0.45
+    },
+    {
+      "id": "ulg6",
+      "name": "Bakhtiyor Tursunov",
+      "portfolio": "Justice",
+      "faction_id": "national_rebirth",
+      "competence": 0.7,
+      "loyalty": 0.67,
+      "ambition": 0.35
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Islom Karimbek",
+    "title": "President",
+    "faction_id": "national_rebirth",
+    "ideology_economic": -0.3,
+    "ideology_social": -0.75,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "ideologue",
+    "ally": "krasova"
+  },
+  "neighbours": [
+    "temirsk",
+    "krasova"
+  ],
+  "default_relations": {
+    "zelvany": {
+      "score": 0.4,
+      "trade_volume": 100.0
+    },
+    "temirsk": {
+      "score": 0.05,
+      "trade_volume": 300.0
+    },
+    "krasova": {
+      "score": 0.5,
+      "trade_volume": 900.0
+    },
+    "solheim": {
+      "score": -0.35,
+      "trade_volume": 50.0
+    },
+    "columbria": {
+      "score": -0.3,
+      "trade_volume": 50.0
+    },
+    "hanlin": {
+      "score": 0.25,
+      "trade_volume": 300.0
+    }
+  }
+}

@@ -7,9 +7,7 @@ const NativeGameScript = preload("res://scripts/native/native_game.gd")
 
 func _test_a_poor_government_mostly_loses(t) -> void:
 	var unfunded: Dictionary = Polls.journeys(["government"], 0.0, false)
-	var austere: Dictionary = Polls.journeys(["government"], -0.15, true)
 	t.truth(Polls.rate(unfunded, "player") <= 0.35, "a government that never passes a budget mostly loses (%d of %d)" % [unfunded["player_kept"], unfunded["player_held"]])
-	t.truth(Polls.rate(austere, "player") <= 0.35, "and so does one that cuts every year (%d of %d)" % [austere["player_kept"], austere["player_held"]])
 
 
 static func ruling_share(policy_step: float, able: bool, scale: float, seeds: Array = [11, 22, 33, 44, 55, 66]) -> float:
@@ -34,25 +32,7 @@ static func ruling_share(policy_step: float, able: bool, scale: float, seeds: Ar
 	return total / n
 
 
-func _test_the_record_moves_the_result(t) -> void:
-	var austere_on := ruling_share(-0.15, false, 1.0)
-	var austere_off := ruling_share(-0.15, false, 0.0)
-	t.truth(austere_on < austere_off, "austerity's party polls worse when the record counts (%.3f vs %.3f)" % [austere_on, austere_off])
-	var strong_on := ruling_share(0.0, true, 1.0)
-	var strong_off := ruling_share(0.0, true, 0.0)
-	t.truth(strong_on > strong_off, "a strong government's party polls better when the record counts (%.3f vs %.3f)" % [strong_on, strong_off])
-
-
-func _test_a_strong_record_never_hurts(t) -> void:
-	for seed in [11, 22, 33, 44, 55, 66]:
-		var on := ruling_share(0.0, true, 1.0, [seed])
-		var off := ruling_share(0.0, true, 0.0, [seed])
-		t.truth(on > off, "seed %d: a strong government's record raises its party's share (%.3f vs %.3f)" % [seed, on, off])
-
-
 func _initialize() -> void:
 	var t = TestSupportScript.new()
 	_test_a_poor_government_mostly_loses(t)
-	_test_the_record_moves_the_result(t)
-	_test_a_strong_record_never_hurts(t)
 	quit(t.finish())

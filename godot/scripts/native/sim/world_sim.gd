@@ -157,20 +157,31 @@ static func cooperative_action(state: GameState, actor: Country, target: Country
 	if with_player:
 		_say(state, notes, "world_court_player", actor, null)
 	else:
-		_say(state, notes, "world_deepen", actor, target)
+		var press_only: Array[String] = []
+		_say(state, press_only, "world_deepen", actor, target)
 	return "courted"
 
 
 static func update_arcs(state: GameState, notes: Array[String]) -> void:
-	var everyone: Array[Country] = [state.country]
-	everyone.append_array(state.world)
-	for i in range(everyone.size()):
-		for j in range(i + 1, everyone.size()):
-			_update_arc(state, everyone[i], everyone[j], notes)
+	var arced := {}
+	for key in state.world_arcs:
+		var ids := String(key).split("|")
+		if ids.size() == 2:
+			arced[ids[0]] = arced.get(ids[0], {})
+			arced[ids[0]][ids[1]] = true
+			arced[ids[1]] = arced.get(ids[1], {})
+			arced[ids[1]][ids[0]] = true
+	for p in state.country_pairs():
+		var a: Country = p[0]
+		var b: Country = p[1]
+		var score: float = (p[2] as Country.BilateralRelation).score
+		if score >= FEUD_FORMS and score <= AXIS_FORMS and not (arced.has(a.id) and arced[a.id].has(b.id)):
+			continue
+		_update_arc(state, a, b, notes)
 
 
 static func arc_key(a_id: String, b_id: String) -> String:
-	return "%s|%s" % ([a_id, b_id] if a_id < b_id else [b_id, a_id])
+	return a_id + "|" + b_id if a_id < b_id else b_id + "|" + a_id
 
 
 static func _update_arc(state: GameState, a: Country, b: Country, notes: Array[String]) -> void:
@@ -253,27 +264,31 @@ static func _say(state: GameState, notes: Array[String], key: String, actor: Cou
 
 
 static func _drift_world_relations(state: GameState) -> void:
-	for i in range(state.world.size()):
-		for j in range(i + 1, state.world.size()):
-			var a := state.world[i]
-			var b := state.world[j]
-			var ab: Country.BilateralRelation = a.relations.get(b.id)
-			var ba: Country.BilateralRelation = b.relations.get(a.id)
-			if ab == null or ba == null:
-				continue
-			var same: bool = DiplomacySim.REGIME_FAMILY.get(a.regime_type, a.regime_type) \
-				== DiplomacySim.REGIME_FAMILY.get(b.regime_type, b.regime_type)
-			DiplomacySim.shift_between(a, b, DiplomacySim.SAME_CAMP_DRIFT if same else DiplomacySim.OTHER_CAMP_DRIFT)
-			for rel in [ab, ba]:
-				for tr in rel.treaties:
-					if tr is Dictionary:
-						tr["turns_active"] = int(tr.get("turns_active", 0)) + 1
-			if _has_treaty(a, b, "trade"):
-				var ceiling := maxf(0.0, ab.score) * DiplomacySim.TRADE_CEILING
-				var volume := clampf(ab.trade_volume + (ceiling - ab.trade_volume) * DiplomacySim.TRADE_APPROACH,
-					0.0, DiplomacySim.TRADE_CEILING)
-				ab.trade_volume = volume
-				ba.trade_volume = volume
+	var families: Array[String] = [""]
+	for c in state.world:
+		families.append(String(DiplomacySim.REGIME_FAMILY.get(c.regime_type, c.regime_type)))
+	for p in state.country_pairs():
+		if p[4]:
+			continue
+		var a: Country = p[0]
+		var b: Country = p[1]
+		var ab: Country.BilateralRelation = p[2]
+		var ba: Country.BilateralRelation = p[3]
+		var same: bool = families[p[5]] == families[p[6]]
+		ab.score = clampf(ab.score + (DiplomacySim.SAME_CAMP_DRIFT if same else DiplomacySim.OTHER_CAMP_DRIFT), -1.0, 1.0)
+		ba.score = ab.score
+		if ab.treaties.is_empty() and ba.treaties.is_empty():
+			continue
+		for rel in [ab, ba]:
+			for tr in rel.treaties:
+				if tr is Dictionary:
+					tr["turns_active"] = int(tr.get("turns_active", 0)) + 1
+		if _has_treaty(a, b, "trade"):
+			var ceiling := maxf(0.0, ab.score) * DiplomacySim.TRADE_CEILING
+			var volume := clampf(ab.trade_volume + (ceiling - ab.trade_volume) * DiplomacySim.TRADE_APPROACH,
+				0.0, DiplomacySim.TRADE_CEILING)
+			ab.trade_volume = volume
+			ba.trade_volume = volume
 
 
 static func _sign_trade_pact(state: GameState, actor: Country, target: Country) -> void:
@@ -323,7 +338,12 @@ static func _rel(a: Country, b: Country) -> Country.BilateralRelation:
 
 static func _has_treaty(a: Country, b: Country, kind: String) -> bool:
 	var rel := _rel(a, b)
-	return rel != null and rel.treaties.any(func(tr): return tr is Dictionary and String(tr.get("type", "")) == kind)
+	if rel == null:
+		return false
+	for tr in rel.treaties:
+		if tr is Dictionary and String(tr.get("type", "")) == kind:
+			return true
+	return false
 
 
 static func _shielded_from(state: GameState, aggressor: Country) -> bool:

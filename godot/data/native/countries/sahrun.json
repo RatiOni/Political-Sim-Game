@@ -1,0 +1,244 @@
+{
+  "id": "sahrun",
+  "name": "Sahrun",
+  "regime_type": "hybrid_regime",
+  "population": 17000000,
+  "bureaucratic_capacity": 0.3,
+  "national_traits": [
+    "fragile_state",
+    "sectarian",
+    "refugee_source"
+  ],
+  "meta": {
+    "short_description": "A fragile state between Ilmar and Qadir whose government holds the capital, the airport and not much else. Three armed movements patrol the rest, and every winter more of its people walk north toward Ozmara and Ardenia.",
+    "difficulty": "normal",
+    "stability_value": 0.24,
+    "civil_war_risk": 0.6,
+    "capital": "Damsara",
+    "strengths": [
+      "A capital still standing",
+      "Foreign aid that keeps arriving",
+      "Ancient trade routes"
+    ],
+    "weaknesses": [
+      "Three armed movements",
+      "Drought and failed harvests",
+      "Refugees leaving by the hundred thousand"
+    ]
+  },
+  "economy": {
+    "gdp": 9000.0,
+    "growth_rate": -0.01,
+    "inflation": 0.35,
+    "unemployment": 0.28,
+    "public_debt_pct": 0.9,
+    "budget": {
+      "revenue": 1800.0,
+      "expenditure": 2900.0
+    },
+    "sectors": [
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.38,
+        "growth_rate": -0.02,
+        "employment_share": 0.6,
+        "aligned_faction_ids": [
+          "valley_tribes"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Services and Aid",
+        "gdp_share": 0.42,
+        "growth_rate": 0.0,
+        "employment_share": 0.32,
+        "aligned_faction_ids": [
+          "national_council"
+        ]
+      },
+      {
+        "id": "resources",
+        "name": "Phosphates",
+        "gdp_share": 0.2,
+        "growth_rate": 0.0,
+        "employment_share": 0.08,
+        "aligned_faction_ids": [
+          "national_council"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "national_council",
+      "name": "National Council",
+      "ideology": {
+        "economic": 0.1,
+        "social": -0.2
+      },
+      "power": 0.45,
+      "loyalty": 0.4,
+      "seats": 32,
+      "in_coalition": true,
+      "support": 0.32,
+      "color": "#7a7a7a",
+      "role": "@establishment",
+      "leader": "Basim Hamdan"
+    },
+    {
+      "id": "faithful_brigades",
+      "name": "Faithful Brigades",
+      "ideology": {
+        "economic": -0.2,
+        "social": -0.9
+      },
+      "power": 0.5,
+      "loyalty": -0.8,
+      "seats": 28,
+      "in_coalition": false,
+      "support": 0.28,
+      "color": "#2a5a2a",
+      "role": "@nationalist",
+      "leader": "Abu Omar al-Sahruni"
+    },
+    {
+      "id": "valley_tribes",
+      "name": "Valley Tribes",
+      "ideology": {
+        "economic": -0.35,
+        "social": -0.4
+      },
+      "power": 0.35,
+      "loyalty": -0.3,
+      "seats": 22,
+      "in_coalition": false,
+      "support": 0.22,
+      "color": "#9a6a3a",
+      "role": "@agrarian",
+      "leader": "Sheikh Ahmad Jarbat"
+    },
+    {
+      "id": "free_sahrun",
+      "name": "Free Sahrun Movement",
+      "ideology": {
+        "economic": 0.3,
+        "social": 0.6
+      },
+      "power": 0.3,
+      "loyalty": -0.6,
+      "seats": 18,
+      "in_coalition": false,
+      "support": 0.18,
+      "color": "#3a8ac0",
+      "role": "@reform",
+      "leader": "Riyad Hijazi"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "sah1",
+      "name": "Adel Safari",
+      "portfolio": "Finance",
+      "faction_id": "national_council",
+      "competence": 0.73,
+      "loyalty": 0.75,
+      "ambition": 0.55
+    },
+    {
+      "id": "sah2",
+      "name": "General Ali Mamlouk",
+      "portfolio": "Interior",
+      "faction_id": "national_council",
+      "competence": 0.73,
+      "loyalty": 0.71,
+      "ambition": 0.45
+    },
+    {
+      "id": "sah3",
+      "name": "Faisal Mekdani",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "national_council",
+      "competence": 0.73,
+      "loyalty": 0.63,
+      "ambition": 0.35
+    },
+    {
+      "id": "sah4",
+      "name": "General Fahd Fraij",
+      "portfolio": "Defense",
+      "faction_id": "national_council",
+      "competence": 0.73,
+      "loyalty": 0.67,
+      "ambition": 0.25
+    },
+    {
+      "id": "sah5",
+      "name": "Mohammad Nidali",
+      "portfolio": "Economy",
+      "faction_id": "national_council",
+      "competence": 0.73,
+      "loyalty": 0.67,
+      "ambition": 0.5
+    },
+    {
+      "id": "sah6",
+      "name": "Najm Ahmadi",
+      "portfolio": "Justice",
+      "faction_id": "national_council",
+      "competence": 0.73,
+      "loyalty": 0.63,
+      "ambition": 0.4
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Basim Hamdan",
+    "title": "President",
+    "faction_id": "national_council",
+    "ideology_economic": 0.1,
+    "ideology_social": -0.2,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "survivor",
+    "rival": "ilmar"
+  },
+  "neighbours": [
+    "ilmar",
+    "qadir",
+    "beyta",
+    "ozmara"
+  ],
+  "default_relations": {
+    "ozmara": {
+      "score": -0.15,
+      "trade_volume": 150.0
+    },
+    "ilmar": {
+      "score": -0.5,
+      "trade_volume": 100.0
+    },
+    "qadir": {
+      "score": -0.2,
+      "trade_volume": 150.0
+    },
+    "beyta": {
+      "score": 0.1,
+      "trade_volume": 100.0
+    },
+    "azhara": {
+      "score": 0.15,
+      "trade_volume": 100.0
+    },
+    "solheim": {
+      "score": 0.1,
+      "trade_volume": 50.0
+    },
+    "ardenia": {
+      "score": 0.0,
+      "trade_volume": 0.0
+    }
+  }
+}

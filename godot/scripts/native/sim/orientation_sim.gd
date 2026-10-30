@@ -170,7 +170,7 @@ static func _world_blocs(state: GameState, notes: Array[String]) -> void:
 		var next: Array = []
 		for c in state.world:
 			var member: bool = c.id in current
-			var stays := c.id == anchor or (not bloc_rejects(state, c, b) if member else bloc_fits(state, c, b))
+			var stays: bool = c.id == anchor or c.id in b.get("core_members", []) or (not bloc_rejects(state, c, b) if member else bloc_fits(state, c, b))
 			if stays:
 				next.append(c.id)
 			if stays != member:

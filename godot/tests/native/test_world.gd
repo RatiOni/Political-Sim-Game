@@ -233,7 +233,7 @@ func _test_named_arcs_form_dissolve_and_persist(t) -> void:
 	_set_score(state, "solheim", "nueva_costa", 0.2)
 	_set_score(state, "krasova", "veldoria", -0.1)
 	WorldSim.update_arcs(state, notes)
-	t.truth(state.world_arcs.is_empty(), "arcs dissolve when the conditions reverse")
+	t.truth(not state.world_arcs.has("nueva_costa|solheim") and not state.world_arcs.has("krasova|veldoria"), "arcs dissolve when the conditions reverse")
 	t.truth(notes[-1].contains("feud") or notes[-1].contains("axis"), "and their end is reported")
 
 

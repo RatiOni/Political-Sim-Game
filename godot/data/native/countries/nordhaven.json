@@ -1,0 +1,271 @@
+{
+  "id": "nordhaven",
+  "name": "Nordhaven",
+  "regime_type": "parliamentary_democracy",
+  "population": 9000000,
+  "bureaucratic_capacity": 0.92,
+  "national_traits": [
+    "welfare_state",
+    "aid_donor",
+    "consensus_politics"
+  ],
+  "meta": {
+    "short_description": "The furthest north of the Western core: cold, rich, egalitarian and loud about it. Nordhaven gives more aid per head than anyone, trains the basin's judges, and is the Concert's most hawkish voice on Krasova, whose submarines it tracks off its own coast.",
+    "difficulty": "normal",
+    "stability_value": 0.86,
+    "civil_war_risk": 0.02,
+    "capital": "Holmstad",
+    "strengths": [
+      "Wealth evenly shared",
+      "Generous aid budgets",
+      "Trusted institutions"
+    ],
+    "weaknesses": [
+      "A long sea frontier with Krasova",
+      "Taxes the young resent",
+      "A small voice in a big alliance"
+    ]
+  },
+  "economy": {
+    "gdp": 95000.0,
+    "growth_rate": 0.025,
+    "inflation": 0.02,
+    "unemployment": 0.07,
+    "public_debt_pct": 0.4,
+    "budget": {
+      "revenue": 32000.0,
+      "expenditure": 32500.0
+    },
+    "sectors": [
+      {
+        "id": "services",
+        "name": "Services",
+        "gdp_share": 0.62,
+        "growth_rate": 0.025,
+        "employment_share": 0.64,
+        "aligned_faction_ids": [
+          "social_democrats_nh"
+        ]
+      },
+      {
+        "id": "industry",
+        "name": "Timber, Steel and Shipping",
+        "gdp_share": 0.3,
+        "growth_rate": 0.025,
+        "employment_share": 0.28,
+        "aligned_faction_ids": [
+          "moderate_party"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Farming and Fishing",
+        "gdp_share": 0.08,
+        "growth_rate": 0.005,
+        "employment_share": 0.08,
+        "aligned_faction_ids": [
+          "centre_party"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "social_democrats_nh",
+      "name": "Social Democrats",
+      "ideology": {
+        "economic": -0.45,
+        "social": 0.45
+      },
+      "power": 0.7,
+      "loyalty": 0.6,
+      "seats": 40,
+      "in_coalition": true,
+      "support": 0.4,
+      "color": "#d83a3a",
+      "role": "@labour",
+      "leader": "Ingvald Carlsen"
+    },
+    {
+      "id": "moderate_party",
+      "name": "Moderate Party",
+      "ideology": {
+        "economic": 0.6,
+        "social": 0.25
+      },
+      "power": 0.55,
+      "loyalty": 0.4,
+      "seats": 28,
+      "in_coalition": false,
+      "support": 0.28,
+      "color": "#3a6ad8",
+      "role": "@business",
+      "leader": "Carl Bildmark"
+    },
+    {
+      "id": "centre_party",
+      "name": "Centre Party",
+      "ideology": {
+        "economic": 0.1,
+        "social": 0.2
+      },
+      "power": 0.3,
+      "loyalty": 0.5,
+      "seats": 14,
+      "in_coalition": true,
+      "support": 0.14,
+      "color": "#3aa04a",
+      "role": "@agrarian",
+      "leader": "Olof Johanning"
+    },
+    {
+      "id": "liberal_people",
+      "name": "Liberal People's Party",
+      "ideology": {
+        "economic": 0.35,
+        "social": 0.7
+      },
+      "power": 0.25,
+      "loyalty": 0.5,
+      "seats": 10,
+      "in_coalition": true,
+      "support": 0.1,
+      "color": "#5ac0e8",
+      "role": "@reform",
+      "leader": "Bengt Westerling"
+    },
+    {
+      "id": "homeland_party",
+      "name": "Homeland Party",
+      "ideology": {
+        "economic": 0.15,
+        "social": -0.65
+      },
+      "power": 0.2,
+      "loyalty": -0.3,
+      "seats": 8,
+      "in_coalition": false,
+      "support": 0.08,
+      "color": "#e8d03a",
+      "role": "@nationalist",
+      "leader": "Ian Wachtel"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "nor1",
+      "name": "Göran Persmark",
+      "portfolio": "Finance",
+      "faction_id": "social_democrats_nh",
+      "competence": 0.61,
+      "loyalty": 0.63,
+      "ambition": 0.35
+    },
+    {
+      "id": "nor2",
+      "name": "Laila Freivald",
+      "portfolio": "Interior",
+      "faction_id": "social_democrats_nh",
+      "competence": 0.61,
+      "loyalty": 0.75,
+      "ambition": 0.25
+    },
+    {
+      "id": "nor3",
+      "name": "Lena Hjelmstad",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "social_democrats_nh",
+      "competence": 0.61,
+      "loyalty": 0.63,
+      "ambition": 0.5
+    },
+    {
+      "id": "nor4",
+      "name": "Björn Sydal",
+      "portfolio": "Defense",
+      "faction_id": "social_democrats_nh",
+      "competence": 0.61,
+      "loyalty": 0.63,
+      "ambition": 0.4
+    },
+    {
+      "id": "nor5",
+      "name": "Anna Lindqvist",
+      "portfolio": "Economy",
+      "faction_id": "liberal_people",
+      "competence": 0.61,
+      "loyalty": 0.63,
+      "ambition": 0.3
+    },
+    {
+      "id": "nor6",
+      "name": "Thomas Bodin",
+      "portfolio": "Justice",
+      "faction_id": "centre_party",
+      "competence": 0.61,
+      "loyalty": 0.67,
+      "ambition": 0.55
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Ingvald Carlsen",
+    "title": "Prime Minister",
+    "faction_id": "social_democrats_nh",
+    "ideology_economic": -0.45,
+    "ideology_social": 0.45,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "reformer",
+    "rival": "krasova",
+    "ally": "kalvia"
+  },
+  "neighbours": [
+    "aldermark",
+    "kalvia"
+  ],
+  "default_relations": {
+    "zelvany": {
+      "score": -0.3,
+      "trade_volume": 50.0
+    },
+    "kalvia": {
+      "score": 0.6,
+      "trade_volume": 700.0
+    },
+    "aldermark": {
+      "score": 0.65,
+      "trade_volume": 3500.0
+    },
+    "valcourt": {
+      "score": 0.55,
+      "trade_volume": 1200.0
+    },
+    "solheim": {
+      "score": 0.7,
+      "trade_volume": 1800.0
+    },
+    "brisca": {
+      "score": 0.55,
+      "trade_volume": 1500.0
+    },
+    "columbria": {
+      "score": 0.5,
+      "trade_volume": 1200.0
+    },
+    "krasova": {
+      "score": -0.5,
+      "trade_volume": 300.0
+    },
+    "ardenia": {
+      "score": 0.2,
+      "trade_volume": 100.0
+    },
+    "veldoria": {
+      "score": 0.4,
+      "trade_volume": 400.0
+    }
+  }
+}

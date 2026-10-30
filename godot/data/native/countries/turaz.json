@@ -1,0 +1,256 @@
+{
+  "id": "turaz",
+  "name": "Turaz",
+  "regime_type": "authoritarian",
+  "population": 7800000,
+  "bureaucratic_capacity": 0.6,
+  "national_traits": [
+    "resource_rich",
+    "dynastic",
+    "coastal_trade"
+  ],
+  "meta": {
+    "short_description": "A gas-rich dynastic republic on the shore of the eastern inland sea, south-east of Krasova. Its ruling family sells to whoever builds a pipe, and a pipe through Ozmara or a tanker route across the Aster Sea would make Turaz the one supplier Ardenia could choose instead of Krasova.",
+    "difficulty": "normal",
+    "stability_value": 0.66,
+    "civil_war_risk": 0.06,
+    "capital": "Bakuren",
+    "strengths": [
+      "Vast gas reserves",
+      "Oil money and new ports",
+      "A family regime that can promise for decades"
+    ],
+    "weaknesses": [
+      "A frozen war with Haravan",
+      "Every export route crosses someone else",
+      "Corruption the family calls tradition"
+    ]
+  },
+  "economy": {
+    "gdp": 34000.0,
+    "growth_rate": 0.05,
+    "inflation": 0.12,
+    "unemployment": 0.1,
+    "public_debt_pct": 0.12,
+    "budget": {
+      "revenue": 9500.0,
+      "expenditure": 8800.0
+    },
+    "sectors": [
+      {
+        "id": "resources",
+        "name": "Gas and Oil",
+        "gdp_share": 0.55,
+        "growth_rate": 0.06,
+        "employment_share": 0.12,
+        "aligned_faction_ids": [
+          "new_turaz"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Services",
+        "gdp_share": 0.3,
+        "growth_rate": 0.035,
+        "employment_share": 0.48,
+        "aligned_faction_ids": [
+          "port_merchants"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.15,
+        "growth_rate": 0.01,
+        "employment_share": 0.4,
+        "aligned_faction_ids": [
+          "village_elders"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "new_turaz",
+      "name": "New Turaz Party",
+      "ideology": {
+        "economic": 0.35,
+        "social": -0.6
+      },
+      "power": 0.9,
+      "loyalty": 0.8,
+      "seats": 68,
+      "in_coalition": true,
+      "support": 0.68,
+      "color": "#2d6fb0",
+      "role": "@nationalist",
+      "leader": "Ilkin Aliyar"
+    },
+    {
+      "id": "port_merchants",
+      "name": "Port Merchants",
+      "ideology": {
+        "economic": 0.75,
+        "social": 0.1
+      },
+      "power": 0.35,
+      "loyalty": 0.5,
+      "seats": 14,
+      "in_coalition": true,
+      "support": 0.14,
+      "color": "#c99a2f",
+      "role": "@business",
+      "leader": "Rasul Guliyev"
+    },
+    {
+      "id": "village_elders",
+      "name": "Village Elders",
+      "ideology": {
+        "economic": -0.35,
+        "social": -0.5
+      },
+      "power": 0.25,
+      "loyalty": 0.4,
+      "seats": 10,
+      "in_coalition": false,
+      "support": 0.1,
+      "color": "#7d8a3a",
+      "role": "@agrarian",
+      "leader": "Ali Karimli"
+    },
+    {
+      "id": "equality_party",
+      "name": "Equality Party",
+      "ideology": {
+        "economic": -0.15,
+        "social": 0.55
+      },
+      "power": 0.15,
+      "loyalty": -0.6,
+      "seats": 8,
+      "in_coalition": false,
+      "support": 0.08,
+      "color": "#3aa070",
+      "role": "@reform",
+      "leader": "Isa Gamberli"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "tur1",
+      "name": "Samir Sharifov",
+      "portfolio": "Finance",
+      "faction_id": "port_merchants",
+      "competence": 0.7,
+      "loyalty": 0.63,
+      "ambition": 0.5
+    },
+    {
+      "id": "tur2",
+      "name": "Ramil Usubov",
+      "portfolio": "Interior",
+      "faction_id": "new_turaz",
+      "competence": 0.7,
+      "loyalty": 0.67,
+      "ambition": 0.4
+    },
+    {
+      "id": "tur3",
+      "name": "Elmar Mammadli",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "new_turaz",
+      "competence": 0.7,
+      "loyalty": 0.63,
+      "ambition": 0.3
+    },
+    {
+      "id": "tur4",
+      "name": "General Safar Abiyev",
+      "portfolio": "Defense",
+      "faction_id": "new_turaz",
+      "competence": 0.7,
+      "loyalty": 0.75,
+      "ambition": 0.55
+    },
+    {
+      "id": "tur5",
+      "name": "Shahin Mustafayev",
+      "portfolio": "Economy",
+      "faction_id": "port_merchants",
+      "competence": 0.7,
+      "loyalty": 0.75,
+      "ambition": 0.45
+    },
+    {
+      "id": "tur6",
+      "name": "Fikrat Mammadov",
+      "portfolio": "Justice",
+      "faction_id": "new_turaz",
+      "competence": 0.7,
+      "loyalty": 0.55,
+      "ambition": 0.35
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Heydar Aliyar",
+    "title": "President",
+    "faction_id": "new_turaz",
+    "ideology_economic": 0.35,
+    "ideology_social": -0.6,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "trader",
+    "rival": "haravan"
+  },
+  "neighbours": [
+    "krasova",
+    "haravan",
+    "merova",
+    "yaskar"
+  ],
+  "default_relations": {
+    "ozmara": {
+      "score": 0.4,
+      "trade_volume": 900.0
+    },
+    "haravan": {
+      "score": -0.75,
+      "trade_volume": 0.0
+    },
+    "temirsk": {
+      "score": 0.15,
+      "trade_volume": 200.0
+    },
+    "krasova": {
+      "score": 0.05,
+      "trade_volume": 900.0
+    },
+    "ardenia": {
+      "score": 0.1,
+      "trade_volume": 200.0
+    },
+    "aldermark": {
+      "score": 0.2,
+      "trade_volume": 600.0
+    },
+    "columbria": {
+      "score": 0.2,
+      "trade_volume": 500.0
+    },
+    "hanlin": {
+      "score": 0.25,
+      "trade_volume": 400.0
+    },
+    "merova": {
+      "score": 0.15,
+      "trade_volume": 200.0
+    },
+    "yaskar": {
+      "score": 0.45,
+      "trade_volume": 400.0
+    }
+  }
+}

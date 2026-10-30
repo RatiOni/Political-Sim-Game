@@ -1,0 +1,263 @@
+{
+  "id": "columbria",
+  "name": "Columbria",
+  "regime_type": "presidential_democracy",
+  "population": 260000000,
+  "bureaucratic_capacity": 0.9,
+  "national_traits": [
+    "superpower",
+    "reserve_currency",
+    "naval_power"
+  ],
+  "meta": {
+    "short_description": "The distant superpower across the western ocean whose fleets and money stand behind the Meridian. Columbria won the long contest with the Kolvenian Union and now cannot decide how much of the old battlefield it wants to own.",
+    "difficulty": "normal",
+    "stability_value": 0.84,
+    "civil_war_risk": 0.02,
+    "capital": "Washburn",
+    "strengths": [
+      "The world's largest economy",
+      "The reserve currency",
+      "Military reach everywhere"
+    ],
+    "weaknesses": [
+      "Attention spread across the whole world",
+      "A congress that changes its mind",
+      "Patience measured in election cycles"
+    ]
+  },
+  "economy": {
+    "gdp": 1600000.0,
+    "growth_rate": 0.03,
+    "inflation": 0.03,
+    "unemployment": 0.06,
+    "public_debt_pct": 0.65,
+    "budget": {
+      "revenue": 370000.0,
+      "expenditure": 400000.0
+    },
+    "sectors": [
+      {
+        "id": "services",
+        "name": "Services and Finance",
+        "gdp_share": 0.72,
+        "growth_rate": 0.032,
+        "employment_share": 0.76,
+        "aligned_faction_ids": [
+          "democrats_co"
+        ]
+      },
+      {
+        "id": "industry",
+        "name": "Industry and Defence",
+        "gdp_share": 0.24,
+        "growth_rate": 0.025,
+        "employment_share": 0.2,
+        "aligned_faction_ids": [
+          "republicans_co"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.04,
+        "growth_rate": 0.01,
+        "employment_share": 0.04,
+        "aligned_faction_ids": [
+          "republicans_co"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "democrats_co",
+      "name": "Democratic Party",
+      "ideology": {
+        "economic": -0.2,
+        "social": 0.5
+      },
+      "power": 0.75,
+      "loyalty": 0.55,
+      "seats": 52,
+      "in_coalition": true,
+      "support": 0.52,
+      "color": "#2a5ad0",
+      "role": "@reform",
+      "leader": "William Calloway"
+    },
+    {
+      "id": "republicans_co",
+      "name": "Republican Party",
+      "ideology": {
+        "economic": 0.65,
+        "social": -0.45
+      },
+      "power": 0.75,
+      "loyalty": 0.3,
+      "seats": 46,
+      "in_coalition": false,
+      "support": 0.46,
+      "color": "#d02a2a",
+      "role": "@business",
+      "leader": "Newell Gingrey"
+    },
+    {
+      "id": "reform_party_co",
+      "name": "Reform Party",
+      "ideology": {
+        "economic": 0.2,
+        "social": -0.2
+      },
+      "power": 0.15,
+      "loyalty": -0.2,
+      "seats": 2,
+      "in_coalition": false,
+      "support": 0.02,
+      "color": "#9a5ad0",
+      "role": "@nationalist",
+      "leader": "Ross Perrin"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "col1",
+      "name": "Robert Rubens",
+      "portfolio": "Finance",
+      "faction_id": "democrats_co",
+      "competence": 0.61,
+      "loyalty": 0.59,
+      "ambition": 0.35
+    },
+    {
+      "id": "col2",
+      "name": "Janet Renner",
+      "portfolio": "Interior",
+      "faction_id": "democrats_co",
+      "competence": 0.61,
+      "loyalty": 0.67,
+      "ambition": 0.25
+    },
+    {
+      "id": "col3",
+      "name": "Warren Christophe",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "democrats_co",
+      "competence": 0.61,
+      "loyalty": 0.75,
+      "ambition": 0.5
+    },
+    {
+      "id": "col4",
+      "name": "William Perrault",
+      "portfolio": "Defense",
+      "faction_id": "democrats_co",
+      "competence": 0.61,
+      "loyalty": 0.59,
+      "ambition": 0.4
+    },
+    {
+      "id": "col5",
+      "name": "Ron Browning",
+      "portfolio": "Economy",
+      "faction_id": "democrats_co",
+      "competence": 0.61,
+      "loyalty": 0.55,
+      "ambition": 0.3
+    },
+    {
+      "id": "col6",
+      "name": "Abner Mikvane",
+      "portfolio": "Justice",
+      "faction_id": "democrats_co",
+      "competence": 0.61,
+      "loyalty": 0.71,
+      "ambition": 0.55
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "William Calloway",
+    "title": "President",
+    "faction_id": "democrats_co",
+    "ideology_economic": -0.2,
+    "ideology_social": 0.5,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "hegemon",
+    "rival": "krasova",
+    "ally": "brisca"
+  },
+  "neighbours": [
+    "brisca",
+    "nueva_costa"
+  ],
+  "default_relations": {
+    "ozmara": {
+      "score": 0.3,
+      "trade_volume": 1200.0
+    },
+    "temirsk": {
+      "score": 0.15,
+      "trade_volume": 500.0
+    },
+    "ulgar": {
+      "score": -0.3,
+      "trade_volume": 50.0
+    },
+    "turaz": {
+      "score": 0.2,
+      "trade_volume": 500.0
+    },
+    "aldermark": {
+      "score": 0.55,
+      "trade_volume": 4000.0
+    },
+    "valcourt": {
+      "score": 0.45,
+      "trade_volume": 4000.0
+    },
+    "nordhaven": {
+      "score": 0.5,
+      "trade_volume": 1200.0
+    },
+    "brisca": {
+      "score": 0.8,
+      "trade_volume": 4000.0
+    },
+    "ilmar": {
+      "score": -0.45,
+      "trade_volume": 100.0
+    },
+    "azhara": {
+      "score": 0.5,
+      "trade_volume": 3000.0
+    },
+    "krasova": {
+      "score": -0.4,
+      "trade_volume": 1000.0
+    },
+    "solheim": {
+      "score": 0.6,
+      "trade_volume": 4000.0
+    },
+    "hanlin": {
+      "score": 0.0,
+      "trade_volume": 4000.0
+    },
+    "nueva_costa": {
+      "score": 0.45,
+      "trade_volume": 1500.0
+    },
+    "ardenia": {
+      "score": 0.2,
+      "trade_volume": 300.0
+    },
+    "veldoria": {
+      "score": 0.4,
+      "trade_volume": 800.0
+    }
+  }
+}

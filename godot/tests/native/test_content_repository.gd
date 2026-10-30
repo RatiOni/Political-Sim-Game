@@ -5,8 +5,10 @@ const TestSupportScript = preload("res://scripts/native/testing/test_support.gd"
 const ContentRepositoryScript = preload("res://scripts/native/content/content_repository.gd")
 
 const EXPECTED_COUNTRY_IDS := [
-	"ardenia", "krasova", "merova", "nueva_costa", "qadir",
-	"solheim", "terand", "valmora", "veldoria",
+	"aldermark", "ardenia", "azhara", "beyta", "borynia", "brisca", "columbria", "drevnia",
+	"hanlin", "haravan", "ilmar", "kalvia", "krasova", "marisca", "merova", "nordhaven",
+	"nueva_costa", "ozmara", "qadir", "sahrun", "selenne", "solheim", "temirsk", "terand",
+	"turaz", "ulgar", "valcourt", "valmora", "veldoria", "yaskar", "zelvany",
 ]
 
 const EXPECTED_ARDENIA_BLOC_IDS := [
@@ -71,7 +73,7 @@ func _initialize() -> void:
 		var countries: Dictionary = repo.get("countries", {})
 		var country_ids: Array = countries.keys()
 		country_ids.sort()
-		t.equal(country_ids, EXPECTED_COUNTRY_IDS, "all nine countries are present")
+		t.equal(country_ids, EXPECTED_COUNTRY_IDS, "all thirty-one countries are present")
 
 		for country_id in EXPECTED_COUNTRY_IDS:
 			var country: Dictionary = countries.get(country_id, {})

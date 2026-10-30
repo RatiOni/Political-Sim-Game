@@ -1,0 +1,249 @@
+{
+  "id": "brisca",
+  "name": "Brisca",
+  "regime_type": "parliamentary_democracy",
+  "population": 57000000,
+  "bureaucratic_capacity": 0.87,
+  "national_traits": [
+    "island",
+    "financial_centre",
+    "naval_power"
+  ],
+  "meta": {
+    "short_description": "An island power off the western coast of the core, half in the Concert and half out of it, whose capital is the world's money market. Brisca lends the basin its bankers and the Meridian its navy, and expects to be thanked for both.",
+    "difficulty": "normal",
+    "stability_value": 0.8,
+    "civil_war_risk": 0.03,
+    "capital": "Londinium",
+    "strengths": [
+      "The world's financial centre",
+      "The Meridian's strongest navy",
+      "A special bond with Columbria"
+    ],
+    "weaknesses": [
+      "Half in, half out of the Concert",
+      "A decaying industrial north",
+      "An empire's habits without an empire"
+    ]
+  },
+  "economy": {
+    "gdp": 290000.0,
+    "growth_rate": 0.026,
+    "inflation": 0.03,
+    "unemployment": 0.09,
+    "public_debt_pct": 0.42,
+    "budget": {
+      "revenue": 70000.0,
+      "expenditure": 74000.0
+    },
+    "sectors": [
+      {
+        "id": "services",
+        "name": "Finance and Services",
+        "gdp_share": 0.72,
+        "growth_rate": 0.03,
+        "employment_share": 0.74,
+        "aligned_faction_ids": [
+          "conservatives_br"
+        ]
+      },
+      {
+        "id": "industry",
+        "name": "Industry",
+        "gdp_share": 0.24,
+        "growth_rate": 0.01,
+        "employment_share": 0.22,
+        "aligned_faction_ids": [
+          "labour_br"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.04,
+        "growth_rate": 0.005,
+        "employment_share": 0.04,
+        "aligned_faction_ids": [
+          "conservatives_br"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "conservatives_br",
+      "name": "Conservative Party",
+      "ideology": {
+        "economic": 0.65,
+        "social": -0.3
+      },
+      "power": 0.7,
+      "loyalty": 0.55,
+      "seats": 46,
+      "in_coalition": true,
+      "support": 0.46,
+      "color": "#1f4fa0",
+      "role": "@business",
+      "leader": "Jonathan Maybury"
+    },
+    {
+      "id": "labour_br",
+      "name": "Labour Party",
+      "ideology": {
+        "economic": -0.45,
+        "social": 0.3
+      },
+      "power": 0.65,
+      "loyalty": 0.2,
+      "seats": 40,
+      "in_coalition": false,
+      "support": 0.4,
+      "color": "#d42a2a",
+      "role": "@labour",
+      "leader": "Anthony Blakeley"
+    },
+    {
+      "id": "liberal_democrats_br",
+      "name": "Liberal Democrats",
+      "ideology": {
+        "economic": 0.0,
+        "social": 0.7
+      },
+      "power": 0.3,
+      "loyalty": 0.3,
+      "seats": 10,
+      "in_coalition": false,
+      "support": 0.1,
+      "color": "#f0a830",
+      "role": "@reform",
+      "leader": "Patrick Ashdale"
+    },
+    {
+      "id": "independence_br",
+      "name": "Independence Party",
+      "ideology": {
+        "economic": 0.4,
+        "social": -0.75
+      },
+      "power": 0.15,
+      "loyalty": -0.4,
+      "seats": 4,
+      "in_coalition": false,
+      "support": 0.04,
+      "color": "#7a3a9a",
+      "role": "@nationalist",
+      "leader": "Alan Skerritt"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "bri1",
+      "name": "Kenneth Clarkson",
+      "portfolio": "Finance",
+      "faction_id": "conservatives_br",
+      "competence": 0.73,
+      "loyalty": 0.71,
+      "ambition": 0.55
+    },
+    {
+      "id": "bri2",
+      "name": "Michael Howell",
+      "portfolio": "Interior",
+      "faction_id": "conservatives_br",
+      "competence": 0.73,
+      "loyalty": 0.75,
+      "ambition": 0.45
+    },
+    {
+      "id": "bri3",
+      "name": "Douglas Hurst",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "conservatives_br",
+      "competence": 0.73,
+      "loyalty": 0.59,
+      "ambition": 0.35
+    },
+    {
+      "id": "bri4",
+      "name": "Malcolm Rifkind-Hale",
+      "portfolio": "Defense",
+      "faction_id": "conservatives_br",
+      "competence": 0.73,
+      "loyalty": 0.75,
+      "ambition": 0.25
+    },
+    {
+      "id": "bri5",
+      "name": "Michael Hesketh",
+      "portfolio": "Economy",
+      "faction_id": "conservatives_br",
+      "competence": 0.73,
+      "loyalty": 0.67,
+      "ambition": 0.5
+    },
+    {
+      "id": "bri6",
+      "name": "Peter Lilleyman",
+      "portfolio": "Justice",
+      "faction_id": "conservatives_br",
+      "competence": 0.73,
+      "loyalty": 0.55,
+      "ambition": 0.4
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Jonathan Maybury",
+    "title": "Prime Minister",
+    "faction_id": "conservatives_br",
+    "ideology_economic": 0.65,
+    "ideology_social": -0.3,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "trader",
+    "ally": "columbria"
+  },
+  "neighbours": [
+    "valcourt"
+  ],
+  "default_relations": {
+    "marisca": {
+      "score": 0.3,
+      "trade_volume": 400.0
+    },
+    "aldermark": {
+      "score": 0.55,
+      "trade_volume": 4000.0
+    },
+    "valcourt": {
+      "score": 0.45,
+      "trade_volume": 4000.0
+    },
+    "nordhaven": {
+      "score": 0.55,
+      "trade_volume": 1500.0
+    },
+    "solheim": {
+      "score": 0.55,
+      "trade_volume": 2500.0
+    },
+    "columbria": {
+      "score": 0.8,
+      "trade_volume": 4000.0
+    },
+    "krasova": {
+      "score": -0.35,
+      "trade_volume": 600.0
+    },
+    "azhara": {
+      "score": 0.35,
+      "trade_volume": 1200.0
+    },
+    "nueva_costa": {
+      "score": 0.3,
+      "trade_volume": 400.0
+    }
+  }
+}

@@ -1,0 +1,275 @@
+{
+  "id": "ozmara",
+  "name": "Ozmara",
+  "regime_type": "presidential_democracy",
+  "population": 31000000,
+  "bureaucratic_capacity": 0.68,
+  "national_traits": [
+    "strategic_position",
+    "military_tradition",
+    "transit_state"
+  ],
+  "meta": {
+    "short_description": "Ardenia's southern neighbour across the Kelvet–Sela frontier, a large and proud republic astride the southern corridor. It asks to sit with the Concert and plays its own game while it waits, and every pipeline that might free Ardenia from Krasovan gas has to cross it.",
+    "difficulty": "normal",
+    "stability_value": 0.58,
+    "civil_war_risk": 0.08,
+    "capital": "Karsiye",
+    "strengths": [
+      "A large army and a confident officer corps",
+      "The southern gas corridor",
+      "A growing home market"
+    ],
+    "weaknesses": [
+      "Inflation never quite tamed",
+      "Generals who think the republic is theirs",
+      "A rivalry with Ilmar that eats attention"
+    ]
+  },
+  "economy": {
+    "gdp": 160000.0,
+    "growth_rate": 0.042,
+    "inflation": 0.11,
+    "unemployment": 0.09,
+    "public_debt_pct": 0.42,
+    "budget": {
+      "revenue": 38000.0,
+      "expenditure": 41000.0
+    },
+    "sectors": [
+      {
+        "id": "industry",
+        "name": "Industry",
+        "gdp_share": 0.3,
+        "growth_rate": 0.04,
+        "employment_share": 0.24,
+        "aligned_faction_ids": [
+          "republican_party"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Services",
+        "gdp_share": 0.42,
+        "growth_rate": 0.045,
+        "employment_share": 0.4,
+        "aligned_faction_ids": [
+          "civic_alliance"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.16,
+        "growth_rate": 0.015,
+        "employment_share": 0.26,
+        "aligned_faction_ids": [
+          "highland_farmers"
+        ]
+      },
+      {
+        "id": "transit",
+        "name": "Energy Transit",
+        "gdp_share": 0.12,
+        "growth_rate": 0.05,
+        "employment_share": 0.1,
+        "aligned_faction_ids": [
+          "republican_party"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "republican_party",
+      "name": "Republican Party",
+      "ideology": {
+        "economic": 0.3,
+        "social": -0.45
+      },
+      "power": 0.75,
+      "loyalty": 0.6,
+      "seats": 38,
+      "in_coalition": true,
+      "support": 0.38,
+      "color": "#b5523b",
+      "role": "@nationalist",
+      "leader": "Kerem Aslandar"
+    },
+    {
+      "id": "civic_alliance",
+      "name": "Civic Alliance",
+      "ideology": {
+        "economic": 0.55,
+        "social": 0.45
+      },
+      "power": 0.55,
+      "loyalty": 0.4,
+      "seats": 24,
+      "in_coalition": true,
+      "support": 0.24,
+      "color": "#3f7fbf",
+      "role": "@reform",
+      "leader": "Leyla Daran"
+    },
+    {
+      "id": "peoples_labour",
+      "name": "People's Labour Party",
+      "ideology": {
+        "economic": -0.55,
+        "social": 0.15
+      },
+      "power": 0.4,
+      "loyalty": -0.1,
+      "seats": 20,
+      "in_coalition": false,
+      "support": 0.2,
+      "color": "#c43b3b",
+      "role": "@labour",
+      "leader": "Hasan Orbay"
+    },
+    {
+      "id": "highland_farmers",
+      "name": "Highland Farmers' League",
+      "ideology": {
+        "economic": -0.1,
+        "social": -0.35
+      },
+      "power": 0.35,
+      "loyalty": 0.2,
+      "seats": 18,
+      "in_coalition": false,
+      "support": 0.18,
+      "color": "#8a9a3c",
+      "role": "@agrarian",
+      "leader": "Metin Tuzcan"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "ozm1",
+      "name": "Selim Karaca",
+      "portfolio": "Finance",
+      "faction_id": "civic_alliance",
+      "competence": 0.73,
+      "loyalty": 0.55,
+      "ambition": 0.55
+    },
+    {
+      "id": "ozm2",
+      "name": "Okan Demirel",
+      "portfolio": "Interior",
+      "faction_id": "republican_party",
+      "competence": 0.73,
+      "loyalty": 0.67,
+      "ambition": 0.45
+    },
+    {
+      "id": "ozm3",
+      "name": "Aylin Sezer",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "republican_party",
+      "competence": 0.73,
+      "loyalty": 0.75,
+      "ambition": 0.35
+    },
+    {
+      "id": "ozm4",
+      "name": "General Bora Atak",
+      "portfolio": "Defense",
+      "faction_id": "republican_party",
+      "competence": 0.73,
+      "loyalty": 0.63,
+      "ambition": 0.25
+    },
+    {
+      "id": "ozm5",
+      "name": "Deniz Yalın",
+      "portfolio": "Economy",
+      "faction_id": "civic_alliance",
+      "competence": 0.73,
+      "loyalty": 0.75,
+      "ambition": 0.5
+    },
+    {
+      "id": "ozm6",
+      "name": "Nur Esen",
+      "portfolio": "Justice",
+      "faction_id": "republican_party",
+      "competence": 0.73,
+      "loyalty": 0.75,
+      "ambition": 0.4
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Ertan Valcı",
+    "title": "President",
+    "faction_id": "republican_party",
+    "ideology_economic": 0.3,
+    "ideology_social": -0.45,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "hegemon",
+    "rival": "ilmar"
+  },
+  "neighbours": [
+    "ardenia",
+    "ilmar",
+    "qadir",
+    "haravan",
+    "merova"
+  ],
+  "default_relations": {
+    "ardenia": {
+      "score": 0.15,
+      "trade_volume": 900.0
+    },
+    "ilmar": {
+      "score": -0.55,
+      "trade_volume": 400.0
+    },
+    "krasova": {
+      "score": -0.1,
+      "trade_volume": 1300.0
+    },
+    "solheim": {
+      "score": 0.25,
+      "trade_volume": 1500.0
+    },
+    "aldermark": {
+      "score": 0.3,
+      "trade_volume": 2400.0
+    },
+    "haravan": {
+      "score": -0.3,
+      "trade_volume": 50.0
+    },
+    "turaz": {
+      "score": 0.4,
+      "trade_volume": 900.0
+    },
+    "qadir": {
+      "score": 0.05,
+      "trade_volume": 600.0
+    },
+    "merova": {
+      "score": 0.15,
+      "trade_volume": 300.0
+    },
+    "sahrun": {
+      "score": -0.15,
+      "trade_volume": 150.0
+    },
+    "columbria": {
+      "score": 0.3,
+      "trade_volume": 1200.0
+    },
+    "drevnia": {
+      "score": -0.2,
+      "trade_volume": 200.0
+    }
+  }
+}

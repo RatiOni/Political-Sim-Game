@@ -1,0 +1,243 @@
+{
+  "id": "kalvia",
+  "name": "Kalvia",
+  "regime_type": "parliamentary_democracy",
+  "population": 2100000,
+  "bureaucratic_capacity": 0.8,
+  "national_traits": [
+    "coastal_trade",
+    "small_state",
+    "western_anchored"
+  ],
+  "meta": {
+    "short_description": "A small coastal republic on Krasova's far north-west edge that walked out of the Kolvenian Union singing and never looked back. It sits in the Concert now, counts Krasovan armour across the border every morning, and has a large Krasovan-speaking minority it has not yet made citizens.",
+    "difficulty": "normal",
+    "stability_value": 0.66,
+    "civil_war_risk": 0.05,
+    "capital": "Rigava",
+    "strengths": [
+      "Concert membership",
+      "Clean, fast administration",
+      "A port the whole north uses"
+    ],
+    "weaknesses": [
+      "A large stateless Krasovan minority",
+      "Krasova on the border",
+      "Too small to matter alone"
+    ]
+  },
+  "economy": {
+    "gdp": 14000.0,
+    "growth_rate": 0.045,
+    "inflation": 0.05,
+    "unemployment": 0.08,
+    "public_debt_pct": 0.15,
+    "budget": {
+      "revenue": 4000.0,
+      "expenditure": 4100.0
+    },
+    "sectors": [
+      {
+        "id": "services",
+        "name": "Services and Ports",
+        "gdp_share": 0.58,
+        "growth_rate": 0.05,
+        "employment_share": 0.56,
+        "aligned_faction_ids": [
+          "fatherland_union"
+        ]
+      },
+      {
+        "id": "industry",
+        "name": "Timber and Light Industry",
+        "gdp_share": 0.28,
+        "growth_rate": 0.035,
+        "employment_share": 0.3,
+        "aligned_faction_ids": [
+          "free_market_party"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.14,
+        "growth_rate": 0.01,
+        "employment_share": 0.14,
+        "aligned_faction_ids": [
+          "greens_and_farmers"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "fatherland_union",
+      "name": "Fatherland Union",
+      "ideology": {
+        "economic": 0.35,
+        "social": -0.35
+      },
+      "power": 0.6,
+      "loyalty": 0.6,
+      "seats": 32,
+      "in_coalition": true,
+      "support": 0.32,
+      "color": "#8f2f3a",
+      "role": "@nationalist",
+      "leader": "Aivars Kalnin"
+    },
+    {
+      "id": "free_market_party",
+      "name": "Free Market Party",
+      "ideology": {
+        "economic": 0.75,
+        "social": 0.4
+      },
+      "power": 0.5,
+      "loyalty": 0.55,
+      "seats": 26,
+      "in_coalition": true,
+      "support": 0.26,
+      "color": "#3a7fb5",
+      "role": "@business",
+      "leader": "Egils Ozol"
+    },
+    {
+      "id": "harmony_centre",
+      "name": "Harmony Centre",
+      "ideology": {
+        "economic": -0.35,
+        "social": 0.25
+      },
+      "power": 0.4,
+      "loyalty": -0.2,
+      "seats": 26,
+      "in_coalition": false,
+      "support": 0.26,
+      "color": "#c25a3a",
+      "role": "@labour",
+      "leader": "Nils Usak"
+    },
+    {
+      "id": "greens_and_farmers",
+      "name": "Greens and Farmers",
+      "ideology": {
+        "economic": -0.1,
+        "social": 0.35
+      },
+      "power": 0.25,
+      "loyalty": 0.4,
+      "seats": 16,
+      "in_coalition": true,
+      "support": 0.16,
+      "color": "#4f9a4a",
+      "role": "@agrarian",
+      "leader": "Ingrida Berz"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "kal1",
+      "name": "Valdis Dombra",
+      "portfolio": "Finance",
+      "faction_id": "free_market_party",
+      "competence": 0.73,
+      "loyalty": 0.59,
+      "ambition": 0.55
+    },
+    {
+      "id": "kal2",
+      "name": "Maris Kucin",
+      "portfolio": "Interior",
+      "faction_id": "fatherland_union",
+      "competence": 0.73,
+      "loyalty": 0.63,
+      "ambition": 0.45
+    },
+    {
+      "id": "kal3",
+      "name": "Sandra Kalnite",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "fatherland_union",
+      "competence": 0.73,
+      "loyalty": 0.63,
+      "ambition": 0.35
+    },
+    {
+      "id": "kal4",
+      "name": "Artis Pabrik",
+      "portfolio": "Defense",
+      "faction_id": "fatherland_union",
+      "competence": 0.73,
+      "loyalty": 0.67,
+      "ambition": 0.25
+    },
+    {
+      "id": "kal5",
+      "name": "Krisjan Karin",
+      "portfolio": "Economy",
+      "faction_id": "free_market_party",
+      "competence": 0.73,
+      "loyalty": 0.59,
+      "ambition": 0.5
+    },
+    {
+      "id": "kal6",
+      "name": "Janis Bord",
+      "portfolio": "Justice",
+      "faction_id": "greens_and_farmers",
+      "competence": 0.73,
+      "loyalty": 0.59,
+      "ambition": 0.4
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Guntis Ulmanis",
+    "title": "Prime Minister",
+    "faction_id": "fatherland_union",
+    "ideology_economic": 0.35,
+    "ideology_social": -0.35,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "reformer",
+    "rival": "krasova",
+    "ally": "nordhaven"
+  },
+  "neighbours": [
+    "krasova",
+    "zelvany"
+  ],
+  "default_relations": {
+    "zelvany": {
+      "score": -0.35,
+      "trade_volume": 150.0
+    },
+    "borynia": {
+      "score": 0.3,
+      "trade_volume": 100.0
+    },
+    "krasova": {
+      "score": -0.55,
+      "trade_volume": 600.0
+    },
+    "solheim": {
+      "score": 0.55,
+      "trade_volume": 500.0
+    },
+    "nordhaven": {
+      "score": 0.6,
+      "trade_volume": 700.0
+    },
+    "aldermark": {
+      "score": 0.45,
+      "trade_volume": 600.0
+    },
+    "veldoria": {
+      "score": 0.2,
+      "trade_volume": 100.0
+    }
+  }
+}

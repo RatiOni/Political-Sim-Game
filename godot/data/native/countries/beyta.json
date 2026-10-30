@@ -1,0 +1,239 @@
+{
+  "id": "beyta",
+  "name": "Beyta",
+  "regime_type": "parliamentary_democracy",
+  "population": 3600000,
+  "bureaucratic_capacity": 0.45,
+  "national_traits": [
+    "confessional_system",
+    "small_state",
+    "trading_tradition"
+  ],
+  "meta": {
+    "short_description": "A small coastal republic between Qadir and Ilmar where seventeen faiths share one parliament by a constitution that counts them. Its bankers are the region's best and its militias the region's most patient, and every larger neighbour keeps a friend in its cabinet.",
+    "difficulty": "normal",
+    "stability_value": 0.4,
+    "civil_war_risk": 0.2,
+    "capital": "Beyrut",
+    "strengths": [
+      "A trading and banking tradition",
+      "A free press, by regional standards",
+      "A diaspora across the world"
+    ],
+    "weaknesses": [
+      "A confessional system that freezes reform",
+      "Militias that outgun the army",
+      "Neighbours who fight their wars on its soil"
+    ]
+  },
+  "economy": {
+    "gdp": 11000.0,
+    "growth_rate": 0.03,
+    "inflation": 0.08,
+    "unemployment": 0.14,
+    "public_debt_pct": 1.1,
+    "budget": {
+      "revenue": 2400.0,
+      "expenditure": 3300.0
+    },
+    "sectors": [
+      {
+        "id": "services",
+        "name": "Banking and Trade",
+        "gdp_share": 0.68,
+        "growth_rate": 0.035,
+        "employment_share": 0.6,
+        "aligned_faction_ids": [
+          "future_movement"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.1,
+        "growth_rate": 0.01,
+        "employment_share": 0.2,
+        "aligned_faction_ids": [
+          "progressive_socialists"
+        ]
+      },
+      {
+        "id": "industry",
+        "name": "Industry",
+        "gdp_share": 0.22,
+        "growth_rate": 0.02,
+        "employment_share": 0.2,
+        "aligned_faction_ids": [
+          "free_patriots"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "future_movement",
+      "name": "Future Movement",
+      "ideology": {
+        "economic": 0.7,
+        "social": 0.2
+      },
+      "power": 0.5,
+      "loyalty": 0.5,
+      "seats": 30,
+      "in_coalition": true,
+      "support": 0.3,
+      "color": "#3a8ad0",
+      "role": "@business",
+      "leader": "Rafiq Harbani"
+    },
+    {
+      "id": "party_of_god",
+      "name": "Party of God",
+      "ideology": {
+        "economic": -0.35,
+        "social": -0.8
+      },
+      "power": 0.55,
+      "loyalty": -0.3,
+      "seats": 26,
+      "in_coalition": false,
+      "support": 0.26,
+      "color": "#e0c02a",
+      "role": "@nationalist",
+      "leader": "Hassan Nasri"
+    },
+    {
+      "id": "free_patriots",
+      "name": "Free Patriotic Movement",
+      "ideology": {
+        "economic": -0.1,
+        "social": 0.3
+      },
+      "power": 0.4,
+      "loyalty": 0.3,
+      "seats": 24,
+      "in_coalition": true,
+      "support": 0.24,
+      "color": "#e07a2a",
+      "role": "@reform",
+      "leader": "Michel Aounel"
+    },
+    {
+      "id": "progressive_socialists",
+      "name": "Progressive Socialists",
+      "ideology": {
+        "economic": -0.5,
+        "social": 0.1
+      },
+      "power": 0.3,
+      "loyalty": 0.4,
+      "seats": 20,
+      "in_coalition": true,
+      "support": 0.2,
+      "color": "#c03a3a",
+      "role": "@labour",
+      "leader": "Walid Jumbali"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "bey1",
+      "name": "Fouad Sinyar",
+      "portfolio": "Finance",
+      "faction_id": "future_movement",
+      "competence": 0.7,
+      "loyalty": 0.55,
+      "ambition": 0.5
+    },
+    {
+      "id": "bey2",
+      "name": "Michel Murrani",
+      "portfolio": "Interior",
+      "faction_id": "free_patriots",
+      "competence": 0.7,
+      "loyalty": 0.75,
+      "ambition": 0.4
+    },
+    {
+      "id": "bey3",
+      "name": "Faris Bouezi",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "future_movement",
+      "competence": 0.7,
+      "loyalty": 0.55,
+      "ambition": 0.3
+    },
+    {
+      "id": "bey4",
+      "name": "Mohsen Dallal",
+      "portfolio": "Defense",
+      "faction_id": "free_patriots",
+      "competence": 0.7,
+      "loyalty": 0.71,
+      "ambition": 0.55
+    },
+    {
+      "id": "bey5",
+      "name": "Marwan Hamadi",
+      "portfolio": "Economy",
+      "faction_id": "future_movement",
+      "competence": 0.7,
+      "loyalty": 0.59,
+      "ambition": 0.45
+    },
+    {
+      "id": "bey6",
+      "name": "Bahij Tabbari",
+      "portfolio": "Justice",
+      "faction_id": "progressive_socialists",
+      "competence": 0.7,
+      "loyalty": 0.71,
+      "ambition": 0.35
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Elias Hrawani",
+    "title": "President",
+    "faction_id": "future_movement",
+    "ideology_economic": 0.7,
+    "ideology_social": 0.2,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "survivor"
+  },
+  "neighbours": [
+    "qadir",
+    "ilmar",
+    "sahrun",
+    "azhara"
+  ],
+  "default_relations": {
+    "ilmar": {
+      "score": -0.2,
+      "trade_volume": 150.0
+    },
+    "sahrun": {
+      "score": 0.1,
+      "trade_volume": 100.0
+    },
+    "azhara": {
+      "score": 0.3,
+      "trade_volume": 400.0
+    },
+    "qadir": {
+      "score": -0.15,
+      "trade_volume": 200.0
+    },
+    "valcourt": {
+      "score": 0.35,
+      "trade_volume": 300.0
+    },
+    "solheim": {
+      "score": 0.2,
+      "trade_volume": 200.0
+    }
+  }
+}

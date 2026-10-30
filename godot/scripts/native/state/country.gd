@@ -124,6 +124,7 @@ static func from_json(data: Dictionary, p_is_player: bool) -> Country:
 
 	var meta: Dictionary = data.get("meta", {})
 	c.stability = float(meta.get("stability_value", 0.7))
+	c.civil_war_risk = float(meta.get("civil_war_risk", 0.0))
 	c.bureaucratic_capacity = float(data.get("bureaucratic_capacity", 0.75))
 
 	for t in data.get("national_traits", []):

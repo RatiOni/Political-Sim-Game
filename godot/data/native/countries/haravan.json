@@ -1,0 +1,240 @@
+{
+  "id": "haravan",
+  "name": "Haravan",
+  "regime_type": "hybrid_regime",
+  "population": 3200000,
+  "bureaucratic_capacity": 0.6,
+  "national_traits": [
+    "landlocked",
+    "diaspora",
+    "frozen_conflict"
+  ],
+  "meta": {
+    "short_description": "A small landlocked mountain republic south-east of Merova, wedged between Ozmara and Turaz, with a frozen war over the Karabeth highlands still shooting along its eastern contact line. It survives on remittances, an ancient church and a Krasovan garrison it cannot afford to send home.",
+    "difficulty": "normal",
+    "stability_value": 0.46,
+    "civil_war_risk": 0.14,
+    "capital": "Erevan Nor",
+    "strengths": [
+      "A Krasovan security guarantee",
+      "A rich and loyal diaspora",
+      "Hardened veterans"
+    ],
+    "weaknesses": [
+      "Blockaded on two borders",
+      "A frozen war with Turaz",
+      "An economy kept alive by remittances"
+    ]
+  },
+  "economy": {
+    "gdp": 6500.0,
+    "growth_rate": 0.03,
+    "inflation": 0.14,
+    "unemployment": 0.17,
+    "public_debt_pct": 0.48,
+    "budget": {
+      "revenue": 1700.0,
+      "expenditure": 2000.0
+    },
+    "sectors": [
+      {
+        "id": "services",
+        "name": "Services and Remittances",
+        "gdp_share": 0.5,
+        "growth_rate": 0.03,
+        "employment_share": 0.42,
+        "aligned_faction_ids": [
+          "republican_haravan"
+        ]
+      },
+      {
+        "id": "industry",
+        "name": "Mining and Brandy",
+        "gdp_share": 0.26,
+        "growth_rate": 0.025,
+        "employment_share": 0.24,
+        "aligned_faction_ids": [
+          "karabeth_committee"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.24,
+        "growth_rate": 0.01,
+        "employment_share": 0.34,
+        "aligned_faction_ids": [
+          "mountain_villages"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "karabeth_committee",
+      "name": "Karabeth Committee",
+      "ideology": {
+        "economic": 0.15,
+        "social": -0.7
+      },
+      "power": 0.7,
+      "loyalty": 0.6,
+      "seats": 40,
+      "in_coalition": true,
+      "support": 0.4,
+      "color": "#9c3a2a",
+      "role": "@nationalist",
+      "leader": "Serob Arkanyan"
+    },
+    {
+      "id": "republican_haravan",
+      "name": "Republican Party",
+      "ideology": {
+        "economic": 0.45,
+        "social": -0.1
+      },
+      "power": 0.5,
+      "loyalty": 0.5,
+      "seats": 30,
+      "in_coalition": true,
+      "support": 0.3,
+      "color": "#3b6aa0",
+      "role": "@business",
+      "leader": "Vazgen Sarkisyan"
+    },
+    {
+      "id": "civil_contract",
+      "name": "Civil Contract",
+      "ideology": {
+        "economic": 0.1,
+        "social": 0.65
+      },
+      "power": 0.3,
+      "loyalty": -0.3,
+      "seats": 18,
+      "in_coalition": false,
+      "support": 0.18,
+      "color": "#d4a83a",
+      "role": "@reform",
+      "leader": "Narek Pashayan"
+    },
+    {
+      "id": "mountain_villages",
+      "name": "Mountain Villages' Union",
+      "ideology": {
+        "economic": -0.45,
+        "social": -0.25
+      },
+      "power": 0.2,
+      "loyalty": 0.1,
+      "seats": 12,
+      "in_coalition": false,
+      "support": 0.12,
+      "color": "#7a8f3c",
+      "role": "@agrarian",
+      "leader": "Gagik Tsarukov"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "har1",
+      "name": "Tigran Sargsov",
+      "portfolio": "Finance",
+      "faction_id": "republican_haravan",
+      "competence": 0.55,
+      "loyalty": 0.63,
+      "ambition": 0.25
+    },
+    {
+      "id": "har2",
+      "name": "Robert Kocharyev",
+      "portfolio": "Interior",
+      "faction_id": "karabeth_committee",
+      "competence": 0.55,
+      "loyalty": 0.59,
+      "ambition": 0.5
+    },
+    {
+      "id": "har3",
+      "name": "Edvard Nalbandov",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "republican_haravan",
+      "competence": 0.55,
+      "loyalty": 0.71,
+      "ambition": 0.4
+    },
+    {
+      "id": "har4",
+      "name": "General Seyran Ohanov",
+      "portfolio": "Defense",
+      "faction_id": "karabeth_committee",
+      "competence": 0.55,
+      "loyalty": 0.55,
+      "ambition": 0.3
+    },
+    {
+      "id": "har5",
+      "name": "Ara Babloyan",
+      "portfolio": "Economy",
+      "faction_id": "republican_haravan",
+      "competence": 0.55,
+      "loyalty": 0.55,
+      "ambition": 0.55
+    },
+    {
+      "id": "har6",
+      "name": "Hrant Vardanov",
+      "portfolio": "Justice",
+      "faction_id": "karabeth_committee",
+      "competence": 0.55,
+      "loyalty": 0.75,
+      "ambition": 0.45
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Levon Terzian",
+    "title": "President",
+    "faction_id": "karabeth_committee",
+    "ideology_economic": 0.15,
+    "ideology_social": -0.7,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "survivor",
+    "rival": "turaz",
+    "ally": "krasova"
+  },
+  "neighbours": [
+    "ozmara",
+    "turaz",
+    "merova"
+  ],
+  "default_relations": {
+    "ozmara": {
+      "score": -0.3,
+      "trade_volume": 50.0
+    },
+    "turaz": {
+      "score": -0.75,
+      "trade_volume": 0.0
+    },
+    "krasova": {
+      "score": 0.55,
+      "trade_volume": 500.0
+    },
+    "merova": {
+      "score": 0.2,
+      "trade_volume": 100.0
+    },
+    "valcourt": {
+      "score": 0.25,
+      "trade_volume": 100.0
+    },
+    "ilmar": {
+      "score": -0.05,
+      "trade_volume": 50.0
+    }
+  }
+}

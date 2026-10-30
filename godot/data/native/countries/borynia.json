@@ -1,0 +1,245 @@
+{
+  "id": "borynia",
+  "name": "Borynia",
+  "regime_type": "presidential_democracy",
+  "population": 15000000,
+  "bureaucratic_capacity": 0.52,
+  "national_traits": [
+    "breakaway_region",
+    "agrarian_heartland",
+    "transit_state"
+  ],
+  "meta": {
+    "short_description": "A wide black-earth republic west of Krasova and north of the Aster Sea, drifting west one disputed election at a time. The far bank of the Dnes is held by a Krasova-backed breakaway administration behind a ceasefire line nobody in Borynia will call a border.",
+    "difficulty": "normal",
+    "stability_value": 0.42,
+    "civil_war_risk": 0.22,
+    "capital": "Kyvel",
+    "strengths": [
+      "Rich farmland",
+      "A young, westward-looking capital",
+      "Gas transit pipelines"
+    ],
+    "weaknesses": [
+      "A frozen breakaway region on the Dnes",
+      "Oligarchs who own the parliament",
+      "Krasovan pressure on every bill"
+    ]
+  },
+  "economy": {
+    "gdp": 38000.0,
+    "growth_rate": 0.01,
+    "inflation": 0.24,
+    "unemployment": 0.12,
+    "public_debt_pct": 0.55,
+    "budget": {
+      "revenue": 9800.0,
+      "expenditure": 11200.0
+    },
+    "sectors": [
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.26,
+        "growth_rate": 0.015,
+        "employment_share": 0.32,
+        "aligned_faction_ids": [
+          "peasant_party"
+        ]
+      },
+      {
+        "id": "industry",
+        "name": "Heavy Industry",
+        "gdp_share": 0.32,
+        "growth_rate": 0.0,
+        "employment_share": 0.3,
+        "aligned_faction_ids": [
+          "party_of_the_east"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Services",
+        "gdp_share": 0.42,
+        "growth_rate": 0.03,
+        "employment_share": 0.38,
+        "aligned_faction_ids": [
+          "democratic_choice"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "democratic_choice",
+      "name": "Democratic Choice",
+      "ideology": {
+        "economic": 0.45,
+        "social": 0.55
+      },
+      "power": 0.55,
+      "loyalty": 0.5,
+      "seats": 34,
+      "in_coalition": true,
+      "support": 0.34,
+      "color": "#e0b33c",
+      "role": "@reform",
+      "leader": "Olena Varchuk"
+    },
+    {
+      "id": "party_of_the_east",
+      "name": "Party of the East",
+      "ideology": {
+        "economic": -0.25,
+        "social": -0.5
+      },
+      "power": 0.5,
+      "loyalty": -0.3,
+      "seats": 30,
+      "in_coalition": false,
+      "support": 0.3,
+      "color": "#5a6fa8",
+      "role": "@nationalist",
+      "leader": "Viktor Hrabov"
+    },
+    {
+      "id": "peasant_party",
+      "name": "Peasant Party",
+      "ideology": {
+        "economic": -0.3,
+        "social": -0.2
+      },
+      "power": 0.35,
+      "loyalty": 0.3,
+      "seats": 18,
+      "in_coalition": true,
+      "support": 0.18,
+      "color": "#7d9b3a",
+      "role": "@agrarian",
+      "leader": "Mykola Stepan"
+    },
+    {
+      "id": "industrialists",
+      "name": "Industrialists' Union",
+      "ideology": {
+        "economic": 0.65,
+        "social": -0.05
+      },
+      "power": 0.4,
+      "loyalty": 0.2,
+      "seats": 18,
+      "in_coalition": true,
+      "support": 0.18,
+      "color": "#8c6d3f",
+      "role": "@business",
+      "leader": "Rinat Akhmed"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "bor1",
+      "name": "Petro Halyk",
+      "portfolio": "Finance",
+      "faction_id": "industrialists",
+      "competence": 0.55,
+      "loyalty": 0.75,
+      "ambition": 0.25
+    },
+    {
+      "id": "bor2",
+      "name": "Arsen Bilyk",
+      "portfolio": "Interior",
+      "faction_id": "democratic_choice",
+      "competence": 0.55,
+      "loyalty": 0.63,
+      "ambition": 0.5
+    },
+    {
+      "id": "bor3",
+      "name": "Dmytro Kulen",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "democratic_choice",
+      "competence": 0.55,
+      "loyalty": 0.55,
+      "ambition": 0.4
+    },
+    {
+      "id": "bor4",
+      "name": "General Vasyl Hrom",
+      "portfolio": "Defense",
+      "faction_id": "peasant_party",
+      "competence": 0.55,
+      "loyalty": 0.67,
+      "ambition": 0.3
+    },
+    {
+      "id": "bor5",
+      "name": "Iryna Moroz",
+      "portfolio": "Economy",
+      "faction_id": "industrialists",
+      "competence": 0.55,
+      "loyalty": 0.75,
+      "ambition": 0.55
+    },
+    {
+      "id": "bor6",
+      "name": "Taras Lysyi",
+      "portfolio": "Justice",
+      "faction_id": "democratic_choice",
+      "competence": 0.55,
+      "loyalty": 0.63,
+      "ambition": 0.45
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Leonid Kravets",
+    "title": "President",
+    "faction_id": "democratic_choice",
+    "ideology_economic": 0.45,
+    "ideology_social": 0.55,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "reformer",
+    "rival": "krasova",
+    "ally": "selenne"
+  },
+  "neighbours": [
+    "krasova",
+    "zelvany",
+    "selenne",
+    "drevnia"
+  ],
+  "default_relations": {
+    "zelvany": {
+      "score": -0.1,
+      "trade_volume": 300.0
+    },
+    "krasova": {
+      "score": -0.45,
+      "trade_volume": 1800.0
+    },
+    "selenne": {
+      "score": 0.35,
+      "trade_volume": 600.0
+    },
+    "solheim": {
+      "score": 0.15,
+      "trade_volume": 400.0
+    },
+    "aldermark": {
+      "score": 0.2,
+      "trade_volume": 700.0
+    },
+    "drevnia": {
+      "score": 0.05,
+      "trade_volume": 200.0
+    },
+    "kalvia": {
+      "score": 0.3,
+      "trade_volume": 100.0
+    }
+  }
+}

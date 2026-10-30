@@ -1,0 +1,251 @@
+{
+  "id": "selenne",
+  "name": "Selenne",
+  "regime_type": "parliamentary_democracy",
+  "population": 19000000,
+  "bureaucratic_capacity": 0.62,
+  "national_traits": [
+    "port_economy",
+    "western_anchored",
+    "agrarian_heartland"
+  ],
+  "meta": {
+    "short_description": "A port republic on the north-west shore of the Aster Sea, the West's gateway into the basin and the Concert's newest and poorest member. Its harbour handles half the basin's container traffic, and its villages are still waiting for the running water the old regime promised.",
+    "difficulty": "normal",
+    "stability_value": 0.56,
+    "civil_war_risk": 0.08,
+    "capital": "Portavel",
+    "strengths": [
+      "Concert membership and funds",
+      "The basin's busiest port",
+      "Cheap, skilled labour"
+    ],
+    "weaknesses": [
+      "Village poverty",
+      "A judiciary for sale",
+      "Emigration draining the young"
+    ]
+  },
+  "economy": {
+    "gdp": 62000.0,
+    "growth_rate": 0.035,
+    "inflation": 0.09,
+    "unemployment": 0.09,
+    "public_debt_pct": 0.28,
+    "budget": {
+      "revenue": 15500.0,
+      "expenditure": 17000.0
+    },
+    "sectors": [
+      {
+        "id": "services",
+        "name": "Ports and Services",
+        "gdp_share": 0.46,
+        "growth_rate": 0.04,
+        "employment_share": 0.38,
+        "aligned_faction_ids": [
+          "national_liberals"
+        ]
+      },
+      {
+        "id": "industry",
+        "name": "Industry",
+        "gdp_share": 0.32,
+        "growth_rate": 0.03,
+        "employment_share": 0.28,
+        "aligned_faction_ids": [
+          "social_democrats_sl"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.22,
+        "growth_rate": 0.015,
+        "employment_share": 0.34,
+        "aligned_faction_ids": [
+          "peasant_alliance"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "social_democrats_sl",
+      "name": "Social Democratic Party",
+      "ideology": {
+        "economic": -0.35,
+        "social": -0.2
+      },
+      "power": 0.6,
+      "loyalty": 0.4,
+      "seats": 34,
+      "in_coalition": false,
+      "support": 0.34,
+      "color": "#c23a3a",
+      "role": "@labour",
+      "leader": "Ion Iliescar"
+    },
+    {
+      "id": "national_liberals",
+      "name": "National Liberal Union",
+      "ideology": {
+        "economic": 0.6,
+        "social": 0.45
+      },
+      "power": 0.55,
+      "loyalty": 0.55,
+      "seats": 32,
+      "in_coalition": true,
+      "support": 0.32,
+      "color": "#e0c03a",
+      "role": "@reform",
+      "leader": "Emil Constantel"
+    },
+    {
+      "id": "peasant_alliance",
+      "name": "Christian Peasant Alliance",
+      "ideology": {
+        "economic": 0.05,
+        "social": -0.4
+      },
+      "power": 0.35,
+      "loyalty": 0.5,
+      "seats": 20,
+      "in_coalition": true,
+      "support": 0.2,
+      "color": "#4a8a4a",
+      "role": "@agrarian",
+      "leader": "Corneliu Coposan"
+    },
+    {
+      "id": "greater_selenne",
+      "name": "Greater Selenne Party",
+      "ideology": {
+        "economic": -0.2,
+        "social": -0.8
+      },
+      "power": 0.25,
+      "loyalty": -0.4,
+      "seats": 14,
+      "in_coalition": false,
+      "support": 0.14,
+      "color": "#5a3a8a",
+      "role": "@nationalist",
+      "leader": "Vadim Tudorescu"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "sel1",
+      "name": "Mugur Isarel",
+      "portfolio": "Finance",
+      "faction_id": "national_liberals",
+      "competence": 0.55,
+      "loyalty": 0.55,
+      "ambition": 0.25
+    },
+    {
+      "id": "sel2",
+      "name": "Victor Ciorbea",
+      "portfolio": "Interior",
+      "faction_id": "peasant_alliance",
+      "competence": 0.55,
+      "loyalty": 0.75,
+      "ambition": 0.5
+    },
+    {
+      "id": "sel3",
+      "name": "Teodor Melescan",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "national_liberals",
+      "competence": 0.55,
+      "loyalty": 0.67,
+      "ambition": 0.4
+    },
+    {
+      "id": "sel4",
+      "name": "Gavril Dejeu",
+      "portfolio": "Defense",
+      "faction_id": "peasant_alliance",
+      "competence": 0.55,
+      "loyalty": 0.67,
+      "ambition": 0.3
+    },
+    {
+      "id": "sel5",
+      "name": "Radu Vasilache",
+      "portfolio": "Economy",
+      "faction_id": "national_liberals",
+      "competence": 0.55,
+      "loyalty": 0.63,
+      "ambition": 0.55
+    },
+    {
+      "id": "sel6",
+      "name": "Valeriu Stoica",
+      "portfolio": "Justice",
+      "faction_id": "peasant_alliance",
+      "competence": 0.55,
+      "loyalty": 0.75,
+      "ambition": 0.45
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Andrei Petrean",
+    "title": "Prime Minister",
+    "faction_id": "social_democrats_sl",
+    "ideology_economic": -0.35,
+    "ideology_social": -0.2,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "reformer",
+    "ally": "aldermark"
+  },
+  "neighbours": [
+    "borynia",
+    "drevnia",
+    "marisca"
+  ],
+  "default_relations": {
+    "borynia": {
+      "score": 0.35,
+      "trade_volume": 600.0
+    },
+    "solheim": {
+      "score": 0.5,
+      "trade_volume": 900.0
+    },
+    "aldermark": {
+      "score": 0.55,
+      "trade_volume": 1800.0
+    },
+    "drevnia": {
+      "score": -0.1,
+      "trade_volume": 300.0
+    },
+    "marisca": {
+      "score": 0.2,
+      "trade_volume": 300.0
+    },
+    "krasova": {
+      "score": -0.25,
+      "trade_volume": 700.0
+    },
+    "ardenia": {
+      "score": 0.2,
+      "trade_volume": 300.0
+    },
+    "valcourt": {
+      "score": 0.45,
+      "trade_volume": 800.0
+    },
+    "valmora": {
+      "score": 0.15,
+      "trade_volume": 150.0
+    }
+  }
+}

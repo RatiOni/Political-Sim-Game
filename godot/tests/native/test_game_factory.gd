@@ -7,8 +7,10 @@ const GameFactoryScript = preload("res://scripts/native/state/game_factory.gd")
 const StateValidatorScript = preload("res://scripts/native/state/state_validator.gd")
 
 const EXPECTED_WORLD_IDS := [
-	"krasova", "merova", "nueva_costa", "qadir",
-	"solheim", "terand", "valmora", "veldoria",
+	"aldermark", "azhara", "beyta", "borynia", "brisca", "columbria", "drevnia", "hanlin",
+	"haravan", "ilmar", "kalvia", "krasova", "marisca", "merova", "nordhaven", "nueva_costa",
+	"ozmara", "qadir", "sahrun", "selenne", "solheim", "temirsk", "terand", "turaz",
+	"ulgar", "valcourt", "valmora", "veldoria", "yaskar", "zelvany",
 ]
 
 const FIXED_SEED := 424242
@@ -41,7 +43,7 @@ func _test_world_and_relations(t, content: Dictionary) -> void:
 	for c in state.world:
 		world_ids.append(c.id)
 	world_ids.sort()
-	t.equal(world_ids, EXPECTED_WORLD_IDS, "all eight other countries exist as world actors")
+	t.equal(world_ids, EXPECTED_WORLD_IDS, "all thirty other countries exist as world actors")
 
 	for c in state.world:
 		t.truth(not c.factions.is_empty(), "world country %s has factions" % c.id)
@@ -65,7 +67,7 @@ func _test_world_and_relations(t, content: Dictionary) -> void:
 				t.equal(rel_ab.trade_volume, rel_ba.trade_volume,
 					"relation trade_volume symmetric for %s/%s" % [a_id, b_id])
 			pair_count += 1
-	t.equal(pair_count, 36, "36 unique country pairs among nine countries")
+	t.equal(pair_count, 465, "465 unique country pairs among thirty-one countries")
 
 	var ardenia_veldoria = state.country.relations.get("veldoria")
 	t.truth(ardenia_veldoria != null, "ardenia/veldoria relation exists")

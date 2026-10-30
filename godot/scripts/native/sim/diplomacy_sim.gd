@@ -37,10 +37,7 @@ const REGIME_FAMILY := {
 
 
 static func world_country(state: GameState, country_id: String) -> Country:
-	for c in state.world:
-		if c.id == country_id:
-			return c
-	return null
+	return state.world_country(country_id)
 
 
 static func pair(state: GameState, country_id: String) -> Array:

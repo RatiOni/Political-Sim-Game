@@ -421,6 +421,58 @@ every figure stays bounded.
 A binary save whose length happened to begin with a space byte was misread
 as JSON and refused; the loader now tries JSON and falls back to binary.
 
+## The world roster
+
+**Player-facing job:** Ardenia is one small state among thirty-one, and
+every foreign name on the desk belongs to a country with its own leader,
+parties, economy and interests.
+
+- **Thirty-one countries in six clusters.** The Krasovan sphere (Krasova,
+  Zelvany, Borynia, Kalvia, Haravan, Temirsk, Ulgar), the eastern energy
+  coast (Turaz, Yaskar), the Aster basin (Selenne, Drevnia, Valmora,
+  Marisca), the Western core (Aldermark, Valcourt, Nordhaven, Solheim,
+  Brisca), the south (Ozmara, Ilmar, Qadir, Terand, Azhara, Sahrun, Beyta)
+  and the distant powers (Columbria, Hanlin, Nueva Costa), plus Ardenia's
+  northern and south-eastern neighbours Veldoria and Merova. Geography is
+  fixed in `docs/design/world_map_prompt.md`.
+- **Yaskar is the 22nd.** The eastern energy coast held one state, so
+  Yaskar — a small ferry republic on the inland sea's northern shore —
+  gives Turaz a neighbour and the gas question a second shore.
+- **Stories are in the numbers.** Zelvany and Ulgar start in the Union and
+  warm to Krasova; Kalvia, Borynia and Nordhaven start cold to it;
+  Haravan and Turaz, Ilmar and Ozmara, and Drevnia and Marisca are rivals;
+  Sahrun opens with a 0.60 civil-war risk (`meta.civil_war_risk`, read at
+  load; absent means zero, so the original nine are unchanged).
+- **Blocs.** The Concert seeds Solheim, Nueva Costa, Aldermark, Valcourt,
+  Nordhaven, Brisca, Kalvia and Selenne; the Meridian seeds Solheim, Nueva
+  Costa, Aldermark, Valcourt, Nordhaven, Brisca and Columbria; the Union
+  seeds Krasova, Zelvany and Ulgar. Ozmara is a hegemon and so never fits
+  the Concert: it courts without a seat. Columbria sits outside the Concert
+  but is a Meridian `core_members` entry, which, like an anchor, never
+  leaves.
+- **Roles everywhere.** Every axis role lands sign-correctly in all
+  thirty-one countries except Terand's `@labour` (no faction left of
+  centre). `@agrarian` and `@establishment` have no axis and resolve to
+  nobody where no faction declares them; the lists are pinned in
+  `test_world_roster.gd`, and an option that acts in Ardenia acts in every
+  country.
+- **The desk stays readable.** A courtesy between two foreign states
+  (`world_deepen`) still reaches the press but no longer takes a line in
+  the monthly report. Pacts, pressure, condemnations, leaks, arcs and bloc
+  changes do. Over twenty years on six seeds (`test_world_journey.gd`) the
+  thirty foreign states carry out about 1,790 plans and 265 hostile moves,
+  none acts more than four times a year, and the report averages about six
+  lines a month and never passes eighteen (caps 8 and 20: the nine-country
+  world averaged 5.7 with a peak of 14, and with every courtesy reported
+  the thirty-one-country world averaged 11.4).
+- **Cost.** A simulated month costs about 1.6× what it did with nine
+  countries, after caching the world's relation pairs and indexing
+  `GameState.world_country`. The election calibration journeys were split
+  into `test_election_calibration`, `test_election_austerity` and
+  `test_election_record` with unchanged checks; `test_election_steady` and
+  `test_election_strong` sum both sides into one band, so by the owner's
+  ruling they run with `timeout 360`, every other test with 180.
+
 ## Opposition play
 
 **Player-facing job:** opposition is a career, not a waiting room. The

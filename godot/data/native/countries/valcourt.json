@@ -1,0 +1,264 @@
+{
+  "id": "valcourt",
+  "name": "Valcourt",
+  "regime_type": "presidential_democracy",
+  "population": 58000000,
+  "bureaucratic_capacity": 0.86,
+  "national_traits": [
+    "nuclear_power",
+    "great_power_ambition",
+    "colonial_legacy"
+  ],
+  "meta": {
+    "short_description": "A proud republic of the Western core that founded the Meridian Treaty Organisation and still believes the West should guarantee its own frontier. Its president presses the alliance to offer a real security guarantee to the basin's new democracies, Ardenia among them.",
+    "difficulty": "normal",
+    "stability_value": 0.76,
+    "civil_war_risk": 0.03,
+    "capital": "Lutèce",
+    "strengths": [
+      "A nuclear deterrent and a seat on every council",
+      "The Meridian's founding voice",
+      "Cheap nuclear power"
+    ],
+    "weaknesses": [
+      "A state that spends more than it earns",
+      "Strikes that stop the country",
+      "Grand designs its partners will not pay for"
+    ]
+  },
+  "economy": {
+    "gdp": 300000.0,
+    "growth_rate": 0.018,
+    "inflation": 0.025,
+    "unemployment": 0.11,
+    "public_debt_pct": 0.55,
+    "budget": {
+      "revenue": 72000.0,
+      "expenditure": 78000.0
+    },
+    "sectors": [
+      {
+        "id": "industry",
+        "name": "Industry and Arms",
+        "gdp_share": 0.26,
+        "growth_rate": 0.018,
+        "employment_share": 0.24,
+        "aligned_faction_ids": [
+          "rally_for_the_republic"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Services",
+        "gdp_share": 0.66,
+        "growth_rate": 0.02,
+        "employment_share": 0.7,
+        "aligned_faction_ids": [
+          "socialist_party_vc"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Agriculture",
+        "gdp_share": 0.08,
+        "growth_rate": 0.008,
+        "employment_share": 0.06,
+        "aligned_faction_ids": [
+          "union_for_democracy"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "rally_for_the_republic",
+      "name": "Rally for the Republic",
+      "ideology": {
+        "economic": 0.35,
+        "social": -0.25
+      },
+      "power": 0.7,
+      "loyalty": 0.6,
+      "seats": 38,
+      "in_coalition": true,
+      "support": 0.38,
+      "color": "#2f4f9f",
+      "role": "@establishment",
+      "leader": "Jacques Charolais"
+    },
+    {
+      "id": "socialist_party_vc",
+      "name": "Socialist Party",
+      "ideology": {
+        "economic": -0.45,
+        "social": 0.45
+      },
+      "power": 0.6,
+      "loyalty": 0.2,
+      "seats": 32,
+      "in_coalition": false,
+      "support": 0.32,
+      "color": "#e04a7a",
+      "role": "@labour",
+      "leader": "Lionel Jospin-Marat"
+    },
+    {
+      "id": "national_front_vc",
+      "name": "National Front",
+      "ideology": {
+        "economic": 0.0,
+        "social": -0.85
+      },
+      "power": 0.35,
+      "loyalty": -0.6,
+      "seats": 14,
+      "in_coalition": false,
+      "support": 0.14,
+      "color": "#1a2a5a",
+      "role": "@nationalist",
+      "leader": "Jean-Marc Lepontier"
+    },
+    {
+      "id": "union_for_democracy",
+      "name": "Union for Democracy",
+      "ideology": {
+        "economic": 0.6,
+        "social": 0.4
+      },
+      "power": 0.35,
+      "loyalty": 0.5,
+      "seats": 16,
+      "in_coalition": true,
+      "support": 0.16,
+      "color": "#5ab0e0",
+      "role": "@business",
+      "leader": "Valère Giscourt"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "val1",
+      "name": "Alain Juppenet",
+      "portfolio": "Finance",
+      "faction_id": "rally_for_the_republic",
+      "competence": 0.58,
+      "loyalty": 0.63,
+      "ambition": 0.3
+    },
+    {
+      "id": "val2",
+      "name": "Charles Pascal",
+      "portfolio": "Interior",
+      "faction_id": "rally_for_the_republic",
+      "competence": 0.58,
+      "loyalty": 0.75,
+      "ambition": 0.55
+    },
+    {
+      "id": "val3",
+      "name": "Hervé Charette",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "rally_for_the_republic",
+      "competence": 0.58,
+      "loyalty": 0.63,
+      "ambition": 0.45
+    },
+    {
+      "id": "val4",
+      "name": "Charles Milloux",
+      "portfolio": "Defense",
+      "faction_id": "union_for_democracy",
+      "competence": 0.58,
+      "loyalty": 0.55,
+      "ambition": 0.35
+    },
+    {
+      "id": "val5",
+      "name": "Jean Arthaud",
+      "portfolio": "Economy",
+      "faction_id": "union_for_democracy",
+      "competence": 0.58,
+      "loyalty": 0.55,
+      "ambition": 0.25
+    },
+    {
+      "id": "val6",
+      "name": "Jacques Toubel",
+      "portfolio": "Justice",
+      "faction_id": "rally_for_the_republic",
+      "competence": 0.58,
+      "loyalty": 0.75,
+      "ambition": 0.5
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "François Mittenard",
+    "title": "President",
+    "faction_id": "rally_for_the_republic",
+    "ideology_economic": 0.35,
+    "ideology_social": -0.25,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "ideologue",
+    "ally": "aldermark",
+    "rival": "krasova"
+  },
+  "neighbours": [
+    "aldermark",
+    "brisca",
+    "solheim"
+  ],
+  "default_relations": {
+    "haravan": {
+      "score": 0.25,
+      "trade_volume": 100.0
+    },
+    "selenne": {
+      "score": 0.45,
+      "trade_volume": 800.0
+    },
+    "drevnia": {
+      "score": 0.15,
+      "trade_volume": 300.0
+    },
+    "aldermark": {
+      "score": 0.75,
+      "trade_volume": 4000.0
+    },
+    "solheim": {
+      "score": 0.6,
+      "trade_volume": 3000.0
+    },
+    "brisca": {
+      "score": 0.45,
+      "trade_volume": 4000.0
+    },
+    "nordhaven": {
+      "score": 0.55,
+      "trade_volume": 1200.0
+    },
+    "columbria": {
+      "score": 0.45,
+      "trade_volume": 4000.0
+    },
+    "krasova": {
+      "score": -0.3,
+      "trade_volume": 800.0
+    },
+    "ardenia": {
+      "score": 0.25,
+      "trade_volume": 300.0
+    },
+    "qadir": {
+      "score": -0.1,
+      "trade_volume": 600.0
+    },
+    "beyta": {
+      "score": 0.35,
+      "trade_volume": 300.0
+    }
+  }
+}

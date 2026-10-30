@@ -1,0 +1,258 @@
+{
+  "id": "ilmar",
+  "name": "Ilmar",
+  "regime_type": "authoritarian",
+  "population": 21000000,
+  "bureaucratic_capacity": 0.6,
+  "national_traits": [
+    "resource_rich",
+    "military_tradition",
+    "personalist"
+  ],
+  "meta": {
+    "short_description": "A large oil state south-east of Ozmara whose leader rebuilt an ancient capital in his own image. Ilmar sees itself as the natural master of the south and Ozmara as the upstart in its way, and it pays for its armies with oil sold to anyone.",
+    "difficulty": "normal",
+    "stability_value": 0.6,
+    "civil_war_risk": 0.15,
+    "capital": "Babilar",
+    "strengths": [
+      "Huge oil reserves",
+      "A large army",
+      "The rivers that feed the south"
+    ],
+    "weaknesses": [
+      "A restless minority in the northern hills",
+      "A history of sanctions",
+      "One man's whims as policy"
+    ]
+  },
+  "economy": {
+    "gdp": 68000.0,
+    "growth_rate": 0.03,
+    "inflation": 0.2,
+    "unemployment": 0.15,
+    "public_debt_pct": 0.7,
+    "budget": {
+      "revenue": 18000.0,
+      "expenditure": 20000.0
+    },
+    "sectors": [
+      {
+        "id": "resources",
+        "name": "Oil",
+        "gdp_share": 0.55,
+        "growth_rate": 0.04,
+        "employment_share": 0.1,
+        "aligned_faction_ids": [
+          "revival_party"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "River Agriculture",
+        "gdp_share": 0.15,
+        "growth_rate": 0.01,
+        "employment_share": 0.38,
+        "aligned_faction_ids": [
+          "tribal_sheikhs"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Services",
+        "gdp_share": 0.3,
+        "growth_rate": 0.02,
+        "employment_share": 0.52,
+        "aligned_faction_ids": [
+          "merchant_class"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "revival_party",
+      "name": "Party of the Revival",
+      "ideology": {
+        "economic": -0.2,
+        "social": -0.65
+      },
+      "power": 0.9,
+      "loyalty": 0.7,
+      "seats": 66,
+      "in_coalition": true,
+      "support": 0.66,
+      "color": "#2a6a3a",
+      "role": "@nationalist",
+      "leader": "Sadun al-Ilmari"
+    },
+    {
+      "id": "tribal_sheikhs",
+      "name": "Tribal Sheikhs",
+      "ideology": {
+        "economic": -0.1,
+        "social": -0.7
+      },
+      "power": 0.4,
+      "loyalty": 0.3,
+      "seats": 14,
+      "in_coalition": true,
+      "support": 0.14,
+      "color": "#9a7a3a",
+      "role": "@agrarian",
+      "leader": "Sheikh Abu Rashid"
+    },
+    {
+      "id": "hill_front",
+      "name": "Northern Hill Front",
+      "ideology": {
+        "economic": -0.3,
+        "social": 0.3
+      },
+      "power": 0.3,
+      "loyalty": -0.7,
+      "seats": 12,
+      "in_coalition": false,
+      "support": 0.12,
+      "color": "#c0a030",
+      "role": "@labour",
+      "leader": "Masud Barzanji"
+    },
+    {
+      "id": "merchant_class",
+      "name": "Merchant Class",
+      "ideology": {
+        "economic": 0.7,
+        "social": 0.1
+      },
+      "power": 0.2,
+      "loyalty": 0.2,
+      "seats": 8,
+      "in_coalition": false,
+      "support": 0.08,
+      "color": "#b06a2a",
+      "role": "@business",
+      "leader": "Ahmad Chalabri"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "ilm1",
+      "name": "Hikmat Mizbani",
+      "portfolio": "Finance",
+      "faction_id": "revival_party",
+      "competence": 0.7,
+      "loyalty": 0.63,
+      "ambition": 0.5
+    },
+    {
+      "id": "ilm2",
+      "name": "Watban Ibrahimi",
+      "portfolio": "Interior",
+      "faction_id": "revival_party",
+      "competence": 0.7,
+      "loyalty": 0.55,
+      "ambition": 0.4
+    },
+    {
+      "id": "ilm3",
+      "name": "Tariq Azizi",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "revival_party",
+      "competence": 0.7,
+      "loyalty": 0.75,
+      "ambition": 0.3
+    },
+    {
+      "id": "ilm4",
+      "name": "General Ali Hassani",
+      "portfolio": "Defense",
+      "faction_id": "revival_party",
+      "competence": 0.7,
+      "loyalty": 0.71,
+      "ambition": 0.55
+    },
+    {
+      "id": "ilm5",
+      "name": "Mohammed Mahdawi",
+      "portfolio": "Economy",
+      "faction_id": "revival_party",
+      "competence": 0.7,
+      "loyalty": 0.71,
+      "ambition": 0.45
+    },
+    {
+      "id": "ilm6",
+      "name": "Shabib Maliki",
+      "portfolio": "Justice",
+      "faction_id": "revival_party",
+      "competence": 0.7,
+      "loyalty": 0.71,
+      "ambition": 0.35
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Sadun al-Ilmari",
+    "title": "President",
+    "faction_id": "revival_party",
+    "ideology_economic": -0.2,
+    "ideology_social": -0.65,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "hegemon",
+    "rival": "ozmara",
+    "ally": "azhara"
+  },
+  "neighbours": [
+    "ozmara",
+    "sahrun",
+    "beyta",
+    "azhara",
+    "qadir"
+  ],
+  "default_relations": {
+    "ozmara": {
+      "score": -0.55,
+      "trade_volume": 400.0
+    },
+    "haravan": {
+      "score": -0.05,
+      "trade_volume": 50.0
+    },
+    "azhara": {
+      "score": 0.4,
+      "trade_volume": 1000.0
+    },
+    "qadir": {
+      "score": -0.25,
+      "trade_volume": 500.0
+    },
+    "sahrun": {
+      "score": -0.5,
+      "trade_volume": 100.0
+    },
+    "beyta": {
+      "score": -0.2,
+      "trade_volume": 150.0
+    },
+    "krasova": {
+      "score": 0.05,
+      "trade_volume": 700.0
+    },
+    "columbria": {
+      "score": -0.45,
+      "trade_volume": 100.0
+    },
+    "solheim": {
+      "score": -0.2,
+      "trade_volume": 300.0
+    },
+    "hanlin": {
+      "score": 0.2,
+      "trade_volume": 600.0
+    }
+  }
+}

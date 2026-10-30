@@ -1,0 +1,251 @@
+{
+  "id": "azhara",
+  "name": "Azhara",
+  "regime_type": "authoritarian",
+  "population": 4200000,
+  "bureaucratic_capacity": 0.7,
+  "national_traits": [
+    "resource_rich",
+    "monarchy",
+    "patron_state"
+  ],
+  "meta": {
+    "short_description": "A rich monarchy on the southern coast whose royal family owns the oil, the airline and a good share of the region's politicians. Azhara funds mosques, militias and opposition newspapers in a dozen countries, and calls the result stability.",
+    "difficulty": "normal",
+    "stability_value": 0.78,
+    "civil_war_risk": 0.03,
+    "capital": "Riyadan",
+    "strengths": [
+      "Immense sovereign wealth",
+      "Money that buys influence everywhere",
+      "A loyal, subsidised citizenry"
+    ],
+    "weaknesses": [
+      "Migrant workers with no rights",
+      "A ruling family of feuding princes",
+      "Everything rests on oil"
+    ]
+  },
+  "economy": {
+    "gdp": 120000.0,
+    "growth_rate": 0.04,
+    "inflation": 0.025,
+    "unemployment": 0.04,
+    "public_debt_pct": 0.08,
+    "budget": {
+      "revenue": 38000.0,
+      "expenditure": 33000.0
+    },
+    "sectors": [
+      {
+        "id": "resources",
+        "name": "Oil and Gas",
+        "gdp_share": 0.58,
+        "growth_rate": 0.04,
+        "employment_share": 0.08,
+        "aligned_faction_ids": [
+          "royal_court"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Finance and Services",
+        "gdp_share": 0.36,
+        "growth_rate": 0.05,
+        "employment_share": 0.62,
+        "aligned_faction_ids": [
+          "merchant_families"
+        ]
+      },
+      {
+        "id": "industry",
+        "name": "Petrochemicals",
+        "gdp_share": 0.06,
+        "growth_rate": 0.04,
+        "employment_share": 0.3,
+        "aligned_faction_ids": [
+          "merchant_families"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "royal_court",
+      "name": "Royal Court",
+      "ideology": {
+        "economic": 0.3,
+        "social": -0.75
+      },
+      "power": 0.9,
+      "loyalty": 0.8,
+      "seats": 58,
+      "in_coalition": true,
+      "support": 0.58,
+      "color": "#1f6a4a",
+      "role": "@nationalist",
+      "leader": "Prince Faisal bin Azhar"
+    },
+    {
+      "id": "merchant_families",
+      "name": "Merchant Families",
+      "ideology": {
+        "economic": 0.8,
+        "social": -0.2
+      },
+      "power": 0.45,
+      "loyalty": 0.6,
+      "seats": 22,
+      "in_coalition": true,
+      "support": 0.22,
+      "color": "#c8a03a",
+      "role": "@business",
+      "leader": "Khalid al-Ghurairi"
+    },
+    {
+      "id": "council_of_scholars",
+      "name": "Council of Scholars",
+      "ideology": {
+        "economic": -0.2,
+        "social": -0.9
+      },
+      "power": 0.4,
+      "loyalty": 0.5,
+      "seats": 12,
+      "in_coalition": true,
+      "support": 0.12,
+      "color": "#4a4a2a",
+      "role": "@establishment",
+      "leader": "Sheikh Abd al-Bazi"
+    },
+    {
+      "id": "shura_reformers",
+      "name": "Shura Reformers",
+      "ideology": {
+        "economic": 0.1,
+        "social": 0.55
+      },
+      "power": 0.15,
+      "loyalty": -0.3,
+      "seats": 8,
+      "in_coalition": false,
+      "support": 0.08,
+      "color": "#5a8ad0",
+      "role": "@reform",
+      "leader": "Salman al-Awdi"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "azh1",
+      "name": "Ibrahim al-Assaf",
+      "portfolio": "Finance",
+      "faction_id": "merchant_families",
+      "competence": 0.73,
+      "loyalty": 0.71,
+      "ambition": 0.55
+    },
+    {
+      "id": "azh2",
+      "name": "Prince Nayef bin Azhar",
+      "portfolio": "Interior",
+      "faction_id": "royal_court",
+      "competence": 0.73,
+      "loyalty": 0.59,
+      "ambition": 0.45
+    },
+    {
+      "id": "azh3",
+      "name": "Prince Saud bin Azhar",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "royal_court",
+      "competence": 0.73,
+      "loyalty": 0.67,
+      "ambition": 0.35
+    },
+    {
+      "id": "azh4",
+      "name": "Prince Sultan bin Azhar",
+      "portfolio": "Defense",
+      "faction_id": "royal_court",
+      "competence": 0.73,
+      "loyalty": 0.63,
+      "ambition": 0.25
+    },
+    {
+      "id": "azh5",
+      "name": "Ali al-Naimi",
+      "portfolio": "Economy",
+      "faction_id": "merchant_families",
+      "competence": 0.73,
+      "loyalty": 0.55,
+      "ambition": 0.5
+    },
+    {
+      "id": "azh6",
+      "name": "Abdullah al-Sheikhi",
+      "portfolio": "Justice",
+      "faction_id": "council_of_scholars",
+      "competence": 0.73,
+      "loyalty": 0.71,
+      "ambition": 0.4
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "King Fahad bin Azhar",
+    "title": "King",
+    "faction_id": "royal_court",
+    "ideology_economic": 0.3,
+    "ideology_social": -0.75,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "trader",
+    "ally": "ilmar"
+  },
+  "neighbours": [
+    "ilmar",
+    "qadir",
+    "beyta"
+  ],
+  "default_relations": {
+    "marisca": {
+      "score": 0.2,
+      "trade_volume": 200.0
+    },
+    "brisca": {
+      "score": 0.35,
+      "trade_volume": 1200.0
+    },
+    "ilmar": {
+      "score": 0.4,
+      "trade_volume": 1000.0
+    },
+    "sahrun": {
+      "score": 0.15,
+      "trade_volume": 100.0
+    },
+    "qadir": {
+      "score": 0.1,
+      "trade_volume": 800.0
+    },
+    "beyta": {
+      "score": 0.3,
+      "trade_volume": 400.0
+    },
+    "columbria": {
+      "score": 0.5,
+      "trade_volume": 3000.0
+    },
+    "solheim": {
+      "score": 0.2,
+      "trade_volume": 900.0
+    },
+    "hanlin": {
+      "score": 0.2,
+      "trade_volume": 1500.0
+    }
+  }
+}

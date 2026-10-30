@@ -1,0 +1,242 @@
+{
+  "id": "marisca",
+  "name": "Marisca",
+  "regime_type": "hybrid_regime",
+  "population": 900000,
+  "bureaucratic_capacity": 0.58,
+  "national_traits": [
+    "island",
+    "transit_hub",
+    "smuggling"
+  ],
+  "meta": {
+    "short_description": "A rocky island state in the middle of the Aster Sea where every ship in the basin refuels and half of them leave lighter than they arrived. Its free port does honest business by day; the brothers who run the customs service do the rest at night.",
+    "difficulty": "normal",
+    "stability_value": 0.52,
+    "civil_war_risk": 0.09,
+    "capital": "Porto Franco",
+    "strengths": [
+      "The basin's free port and bunkering trade",
+      "Neutrality everyone finds useful",
+      "Offshore banking"
+    ],
+    "weaknesses": [
+      "Smuggling that owns the customs service",
+      "Water and food all imported",
+      "Too small to refuse anyone"
+    ]
+  },
+  "economy": {
+    "gdp": 5200.0,
+    "growth_rate": 0.04,
+    "inflation": 0.07,
+    "unemployment": 0.11,
+    "public_debt_pct": 0.6,
+    "budget": {
+      "revenue": 1500.0,
+      "expenditure": 1650.0
+    },
+    "sectors": [
+      {
+        "id": "services",
+        "name": "Free Port and Banking",
+        "gdp_share": 0.68,
+        "growth_rate": 0.045,
+        "employment_share": 0.6,
+        "aligned_faction_ids": [
+          "harbour_party"
+        ]
+      },
+      {
+        "id": "industry",
+        "name": "Ship Repair",
+        "gdp_share": 0.2,
+        "growth_rate": 0.025,
+        "employment_share": 0.22,
+        "aligned_faction_ids": [
+          "dockers_league"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Fishing",
+        "gdp_share": 0.12,
+        "growth_rate": 0.005,
+        "employment_share": 0.18,
+        "aligned_faction_ids": [
+          "island_families"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "harbour_party",
+      "name": "Harbour Party",
+      "ideology": {
+        "economic": 0.7,
+        "social": 0.2
+      },
+      "power": 0.7,
+      "loyalty": 0.6,
+      "seats": 46,
+      "in_coalition": true,
+      "support": 0.46,
+      "color": "#2f8fb0",
+      "role": "@business",
+      "leader": "Josef Scerran"
+    },
+    {
+      "id": "island_families",
+      "name": "Old Island Families",
+      "ideology": {
+        "economic": 0.1,
+        "social": -0.55
+      },
+      "power": 0.45,
+      "loyalty": 0.4,
+      "seats": 28,
+      "in_coalition": true,
+      "support": 0.28,
+      "color": "#8a5a3a",
+      "role": "@nationalist",
+      "leader": "Dom Mintavel"
+    },
+    {
+      "id": "dockers_league",
+      "name": "Dockers' League",
+      "ideology": {
+        "economic": -0.6,
+        "social": 0.0
+      },
+      "power": 0.3,
+      "loyalty": -0.2,
+      "seats": 16,
+      "in_coalition": false,
+      "support": 0.16,
+      "color": "#c04040",
+      "role": "@labour",
+      "leader": "Karmenu Borgat"
+    },
+    {
+      "id": "clean_hands",
+      "name": "Clean Hands",
+      "ideology": {
+        "economic": 0.1,
+        "social": 0.6
+      },
+      "power": 0.15,
+      "loyalty": -0.4,
+      "seats": 10,
+      "in_coalition": false,
+      "support": 0.1,
+      "color": "#5aa05a",
+      "role": "@reform",
+      "leader": "Daria Galeno"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "mar1",
+      "name": "Edwin Sciclar",
+      "portfolio": "Finance",
+      "faction_id": "harbour_party",
+      "competence": 0.55,
+      "loyalty": 0.59,
+      "ambition": 0.25
+    },
+    {
+      "id": "mar2",
+      "name": "Manuel Mallon",
+      "portfolio": "Interior",
+      "faction_id": "island_families",
+      "competence": 0.55,
+      "loyalty": 0.71,
+      "ambition": 0.5
+    },
+    {
+      "id": "mar3",
+      "name": "Georg Vellan",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "harbour_party",
+      "competence": 0.55,
+      "loyalty": 0.55,
+      "ambition": 0.4
+    },
+    {
+      "id": "mar4",
+      "name": "Carmel Abelo",
+      "portfolio": "Defense",
+      "faction_id": "island_families",
+      "competence": 0.55,
+      "loyalty": 0.67,
+      "ambition": 0.3
+    },
+    {
+      "id": "mar5",
+      "name": "Chris Cardonel",
+      "portfolio": "Economy",
+      "faction_id": "harbour_party",
+      "competence": 0.55,
+      "loyalty": 0.63,
+      "ambition": 0.55
+    },
+    {
+      "id": "mar6",
+      "name": "Owen Bonnici",
+      "portfolio": "Justice",
+      "faction_id": "island_families",
+      "competence": 0.55,
+      "loyalty": 0.67,
+      "ambition": 0.45
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Lorenzo Muscara",
+    "title": "Prime Minister",
+    "faction_id": "harbour_party",
+    "ideology_economic": 0.7,
+    "ideology_social": 0.2,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "survivor"
+  },
+  "neighbours": [
+    "selenne",
+    "drevnia",
+    "valmora"
+  ],
+  "default_relations": {
+    "selenne": {
+      "score": 0.2,
+      "trade_volume": 300.0
+    },
+    "drevnia": {
+      "score": -0.55,
+      "trade_volume": 200.0
+    },
+    "valmora": {
+      "score": 0.05,
+      "trade_volume": 150.0
+    },
+    "brisca": {
+      "score": 0.3,
+      "trade_volume": 400.0
+    },
+    "krasova": {
+      "score": 0.1,
+      "trade_volume": 300.0
+    },
+    "ardenia": {
+      "score": 0.05,
+      "trade_volume": 100.0
+    },
+    "azhara": {
+      "score": 0.2,
+      "trade_volume": 200.0
+    }
+  }
+}

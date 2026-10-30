@@ -1,0 +1,230 @@
+{
+  "id": "yaskar",
+  "name": "Yaskar",
+  "regime_type": "hybrid_regime",
+  "population": 2600000,
+  "bureaucratic_capacity": 0.55,
+  "national_traits": [
+    "coastal_trade",
+    "small_state",
+    "transit_state"
+  ],
+  "meta": {
+    "short_description": "A narrow fishing and ferry republic on the northern shore of the eastern inland sea, between Turaz and the Temirsk steppe. Its rail ferries carry Turazi condensate and Temirsk grain across the water, and every pipeline plan in the region either needs Yaskar's shore or wants to bypass it.",
+    "difficulty": "normal",
+    "stability_value": 0.5,
+    "civil_war_risk": 0.1,
+    "capital": "Aktau Nor",
+    "strengths": [
+      "The inland sea's rail-ferry terminal",
+      "Sturgeon and caviar",
+      "Friends on every shore"
+    ],
+    "weaknesses": [
+      "A dying sea and a shrinking fishery",
+      "Clans that divide the transit fees",
+      "Too small to bargain hard"
+    ]
+  },
+  "economy": {
+    "gdp": 4800.0,
+    "growth_rate": 0.03,
+    "inflation": 0.15,
+    "unemployment": 0.13,
+    "public_debt_pct": 0.35,
+    "budget": {
+      "revenue": 1200.0,
+      "expenditure": 1350.0
+    },
+    "sectors": [
+      {
+        "id": "services",
+        "name": "Ports and Ferries",
+        "gdp_share": 0.5,
+        "growth_rate": 0.04,
+        "employment_share": 0.38,
+        "aligned_faction_ids": [
+          "harbour_clans"
+        ]
+      },
+      {
+        "id": "resources",
+        "name": "Fishing and Caviar",
+        "gdp_share": 0.2,
+        "growth_rate": 0.0,
+        "employment_share": 0.3,
+        "aligned_faction_ids": [
+          "fishing_artels"
+        ]
+      },
+      {
+        "id": "industry",
+        "name": "Rail and Repair",
+        "gdp_share": 0.3,
+        "growth_rate": 0.02,
+        "employment_share": 0.32,
+        "aligned_faction_ids": [
+          "rail_workers"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "harbour_clans",
+      "name": "Harbour Clans",
+      "ideology": {
+        "economic": 0.55,
+        "social": -0.4
+      },
+      "power": 0.65,
+      "loyalty": 0.6,
+      "seats": 44,
+      "in_coalition": true,
+      "support": 0.44,
+      "color": "#3a8aa0",
+      "role": "@business",
+      "leader": "Daniyar Kassen"
+    },
+    {
+      "id": "fishing_artels",
+      "name": "Fishing Artels",
+      "ideology": {
+        "economic": -0.25,
+        "social": -0.45
+      },
+      "power": 0.35,
+      "loyalty": 0.4,
+      "seats": 24,
+      "in_coalition": true,
+      "support": 0.24,
+      "color": "#5a7a3a",
+      "role": "@agrarian",
+      "leader": "Oraz Bekov"
+    },
+    {
+      "id": "rail_workers",
+      "name": "Rail Workers' Union",
+      "ideology": {
+        "economic": -0.6,
+        "social": 0.1
+      },
+      "power": 0.3,
+      "loyalty": -0.1,
+      "seats": 18,
+      "in_coalition": false,
+      "support": 0.18,
+      "color": "#b03a3a",
+      "role": "@labour",
+      "leader": "Galym Zhanov"
+    },
+    {
+      "id": "new_shore",
+      "name": "New Shore",
+      "ideology": {
+        "economic": 0.2,
+        "social": 0.6
+      },
+      "power": 0.15,
+      "loyalty": -0.3,
+      "seats": 14,
+      "in_coalition": false,
+      "support": 0.14,
+      "color": "#d0b03a",
+      "role": "@reform",
+      "leader": "Aigul Sarsenova"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "yas1",
+      "name": "Murat Orazov",
+      "portfolio": "Finance",
+      "faction_id": "harbour_clans",
+      "competence": 0.73,
+      "loyalty": 0.55,
+      "ambition": 0.55
+    },
+    {
+      "id": "yas2",
+      "name": "Bolat Kemelov",
+      "portfolio": "Interior",
+      "faction_id": "harbour_clans",
+      "competence": 0.73,
+      "loyalty": 0.71,
+      "ambition": 0.45
+    },
+    {
+      "id": "yas3",
+      "name": "Yerlan Idrisov",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "harbour_clans",
+      "competence": 0.73,
+      "loyalty": 0.63,
+      "ambition": 0.35
+    },
+    {
+      "id": "yas4",
+      "name": "Colonel Sapar Nurov",
+      "portfolio": "Defense",
+      "faction_id": "harbour_clans",
+      "competence": 0.73,
+      "loyalty": 0.71,
+      "ambition": 0.25
+    },
+    {
+      "id": "yas5",
+      "name": "Talgat Esenov",
+      "portfolio": "Economy",
+      "faction_id": "harbour_clans",
+      "competence": 0.73,
+      "loyalty": 0.59,
+      "ambition": 0.5
+    },
+    {
+      "id": "yas6",
+      "name": "Erzhan Daukenov",
+      "portfolio": "Justice",
+      "faction_id": "fishing_artels",
+      "competence": 0.73,
+      "loyalty": 0.55,
+      "ambition": 0.4
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Saparmurat Kassymov",
+    "title": "President",
+    "faction_id": "harbour_clans",
+    "ideology_economic": 0.55,
+    "ideology_social": -0.4,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "survivor",
+    "ally": "turaz"
+  },
+  "neighbours": [
+    "turaz",
+    "temirsk"
+  ],
+  "default_relations": {
+    "turaz": {
+      "score": 0.45,
+      "trade_volume": 400.0
+    },
+    "temirsk": {
+      "score": 0.35,
+      "trade_volume": 300.0
+    },
+    "krasova": {
+      "score": 0.15,
+      "trade_volume": 300.0
+    },
+    "hanlin": {
+      "score": 0.1,
+      "trade_volume": 100.0
+    }
+  }
+}

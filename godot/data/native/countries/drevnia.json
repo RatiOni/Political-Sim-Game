@@ -1,0 +1,248 @@
+{
+  "id": "drevnia",
+  "name": "Drevnia",
+  "regime_type": "hybrid_regime",
+  "population": 7200000,
+  "bureaucratic_capacity": 0.6,
+  "national_traits": [
+    "irredentist",
+    "military_tradition",
+    "national_church"
+  ],
+  "meta": {
+    "short_description": "A proud, poor kingdom-turned-republic west of Selenne whose maps still show the island of Marisca as a lost province across the water. Its government lives off the claim; its admirals keep the fleet ready to press it.",
+    "difficulty": "normal",
+    "stability_value": 0.54,
+    "civil_war_risk": 0.1,
+    "capital": "Thessara",
+    "strengths": [
+      "A disciplined army and a navy",
+      "A church that unites the country",
+      "A nationalism every party shares"
+    ],
+    "weaknesses": [
+      "Old claims that frighten the basin",
+      "A shrinking, ageing population",
+      "An economy of pensions and remittances"
+    ]
+  },
+  "economy": {
+    "gdp": 16000.0,
+    "growth_rate": 0.025,
+    "inflation": 0.1,
+    "unemployment": 0.14,
+    "public_debt_pct": 0.62,
+    "budget": {
+      "revenue": 4300.0,
+      "expenditure": 4900.0
+    },
+    "sectors": [
+      {
+        "id": "services",
+        "name": "Services and Tourism",
+        "gdp_share": 0.46,
+        "growth_rate": 0.03,
+        "employment_share": 0.4,
+        "aligned_faction_ids": [
+          "civic_platform"
+        ]
+      },
+      {
+        "id": "industry",
+        "name": "Shipyards and Industry",
+        "gdp_share": 0.3,
+        "growth_rate": 0.015,
+        "employment_share": 0.28,
+        "aligned_faction_ids": [
+          "national_rally"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Vineyards and Fields",
+        "gdp_share": 0.24,
+        "growth_rate": 0.01,
+        "employment_share": 0.32,
+        "aligned_faction_ids": [
+          "rural_party_dv"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "national_rally",
+      "name": "National Rally",
+      "ideology": {
+        "economic": 0.1,
+        "social": -0.75
+      },
+      "power": 0.7,
+      "loyalty": 0.6,
+      "seats": 40,
+      "in_coalition": true,
+      "support": 0.4,
+      "color": "#3a4fa0",
+      "role": "@nationalist",
+      "leader": "Andreas Papadrev"
+    },
+    {
+      "id": "labour_movement_dv",
+      "name": "Labour Movement",
+      "ideology": {
+        "economic": -0.55,
+        "social": 0.05
+      },
+      "power": 0.45,
+      "loyalty": -0.1,
+      "seats": 24,
+      "in_coalition": false,
+      "support": 0.24,
+      "color": "#c43a3a",
+      "role": "@labour",
+      "leader": "Kostas Simitel"
+    },
+    {
+      "id": "civic_platform",
+      "name": "Civic Platform",
+      "ideology": {
+        "economic": 0.6,
+        "social": 0.45
+      },
+      "power": 0.35,
+      "loyalty": 0.3,
+      "seats": 20,
+      "in_coalition": true,
+      "support": 0.2,
+      "color": "#d8b03a",
+      "role": "@reform",
+      "leader": "Dora Bakoyan"
+    },
+    {
+      "id": "rural_party_dv",
+      "name": "Rural Party",
+      "ideology": {
+        "economic": -0.1,
+        "social": -0.4
+      },
+      "power": 0.25,
+      "loyalty": 0.4,
+      "seats": 16,
+      "in_coalition": true,
+      "support": 0.16,
+      "color": "#6f8f3a",
+      "role": "@agrarian",
+      "leader": "Yiannis Kalanos"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "dre1",
+      "name": "Yannis Stournar",
+      "portfolio": "Finance",
+      "faction_id": "civic_platform",
+      "competence": 0.55,
+      "loyalty": 0.67,
+      "ambition": 0.25
+    },
+    {
+      "id": "dre2",
+      "name": "Akis Tsochan",
+      "portfolio": "Interior",
+      "faction_id": "national_rally",
+      "competence": 0.55,
+      "loyalty": 0.67,
+      "ambition": 0.5
+    },
+    {
+      "id": "dre3",
+      "name": "Theodor Pangalos",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "national_rally",
+      "competence": 0.55,
+      "loyalty": 0.71,
+      "ambition": 0.4
+    },
+    {
+      "id": "dre4",
+      "name": "Admiral Evangelos Venar",
+      "portfolio": "Defense",
+      "faction_id": "national_rally",
+      "competence": 0.55,
+      "loyalty": 0.63,
+      "ambition": 0.3
+    },
+    {
+      "id": "dre5",
+      "name": "Stefanos Manolis",
+      "portfolio": "Economy",
+      "faction_id": "civic_platform",
+      "competence": 0.55,
+      "loyalty": 0.71,
+      "ambition": 0.55
+    },
+    {
+      "id": "dre6",
+      "name": "Nikos Dendrias",
+      "portfolio": "Justice",
+      "faction_id": "rural_party_dv",
+      "competence": 0.55,
+      "loyalty": 0.75,
+      "ambition": 0.45
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Konstantin Mitselos",
+    "title": "President",
+    "faction_id": "national_rally",
+    "ideology_economic": 0.1,
+    "ideology_social": -0.75,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "revanchist",
+    "rival": "marisca"
+  },
+  "neighbours": [
+    "selenne",
+    "valmora",
+    "borynia",
+    "marisca"
+  ],
+  "default_relations": {
+    "ozmara": {
+      "score": -0.2,
+      "trade_volume": 200.0
+    },
+    "borynia": {
+      "score": 0.05,
+      "trade_volume": 200.0
+    },
+    "selenne": {
+      "score": -0.1,
+      "trade_volume": 300.0
+    },
+    "marisca": {
+      "score": -0.55,
+      "trade_volume": 200.0
+    },
+    "valmora": {
+      "score": 0.1,
+      "trade_volume": 150.0
+    },
+    "solheim": {
+      "score": 0.1,
+      "trade_volume": 300.0
+    },
+    "krasova": {
+      "score": 0.0,
+      "trade_volume": 300.0
+    },
+    "valcourt": {
+      "score": 0.15,
+      "trade_volume": 300.0
+    }
+  }
+}

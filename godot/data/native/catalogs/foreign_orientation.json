@@ -7,9 +7,9 @@
     {"id": "union", "name": "The Krasovan Economic Union", "kind": "bloc", "anchor": "krasova", "gas_share": 0.0}
   ],
   "blocs": [
-    {"id": "concert", "seed_members": ["solheim", "nueva_costa"], "agendas": ["trader", "reformer"], "families": ["democratic"], "requires": "", "excludes": ["union"], "min_stability": 0.45, "min_warmth": 0.2, "leave_stability": 0.3, "leave_warmth": -0.2},
-    {"id": "meridian", "seed_members": ["solheim", "nueva_costa"], "agendas": ["trader", "reformer"], "families": ["democratic"], "requires": "concert", "excludes": ["union"], "min_stability": 0.5, "min_warmth": 0.3, "leave_stability": 0.3, "leave_warmth": -0.1},
-    {"id": "union", "seed_members": ["krasova"], "agendas": ["revanchist", "hegemon"], "families": ["autocratic", "hybrid"], "requires": "", "excludes": ["concert", "meridian"], "min_stability": 0.3, "min_warmth": 0.1, "leave_stability": 0.2, "leave_warmth": -0.3}
+    {"id": "concert", "seed_members": ["solheim", "nueva_costa", "kalvia", "selenne", "aldermark", "valcourt", "nordhaven", "brisca"], "agendas": ["trader", "reformer"], "families": ["democratic"], "requires": "", "excludes": ["union"], "min_stability": 0.45, "min_warmth": 0.2, "leave_stability": 0.3, "leave_warmth": -0.2},
+    {"id": "meridian", "seed_members": ["solheim", "nueva_costa", "valcourt", "brisca", "nordhaven", "aldermark", "columbria"], "core_members": ["columbria"], "agendas": ["trader", "reformer"], "families": ["democratic"], "requires": "concert", "excludes": ["union"], "min_stability": 0.5, "min_warmth": 0.3, "leave_stability": 0.3, "leave_warmth": -0.1},
+    {"id": "union", "seed_members": ["krasova", "zelvany", "ulgar"], "agendas": ["revanchist", "hegemon"], "families": ["autocratic", "hybrid"], "requires": "", "excludes": ["concert", "meridian"], "min_stability": 0.3, "min_warmth": 0.1, "leave_stability": 0.2, "leave_warmth": -0.3}
   ],
   "milestones": [
     {"id": "isf_programme", "track": "isf", "power": "isf", "name": "ISF stabilisation programme", "commitment": 0.4, "starts_reached": true, "body": "The agreement the Baran Council signed in December 1992. Quarterly reviews judge the deficit, inflation and, in time, the Bank's independence."},

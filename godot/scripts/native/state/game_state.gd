@@ -157,11 +157,36 @@ func coalition_faction_ids() -> Array[String]:
 	return out
 
 
+var _world_index: Dictionary = {}
+var _pairs_for: Array = []
+var _pairs: Array = []
+
+
+func country_pairs() -> Array:
+	var everyone: Array = [country]
+	everyone.append_array(world)
+	if everyone == _pairs_for:
+		return _pairs
+	_pairs_for = everyone
+	_pairs = []
+	for i in range(everyone.size()):
+		for j in range(i + 1, everyone.size()):
+			var a: Country = everyone[i]
+			var b: Country = everyone[j]
+			if a.relations.has(b.id) and b.relations.has(a.id):
+				_pairs.append([a, b, a.relations[b.id], b.relations[a.id], i == 0, i, j])
+	return _pairs
+
+
 func world_country(country_id: String) -> Country:
-	for c in world:
-		if c.id == country_id:
-			return c
-	return null
+	var i := int(_world_index.get(country_id, -1))
+	if i >= 0 and i < world.size() and world[i].id == country_id:
+		return world[i]
+	_world_index.clear()
+	for j in range(world.size()):
+		_world_index[world[j].id] = j
+	i = int(_world_index.get(country_id, -1))
+	return world[i] if i >= 0 else null
 
 
 func to_dict() -> Dictionary:

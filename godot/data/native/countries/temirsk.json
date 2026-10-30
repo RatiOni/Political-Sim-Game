@@ -1,0 +1,243 @@
+{
+  "id": "temirsk",
+  "name": "Temirsk",
+  "regime_type": "authoritarian",
+  "population": 16500000,
+  "bureaucratic_capacity": 0.62,
+  "national_traits": [
+    "resource_rich",
+    "vast_territory",
+    "multi_vector"
+  ],
+  "meta": {
+    "short_description": "A steppe state east of Krasova so large its trains take three days to cross it. Its founding president sells oil west, uranium east and promises to both, keeping Krasova close enough to be safe and Hanlin close enough to pay.",
+    "difficulty": "normal",
+    "stability_value": 0.64,
+    "civil_war_risk": 0.07,
+    "capital": "Akmola",
+    "strengths": [
+      "Oil, metals and uranium",
+      "A balancing act that keeps everyone courting",
+      "Low public debt"
+    ],
+    "weaknesses": [
+      "A succession nobody may discuss",
+      "A Krasovan-speaking north it watches nervously",
+      "Wealth that stops at the capital"
+    ]
+  },
+  "economy": {
+    "gdp": 52000.0,
+    "growth_rate": 0.035,
+    "inflation": 0.16,
+    "unemployment": 0.08,
+    "public_debt_pct": 0.18,
+    "budget": {
+      "revenue": 12500.0,
+      "expenditure": 12800.0
+    },
+    "sectors": [
+      {
+        "id": "resources",
+        "name": "Oil, Gas and Metals",
+        "gdp_share": 0.44,
+        "growth_rate": 0.045,
+        "employment_share": 0.14,
+        "aligned_faction_ids": [
+          "light_of_the_fatherland"
+        ]
+      },
+      {
+        "id": "agriculture",
+        "name": "Grain and Herds",
+        "gdp_share": 0.16,
+        "growth_rate": 0.01,
+        "employment_share": 0.34,
+        "aligned_faction_ids": [
+          "steppe_governors"
+        ]
+      },
+      {
+        "id": "services",
+        "name": "Services",
+        "gdp_share": 0.4,
+        "growth_rate": 0.035,
+        "employment_share": 0.52,
+        "aligned_faction_ids": [
+          "business_circle"
+        ]
+      }
+    ]
+  },
+  "factions": [
+    {
+      "id": "light_of_the_fatherland",
+      "name": "Light of the Fatherland",
+      "ideology": {
+        "economic": 0.2,
+        "social": -0.5
+      },
+      "power": 0.85,
+      "loyalty": 0.75,
+      "seats": 64,
+      "in_coalition": true,
+      "support": 0.64,
+      "color": "#3aa0b5",
+      "role": "@nationalist",
+      "leader": "Nurlan Abayev"
+    },
+    {
+      "id": "business_circle",
+      "name": "Business Circle",
+      "ideology": {
+        "economic": 0.75,
+        "social": 0.15
+      },
+      "power": 0.45,
+      "loyalty": 0.5,
+      "seats": 18,
+      "in_coalition": true,
+      "support": 0.18,
+      "color": "#c9a43a",
+      "role": "@business",
+      "leader": "Timur Kulibek"
+    },
+    {
+      "id": "steppe_governors",
+      "name": "Steppe Governors",
+      "ideology": {
+        "economic": -0.3,
+        "social": -0.3
+      },
+      "power": 0.35,
+      "loyalty": 0.4,
+      "seats": 10,
+      "in_coalition": false,
+      "support": 0.1,
+      "color": "#8a7a3a",
+      "role": "@agrarian",
+      "leader": "Serik Akhmetov"
+    },
+    {
+      "id": "democratic_choice_tm",
+      "name": "Democratic Choice of Temirsk",
+      "ideology": {
+        "economic": 0.2,
+        "social": 0.6
+      },
+      "power": 0.15,
+      "loyalty": -0.6,
+      "seats": 8,
+      "in_coalition": false,
+      "support": 0.08,
+      "color": "#d06a4a",
+      "role": "@reform",
+      "leader": "Mukhtar Ablaev"
+    }
+  ],
+  "cabinet": [
+    {
+      "id": "tem1",
+      "name": "Erbol Saparov",
+      "portfolio": "Finance",
+      "faction_id": "business_circle",
+      "competence": 0.55,
+      "loyalty": 0.59,
+      "ambition": 0.25
+    },
+    {
+      "id": "tem2",
+      "name": "Kairat Musin",
+      "portfolio": "Interior",
+      "faction_id": "light_of_the_fatherland",
+      "competence": 0.55,
+      "loyalty": 0.67,
+      "ambition": 0.5
+    },
+    {
+      "id": "tem3",
+      "name": "Kassym Tokaev",
+      "portfolio": "Foreign Affairs",
+      "faction_id": "light_of_the_fatherland",
+      "competence": 0.55,
+      "loyalty": 0.59,
+      "ambition": 0.4
+    },
+    {
+      "id": "tem4",
+      "name": "General Mukhtar Altynbek",
+      "portfolio": "Defense",
+      "faction_id": "light_of_the_fatherland",
+      "competence": 0.55,
+      "loyalty": 0.67,
+      "ambition": 0.3
+    },
+    {
+      "id": "tem5",
+      "name": "Askar Maminov",
+      "portfolio": "Economy",
+      "faction_id": "business_circle",
+      "competence": 0.55,
+      "loyalty": 0.59,
+      "ambition": 0.55
+    },
+    {
+      "id": "tem6",
+      "name": "Beibut Dosanov",
+      "portfolio": "Justice",
+      "faction_id": "light_of_the_fatherland",
+      "competence": 0.55,
+      "loyalty": 0.75,
+      "ambition": 0.45
+    }
+  ],
+  "starting_laws": [],
+  "default_player": {
+    "name": "Nurtai Baisarin",
+    "title": "President",
+    "faction_id": "light_of_the_fatherland",
+    "ideology_economic": 0.2,
+    "ideology_social": -0.5,
+    "approval": 0.5,
+    "political_capital": 50.0
+  },
+  "agenda": {
+    "type": "trader"
+  },
+  "neighbours": [
+    "krasova",
+    "ulgar",
+    "yaskar",
+    "hanlin"
+  ],
+  "default_relations": {
+    "krasova": {
+      "score": 0.35,
+      "trade_volume": 2200.0
+    },
+    "hanlin": {
+      "score": 0.4,
+      "trade_volume": 1500.0
+    },
+    "ulgar": {
+      "score": 0.05,
+      "trade_volume": 300.0
+    },
+    "columbria": {
+      "score": 0.15,
+      "trade_volume": 500.0
+    },
+    "turaz": {
+      "score": 0.15,
+      "trade_volume": 200.0
+    },
+    "aldermark": {
+      "score": 0.15,
+      "trade_volume": 500.0
+    },
+    "yaskar": {
+      "score": 0.35,
+      "trade_volume": 300.0
+    }
+  }
+}
