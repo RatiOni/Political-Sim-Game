@@ -114,7 +114,10 @@ func draw(s: RegionScene, t: float) -> void:
 	_crane(s, t)
 	_lamps(s, t)
 	_people(s, t)
-	_cars(s, t)
+	_cars(s, t, 0)
+	_tram(s, t)
+	_barrier(s, t)
+	_cars(s, t, 1)
 	RegionProjects.draw(self, s, t)
 	_fires(s, t)
 	_water(s, t)
@@ -323,10 +326,13 @@ func _lamps(s: RegionScene, t: float) -> void:
 			flicker = 0.0 if sin(t * 13.0 + i) > 0.6 else 1.0   # a dying tube
 		var strength := (0.16 + 0.02 * sin(t * 3.0 + i)) * flicker * night
 		_beam(head, Vector2(lx - 11, s.road_top + 3), Vector2(lx + 11, s.road_top + 3), LAMP, strength)
-		var pool := LAMP
-		pool.a = 0.10 * flicker * night
-		canvas.draw_set_transform_matrix(base * Transform2D(0.0, Vector2(1.0, 0.3), 0.0, origin + Vector2(lx, s.road_top) * px))
-		canvas.draw_circle(Vector2.ZERO, 12.0 * px, pool)
+		# The pool of light on the pavement: a bright core and a wider wash,
+		# strong enough to survive the converter as a warm patch.
+		for ring in 2:
+			var pool := LAMP
+			pool.a = (0.30 if ring == 0 else 0.14) * flicker * night
+			canvas.draw_set_transform_matrix(base * Transform2D(0.0, Vector2(1.0, 0.28), 0.0, origin + Vector2(lx, s.road_top - 3) * px))
+			canvas.draw_circle(Vector2.ZERO, (7.0 if ring == 0 else 14.0) * px, pool)
 		canvas.draw_set_transform_matrix(base)
 		_blk(lx - 1, s.ground - 24, 3, 2, LAMP if flicker > 0.0 else Color(0.3, 0.3, 0.3))
 
@@ -336,7 +342,7 @@ func _lamps(s: RegionScene, t: float) -> void:
 func _people(s: RegionScene, t: float) -> void:
 	for p in s.people:
 		var lane := int(p["lane"])
-		var foot := float(s.ground + 2 + lane * 2)
+		var foot := float(s.ground + 2 + lane * 2) if lane < 3 else float(s.front + 12)
 		var x := float(p["x"])
 		var dist := 0.0
 		if not bool(p["idle"]):
@@ -348,15 +354,33 @@ func _people(s: RegionScene, t: float) -> void:
 		var stride := int(absf(dist) / 1.5) % 4
 		var y := foot - FIGURE_H - bob
 		var protest := bool(p.get("protest", false))
-		pictogram(x, foot - bob, FIGURE, (stride % 2) if not bool(p["idle"]) else -1, protest and int(p["coat"]) % 3 == 0)
+		# Coat in colour, head pale: the figure reads as a person in a coat
+		# rather than as a light blob, and a street of them reads as a crowd.
+		var coat: Color = COATS[int(p["coat"])].lightened(0.30)
+		if bool(p.get("uniform", false)):
+			coat = Color(0.30, 0.34, 0.22)
+		var still := bool(p["idle"])
+		pictogram(x, foot - bob, coat, (stride % 2) if not still else -1, protest and int(p["coat"]) % 3 == 0)
+		_blk(x, y, 3, 3, FIGURE)
+		if bool(p.get("uniform", false)):
+			_blk(x - 0.5, y - 1, 4, 1.5, coat.darkened(0.3))          # the cap
+			_blk(x + 4, y + 2, 1, 9, Color(0.10, 0.10, 0.10))         # the rifle, slung
+		elif not still and int(p["coat"]) == 2:
+			_blk(x + 3.5, y + 7, 2, 3, Color(0.28, 0.20, 0.14))       # a bag
+		elif int(p["coat"]) == 5:
+			_blk(x - 1, y - 0.5, 5, 1, Color(0.12, 0.12, 0.14))       # a hat
+			_blk(x, y - 2, 3, 1.5, Color(0.12, 0.12, 0.14))
 		if bool(p.get("placard", false)):
 			var lift := floorf(1.5 + 1.5 * sin(t * 2.5 + float(p["phase"])))
 			_blk(x + 1, y - 6 - lift, 1, 7, Color(0.30, 0.22, 0.14))
 			_blk(x - 2, y - 10 - lift, 7, 4, Color(0.85, 0.82, 0.72))
 
 
-func _cars(s: RegionScene, t: float) -> void:
+## Far lane first, then the tram on the crown, then the near lane.
+func _cars(s: RegionScene, t: float, lane: int) -> void:
 	for c in s.cars:
+		if int(c["lane"]) != lane:
+			continue
 		var length := float(c["len"])
 		var x := fposmod(float(c["x"]) + t * float(c["speed"]), s.cols + length * 2.0) - length
 		var forward := float(c["speed"]) > 0.0
@@ -367,8 +391,22 @@ func _cars(s: RegionScene, t: float) -> void:
 		_beam(Vector2(nose, y + 3), Vector2(nose + reach, y - 1), Vector2(nose + reach, y + 8), LAMP, 0.18 * night)
 		if bool(c["bus"]):
 			_blk(x, y - 6, length, 10, Color(0.62, 0.50, 0.22))
+			_blk(x, y - 1, length, 1, Color(0.40, 0.30, 0.12))
 			for wx in range(2, int(length) - 3, 4):
 				_blk(x + wx, y - 5, 3, 3, Color(1.0, 0.85, 0.55, 0.9))
+		elif bool(c.get("truck", false)):
+			# A lorry: a canvas-tilt or box body and a cab at the nose end.
+			var army := s.land == RegionScene.Land.FRONTIER
+			var load := Color(0.30, 0.34, 0.22) if army else body.darkened(0.25)
+			var cab := Color(0.24, 0.28, 0.18) if army else body
+			var cab_x := x + length - 8 if forward else x
+			var box_x := x if forward else x + 8
+			_blk(box_x, y - 7, length - 8, 11, load)
+			_blk(box_x, y - 7, length - 8, 1, load.lightened(0.3))
+			for rib in range(3, int(length) - 9, 5):
+				_blk(box_x + rib, y - 6, 1, 9, load.darkened(0.3))
+			_blk(cab_x, y - 4, 8, 8, cab)
+			_blk(cab_x + (3 if forward else 1), y - 3, 4, 3, Color(0.10, 0.12, 0.16))
 		else:
 			_blk(x, y, length, 5, body)
 			_blk(x + length * 0.25, y - 3, length * 0.5, 3, body.lightened(0.15))
@@ -381,6 +419,59 @@ func _cars(s: RegionScene, t: float) -> void:
 		for wx in [x + 2.0, x + length - 5.0]:
 			_blk(wx, y + 4, 3, 3, Color(0.04, 0.04, 0.05))
 			_blk(wx + spin, y + 5, 1, 1, Color(0.45, 0.45, 0.45))
+
+
+## The tram: two-tone cars on the rails down the crown of the road, a lit
+## saloon, a pantograph on the wire, a stop every lap at the landmark.
+func _tram(s: RegionScene, t: float) -> void:
+	if not s.tram:
+		return
+	var mid := float(s.road_top + s.road_h / 2)
+	var length := 64.0
+	var lap := float(s.cols) + length * 2.0
+	# It runs at 14 px/s and dwells eight seconds at the stop.
+	var period := lap / 14.0 + 8.0
+	var k := fposmod(t + 30.0, period)
+	var stop := float(s.landmark_x) - 80.0 + length
+	var run := k * 14.0
+	if run > stop:
+		run = maxf(stop, (k - 8.0) * 14.0)
+	var x := run - length
+	var top := mid - 16.0
+	var cream := Color(0.78, 0.72, 0.58)
+	var red := Color(0.55, 0.18, 0.14)
+	for car in 2:
+		var cx := x + car * 33.0
+		_blk(cx, top, 31, 8, cream)
+		_blk(cx, top + 8, 31, 7, red)
+		_blk(cx, top + 14, 31, 1, red.darkened(0.5))
+		for wx in range(2, 29, 5):
+			_blk(cx + wx, top + 2, 4, 4, Color(1.0, 0.82, 0.50) if night > 0.4 else Color(0.20, 0.24, 0.30))
+		_blk(cx + 3, top + 15, 6, 2, Color(0.05, 0.05, 0.05))      # bogies
+		_blk(cx + 22, top + 15, 6, 2, Color(0.05, 0.05, 0.05))
+		_blk(cx - 1, top - 1, 33, 1, red.darkened(0.3))             # roof
+	var pan := x + 30.0                                             # the pantograph
+	var wire := float(s.road_top + s.road_h / 2 - 24)
+	for d in int(top - wire):
+		_blk(pan + (d % 6) * 0.5 - 1.5, top - 1 - d, 1, 1, Color(0.30, 0.30, 0.32))
+	_blk(pan - 3, wire, 7, 1, Color(0.40, 0.40, 0.42))
+	if fposmod(t, 1.7) < 0.08:                                      # a spark off the wire
+		_blk(pan, wire - 1, 2, 2, Color(0.75, 0.85, 1.0))
+	_blk(x + length - 2, top + 9, 2, 2, Color(1.0, 0.92, 0.7))      # headlamp
+
+
+## The frontier post's barrier swings up for a vehicle now and then.
+func _barrier(s: RegionScene, t: float) -> void:
+	if s.landmark != "watchtower":
+		return
+	var bx := float(s.landmark_x) - 30.0
+	var y := float(s.road_top + 3)
+	var cycle := fposmod(t, 11.0)
+	var lift := clampf(minf(cycle - 7.0, 11.0 - cycle) * 1.5, 0.0, 1.0)
+	_blk(bx - 1, y - 6, 3, 10, Color(0.30, 0.30, 0.30))
+	for k in 14:
+		var a := Vector2(bx + 1.0, y - 4.0) + Vector2(cos(-lift * 1.35), sin(-lift * 1.35)) * k * 2.5
+		_blk(a.x, a.y, 2.5, 1.5, Color(0.83, 0.30, 0.22) if k % 2 == 0 else Color(0.95, 0.92, 0.85))
 
 
 func _fires(s: RegionScene, t: float) -> void:

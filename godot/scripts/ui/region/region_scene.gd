@@ -76,6 +76,13 @@ var water_top := -1
 var landmark := ""
 var landmark_x := 0
 var clock_at := Vector2i(-1, -1)
+## A tram runs on the capital's and the trading towns' paved streets.
+var tram := false
+## Newspaper and tobacco kiosks on the pavement of a paved town.
+var kiosks: Array[int] = []
+## Street buildings keep clear of this span so a street-level landmark (the
+## frontier watchtower) stands in the open. Empty when nothing needs it.
+var clearing := Vector2i(-1, -1)
 
 const LANDMARK_OF := {
 	Land.BASIN: "parliament", Land.INDUSTRY: "works", Land.COAST: "lighthouse",
@@ -123,6 +130,7 @@ func setup(region_data: Dictionary, width: int, height: int) -> void:
 	if programme and region["active_program"] is Dictionary:
 		program_id = String((region["active_program"] as Dictionary).get("program_id", ""))
 	water_top = front + 4 if land in [Land.COAST, Land.BASIN] else -1
+	tram = paved and (capital or land in [Land.TRADE, Land.COAST])
 	_layout()
 
 
@@ -164,8 +172,13 @@ func _town() -> void:
 	var plant_x := cols + 1000
 	if land == Land.INDUSTRY or development > 0.7:
 		plant_x = cols - 96
+	if landmark == "watchtower":
+		clearing = Vector2i(landmark_x - 44, landmark_x + 40)
 	var x := 4
 	while x < cols - 20:
+		if clearing.x >= 0 and x + 30 > clearing.x and x < clearing.y:
+			x = clearing.y
+			continue
 		if not civic_done and x + 26 > civic_x:
 			var cx := maxi(x, civic_x)
 			_add(cx, 44, Build.CIVIC, 3)
@@ -176,8 +189,8 @@ func _town() -> void:
 		if x + 30 > plant_x:
 			_add(plant_x, 88, Build.PLANT, 1)
 			for s in 3:
-				chimneys.append({"x": plant_x + 14 + s * 24, "y": ground - 40 - 30, "kind": "stack"})
-				beacons.append(Vector2i(plant_x + 16 + s * 24, ground - 40 - 31))
+				chimneys.append({"x": plant_x + 14 + s * 24, "y": ground - 40 - 58, "kind": "stack"})
+				beacons.append(Vector2i(plant_x + 14 + s * 24, ground - 40 - 50))
 			break
 		var kind := _pick(built)
 		var w := 0
@@ -207,7 +220,7 @@ func _town() -> void:
 		crane_at = 12
 	_towers()
 	match land:
-		Land.FRONTIER: searchlight_at = Vector2i(landmark_x - 3, ground - 48)
+		Land.FRONTIER: searchlight_at = Vector2i(landmark_x - 3, ground - 113)
 		Land.PLAIN: mill_at = Vector2i(landmark_x + 70, horizon + 8)
 	if landmark == "works":
 		for k in 3:
@@ -274,10 +287,17 @@ func _street() -> void:
 	while x < cols - 6:
 		lamps.append(x)
 		x += 42 + rng.randi_range(-8, 8)
+	if paved and land != Land.PLAIN:
+		var k := 70 + rng.randi_range(0, 40)
+		while k < cols - 30:
+			if absi(k - landmark_x) > 30:
+				kiosks.append(k)
+			k += 190 + rng.randi_range(0, 120)
 
 
 ## People on the pavement: more where there is life, a crowd where there is
 ## anger. Walkers keep their own pace and direction; idlers stand and shift.
+## Lane 3 is the near verge or field track, where the town thins out.
 func _crowd() -> void:
 	var count := int(4 + population * 14 + development * 8) + (10 if capital else 0)
 	for i in count:
@@ -285,6 +305,17 @@ func _crowd() -> void:
 		people.append({"x": rng.randf() * cols, "speed": dir * rng.randf_range(6.0, 11.0),
 			"lane": rng.randi_range(0, 2), "coat": rng.randi_range(0, 5), "idle": rng.randf() < 0.2,
 			"phase": rng.randf() * TAU})
+	if water_top < 0:
+		for i in 3 + int((1.0 - population) * 4.0):
+			var dir := 1.0 if rng.randf() < 0.5 else -1.0
+			people.append({"x": rng.randf() * cols, "speed": dir * rng.randf_range(4.0, 7.0),
+				"lane": 3, "coat": rng.randi_range(0, 5), "idle": rng.randf() < 0.25,
+				"phase": rng.randf() * TAU})
+	if landmark == "watchtower":
+		# The post at the tower's foot: a sentry each side of the barrier.
+		for dx in [-30, 30]:
+			people.append({"x": landmark_x + dx, "speed": 0.0, "lane": 1, "coat": 3, "idle": true,
+				"uniform": true, "phase": rng.randf() * TAU})
 	if trouble > 0.5:
 		var centre := cols * (0.3 + rng.randf() * 0.4)
 		for i in int(8 + trouble * 22):
@@ -293,11 +324,15 @@ func _crowd() -> void:
 				"placard": rng.randf() < 0.35, "phase": rng.randf() * TAU})
 
 
+## Even a quiet road carries something. Buses where the town is built up,
+## lorries in working country, army trucks on the frontier.
 func _traffic() -> void:
-	var count := 1 + int((1.0 - unemployment) * development * 5.0 * maxf(population, 0.5)) + (3 if capital else 0)
+	var count := maxi(3, 1 + int((1.0 - unemployment) * development * 5.0 * maxf(population, 0.5)) + (3 if capital else 0))
 	for i in count:
 		var lane := i % 2
 		var bus := development > 0.45 and rng.randf() < 0.18
+		var truck := not bus and land in [Land.FRONTIER, Land.INDUSTRY, Land.PLAIN, Land.PASS] and rng.randf() < 0.4
+		var length := 30 if bus else (26 if truck else rng.randi_range(14, 18))
 		cars.append({"x": rng.randf() * cols, "lane": lane,
-			"speed": (18.0 + rng.randf() * 16.0) * (1.0 if lane == 0 else -1.0),
-			"tone": rng.randi_range(0, 4), "len": 30 if bus else rng.randi_range(14, 18), "bus": bus})
+			"speed": (18.0 + rng.randf() * 16.0) * (1.0 if lane == 0 else -1.0) * (0.7 if truck else 1.0),
+			"tone": rng.randi_range(0, 4), "len": length, "bus": bus, "truck": truck})
