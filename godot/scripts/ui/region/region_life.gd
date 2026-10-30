@@ -17,6 +17,9 @@ const CAR_TONES: Array[Color] = [
 	Color(0.24, 0.32, 0.22), Color(0.50, 0.42, 0.20),
 ]
 const SKIN := Color(0.62, 0.50, 0.40)
+## People are faceless pictograms in one flat tone, read by posture.
+const FIGURE := Color(0.62, 0.59, 0.52)
+const FIGURE_H := 14.0
 const LAMP := Color(1.0, 0.80, 0.48)
 
 var canvas: CanvasItem
@@ -68,6 +71,31 @@ func _behind(s: RegionScene, x: float, y: float, w: float, h: float, c: Color) -
 		var clip := minf(h, float(s.front_top[col]) - y)
 		if clip > 0.0:
 			_blk(col, y, 1, clip, c)
+
+
+## A faceless figure in one tone: head, torso, legs. `stride` -1 stands,
+## 0/1 are the two walking steps; `arms_up` raises both arms (a marshaller,
+## a protester with fists up).
+func pictogram(x: float, foot: float, tone: Color, stride: int, arms_up: bool = false) -> void:
+	var y := foot - FIGURE_H
+	_blk(x, y, 3, 3, tone)                       # head
+	_blk(x - 0.5, y + 4, 4, 5, tone)             # torso
+	if arms_up:
+		_blk(x - 2, y - 1, 1, 6, tone)
+		_blk(x + 4, y - 1, 1, 6, tone)
+	else:
+		_blk(x - 1.5, y + 4, 1, 4, tone)
+		_blk(x + 3.5, y + 4, 1, 4, tone)
+	match stride:
+		0:
+			_blk(x - 1, y + 9, 1.5, 5, tone)
+			_blk(x + 2.5, y + 9, 1.5, 5, tone)
+		1:
+			_blk(x, y + 9, 1.5, 5, tone)
+			_blk(x + 1.5, y + 9, 1.5, 5, tone)
+		_:
+			_blk(x, y + 9, 1.5, 5, tone)
+			_blk(x + 2, y + 9, 1.5, 5, tone)
 
 
 func draw(s: RegionScene, t: float) -> void:
@@ -307,29 +335,17 @@ func _people(s: RegionScene, t: float) -> void:
 		if not bool(p["idle"]):
 			dist = t * float(p["speed"])
 			x = fposmod(x + dist, s.cols + 20.0) - 10.0
-		var coat: Color = COATS[int(p["coat"])]
 		var bob := 0.0
 		if bool(p.get("protest", false)):
 			bob = floorf(0.5 + 0.5 * sin(t * 4.0 + float(p["phase"])))
 		var stride := int(absf(dist) / 1.5) % 4
-		var y := foot - 10.0 - bob
-		_blk(x, y, 2, 2, SKIN.darkened(0.3))                 # head
-		_blk(x - 0.5, y + 2, 3, 4, coat)                      # coat
-		_blk(x + (2.0 if float(p["speed"]) >= 0.0 else -1.0), y + 3 + (1 if stride % 2 else 0), 1, 2, coat.darkened(0.3))
-		match stride:
-			0, 2:
-				_blk(x, y + 6, 1, 4, Color(0.1, 0.1, 0.12))
-				_blk(x + 1, y + 6, 1, 4, Color(0.1, 0.1, 0.12))
-			1:
-				_blk(x - 1, y + 6, 1, 4, Color(0.1, 0.1, 0.12))
-				_blk(x + 2, y + 6, 1, 4, Color(0.1, 0.1, 0.12))
-			3:
-				_blk(x - 0.5, y + 6, 1, 4, Color(0.1, 0.1, 0.12))
-				_blk(x + 1.5, y + 6, 1, 4, Color(0.1, 0.1, 0.12))
+		var y := foot - FIGURE_H - bob
+		var protest := bool(p.get("protest", false))
+		pictogram(x, foot - bob, FIGURE, (stride % 2) if not bool(p["idle"]) else -1, protest and int(p["coat"]) % 3 == 0)
 		if bool(p.get("placard", false)):
 			var lift := floorf(1.5 + 1.5 * sin(t * 2.5 + float(p["phase"])))
 			_blk(x + 1, y - 6 - lift, 1, 7, Color(0.30, 0.22, 0.14))
-			_blk(x - 2, y - 10 - lift, 7, 4, Color(0.85, 0.82, 0.72) if int(p["coat"]) % 2 else Color(0.83, 0.30, 0.22))
+			_blk(x - 2, y - 10 - lift, 7, 4, Color(0.85, 0.82, 0.72))
 
 
 func _cars(s: RegionScene, t: float) -> void:

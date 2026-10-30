@@ -84,10 +84,10 @@ func _run() -> void:
 func _test_the_desk_follows_the_players_side(t) -> void:
 	await _fresh("contextual")
 	t.equal(app.save_slot, TEST_SLOT, "the test never touches the player's slot")
-	t.equal(app.find_child("LegislationButton", true, false).text, "Legislation", "a government sees its legislation desk")
+	t.equal(app.find_child("LegislationButton", true, false).text.to_upper(), "LEGISLATION", "a government sees its legislation desk")
 	await _fresh("opposition")
 	var button: Button = app.find_child("LegislationButton", true, false)
-	t.equal(button.text, "Opposition", "an opposition leader sees the opposition desk in the same place")
+	t.equal(button.text.to_upper(), "OPPOSITION", "an opposition leader sees the opposition desk in the same place")
 	button.pressed.emit()
 	await _frames(2)
 	t.truth(_panel().visible, "it opens")

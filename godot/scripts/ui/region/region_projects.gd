@@ -32,12 +32,7 @@ static func _lane_y(s: RegionScene, lane: int) -> float:
 
 ## A figure on foot; `vest` paints it as a road crew or soldier.
 static func _figure(l: RegionLife, x: float, foot: float, coat: Color, t: float, walking: bool, phase: float) -> void:
-	var y := foot - 10.0
-	l._blk(x, y, 2, 2, RegionLife.SKIN.darkened(0.3))
-	l._blk(x - 0.5, y + 2, 3, 4, coat)
-	var step := int(t * 6.0 + phase) % 2 if walking else 0
-	l._blk(x - float(step), y + 6, 1, 4, Color(0.1, 0.1, 0.12))
-	l._blk(x + 1.0 + float(step), y + 6, 1, 4, Color(0.1, 0.1, 0.12))
+	l.pictogram(x, foot, coat, int(t * 6.0 + phase) % 2 if walking else -1)
 
 
 static func _lorry(l: RegionLife, x: float, y: float, cab: Color, load: Color) -> void:
@@ -117,7 +112,7 @@ static func _offices(l: RegionLife, s: RegionScene, t: float) -> void:
 	# A queue at the door, shuffling forward; clerks crossing with files.
 	for k in 8:
 		var shuffle := fposmod(t * 0.8 + k, 1.0) * 0.8
-		_figure(l, door - 6.0 - k * 4.0 + shuffle, float(s.ground + 2), RegionLife.COATS[k % 6], t, false, k)
+		_figure(l, door - 6.0 - k * 4.0 + shuffle, float(s.ground + 2), RegionLife.FIGURE, t, false, k)
 	for k in 2:
 		var cx := fposmod(door + t * 9.0 * (1.0 if k == 0 else -1.0) + k * 60.0, float(s.cols))
 		_figure(l, cx, float(s.ground + 4), Color(0.18, 0.20, 0.26), t, true, k)

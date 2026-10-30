@@ -8,6 +8,7 @@ const DATE_WIDTH_COMPACT := 120
 const DATE_WIDTH_WIDE := 192
 
 
+var _wire := WireLog.new()
 var snapshot: Dictionary = {}
 var selected_region_id := "vashtera"
 var _decision_index := -1
@@ -51,6 +52,11 @@ var _bill_preview: Dictionary = {}
 func _ready() -> void:
 	TerminalFrame.adopt_all(self)
 	TerminalFrame.capitalise(self)
+	TerminalFrame.capitalise_buttons(self)
+	%DateLabel.add_theme_color_override("font_color", UiPalette.GOLD)
+	var wire_text: Label = %MonthlyReport.find_child("DispatchText")
+	wire_text.visible = false
+	wire_text.get_parent().add_child(_wire)
 	%ArdeniaMap.region_selected.connect(_select_region)
 	find_child("NextDecision").pressed.connect(_next_decision)
 	%PlayButton.pressed.connect(_toggle_pause)
@@ -131,6 +137,9 @@ func _resize_layout() -> void:
 	%DateLabel.custom_minimum_size.x = DATE_WIDTH_COMPACT if compact else DATE_WIDTH_WIDE
 	find_child("NationalPanel").visible = not compact and not _desk_open()
 	find_child("MapPanel").visible = not _desk_open()
+	# A desk takes the whole body; its room needs the height the decision rail
+	# would otherwise hold. The rail returns the moment the desk closes.
+	find_child("DecisionRail").visible = not _desk_open()
 	%RegionBrief.visible = not _desk_open()
 	%BudgetPanel.visible = _budget_open
 	%LegislationPanel.visible = _legislation_open
@@ -140,7 +149,7 @@ func _resize_layout() -> void:
 	%RecordsPanel.visible = _records_open
 	%RegionPanel.visible = _region_panel_open
 	find_child("MapHint").visible = not compact and not _desk_open()
-	%MonthlyReport.custom_minimum_size.y = 88 if compact else 192
+	%MonthlyReport.custom_minimum_size.y = 88 if compact or _desk_open() else 192
 	%RegionBrief.find_child("Details").custom_minimum_size.y = 48 if compact else 84
 	for name in ["Rule", "PressureHeading", "PressureValue", "Details"]:
 		%RegionBrief.find_child(name).visible = not compact
@@ -152,6 +161,7 @@ func _resize_layout() -> void:
 	%MonthlyReport.find_child("DispatchColumn").visible = not compact
 	if not snapshot.is_empty():
 		_refresh_controls()
+	_refresh_rooms()
 	if not snapshot.is_empty():
 		if _budget_open:
 			_refresh_budget()
@@ -170,6 +180,39 @@ func _resize_layout() -> void:
 		else:
 			_refresh_region()
 
+## Each desk opens on its own room (`scripts/ui/desk/`): mounted at the top
+## of the panel once, then fed the snapshot whenever the layout refreshes.
+const ROOMS := {
+	"BudgetPanel": "treasury", "LegislationPanel": "parliament", "DiplomacyPanel": "foreign",
+	"RecordsPanel": "records", "OppositionPanel": "opposition", "SituationPanel": "situation",
+}
+var _rooms: Dictionary = {}
+
+func _refresh_rooms() -> void:
+	var compact := get_window().size.y < COMPACT_MAX_HEIGHT
+	for panel_name in ROOMS:
+		var panel := find_child(panel_name) as Control
+		if panel == null or not panel.visible:
+			continue
+		var path := "res://scripts/ui/desk/room_%s.gd" % ROOMS[panel_name]
+		if not ResourceLoader.exists(path):
+			continue
+		var room := load(path) as GDScript
+		if not _rooms.has(panel_name) or not is_instance_valid(_rooms[panel_name]):
+			var view := DeskView.new()
+			view.name = "Room"
+			view.painter = room.paint
+			var content := panel.get_child(0)
+			content.add_child(view)
+			content.move_child(view, mini(1, content.get_child_count() - 1))
+			_rooms[panel_name] = view
+		var view: DeskView = _rooms[panel_name]
+		view.custom_minimum_size.y = 150 if panel_name == "BudgetPanel" else (150 if compact else 270)
+		# On a small window the budget sliders need every row; its room steps aside.
+		view.visible = not (compact and panel_name == "BudgetPanel")
+		if not snapshot.is_empty():
+			view.data = room.data_from(snapshot)
+
 func apply_snapshot(value: Dictionary) -> void:
 	var incoming_budget: Dictionary = value.get("budget", {})
 	var incoming_pending: Variant = incoming_budget.get("pending")
@@ -179,7 +222,8 @@ func apply_snapshot(value: Dictionary) -> void:
 			and int(cached_plan.get("year", 0)) != incoming_proposal_year):
 		_reset_budget_draft()
 	snapshot = value.duplicate(true)
-	%DateLabel.text = str(snapshot.get("date", {}).get("text", "Awaiting snapshot"))
+	_refresh_rooms()
+	%DateLabel.text = "▌ %s ▌" % str(snapshot.get("date", {}).get("text", "Awaiting snapshot"))
 	var player: Dictionary = snapshot.get("player", {})
 	find_child("OfficeLabel").text = "%s / %s" % [player.get("title", "Office of government"), player.get("name", "—")]
 	find_child("StabilityLabel").text = str(snapshot.get("headline", {}).get("stability", "—"))
@@ -208,6 +252,7 @@ func apply_snapshot(value: Dictionary) -> void:
 		_decision_index = -1
 	%MonthlyReport.find_child("ReportText").text = _lines(snapshot.get("digest", []), "No monthly report yet. Advance a day once connected.")
 	%MonthlyReport.find_child("DispatchText").text = _lines(snapshot.get("dispatches", []), "No dispatches this period.")
+	_wire.show_rows(snapshot.get("dispatches", []), "No dispatches this period.")
 	%ArdeniaMap.apply_snapshot(snapshot.get("regions", []), selected_region_id)
 
 	_refresh_region()

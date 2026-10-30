@@ -59,16 +59,12 @@ size_flags_horizontal = 3
 clip_text = true
 text = "FREE —"
 
-[node name="ChartBar" type="HBoxContainer" parent="Content"]
+[node name="ChartLabel" type="Label" parent="Content/FiscalHeader"]
 layout_mode = 2
-
-[node name="ChartLabel" type="Label" parent="Content/ChartBar"]
-layout_mode = 2
-size_flags_horizontal = 3
 theme_type_variation = &"Muted"
 text = "CHART"
 
-[node name="ChartTypeChoice" type="OptionButton" parent="Content/ChartBar"]
+[node name="ChartTypeChoice" type="OptionButton" parent="Content/FiscalHeader"]
 custom_minimum_size = Vector2(168, 44)
 layout_mode = 2
 
@@ -82,7 +78,7 @@ layout_mode = 2
 metadata/_tab_index = 0
 
 [node name="SpendingChart" type="Control" parent="Content/BudgetTabs/SPENDING"]
-custom_minimum_size = Vector2(0, 150)
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 script = ExtResource("1_chart")
 
@@ -103,7 +99,7 @@ layout_mode = 2
 metadata/_tab_index = 1
 
 [node name="IncomeChart" type="Control" parent="Content/BudgetTabs/INCOME"]
-custom_minimum_size = Vector2(0, 150)
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
 script = ExtResource("1_chart")
 

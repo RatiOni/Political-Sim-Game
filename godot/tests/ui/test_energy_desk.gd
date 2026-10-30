@@ -40,7 +40,7 @@ func _wipe_slot() -> void:
 func _energy_button(prefix: String) -> Button:
 	var steps: VBoxContainer = app.find_child("EnergySteps", true, false)
 	for child in steps.get_children():
-		if child is Button and (child as Button).text.begins_with(prefix):
+		if child is Button and (child as Button).text.to_upper().begins_with(prefix.to_upper()):
 			return child
 	return null
 

@@ -65,6 +65,27 @@ static func _draw_title(panel: PanelContainer) -> void:
 ## Control-room type is all caps. Display-only (`Label.uppercase`), so the
 ## text the code and tests read stays as written. Hooks the tree so rows
 ## built at runtime (vitals, dispatches) get it too.
+## Buttons have no display-only caps, and the app rewrites their text as
+## state changes, so a watcher raises any lower case it finds each frame.
+static func capitalise_buttons(root: Node) -> void:
+	var watcher := Timer.new()
+	watcher.wait_time = 0.05
+	watcher.autostart = true
+	watcher.timeout.connect(func() -> void:
+		for node in root.find_children("*", "BaseButton", true, false):
+			if node is OptionButton:
+				var option := node as OptionButton
+				for i in option.item_count:
+					var item := option.get_item_text(i)
+					if item != item.to_upper():
+						option.set_item_text(i, item.to_upper())
+			elif node is Button:
+				var button := node as Button
+				if button.text != button.text.to_upper():
+					button.text = button.text.to_upper())
+	root.add_child(watcher)
+
+
 static func capitalise(root: Node) -> void:
 	for node in root.find_children("*", "Label", true, false):
 		(node as Label).uppercase = true

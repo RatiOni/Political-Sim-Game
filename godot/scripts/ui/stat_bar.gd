@@ -48,6 +48,8 @@ const ROW_H := 22
 		queue_redraw()
 
 var _font: Font
+## What the gauge shows: eases toward `value` instead of jumping.
+var _shown := -1.0
 var _font_size := 14
 
 
@@ -58,6 +60,17 @@ func _init() -> void:
 func _ready() -> void:
 	_font = get_theme_font("font", "Label")
 	_font_size = get_theme_font_size("font_size", "Label")
+
+
+func _process(delta: float) -> void:
+	if value < 0.0:
+		_shown = -1.0
+		return
+	if _shown < 0.0:
+		_shown = value
+	if absf(_shown - value) > 0.001:
+		_shown = lerpf(_shown, value, 1.0 - exp(-delta * 4.0))
+		queue_redraw()
 
 
 func _draw() -> void:
@@ -83,7 +96,9 @@ func _draw() -> void:
 
 	# Inline bracket gauge between key and figure: `[█████····]`, the
 	# control-room meter. Filled cells, dotted empties, thin bracket rules.
-	var lit := int(round(clampf(value, 0.0, 1.0) * SEGMENTS))
+	var cells := clampf(_shown if _shown >= 0.0 else value, 0.0, 1.0) * SEGMENTS
+	var lit := int(cells)
+	var part := cells - lit   # the leading cell fills by thirds as the gauge moves
 	# Gauge sits just after the key column, never adrift in a wide row.
 	var gx := floorf(minf(w * 0.42, 190.0))
 	var cell := float(SEG_W)
@@ -100,6 +115,9 @@ func _draw() -> void:
 		var x := gx + inner + i * cell
 		if i < lit:
 			draw_rect(Rect2(x, top, cell - 1, SEG_H), fill_color, true)
+		elif i == lit and part >= 0.33:
+			var third := floorf(part * 3.0) / 3.0
+			draw_rect(Rect2(x, top + SEG_H * (1.0 - third), cell - 1, SEG_H * third), fill_color, true)
 		else:
 			draw_rect(Rect2(x + 2, top + SEG_H - 2, 2, 2), UiPalette.TRACK, true)
 
