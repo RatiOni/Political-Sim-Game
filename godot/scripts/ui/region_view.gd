@@ -21,6 +21,9 @@ const MAX_COLS := 1000   # bound on scene width, in scene pixels
 ## they no longer fit under the frame, so the scale gives way to keep it.
 const MIN_ROWS := 200
 const MIN_W := 240
+const SOLID_FROM := 0.07
+const SEAM := 0.8
+const TONE_WEIGHT := 3.0
 
 var _region: Dictionary = {}
 var _scene: RegionScene
@@ -54,6 +57,10 @@ func _ready() -> void:
 	(_grade.material as ShaderMaterial).shader = preload("res://shaders/day_grade.gdshader")
 	add_child(_grade)
 	_ascii = AsciiConvert.cover(self)
+	# Print for legibility: the dim middle of the picture becomes flat tiles
+	# instead of a screen of dots, and the dark gutter outlines a change of
+	# colour rather than meshing every surface.
+	_ascii.set_shape(SOLID_FROM, SEAM, TONE_WEIGHT, true)
 
 
 func show_region(region: Dictionary) -> void:
@@ -108,12 +115,10 @@ func _draw() -> void:
 		m.set_shader_parameter("scene_rect", Vector4(_origin.x / size.x, _origin.y / size.y, used.x / size.x, used.y / size.y))
 		_frame_scene(before, used)
 
-	# The camera breathes: a slow push-in and drift, never still, never fast.
-	var push := 1.0 + 0.02 * (0.5 - 0.5 * cos(_clock * 0.045))
-	var drift := Vector2(sin(_clock * 0.031) * 10.0, sin(_clock * 0.023) * 3.0)
-	var centre := size * 0.5
-	# Whole-pixel offset, so the nearest-neighbour picture stays sharp.
-	var camera := Transform2D(0.0, Vector2(push, push), 0.0, (centre + drift - centre * push).round())
+	# The camera holds still. A push-in at a fractional scale doubled odd
+	# scene pixels and a drift slid every edge across the converter's cells,
+	# so the whole picture crawled; the life in the street is the motion.
+	var camera := Transform2D.IDENTITY
 	draw_set_transform_matrix(camera)
 	draw_texture_rect(_static_tex, Rect2(_origin, used), false)
 	_life.canvas = self

@@ -33,6 +33,25 @@ uniform vec2 size_px = vec2(800.0, 300.0);
 uniform vec2 ring_at = vec2(0.5, 0.5);
 uniform float ring_radius = -1.0;
 uniform float ring_width = 18.0;
+// Opt-in, per instance; the defaults reproduce the original output exactly.
+// `solid_from`: the tone from which a cell prints as a solid tile rather than
+// a dot (0.18 is where the ramp already turns solid). A lower value pushes
+// the dim middle of a picture into flat tiles, leaving dots only for the
+// near-black. `seam`: 0 gives every tile its dark gutter; above 0 the gutter
+// is drawn dark only where the neighbouring cell prints a different colour,
+// and inside one mass it is the tile's own colour at this strength — masses
+// read as solid shapes with a crisp outline instead of a uniform mesh.
+uniform float solid_from = 0.18;
+uniform float seam = 0.0;
+// How much brightness counts against hue when snapping to the palette. Tiles
+// carry no tone of their own, so a picture printed mostly in tiles wants a
+// higher weight, or a dark grey road snaps to the same mid grey as a wall.
+uniform float tone_weight = 0.6;
+// 1: a cell takes the one source colour among its taps that sits closest to
+// their average, instead of the average itself. No blended in-between colour
+// is invented, so a hairline that covers less than half a cell drops out
+// cleanly rather than tinting the cell into some unrelated palette colour.
+uniform float medoid = 0.0;
 
 const vec3 CREAM = vec3(0.93, 0.90, 0.80);
 
@@ -61,7 +80,7 @@ vec3 nearest(vec3 c, float want) {
 		vec3 p = palette[i];
 		float lp = luma(p);
 		vec3 d = p * (0.45 / max(lp, 0.004)) - cn;
-		float dd = dot(d, d) + 0.6 * (lp - want) * (lp - want);
+		float dd = dot(d, d) + tone_weight * (lp - want) * (lp - want);
 		if (dd < bd) { bd = dd; best = p; }
 	}
 	return best;
@@ -88,16 +107,39 @@ float bayer(vec2 frag, float level) {
 	return step(float(m[q.y * 4 + q.x]) + 0.5, level * 16.0);
 }
 
+// Five taps across the cell: centre and four quarter points.
+vec3 cell_average(vec2 cell, vec2 tx) {
+	vec2 o = cell * cell_px;
+	vec3 t[5] = vec3[](source(o + cell_px * 0.5, tx),
+		source(o + cell_px * vec2(0.25, 0.25), tx), source(o + cell_px * vec2(0.75, 0.25), tx),
+		source(o + cell_px * vec2(0.25, 0.75), tx), source(o + cell_px * vec2(0.75, 0.75), tx));
+	vec3 avg = t[0] * 0.4 + (t[1] + t[2] + t[3] + t[4]) * 0.15;
+	if (medoid < 0.5) { return avg; }
+	vec3 best = t[0];
+	float bd = distance(t[0], avg) - 0.02;   // the centre wins a tie
+	for (int i = 1; i < 5; i++) {
+		float d = distance(t[i], avg);
+		if (d < bd) { bd = d; best = t[i]; }
+	}
+	return best;
+}
+
+// What a cell prints, for the seam test: its hue, or the ground when the cell
+// is not a solid tile.
+vec3 cell_print(vec2 cell, vec2 tx) {
+	vec3 c = cell_average(cell, tx);
+	float l = luma(c) * gain;
+	if (l < max(solid_from, 0.04)) { return ground; }
+	return nearest(c, clamp(luma(c) * gain * 0.9 + 0.04, 0.08, 0.9));
+}
+
 void fragment() {
 	vec2 cell = floor(FRAGCOORD.xy / cell_px);
 	vec2 f = fract(FRAGCOORD.xy / cell_px);
-	vec2 o = cell * cell_px;
-	// Five taps across the cell: centre and four quarter points.
 	vec2 tx = SCREEN_PIXEL_SIZE;
-	vec3 c = source(o + cell_px * 0.5, tx) * 0.4
-		+ (source(o + cell_px * vec2(0.25, 0.25), tx) + source(o + cell_px * vec2(0.75, 0.25), tx)
-		+ source(o + cell_px * vec2(0.25, 0.75), tx) + source(o + cell_px * vec2(0.75, 0.75), tx)) * 0.15;
+	vec3 c = cell_average(cell, tx);
 	float lum = dot(c, vec3(0.299, 0.587, 0.114)) * gain;
+	bool solid = lum >= solid_from;
 
 	// Light events: the ring brightens the cells it crosses, the flash every cell.
 	vec2 here = UV * size_px;
@@ -115,6 +157,7 @@ void fragment() {
 	} else {
 		g = lum < 0.04 ? 0.0 : lum < 0.08 ? 1.0 : lum < 0.12 ? 2.0 : lum < 0.18 ? 3.0
 			: lum < 0.30 ? 4.0 : lum < 0.46 ? 5.0 : lum < 0.66 ? 6.0 : 7.0;
+		if (solid && lum >= 0.04) { g = max(g, 4.0); }
 	}
 	// Hue from the source; the glyph carries the tone, so the ink is chosen a
 	// little brighter than the source for legibility.
@@ -131,6 +174,16 @@ void fragment() {
 	float dot2 = step(q.x, 2.0) * step(1.0, q.x) * step(abs(q.y - 2.0), 0.0);
 	float dot4 = step(q.x, 2.0) * step(1.0, q.x) * step(q.y, 2.0) * step(1.0, q.y);
 	float k = g >= 4.0 ? tile : (g == 3.0 ? dot4 : (g == 2.0 ? dot2 : (g == 1.0 ? dot1 : 0.0)));
+	if (seam > 0.0 && g >= 4.0 && tile < 0.5) {
+		// The gutter: dark only on a boundary between two clearly different
+		// prints; neighbouring steps of one ramp (a sky gradient) stay joined.
+		vec3 own = cell_print(cell, tx);
+		vec2 side = vec2(q.x > cell_px.x - 2.0 ? 1.0 : 0.0, q.y > cell_px.y - 2.0 ? 1.0 : 0.0);
+		float edge = 0.0;
+		if (side.x > 0.0) { edge = max(edge, step(0.125, distance(own, cell_print(cell + vec2(1.0, 0.0), tx)))); }
+		if (side.y > 0.0) { edge = max(edge, step(0.125, distance(own, cell_print(cell + vec2(0.0, 1.0), tx)))); }
+		k = (1.0 - edge) * seam;
+	}
 	if (UV.y > water_from) { k = ink(g, f); }
 	// Material by pattern, not only tone. The camera is locked, so screen
 	// space is the scene's own space and every pattern stays put.
