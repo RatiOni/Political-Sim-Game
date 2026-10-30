@@ -67,7 +67,12 @@ static func _fold(offset: int, t: float, scale: float, octaves: int = 3) -> floa
 
 static func northern_edge(u: float) -> float:
 	var base := 0.125 + 0.052 * u
-	var fold := _fold(21, u, 7.0) * 0.030 + _fold(22, u, 10.0) * 0.012
+	# One single-octave fold, for the same reason as the coast below: these
+	# edges run the long axis, so a three-octave fold at scale 7 creased every
+	# three tiles and one at scale 10 every two — under the floor the tile grid
+	# can draw, which it rendered as a sawtooth. Scale 7 at one octave creases
+	# roughly every twelve tiles; the second fold's weight folds into the first.
+	var fold := _fold(21, u, 7.0, 1) * 0.038
 	var passes := -0.030 * exp(-pow((u - 0.30) / 0.045, 2.0)) \
 		- 0.022 * exp(-pow((u - 0.52) / 0.035, 2.0)) \
 		- 0.026 * exp(-pow((u - 0.80) / 0.055, 2.0))
@@ -79,7 +84,7 @@ static func southern_edge(u: float) -> float:
 	if u >= MEROVA_SURVEY_U:
 		return 0.845 - (u - MEROVA_SURVEY_U) * 0.56
 	var base := 0.878 - 0.050 * exp(-pow((u - 0.44) / 0.10, 2.0))
-	return base + _fold(23, u, 11.0) * 0.020 + sin(u * 13.0 + 2.0) * 0.008
+	return base + _fold(23, u, 7.0, 1) * 0.020 + sin(u * 13.0 + 2.0) * 0.008
 
 
 static func coastline(v: float) -> float:
