@@ -202,13 +202,33 @@ func _refresh_rooms() -> void:
 			var view := DeskView.new()
 			view.name = "Room"
 			view.painter = room.paint
-			var content := panel.get_child(0)
-			content.add_child(view)
-			content.move_child(view, mini(1, content.get_child_count() - 1))
+			# The room fills the desk, as in a control-room console: the desk's
+			# own controls move into a column on the left, the room takes the
+			# rest of the panel at full height.
+			var content := panel.get_child(0) as Control
+			var split := HBoxContainer.new()
+			split.name = "Split"
+			split.add_theme_constant_override("separation", 16)
+			var owners := {}
+			for node in [content] + content.find_children("*", "", true, false):
+				owners[node] = node.owner
+			panel.remove_child(content)
+			panel.add_child(split)
+			split.add_child(content)
+			# Re-parenting clears ownership; the desk's lookups need it back.
+			split.owner = panel
+			for node in owners:
+				node.owner = owners[node] if owners[node] != null else panel
+			content.size_flags_horizontal = Control.SIZE_FILL
+			view.custom_minimum_size = Vector2(0, 0)
+			view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			split.add_child(view)
 			_rooms[panel_name] = view
 		var view: DeskView = _rooms[panel_name]
-		view.custom_minimum_size.y = 150 if panel_name == "BudgetPanel" else (150 if compact else 270)
-		# On a small window the budget sliders need every row; its room steps aside.
+		var column := view.get_parent().get_child(0) as Control
+		column.custom_minimum_size.x = (460 if compact else 560) + (180 if panel_name == "BudgetPanel" else 0)
+		# On a small window the budget sliders need the whole width.
 		view.visible = not (compact and panel_name == "BudgetPanel")
 		if not snapshot.is_empty():
 			view.data = room.data_from(snapshot)

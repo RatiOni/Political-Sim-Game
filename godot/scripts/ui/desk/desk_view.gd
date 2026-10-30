@@ -47,7 +47,6 @@ var _overlay: Control
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = true
-	custom_minimum_size = Vector2(0, 220)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 
@@ -71,8 +70,10 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), INK, true)
-	_scale = size.y / SPACE.y
-	_origin = Vector2((size.x - SPACE.x * _scale) * 0.5, 0.0)
+	# Fit the height, but never crop the core composition by more than 60
+	# units a side: a tall narrow room letterboxes instead (dark bands).
+	_scale = minf(size.y / SPACE.y, size.x / (SPACE.x - 120.0))
+	_origin = ((size - SPACE * _scale) * 0.5).floor()
 	left = -_origin.x / _scale
 	right = SPACE.x + _origin.x / _scale
 	_labels.clear()
