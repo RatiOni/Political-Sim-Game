@@ -75,7 +75,7 @@ Re-running the retired exporter would undo this; edit the JSON directly.
 - At 1280x720 the situation panel shows one option above the fold; the rest
   scroll. Phase 5 layout work should give the panel more of the body.
 
-- Gas situations (the valve threat as a decision) and Zovar sabotage arrive with plans 3 and 4; the hooks are `GasSim.valve_threat` and `GasContract.sabotage`.
+- Zovar sabotage and the escalation ladder arrive with plan 4; the hook is `GasContract.sabotage`.
 
 ## The schemer arc
 
@@ -287,6 +287,80 @@ so the old reference is kept. Bands: steady player 39/77 pass; from opposition
 22/36 pass; schemer gain pass; election calibration, ISF, orientation journeys
 and fiscal regression pass; pending: AI that won power 0/28, 1997 steady 3/12,
 opening government 3/12.
+
+## Foreign situations
+
+**Player-facing job:** foreign affairs arrive as decisions about a named
+country, not as weather. Any of them can be ignored. Ignoring one is a choice
+with a price, and the price is small.
+
+- **Fifteen situations, two chains.** The supplier's valve threat, an ISF
+  review crisis, a transit dispute and a transit-fee windfall, a Concert
+  delegation, the Union's invitation and its pressure on a member, Western
+  aid with strings (and its conditions six months on), a neighbour's coup, a
+  Concert sanctions coalition, an arms offer, the rival's "legitimate
+  interests", and the Concert's offer to fast-track the second line (and
+  its gas-market conditions). The refugee crisis is now about the
+  neighbour at war.
+- **About whom.** Each situation names its country when it arrives:
+  the gas supplier, the rival, the Concert's or the Union's anchor, a
+  neighbour at war, a neighbour ripe for a coup, the Concert's chosen
+  target, or the warmest friend. The names come from live state and the
+  foreign catalog; the events name no country.
+- **Some cannot be missed.** A valve threat and a failed ISF review put
+  their decision on the desk the month they happen, as a follow-up. If one
+  is still undelivered a month later, it is dropped instead.
+- **The desks speak for themselves.** An option that pays arrears, buys a
+  cargo, renegotiates, joins the Union or sanctions a country is the
+  energy, orientation or diplomacy action itself. It is refused in that
+  desk's own words and charged once.
+- **A coup happens whatever Ardenia says.** The options are the response.
+- **The West's energy relief.** With the Concert application lodged and a
+  second line under construction, the Concert offers to fast-track it: the
+  line opens after 30 months instead of 48, the bill is unchanged, and
+  Krasova takes it as hostile (−0.08). Six months later the Concert's
+  gas-market conditions come due; stalling halves the saving. A line that
+  was shelved and restarted has no saving to halve.
+
+**The trade-off, measured.** The relief buys earlier independence, and the
+price is Krasovan anger. The figures below come from `test_west_relief_journey.gd`,
+measured while another branch's 31-country world was present in the tree. On
+seeds 919191, 31, 424242 and 7 the offer arrives in month 8, 3, 3 and 10 of a
+Western 20-year journey. The relief line opens in month 31 against the
+control's 49. In those 18 months Krasova's gas share is lower by 0.250 on
+every seed, and its leverage over Ardenia is lower, 1.686 against 2.311 (window
+means summed over seeds). Neither arm is short of gas in that window: summed
+window severity is 0.000 in both.
+
+Over 20 years the relief is slightly colder, 1.258 against 1.240 summed. The
+nine-country attribution run put the whole gap on the −0.08 hostility: 1.322
+against 1.293, and with the shift zeroed 1.293 against 1.293. That 0.029 is
+`WEST_RELIEF_KRASOVA_COST`. Both arms take one cut per seed.
+
+Final figures, relief against control:
+
+| Seed | GDP | Krasova's warmth | Mean approval |
+|---|---|---|---|
+| 919191 | 75251 / 77535 | −0.845 / −0.874 | 0.466 / 0.455 |
+| 31 | 77131 / 75062 | −0.995 / −0.993 | 0.474 / 0.477 |
+| 424242 | 74787 / 74523 | −0.995 / −0.798 | 0.478 / 0.472 |
+| 7 | 77057 / 74386 | −0.995 / −0.880 | 0.473 / 0.471 |
+
+**Coverage and pacing.** `test_foreign_situation_journeys.gd` runs twelve
+20-year journeys: four seeds, each under neutral, Western and Union play.
+These figures were also taken with the 31-country world present. The Western
+player accepts the Western aid and the energy offer, so both chains are walked.
+
+- Every one of the fifteen ids arrives.
+- The least frequent are `union_invitation` (1) and `aid_conditions_due` (2).
+  The most frequent is `sanctions_coalition` (22).
+- Decisions per five years, per strategy across the seeds: neutral 28.1,
+  Western 32.3, Union 24.7, against the 10–35 band. Single journeys range from
+  20.3 to 36.5, so the band is asserted on the seed mean.
+- Foreign situations fill 7–22 % of any one desk.
+
+To hold the band, two chances were lowered: `sanctions_coalition` from 0.05 to
+0.03, and `rival_interests` from 0.06 to 0.04.
 
 ## The world acts
 

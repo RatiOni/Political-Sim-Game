@@ -4163,7 +4163,7 @@
     {
       "id": "sanctions_coalition", "title": "The Concert Is Counting Votes",
       "description": "The Concert is assembling a sanctions coalition against a state it has run out of patience with, and has asked Ardenia, politely and in writing, which side of the table it sits on.",
-      "category": "Diplomatic", "condition": "sanctions_coalition_forming", "chance": 0.05, "target": "__concert_foe__",
+      "category": "Diplomatic", "condition": "sanctions_coalition_forming", "chance": 0.03, "target": "__concert_foe__",
       "options": [
         {"id": "join", "label": "Join the coalition", "description": "Stand with the Concert and pay for it in trade.", "effects": {}, "relation_deltas": {}, "pc_cost": 0, "follow_up": null, "on_apply": "sanctions_join", "requires": {"diplomacy_verb": "impose_sanctions"}},
         {"id": "speak_against", "label": "Speak against sanctions", "description": "Ardenia has lived under other people's embargoes. It will not join one.", "effects": {"faction_loyalty_deltas": {"@nationalist": 0.02}}, "relation_deltas": {"__concert_foe__": 0.05}, "pc_cost": 0, "follow_up": null, "on_apply": "sanctions_oppose", "requires": null},
@@ -4184,7 +4184,7 @@
     {
       "id": "rival_interests", "title": "Our Neighbour's \"Legitimate Interests\"",
       "description": "After its latest move against Ardenia, the old imperial neighbour has sent a note listing its 'legitimate interests': the language of the border districts, the pipeline's ownership, and who Ardenia may sign treaties with. It asks for a reply that recognises them.",
-      "category": "Diplomatic", "condition": "rival_presses_interests", "chance": 0.06, "target": "__rival__",
+      "category": "Diplomatic", "condition": "rival_presses_interests", "chance": 0.04, "target": "__rival__",
       "options": [
         {"id": "acknowledge", "label": "Acknowledge their interests", "description": "Words cost little, and these words buy quiet. They also tell the West something.", "effects": {"faction_loyalty_deltas": {"@nationalist": -0.06}}, "relation_deltas": {"__rival__": 0.08}, "pc_cost": 0, "follow_up": null, "on_apply": "interests_acknowledge", "requires": null},
         {"id": "take_it_to_the_concert", "label": "Publish the note in the West", "description": "Let the Concert read what is being demanded of an applicant.", "effects": {"faction_loyalty_deltas": {"@reform": 0.03}}, "relation_deltas": {"__rival__": -0.06}, "pc_cost": 8, "follow_up": null, "on_apply": "interests_internationalise", "requires": null},
