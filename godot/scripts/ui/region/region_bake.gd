@@ -33,6 +33,11 @@ const DARK_GLASS := Color(0.05, 0.06, 0.08)
 const ROOF := Color(0.24, 0.12, 0.09)
 const GOLD := Color(0.89, 0.60, 0.23)
 const ALARM := Color(0.83, 0.30, 0.22)
+## Architectural linework: pale dressed stone for copings and string
+## courses, near-black for the shadow under a cornice. Both sit in a
+## different palette band from any wall, so the line survives the converter.
+const TRIM := Color(0.62, 0.58, 0.50)
+const SHADOW := Color(0.03, 0.03, 0.035)
 ## Night walls: lit from the street, so quiet but readable.
 const WALLS: Array[Color] = [
 	Color(0.38, 0.35, 0.30), Color(0.30, 0.31, 0.33), Color(0.36, 0.29, 0.22),
@@ -49,12 +54,20 @@ static func bake(s: RegionScene) -> Image:
 	var sky := img.get_data()
 	_ridges(img, s)
 	_skyline(img, s)
-	_towers(img, s)
 	_land(img, s)
-	_landmark(img, s)
+	# The viaduct stands far back: the middle distance passes in front of it.
+	var far_landmark := s.landmark == "viaduct"
+	if far_landmark:
+		_landmark(img, s)
+	_mid(img, s)
+	_towers(img, s)
+	_harbour(img, s)
+	if not far_landmark:
+		_landmark(img, s)
 	var behind := img.get_data()
 	for b in s.buildings:
 		_building(img, s, b)
+	_chimney_stacks(img, s)
 	s.front_top = _front_top(img, behind, s)
 	_street(img, s)
 	_foreground(img, s)
@@ -62,6 +75,7 @@ static func bake(s: RegionScene) -> Image:
 		_scaffold(img, s)
 	if s.trouble > 0.45:
 		_barricades(img, s)
+	_reflections(img, s)
 	s.sky_mask = _sky_mask(img, sky, s)
 	return img
 
@@ -195,45 +209,164 @@ static func _ridges(img: Image, s: RegionScene) -> void:
 				fill(img, x, y, 1, cap, SNOW.darkened(0.3 if ys[x] >= ys[maxi(0, x - 1)] else 0.0))
 
 
-## A far town on the horizon: low blocks with a scatter of lit windows. It
-## gives the picture depth, and its lights thin out with the economy.
+## The far skyline on the horizon: the most distant layer, sparse and dark —
+## flat silhouettes with setbacks and masts, a few lights. Its lights thin
+## out with the economy.
 static func _skyline(img: Image, s: RegionScene) -> void:
-	var density := clampf(s.development * 0.7 + s.population * 0.45 + (0.15 if s.capital else 0.0), 0.1, 1.0)
+	var density := _density(s)
+	var tone := SKYLINE.darkened(0.15)
 	var x := 0
 	while x < s.cols:
-		var w := s.rng.randi_range(4, 14)
+		var w := s.rng.randi_range(5, 16)
 		var hgt := int(s.rng.randf_range(3.0, 8.0 + 22.0 * density * density))
 		if s.rng.randf() < 0.3:
 			hgt = s.rng.randi_range(1, 3)
-		fill(img, x, s.horizon - hgt, w, hgt, SKYLINE)
+		var top := s.horizon - hgt
+		fill(img, x, top, w, hgt, tone)
+		if hgt > 12 and w > 8 and s.rng.randf() < 0.5:   # a setback crown
+			fill(img, x + 2, top - 4, w - 4, 4, tone)
+			top -= 4
+		if hgt > 10 and s.rng.randf() < 0.35:            # a mast
+			fill(img, x + w / 2, top - 7, 1, 7, tone)
 		for wy in range(s.horizon - hgt + 2, s.horizon - 1, 3):
-			for wx in range(x + 1, x + w - 1, 2):
-				if s.rng.randf() < 0.18 * density * (1.0 - s.unemployment):
-					dot(img, wx, wy, LIT.darkened(0.45))
-		if hgt > 16 and s.rng.randf() < 0.3:
-			fill(img, x + w / 2, s.horizon - hgt - 5, 1, 5, SKYLINE)
+			for wx in range(x + 1, x + w - 2, 3):
+				if s.rng.randf() < 0.14 * density * (1.0 - s.unemployment):
+					fill(img, wx, wy, 2, 1, LIT.darkened(0.5))
 		x += w + (s.rng.randi_range(2, 10) if s.rng.randf() < 0.25 else 0)
 
 
-## High-rises between the far skyline and the street, window grids lit by
-## occupancy; some carry a crown and an aviation light.
+static func _density(s: RegionScene) -> float:
+	return clampf(s.development * 0.7 + s.population * 0.45 + (0.15 if s.capital else 0.0), 0.1, 1.0)
+
+
+## Tones for the converter's glyph classes (luma x gain 1.35): above ~0.13
+## a cell prints solid, 0.09..0.13 as a 2x2 point, darker as a dot or
+## nothing. Middle-distance masses sit in the point band, so they print as a
+## dithered grid; their linework is lifted into the solid band.
+const MID_BODY := Color(0.09, 0.09, 0.105)
+const MID_LINE := Color(0.30, 0.30, 0.33)
+const MID_GLASS := Color(0.025, 0.028, 0.035)
+
+
+static func _even(x: int) -> int:
+	return x - (x & 1)
+
+
+## The middle distance: a row of silhouettes standing on the building line,
+## between the far skyline and the street, printed as a dot grid with crisp
+## roof lines. Blocks and water towers in a town; low gables in the country.
+static func _mid(img: Image, s: RegionScene) -> void:
+	var urban := s.land in [RegionScene.Land.BASIN, RegionScene.Land.INDUSTRY, RegionScene.Land.TRADE,
+		RegionScene.Land.COAST, RegionScene.Land.FRONTIER]
+	var density := _density(s)
+	var x := s.rng.randi_range(0, 12)
+	while x < s.cols:
+		var w := s.rng.randi_range(12, 30) if urban else s.rng.randi_range(10, 18)
+		var hgt := int(s.rng.randf_range(18.0, 26.0 + 34.0 * density)) if urban else s.rng.randi_range(12, 20)
+		hgt = mini(hgt, s.ground - s.horizon + 30)
+		var top := s.ground - hgt
+		fill(img, x, top, w, hgt, MID_BODY)
+		if urban:
+			fill(img, x - 1, top - 2, w + 2, 2, MID_LINE)            # roof line
+			if s.rng.randf() < 0.35:                                # water tower
+				var tx := _even(x + s.rng.randi_range(2, maxi(2, w - 9)))
+				fill(img, tx, top - 10, 8, 6, MID_LINE)
+				fill(img, tx + 2, top - 12, 4, 2, MID_LINE)
+				fill(img, tx, top - 4, 2, 2, MID_LINE)
+				fill(img, tx + 6, top - 4, 2, 2, MID_LINE)
+			elif s.rng.randf() < 0.4:                              # mast
+				fill(img, _even(x + w - 6), top - 12, 2, 10, MID_LINE)
+				fill(img, _even(x + w - 8), top - 9, 6, 1, MID_LINE)
+			for wy in range(top + 3, s.ground - 4, 5):
+				for wx in range(_even(x + 2), x + w - 3, 4):
+					if s.rng.randf() < 0.12 * density * (1.0 - s.unemployment):
+						fill(img, wx, wy, 2, 3, LIT.darkened(0.3))
+		else:
+			var half := w / 2 + 1
+			for i in half:
+				var inset := half - 1 - i
+				fill(img, x - 1 + inset, top - half + i, w + 2 - 2 * inset, 1, MID_BODY)
+				fill(img, x - 1 + inset, top - half + i, 2, 1, MID_LINE)   # the lit slope
+			if s.rng.randf() < 0.3:
+				fill(img, _even(x + w / 3), top + 4, 2, 3, LIT.darkened(0.3))
+		x += w + (s.rng.randi_range(6, 30) if s.rng.randf() < (0.3 if urban else 0.55) else s.rng.randi_range(0, 3))
+
+
+## High-rises between the far skyline and the street: slabs printed as a dot
+## grid, edged with crisp parapets and setback ledges, carrying a dense grid
+## of window cells — most dark, some lit — and on some a mast and an
+## aviation light.
 static func _towers(img: Image, s: RegionScene) -> void:
+	var lit_p := 0.40 * (1.0 - s.unemployment) * (0.6 + s.development * 0.5)
 	for tw in s.towers:
-		var x := int(tw["x"])
-		var w := int(tw["w"])
+		var x := _even(int(tw["x"]))
+		var w := int(tw["w"]) + (int(tw["w"]) & 1)
 		var hgt := int(tw["h"])
 		var top := s.ground - hgt
-		var body := SKYLINE.lightened(0.10)
-		fill(img, x, top, w, hgt, body)
-		fill(img, x + w - 2, top, 2, hgt, body.darkened(0.3))
-		for wy in range(top + 3, s.ground - 3, 4):
-			for wx in range(x + 2, x + w - 3, 3):
-				var lit := s.rng.randf() < 0.45 * (1.0 - s.unemployment) * (0.6 + s.development * 0.5)
-				dot(img, wx, wy, LIT_COOL.darkened(0.2) if lit and s.rng.randf() < 0.3 else (LIT if lit else DARK_GLASS))
+		# Setback: the upper third steps in, if the tower is tall enough.
+		var step_y := top + hgt / 3 if hgt > 50 and w > 14 else top
+		var inset := 2 if step_y > top else 0
+		fill(img, x, step_y, w, s.ground - step_y, MID_BODY)
+		fill(img, x + inset, top, w - inset * 2, step_y - top, MID_BODY)
+		if step_y > top:
+			fill(img, x - 1, step_y - 2, w + 2, 2, MID_LINE)             # ledge at the setback
+		fill(img, x + inset - 1, top - 2, w - inset * 2 + 2, 2, MID_LINE)   # parapet
+		fill(img, x + inset, top, 2, step_y - top, MID_LINE.darkened(0.2))   # moonlit edge
+		fill(img, x, step_y, 2, s.ground - step_y, MID_LINE.darkened(0.2))
+		for wy in range(top + 2, s.ground - 4, 5):
+			var l := x + (inset if wy < step_y else 0) + 4
+			var r := x + w - (inset if wy < step_y else 0) - 2
+			for wx in range(l, r, 4):
+				var rect := Rect2i(wx, wy, 2, 3)
+				if s.rng.randf() < lit_p:
+					fill(img, wx, wy, 2, 3, LIT_COOL.darkened(0.1) if s.rng.randf() < 0.3 else LIT)
+					if s.rng.randf() < 0.08:
+						s.blink_lit.append(rect)
+				else:
+					fill(img, wx, wy, 2, 3, MID_GLASS)
+					if s.rng.randf() < 0.03:
+						s.blink_dark.append(rect)
+		var mid := _even(x + w / 2)
 		if bool(tw["crown"]):
-			fill(img, x + 2, top - 4, w - 4, 4, body.lightened(0.05))
-			fill(img, x + w / 2, top - 14, 1, 10, IRON.lightened(0.2))
-			s.beacons.append(Vector2i(x + w / 2, top - 14))
+			fill(img, mid - 4, top - 6, 8, 4, MID_LINE.darkened(0.2))         # plant room
+			fill(img, mid, top - 18, 2, 12, MID_LINE)                         # mast
+			fill(img, mid - 2, top - 13, 6, 1, MID_LINE)
+			s.beacons.append(Vector2i(mid, top - 19))
+		elif s.rng.randf() < 0.5:
+			fill(img, x + inset + 2, top - 6, 6, 4, MID_LINE.darkened(0.2))   # stair hut
+			fill(img, _even(x + w - inset - 4), top - 10, 2, 8, MID_LINE)     # aerial
+			fill(img, x + w - inset - 7, top - 8, 6, 1, MID_LINE)
+
+
+## Harbour cranes standing behind the waterfront: the coast's working skyline.
+static func _harbour(img: Image, s: RegionScene) -> void:
+	if s.land != RegionScene.Land.COAST:
+		return
+	var steel := IRON.lightened(0.32)
+	for k in 2:
+		var x := int(s.cols * (0.18 + 0.52 * k + s.rng.randf() * 0.12))
+		var g := s.ground
+		var deck := g - 58
+		for leg in [x, x + 16]:
+			fill(img, leg, deck, 2, g - deck, steel)
+		for y in range(deck + 6, g, 10):                # cross bracing
+			for d in 8:
+				dot(img, x + 2 + d * 2, y + d, steel)
+		fill(img, x - 2, deck, 22, 3, steel)            # portal beam
+		fill(img, x + 2, deck - 10, 12, 10, steel)      # machinery house
+		fill(img, x + 4, deck - 7, 3, 2, LIT.darkened(0.2))
+		var boom := deck - 12
+		fill(img, x - 34, boom, 76, 2, steel)           # the boom
+		for bx in range(x - 32, x + 40, 4):             # lattice under it
+			dot(img, bx, boom + 2, steel)
+			dot(img, bx + 1, boom + 3, steel)
+		fill(img, x + 7, boom - 16, 2, 16, steel)       # A-frame
+		for d in 16:                                    # stays to the boom ends
+			dot(img, x + 7 - d * 41 / 16, boom - 16 + d, steel)
+			dot(img, x + 8 + d * 33 / 16, boom - 16 + d, steel)
+		fill(img, x - 26, boom + 2, 1, 22, steel)       # hoist cable
+		fill(img, x - 28, boom + 24, 5, 3, steel)
+		s.beacons.append(Vector2i(x + 7, boom - 17))
 
 
 static func _land(img: Image, s: RegionScene) -> void:
@@ -364,14 +497,29 @@ static func _landmark(img: Image, s: RegionScene) -> void:
 				_window(img, s, c, top - 20, 3, 6, c * 3)
 			_window(img, s, cx - 2, top - 50, 4, 7, 991)
 		"viaduct":
+			# Far off, so it prints as a dot grid; its coping, piers' lit
+			# faces and arch rings are the crisp lines.
 			var deck := s.horizon - 20
-			fill(img, 0, deck, s.cols, 4, stone.darkened(0.2))
-			fill(img, 0, deck - 1, s.cols, 1, stone.lightened(0.1))
+			var body := Color(0.095, 0.09, 0.085)
+			var line := Color(0.34, 0.32, 0.29)
+			fill(img, 0, deck, s.cols, 6, body)
+			fill(img, 0, deck - 2, s.cols, 2, line)                           # coping
+			for px in range(0, s.cols, 6):                                     # parapet posts
+				fill(img, px, deck - 4, 2, 2, line)
+			# Two tiers of round arches on piers every 34 px, the spandrels
+			# solid above each curve and open below it.
+			var tier2 := deck + 30
 			for ax in range(0, s.cols, 34):
-				fill(img, ax, deck + 4, 8, s.ground - deck - 4, stone.darkened(0.35))
-				for r in 13:
-					var w := int(sqrt(float(169 - r * r)))
-					fill(img, ax + 8, deck + 4 + r, 26 - 2 * (13 - w), 1, stone.darkened(0.35))
+				fill(img, ax, deck + 6, 8, s.ground - deck - 6, body)
+				fill(img, ax, deck + 6, 2, s.ground - deck - 6, line.darkened(0.25))
+				for top in [deck + 6, tier2 + 3]:
+					for dx in 26:
+						var off := float(dx) - 12.5
+						var drop := 13 - int(sqrt(maxf(0.0, 169.0 - off * off)))
+						fill(img, ax + 8 + dx, top, 1, 3 + drop, body)
+						fill(img, ax + 8 + dx, top + 3 + drop, 1, 2, line.darkened(0.15))   # the arch ring
+			fill(img, 0, tier2, s.cols, 3, body)                               # the lower deck
+			fill(img, 0, tier2, s.cols, 2, line.darkened(0.15))
 		"clocktower":
 			var th := mini(g - 26, 120)
 			fill(img, cx - 12, g - th, 24, th, stone)
@@ -384,22 +532,41 @@ static func _landmark(img: Image, s: RegionScene) -> void:
 			for wy in range(g - th + 40, g - 10, 14):
 				_window(img, s, cx - 2, wy, 4, 7, wy)
 		"fortress":
+			# The hill prints as a dark dot grid with a lit crest, so the
+			# walls stand on it instead of on a flat grey mound.
+			var hill := Color(0.08, 0.095, 0.065)
 			for x in range(cx - 130, cx + 130):
 				if x < 0 or x >= s.cols:
 					continue
 				# A flat-crowned hill, so the walls have ground under all of them.
 				var y := int(g - 30 - 40.0 * (1.0 - pow(absf(x - cx) / 130.0, 6.0)))
-				fill(img, x, y, 1, g - y, LAND.lightened(0.12))
+				fill(img, x, y, 1, g - y, hill)
+				fill(img, x, y, 1, 2, LAND.lightened(0.28))
+				if (x * 7) % 23 < 2 and y < g - 34:                 # scrub on the slope
+					fill(img, x, y + 5 + (x * 13) % 9, 2, 2, PINE.lightened(0.2))
+			for k in 6:                                              # the switchback path up
+				var py := g - 34 - k * 6
+				var px0 := cx - 100 + (k % 2) * 30 + k * 6
+				fill(img, px0, py, 34, 1, LAND.lightened(0.22))
 			var top := g - 68
-			fill(img, cx - 70, top - 24, 140, 24, stone.darkened(0.1))
+			var wall_c := stone.darkened(0.1)
+			fill(img, cx - 70, top - 24, 140, 24, wall_c)
 			fill(img, cx - 74, top, 150, 6, stone.darkened(0.35))   # footing
+			fill(img, cx - 70, top - 24, 140, 2, SHADOW)             # shadow under the wall-walk
 			for k in range(cx - 70, cx + 70, 8):
-				fill(img, k, top - 28, 4, 4, stone.darkened(0.1))
+				fill(img, k, top - 28, 4, 4, wall_c)
+			for k in range(cx - 62, cx + 62, 12):                   # arrow slits
+				fill(img, k, top - 17, 2, 6, SHADOW)
+			fill(img, cx - 34, top - 14, 8, 14, SHADOW)              # the gate
+			fill(img, cx - 33, top - 16, 6, 2, SHADOW)
 			for tx in [cx - 74, cx - 8, cx + 62]:
 				fill(img, tx, top - 48, 14, 48, stone)
+				fill(img, tx + 11, top - 48, 3, 48, stone.darkened(0.3))
+				fill(img, tx - 1, top - 50, 16, 2, TRIM)
 				for k in range(tx, tx + 14, 4):
-					fill(img, k, top - 52, 2, 4, stone)
+					fill(img, k, top - 54, 2, 4, stone)
 				_window(img, s, tx + 5, top - 38, 3, 6, tx)
+				fill(img, tx + 5, top - 22, 2, 5, SHADOW)
 
 
 ## A filled half-disc, lit on its left shoulder.
@@ -430,40 +597,36 @@ static func _house(img: Image, s: RegionScene, b: Dictionary) -> void:
 	if s.development < 0.35:
 		wall = wall.lerp(Color(0.26, 0.22, 0.17), 0.6)
 	fill(img, x, top, w, hgt, wall)
+	fill(img, x, top, 1, hgt, wall.lightened(0.14))             # moonlit edge
 	fill(img, x + w - 3, top, 3, hgt, wall.darkened(0.35))      # shaded flank
 	fill(img, x, s.ground - 3, w, 3, wall.darkened(0.25))       # plinth
-	fill(img, x, top, w, 1, wall.lightened(0.18))               # cornice catch-light
 	if s.trouble > 0.5 and s.roll(x, 7) < s.trouble - 0.3:
 		# Posters and slogans on the wall.
 		fill(img, x + 2 + int(s.roll(x, 8) * (w - 8)), s.ground - 12, 5, 4, ALARM.darkened(0.2))
 
-	var roof_top := top
 	if bool(b["flat"]):
-		fill(img, x - 1, top - 2, w + 2, 2, wall.lightened(0.1))
-		if kind == RegionScene.Build.BLOCK:
-			if s.roll(x, 1) < 0.5:  # water tank on legs
-				var tx := x + 4
-				fill(img, tx, top - 10, 7, 6, IRON.lightened(0.2))
-				fill(img, tx + 1, top - 4, 1, 2, IRON)
-				fill(img, tx + 5, top - 4, 1, 2, IRON)
-			var ax := x + w - 8
-			fill(img, ax, top - 12, 1, 10, IRON.lightened(0.3))      # aerial
-			fill(img, ax - 2, top - 10, 5, 1, IRON.lightened(0.3))
-			fill(img, ax - 1, top - 7, 3, 1, IRON.lightened(0.3))
+		# Parapet: a pale coping overhanging a pixel, its shadow on the wall.
+		fill(img, x - 1, top - 3, w + 2, 2, TRIM)
+		fill(img, x, top - 1, w, 1, wall.darkened(0.1))
+		fill(img, x, top, w, 2, SHADOW)
+		_roof_kit(img, s, x, w, top - 3, kind)
 	else:
 		var half := w / 2 + 1
 		# Row i from the ridge down widens by a pixel each side; alternate
-		# rows read as courses of tile.
+		# rows read as courses of tile, the left slope catching the moon.
 		for i in half:
 			var row_tone := ROOF.darkened(0.25) if i % 2 == 0 else ROOF
 			var inset := half - 1 - i
 			fill(img, x - 1 + inset, top - half + i, w + 2 - 2 * inset, 1, row_tone)
+			dot(img, x - 1 + inset, top - half + i, ROOF.lightened(0.3))
 		fill(img, x + w / 2 - 1, top - half, 2, 1, ROOF.lightened(0.3))
-		roof_top = top - half
+		fill(img, x - 1, top, w + 2, 1, ROOF.darkened(0.55))      # eaves shadow
 	if kind == RegionScene.Build.CHURCH:
 		var sx := x + w / 2 - 4
 		fill(img, sx, top - 30, 8, 30, wall)
+		fill(img, sx, top - 30, 1, 30, wall.lightened(0.14))
 		fill(img, sx + 6, top - 30, 2, 30, wall.darkened(0.35))
+		fill(img, sx - 1, top - 31, 10, 1, TRIM)
 		for i in 6:   # spire: narrow at the tip, widening down to the tower
 			var inset := (5 - i) * 2 / 3
 			fill(img, sx + inset, top - 42 + i * 2, 8 - inset * 2, 2, ROOF)
@@ -479,7 +642,8 @@ static func _house(img: Image, s: RegionScene, b: Dictionary) -> void:
 		fill(img, x + 4, s.ground - 14, w - 8, 14, IRON.lightened(0.15))
 		for k in range(0, 14, 2):
 			fill(img, x + 4, s.ground - 14 + k, w - 8, 1, IRON.lightened(0.05))
-		_window_row(img, s, x, w, top + 4, x)
+		fill(img, x + 3, s.ground - 15, w - 6, 1, wall.lightened(0.2))   # lintel
+		_window_row(img, s, x, w, top + 4, x, 3, 3, 5)
 		return
 
 	# Ground floor: a shopfront or a door with a step.
@@ -505,32 +669,98 @@ static func _house(img: Image, s: RegionScene, b: Dictionary) -> void:
 				dot(img, i, s.ground - 18, LIT if open else KERB)
 	else:
 		var dx := x + w / 2 - 2
+		fill(img, dx - 1, s.ground - 11, 7, 1, wall.lightened(0.2))   # door hood
 		fill(img, dx, s.ground - 10, 5, 10, BOARD.darkened(0.2))
 		fill(img, dx + 1, s.ground - 9, 3, 1, LIT.darkened(0.4))   # fanlight
 		fill(img, dx - 1, s.ground - 1, 7, 1, KERB)
 
+	# Upper floors: a dense grid of window cells for blocks, sashes for
+	# houses, each storey divided by a string course.
+	var block := kind == RegionScene.Build.BLOCK
 	var storeys := int(b["storeys"])
 	for st in storeys:
 		var wy := s.ground - 18 - st * 10 - (4 if kind == RegionScene.Build.SHOP else 0)
 		if wy < top + 3:
 			break
-		_window_row(img, s, x, w, wy, x * 31 + st)
-		if kind == RegionScene.Build.BLOCK and st % 2 == 1:
-			fill(img, x + 2, wy + 7, w - 5, 1, IRON.lightened(0.35))   # balcony rail
-			for k in range(x + 2, x + w - 3, 3):
-				dot(img, k, wy + 8, IRON.lightened(0.25))
+		if st > 0:
+			fill(img, x, wy + 7, w - 3, 2, wall.lerp(TRIM, 0.6))   # string course
+		if block:
+			_window_row(img, s, x, w, wy, x * 31 + st, 2, 5, 4)
+		else:
+			_window_row(img, s, x, w, wy, x * 31 + st, 4, 5, 8)
+	if block and storeys >= 3 and w >= 26 and s.roll(x, 11) < 0.6:
+		_fire_escape(img, s, x + (w - 12) / 2 + (3 if s.roll(x, 12) < 0.5 else -3), top, storeys)
 
 
-static func _window_row(img: Image, s: RegionScene, x: int, w: int, wy: int, key: int) -> void:
-	var step := 7
+## Roof furniture on a flat roof: what makes a block read as a city block.
+static func _roof_kit(img: Image, s: RegionScene, x: int, w: int, roof: int, kind: int) -> void:
+	var steel := IRON.lightened(0.3)
+	if kind != RegionScene.Build.BLOCK:
+		if w > 20:                                                # vent boxes
+			fill(img, x + 3, roof - 2, 4, 2, IRON.lightened(0.2))
+			fill(img, x + w - 9, roof - 3, 3, 3, IRON.lightened(0.2))
+		return
+	if s.roll(x, 1) < 0.55:
+		# A timber water tower: legs, a hooped barrel, a conical cap.
+		var tx := x + 3 + int(s.roll(x, 13) * maxf(0.0, w - 16))
+		fill(img, tx + 1, roof - 4, 1, 4, IRON)
+		fill(img, tx + 6, roof - 4, 1, 4, IRON)
+		fill(img, tx + 1, roof - 3, 6, 1, IRON)
+		fill(img, tx, roof - 11, 8, 7, Color(0.30, 0.22, 0.16))
+		fill(img, tx, roof - 11, 1, 7, Color(0.40, 0.31, 0.22))
+		fill(img, tx, roof - 9, 8, 1, IRON)
+		fill(img, tx, roof - 6, 8, 1, IRON)
+		fill(img, tx + 1, roof - 13, 6, 2, Color(0.22, 0.17, 0.13))
+		fill(img, tx + 3, roof - 14, 2, 1, Color(0.22, 0.17, 0.13))
+	else:
+		# A stair hut with a dark door.
+		var hx := x + 3
+		fill(img, hx, roof - 6, 9, 6, IRON.lightened(0.24))
+		fill(img, hx - 1, roof - 7, 11, 1, IRON.lightened(0.36))
+		fill(img, hx + 2, roof - 4, 3, 4, DARK_GLASS)
+	# Chimney stacks and an aerial on the far end.
+	if s.roll(x, 14) < 0.6:
+		var cx := x + w / 2 + 1
+		fill(img, cx, roof - 5, 3, 5, Color(0.30, 0.18, 0.14))
+		fill(img, cx - 1, roof - 6, 5, 1, Color(0.40, 0.26, 0.20))
+	var ax := x + w - 7
+	fill(img, ax, roof - 13, 1, 13, steel)
+	fill(img, ax - 3, roof - 11, 7, 1, steel)
+	fill(img, ax - 2, roof - 8, 5, 1, steel)
+
+
+## An iron fire escape down the face of a block: a landing at every floor
+## above the street, a railing, a ladder slanting down to the next.
+static func _fire_escape(img: Image, s: RegionScene, fx: int, top: int, storeys: int) -> void:
+	var iron := IRON
+	var rail := IRON.lightened(0.04)
+	for st in range(1, storeys):
+		var py := s.ground - 18 - st * 10 + 7
+		if py - 4 < top + 2:
+			break
+		fill(img, fx, py, 12, 2, iron)                       # landing
+		fill(img, fx, py - 4, 12, 1, rail)                   # railing
+		for k in [0, 5, 11]:
+			fill(img, fx + k, py - 4, 1, 4, rail)
+		if st > 1:                                           # ladder to the landing below
+			for d in 9:
+				fill(img, fx + 1 + d, py + 2 + d, 2, 1, rail)
+	# The drop ladder hangs above the pavement.
+	fill(img, fx + 9, s.ground - 18, 1, 6, rail)
+	fill(img, fx + 11, s.ground - 18, 1, 6, rail)
+
+
+static func _window_row(img: Image, s: RegionScene, x: int, w: int, wy: int, key: int,
+		ww: int = 4, wh: int = 6, step: int = 7) -> void:
 	var count := maxi(1, (w - 6) / step)
-	var start := x + (w - 3 - count * step) / 2 + 2
+	var start := _even(x + (w - 3 - count * step) / 2 + (step - ww) / 2 + 1)
 	for i in count:
-		_window(img, s, start + i * step, wy, 4, 6, key * 13 + i)
+		_window(img, s, start + i * step, wy, ww, wh, key * 13 + i)
 
 
-## One window, whose state is the town's condition in miniature: lit and
-## glowing, dark, a blue television flicker (animated later), or boarded.
+## One window, whose state is the town's condition in miniature: lit, dark,
+## a blue television flicker (animated later), or boarded. No halo: the cell
+## is crisp, and the lit ones carry the night on their own.
 static func _window(img: Image, s: RegionScene, wx: int, wy: int, w: int, h: int, key: int) -> void:
 	var r := s.roll(key, wx, wy)
 	var boarded := s.unemployment * 0.85 + s.trouble * 0.2
@@ -539,23 +769,26 @@ static func _window(img: Image, s: RegionScene, wx: int, wy: int, w: int, h: int
 	if r < boarded:
 		fill(img, wx, wy, w, h, BOARD)
 		fill(img, wx, wy + 1, w, 1, BOARD.lightened(0.2))
-		fill(img, wx, wy + 4, w, 1, BOARD.lightened(0.2))
+		fill(img, wx, wy + h - 2, w, 1, BOARD.lightened(0.2))
 		return
 	if r < dark:
 		fill(img, wx, wy, w, h, DARK_GLASS)
-		dot(img, wx, wy, DARK_GLASS.lightened(0.25))
+		fill(img, wx, wy, 1, 1, DARK_GLASS.lightened(0.3))       # a glint of moon
+		if s.roll(key, 5) < 0.05:
+			s.blink_dark.append(Rect2i(wx, wy, w, h))
 		return
 	var tone := LIT_COOL if s.roll(key, 1) < 0.18 else LIT.darkened(s.roll(key, 2) * 0.35)
-	# A soft halo on the wall around a lit pane.
-	for dy in range(-1, h + 1):
-		for dx in range(-1, w + 1):
-			blend(img, wx + dx, wy + dy, tone, 0.22)
 	fill(img, wx, wy, w, h, tone)
-	fill(img, wx + w / 2, wy, 1, h, tone.darkened(0.4))         # mullion
+	fill(img, wx - 1, wy - 1, w + 2, 1, tone.darkened(0.75))   # lintel shadow
+	if w >= 4:
+		fill(img, wx + w / 2, wy, 1, h, tone.darkened(0.4))     # mullion
+	fill(img, wx, wy + h / 2, w, 1, tone.darkened(0.3))          # transom
 	if s.roll(key, 3) < 0.3:
-		fill(img, wx, wy, w / 2, h, tone.darkened(0.55))        # drawn curtain
-	if s.roll(key, 4) < 0.12:
+		fill(img, wx, wy, maxi(1, w / 2), h, tone.darkened(0.55))   # drawn curtain
+	if w >= 4 and s.roll(key, 4) < 0.12:
 		s.tv_windows.append(Vector2i(wx, wy))
+	elif s.roll(key, 6) < 0.08:
+		s.blink_lit.append(Rect2i(wx, wy, w, h))
 	s.lit_windows.append(Vector2i(wx + w / 2, wy + h / 2))
 
 
@@ -611,42 +844,90 @@ static func _plant(img: Image, s: RegionScene, b: Dictionary) -> void:
 
 # --- street and foreground -----------------------------------------------
 
+## Brick stacks on the pitched roofs, where `RegionLife` puffs the smoke.
+static func _chimney_stacks(img: Image, s: RegionScene) -> void:
+	for c in s.chimneys:
+		if String(c["kind"]) != "house":
+			continue
+		var cx := int(c["x"])
+		var cy := int(c["y"])
+		fill(img, cx - 1, cy, 4, 8, Color(0.30, 0.18, 0.14))
+		fill(img, cx - 1, cy, 1, 8, Color(0.40, 0.26, 0.20))
+		fill(img, cx - 2, cy - 1, 6, 2, Color(0.22, 0.14, 0.11))
+		fill(img, cx, cy - 3, 1, 2, Color(0.30, 0.18, 0.14))      # a chimney pot
+
+
+## Trams run on the capital's and the trading towns' paved streets.
+static func _has_tram(s: RegionScene) -> bool:
+	return s.paved and (s.capital or s.land in [RegionScene.Land.TRADE, RegionScene.Land.COAST])
+
+
 static func _street(img: Image, s: RegionScene) -> void:
 	fill(img, 0, s.ground, s.cols, s.road_top - s.ground, PAVEMENT)
+	fill(img, 0, s.ground, s.cols, 1, PAVEMENT.darkened(0.35))          # foot of the walls
 	for jx in range(0, s.cols, 8):
-		fill(img, jx, s.ground, 1, s.road_top - s.ground, PAVEMENT.darkened(0.25))
-	fill(img, 0, s.road_top - 1, s.cols, 1, KERB)
+		fill(img, jx, s.ground + 1, 1, s.road_top - s.ground - 1, PAVEMENT.darkened(0.25))
+	# The kerb: a pale edge stone over its own shadow.
+	fill(img, 0, s.road_top - 2, s.cols, 1, KERB.lightened(0.12))
+	fill(img, 0, s.road_top - 1, s.cols, 1, KERB.darkened(0.25))
 	var surface := ROAD if s.paved else DIRT
 	fill(img, 0, s.road_top, s.cols, s.road_h, surface)
 	var mid := s.road_top + s.road_h / 2
 	if s.paved:
-		for dx in range(4, s.cols, 18):
-			fill(img, dx, mid, 9, 1, MARKING)
+		if _has_tram(s):
+			# The tram runs down the crown of the road: two steel rails with
+			# sleepers set in the setts, in place of the centre line.
+			fill(img, 0, mid - 3, s.cols, 6, ROAD.lightened(0.04))
+			for sx in range(0, s.cols, 5):
+				fill(img, sx, mid - 2, 2, 4, ROAD.lightened(0.10))
+			fill(img, 0, mid - 3, s.cols, 1, KERB.lightened(0.15))
+			fill(img, 0, mid + 2, s.cols, 1, KERB.lightened(0.15))
+		else:
+			for dx in range(4, s.cols, 18):
+				fill(img, dx, mid, 9, 1, MARKING)
 		for mx in range(30, s.cols, 110):               # drains
-			fill(img, mx, s.road_top + 2, 4, 1, IRON)
+			fill(img, mx, s.road_top + 1, 5, 2, IRON)
+			for k in range(mx, mx + 5, 2):
+				dot(img, k, s.road_top + 1, KERB.darkened(0.4))
 	else:
 		for rx in range(0, s.cols, 6):
 			fill(img, rx, mid - 3, 4, 1, DIRT.darkened(0.3))
 			fill(img, rx + 3, mid + 3, 4, 1, DIRT.darkened(0.3))
-	fill(img, 0, s.front, s.cols, 2, KERB)
-	# Lamp posts, benches and bins along the pavement.
+	fill(img, 0, s.front, s.cols, 1, KERB.lightened(0.12))
+	fill(img, 0, s.front + 1, s.cols, 1, KERB.darkened(0.25))
+	# Lamp posts on a footing with a swan-neck arm; benches and bins.
+	var post := IRON
 	for lx in s.lamps:
-		fill(img, lx, s.ground - 26, 1, 26, IRON.lightened(0.25))
-		fill(img, lx, s.ground - 26, 5, 1, IRON.lightened(0.25))
-		fill(img, lx + 3, s.ground - 25, 3, 2, IRON.lightened(0.45))
+		fill(img, lx - 1, s.ground - 3, 4, 3, post)                   # footing
+		fill(img, lx, s.ground - 26, 2, 26, post)
+		fill(img, lx, s.ground - 27, 5, 2, post)                      # arm
+		fill(img, lx + 3, s.ground - 25, 3, 2, IRON.lightened(0.45))  # lantern housing
+		fill(img, lx - 1, s.ground - 28, 4, 1, post)                  # finial
 		if s.roll(lx, 9) < 0.3:
-			fill(img, lx + 8, s.road_top - 4, 8, 1, BOARD.lightened(0.2))
-			fill(img, lx + 8, s.road_top - 3, 1, 2, IRON)
-			fill(img, lx + 15, s.road_top - 3, 1, 2, IRON)
+			fill(img, lx + 8, s.road_top - 6, 9, 2, BOARD.lightened(0.2))
+			fill(img, lx + 8, s.road_top - 9, 9, 1, BOARD.lightened(0.1))
+			fill(img, lx + 8, s.road_top - 4, 1, 2, IRON)
+			fill(img, lx + 16, s.road_top - 4, 1, 2, IRON)
 		elif s.roll(lx, 10) < 0.25:
-			fill(img, lx + 6, s.road_top - 5, 3, 4, Color(0.14, 0.20, 0.16))
+			fill(img, lx + 6, s.road_top - 7, 4, 5, Color(0.14, 0.20, 0.16))
+			fill(img, lx + 5, s.road_top - 8, 6, 1, Color(0.20, 0.28, 0.22))
+	if s.paved and _has_tram(s):
+		# The overhead wire, slung from pole to pole.
+		for i in s.lamps.size() - 1:
+			var a := s.lamps[i] + 1
+			var z := s.lamps[i + 1] + 1
+			for wx in range(a, z):
+				var t := float(wx - a) / float(maxi(1, z - a))
+				dot(img, wx, s.ground - 30 + int(3.0 * 4.0 * t * (1.0 - t)), IRON.lightened(0.35))
 	# Old towns keep wooden poles and a sagging wire.
 	if not s.paved:
 		var poles: Array[int] = []
 		for px in range(20, s.cols, 64):
 			poles.append(px)
 			fill(img, px, s.ground - 34, 2, 34, BOARD)
-			fill(img, px - 4, s.ground - 33, 10, 1, BOARD)
+			fill(img, px - 4, s.ground - 33, 10, 2, BOARD)
+			dot(img, px - 3, s.ground - 34, KERB)
+			dot(img, px + 4, s.ground - 34, KERB)
 		for i in poles.size() - 1:
 			var a := poles[i] + 1
 			var z := poles[i + 1] + 1
@@ -662,21 +943,57 @@ static func _foreground(img: Image, s: RegionScene) -> void:
 			var gx := s.rng.randi_range(0, s.cols)
 			var gy := s.rng.randi_range(s.front + 3, s.h - 1)
 			fill(img, gx, gy, 1, 2, LAND.lightened(0.25))
-		for fx in range(0, s.cols, 5):                 # a low fence
-			fill(img, fx, s.front + 3, 1, 5, BOARD.darkened(0.2))
-		fill(img, 0, s.front + 4, s.cols, 1, BOARD.darkened(0.3))
+		# A post-and-rail fence: posts two pixels wide, two rails.
+		for fx in range(0, s.cols, 10):
+			fill(img, fx, s.front + 3, 2, 7, BOARD)
+			dot(img, fx, s.front + 3, BOARD.lightened(0.3))
+		fill(img, 0, s.front + 4, s.cols, 1, BOARD.lightened(0.1))
+		fill(img, 0, s.front + 7, s.cols, 1, BOARD.darkened(0.2))
 		return
+	# The quay wall: dressed stone courses down to the water.
 	fill(img, 0, s.front + 2, s.cols, s.water_top - s.front - 2, KERB.darkened(0.35))
+	for bx in range(0, s.cols, 6):
+		dot(img, bx, s.front + 3, KERB.darkened(0.55))
 	gradient(img, 0, s.water_top, s.cols, s.h, WATER.lightened(0.08), WATER, 5)
+	fill(img, 0, s.water_top, s.cols, 1, WATER.darkened(0.4))         # the waterline
 	if s.land == RegionScene.Land.BASIN:
-		for rx in range(0, s.cols, 4):                 # embankment railing
+		# Embankment railing: a two-pixel top rail on posts, lamps' bollards.
+		for rx in range(0, s.cols, 5):
 			fill(img, rx, s.front - 5, 1, 4, IRON.lightened(0.3))
-		fill(img, 0, s.front - 5, s.cols, 1, IRON.lightened(0.35))
+		fill(img, 0, s.front - 6, s.cols, 2, IRON.lightened(0.38))
+		for bx in range(14, s.cols, 60):
+			fill(img, bx, s.front - 4, 3, 4, IRON.lightened(0.2))
 	else:
-		for px in range(40, s.cols, 90):               # pier piles
-			fill(img, px, s.water_top - 1, 30, 2, BOARD)
+		for px in range(40, s.cols, 90):               # piers on piles
+			fill(img, px, s.water_top - 2, 30, 2, BOARD.lightened(0.1))
+			fill(img, px, s.water_top, 30, 1, BOARD.darkened(0.3))
 			for k in range(px, px + 30, 7):
-				fill(img, k, s.water_top + 1, 2, 8, BOARD.darkened(0.4))
+				fill(img, k, s.water_top + 1, 2, 9, BOARD.darkened(0.4))
+
+
+## The street mirrored in the water as broken horizontal streaks: walls as
+## dim smears, lit windows as warm dashes, stretched and fading with depth.
+## Moving shimmer on top is `RegionLife._water`'s.
+static func _reflections(img: Image, s: RegionScene) -> void:
+	if s.water_top < 0:
+		return
+	var depth := s.h - s.water_top
+	for y in range(s.water_top + 2, s.h, 2):
+		var k := float(y - s.water_top) / float(depth)
+		var src_y := clampi(s.ground - 4 - int((y - s.water_top) * 2.2), 0, s.h - 1)
+		var x := s.rng.randi_range(0, 6)
+		while x < s.cols:
+			var run := s.rng.randi_range(2, 10)
+			for dx in run:
+				var px := x + dx
+				if px >= s.cols:
+					break
+				var c := img.get_pixel(px, src_y)
+				var under := img.get_pixel(px, y)
+				var bright := c.r > 0.6 and c.r > c.b + 0.2
+				var a := (0.75 if bright else 0.22) * (1.0 - k * 0.7)
+				img.set_pixel(px, y, under.lerp(c, a))
+			x += run + s.rng.randi_range(1, 6)
 
 
 static func _scaffold(img: Image, s: RegionScene) -> void:

@@ -257,10 +257,17 @@ func _windows(s: RegionScene, t: float) -> void:
 		var w := s.tv_windows[i]
 		var k := 0.5 + 0.5 * sin(t * 7.0 + i * 3.1) * sin(t * 2.3 + i)
 		_blk(w.x, w.y, 4, 6, Color(0.55, 0.70, 1.0, 0.25 + 0.45 * k))
-	for i in range(0, s.lit_windows.size(), 9):
-		var w := s.lit_windows[i]
-		if sin(t * 0.21 + i * 1.7) > 0.82:
-			_blk(w.x - 2, w.y - 3, 4, 6, Color(0.05, 0.06, 0.08, 0.9))
+	# One window at a time changes: every few seconds a different lit one goes
+	# dark and a different dark one lights up, as people go about the night.
+	for slot in 2:
+		var n := s.blink_lit.size()
+		if n > 0:
+			var r := s.blink_lit[(int(t / (2.3 + slot * 1.1)) * 37 + slot * 101) % n]
+			_blk(r.position.x, r.position.y, r.size.x, r.size.y, Color(0.05, 0.06, 0.08))
+		var m := s.blink_dark.size()
+		if m > 0:
+			var r := s.blink_dark[(int(t / (3.1 + slot * 1.7)) * 53 + slot * 17) % m]
+			_blk(r.position.x, r.position.y, r.size.x, r.size.y, Color(1.0, 0.76, 0.40).darkened(0.1 * slot))
 
 
 func _smoke(s: RegionScene, t: float) -> void:

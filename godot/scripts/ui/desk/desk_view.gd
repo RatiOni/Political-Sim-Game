@@ -7,9 +7,9 @@ extends Control
 ## over the finished cells like labels on a reconnaissance photograph.
 ##
 ## A room is a painter: `static func paint(v: DeskView, t: float, d: Dictionary)`
-## that draws in a 640 x 240 authoring space (`SPACE`) with the helpers
+## that draws in a 640 x 420 authoring space (`SPACE`) with the helpers
 ## below. The view fits that space to its own *height* and centres it, so a
-## room never crops vertically. On a panel wider than 640:240 the visible
+## room never crops vertically. On a panel wider than 640:420 the visible
 ## span runs from `left` to `right` (left < 0, right > 640): the core
 ## composition stays inside 0..640 and backdrop elements (walls, windows,
 ## shelving, rows of people) should repeat across left..right so the edges
@@ -17,7 +17,7 @@ extends Control
 ## Everything a painter knows about the game arrives in `data`; painters
 ## never read the app or the snapshot themselves.
 
-const SPACE := Vector2(640, 240)
+const SPACE := Vector2(640, 420)
 ## Painters draw in these tones and the converter snaps them to its palette.
 const INK := Color(0.05, 0.05, 0.06)      # the room's darkness
 const WALL := Color(0.16, 0.16, 0.17)
@@ -72,7 +72,7 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), INK, true)
 	# Fit the height, but never crop the core composition by more than 60
 	# units a side: a tall narrow room letterboxes instead (dark bands).
-	_scale = minf(size.y / SPACE.y, size.x / (SPACE.x - 120.0))
+	_scale = minf(size.y / SPACE.y, size.x / (SPACE.x - 80.0))
 	_origin = ((size - SPACE * _scale) * 0.5).floor()
 	left = -_origin.x / _scale
 	right = SPACE.x + _origin.x / _scale

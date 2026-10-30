@@ -56,6 +56,10 @@ var lamps: Array[int] = []
 var chimneys: Array[Dictionary] = []
 var lit_windows: Array[Vector2i] = []
 var tv_windows: Array[Vector2i] = []
+## Window cells that change one at a time: lit ones that go dark, dark ones
+## that light up. Set by the bake.
+var blink_lit: Array[Rect2i] = []
+var blink_dark: Array[Rect2i] = []
 var stars: Array[Vector3] = []
 var clouds: Array[Dictionary] = []
 var people: Array[Dictionary] = []
