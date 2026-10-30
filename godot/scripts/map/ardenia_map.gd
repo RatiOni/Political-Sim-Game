@@ -48,6 +48,8 @@ var dusk_button := Button.new()
 var _sea := ColorRect.new()
 var _physical := Node2D.new()
 var _canvas := Node2D.new()
+const RESTLESS_PRESSURE := 0.35
+const PROTEST_PRESSURE := 0.6
 var _highlight := Node2D.new()
 var _labels := MapLabels.new()
 var _notice := Label.new()
@@ -118,11 +120,6 @@ func _build_nodes() -> void:
 	_physical.show_behind_parent = true
 	_physical.name = "Physical"
 	add_child(_physical)
-	# After the picture, behind the map's own chrome: buttons stay crisp.
-	var glass := CrtGlass.cover(self)
-	glass.show_behind_parent = true
-	(glass.material as ShaderMaterial).set_shader_parameter("dim", 1.0)
-	(glass.material as ShaderMaterial).set_shader_parameter("desaturate", 0.0)
 	_physical.add_child(_canvas)
 	for layer in [terrain_layer, growth_layer, smoke_layer]:
 		layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -448,6 +445,7 @@ func apply_snapshot(values: Array, selection: String) -> void:
 			unknown_warnings += 1
 			push_warning("ArdeniaMap: ignoring unknown region id '%s'" % id)
 	selected_id = selection if polygons.has(selection) else ""
+	_labels.status = status_tags(regions)
 	_paint_growth()
 	_redraw()
 
@@ -535,7 +533,49 @@ func _draw() -> void:
 		draw_style_box(get_theme_stylebox("focus", "ArdeniaMap"), Rect2(Vector2(2, 2), size - Vector2(4, 4)))
 
 
+## What is happening in each region, as short words under its name:
+## the running programme, unrest, armed conflict, lost control.
+static func status_tags(rows: Dictionary) -> Dictionary:
+	var tags := {}
+	for id in rows:
+		var row: Dictionary = rows[id]
+		var list: Array = []
+		var program: Variant = row.get("active_program")
+		if program is Dictionary:
+			list.append([String(program.get("short_name", "Programme")).to_upper(), UiPalette.GOLD])
+		if String(row.get("control", "")) == "separatist":
+			list.append(["SEPARATIST", MapPalette.DAY[MapPalette.ROCK_LIGHT]])
+		elif bool(row.get("civil_war", false)) or float(row.get("insurgency", 0.0)) > 0.4:
+			list.append(["CONFLICT", UiPalette.BAD])
+		elif float(row.get("pressure", 0.0)) > PROTEST_PRESSURE:
+			list.append(["UNREST", UiPalette.BAD])
+		elif float(row.get("pressure", 0.0)) > RESTLESS_PRESSURE:
+			list.append(["RESTLESS", UiPalette.WARN])
+		tags[id] = list
+	return tags
+
+
+## A translucent wash over troubled regions; calm ones stay clean so the
+## colour itself means "trouble here".
+func _draw_pressure() -> void:
+	var tile := float(tile_px)
+	for id in _cells:
+		var row: Dictionary = regions.get(id, {})
+		var pressure := float(row.get("pressure", 0.0))
+		var colour: Color
+		if String(row.get("control", "")) == "separatist":
+			colour = Color(0.05, 0.05, 0.07, 0.35)
+		elif pressure > RESTLESS_PRESSURE:
+			colour = UiPalette.risk_scale(pressure, RESTLESS_PRESSURE, PROTEST_PRESSURE)
+			colour.a = lerpf(0.12, 0.30, inverse_lerp(RESTLESS_PRESSURE, 1.0, pressure))
+		else:
+			continue
+		for cell in _cells[id]:
+			_highlight.draw_rect(Rect2(Vector2(cell) * tile, Vector2(tile, tile)), colour)
+
+
 func _draw_highlight() -> void:
+	_draw_pressure()
 	if _cells.has(hovered_id) and hovered_id != selected_id:
 		_outline(_cells[hovered_id], HOVER_WIDTH, MapPalette.DAY[MapPalette.ROCK_LIGHT])
 	if _cells.has(selected_id):

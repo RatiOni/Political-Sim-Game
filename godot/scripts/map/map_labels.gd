@@ -14,6 +14,8 @@ var region_points: Dictionary = {}
 var cities: Array[Dictionary] = []
 var to_physical: Callable
 var region_size := 8
+## Region id -> [[word, colour], ...], drawn under the region's name.
+var status: Dictionary = {}
 var city_scale := 1
 static var _fonts: Dictionary = {}
 ## The terminal face, like the rest of the desk; the pixel fonts above stay
@@ -59,7 +61,9 @@ func _draw() -> void:
 		var text := " ".join(String(id).to_upper().split(""))
 		var at: Vector2 = to_physical.call(region_points[id])
 		var width := region_font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, label_size).x
-		_outlined(region_font, (at - Vector2(width / 2.0, REGION_LIFT * label_size / 16.0)).round(), text, label_size, UiPalette.TEXT)
+		var top := (at - Vector2(width / 2.0, REGION_LIFT * label_size / 16.0)).round()
+		_outlined(region_font, top, text, label_size, UiPalette.TEXT)
+		_draw_tags(status.get(id, []), at + Vector2(0, label_size * 0.9))
 	var city_size := maxi(CITY_MIN, CITY_SIZE * city_scale)
 	for city in cities:
 		var dot: Vector2 = (to_physical.call(city["point"]) as Vector2).round()
@@ -76,3 +80,25 @@ func _outlined(font: Font, at: Vector2, text: String, font_size: int, colour: Co
 	for d in OUTLINE:
 		draw_string(font, at + d, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, MapPalette.DAY[MapPalette.INK])
 	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, colour)
+
+
+func _draw_tags(tags: Array, centre: Vector2) -> void:
+	if tags.is_empty():
+		return
+	var size := CITY_MIN
+	var widths: Array[float] = []
+	var total := 0.0
+	for tag in tags:
+		var w := _city_font.get_string_size(String(tag[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 8.0
+		widths.append(w)
+		total += w + 4.0
+	var x := centre.x - (total - 4.0) / 2.0
+	var h := _city_font.get_height(size) + 2.0
+	for i in tags.size():
+		var colour: Color = tags[i][1]
+		var box := Rect2(Vector2(x, centre.y).round(), Vector2(widths[i], h))
+		draw_rect(box.grow(1), MapPalette.DAY[MapPalette.INK])
+		draw_rect(box, Color(colour, 0.25))
+		draw_rect(box, colour, false, 1.0)
+		draw_string(_city_font, (box.position + Vector2(4, 1 + _city_font.get_ascent(size))).round(), String(tags[i][0]), HORIZONTAL_ALIGNMENT_LEFT, -1, size, colour.lightened(0.3))
+		x += widths[i] + 4.0
