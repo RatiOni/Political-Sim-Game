@@ -16,6 +16,9 @@ const SEG_H := 10
 const GAP := 2
 const ROW_H := 22
 
+## Below this width the gauge would run into the figure; the figure stays.
+const GAUGE_MIN_WIDTH := 260.0
+
 @export var label_text: String = "Metric":
 	set(value):
 		label_text = value
@@ -73,6 +76,10 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 
+func shows_gauge() -> bool:
+	return value >= 0.0 and size.x >= GAUGE_MIN_WIDTH
+
+
 func _draw() -> void:
 	if _font == null:
 		_font = ThemeDB.fallback_font
@@ -91,7 +98,7 @@ func _draw() -> void:
 	if trend != 0:
 		_draw_trend(Vector2(w - trend_w + 2, baseline - 6))
 
-	if value < 0.0:
+	if not shows_gauge():
 		return
 
 	# Inline bracket gauge between key and figure: `[█████····]`, the

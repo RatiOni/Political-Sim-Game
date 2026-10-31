@@ -6,6 +6,8 @@ const COMPACT_MAX_WIDTH := 1500
 const COMPACT_MAX_HEIGHT := 850
 const DATE_WIDTH_COMPACT := 120
 const DATE_WIDTH_WIDE := 192
+const NATIONAL_WIDTH_WIDE := 288
+const NATIONAL_WIDTH_COMPACT := 236
 
 ## What each vital sign means, in the player's terms, on hover.
 const VITAL_TERMS := {
@@ -159,13 +161,22 @@ func _process(delta: float) -> void:
 			_sfx_cue("month_rollover")
 		_refresh_controls()
 
+## The one test for a small layout, on the size the layout actually gets:
+## the window divided by the interface scale.
+func _is_compact() -> bool:
+	var view := Vector2(get_window().size) / maxf(get_window().content_scale_factor, 0.01)
+	return view.x < COMPACT_MAX_WIDTH or view.y < COMPACT_MAX_HEIGHT
+
+
 func _resize_layout() -> void:
 	get_window().content_scale_size = get_window().size
-	var compact := get_window().size.x < COMPACT_MAX_WIDTH or get_window().size.y < COMPACT_MAX_HEIGHT
+	var compact := _is_compact()
 	find_child("OfficeLabel").visible = not compact
 	find_child("PreviewStatus").visible = not compact
 	%DateLabel.custom_minimum_size.x = DATE_WIDTH_COMPACT if compact else DATE_WIDTH_WIDE
-	find_child("NationalPanel").visible = not compact and not _desk_open()
+	var national := find_child("NationalPanel") as Control
+	national.visible = not _desk_open()
+	national.custom_minimum_size.x = NATIONAL_WIDTH_COMPACT if compact else NATIONAL_WIDTH_WIDE
 	find_child("MapPanel").visible = not _desk_open()
 	# A desk takes the whole body; its room needs the height the decision rail
 	# would otherwise hold. The rail returns the moment the desk closes.
@@ -248,7 +259,7 @@ func _update_ambience() -> void:
 
 func _refresh_rooms() -> void:
 	_update_ambience()
-	var compact := get_window().size.y < COMPACT_MAX_HEIGHT
+	var compact := _is_compact()
 	for panel_name in ROOMS:
 		var panel := find_child(panel_name) as Control
 		if panel == null or not panel.visible:
@@ -1669,7 +1680,7 @@ func _refresh_region() -> void:
 		var active: Variant = region.get("active_program")
 		if active is Dictionary:
 			var active_text := "%s\nMonth %d of %d · %.0f M/month" % [active.get("name", "Active programme"), int(active.get("months_active", 0)) + 1, active.get("duration", 0), active.get("monthly_cost", 0.0)]
-			if get_window().size.x < 1500 or get_window().size.y < 850:
+			if _is_compact():
 				active_text = "%s\n%s" % [_compact_region_status(region), active_text]
 			%RegionBrief.find_child("ProgrammeStatus").text = active_text
 			break
@@ -1714,7 +1725,7 @@ func _on_program_selected(index: int) -> void:
 				_selected_program_option = option
 				var reason := str(option.get("disabled_reason", ""))
 				var option_text := reason if not reason.is_empty() else "%s · %d months · %.0f M/month" % [option.get("portfolio", ""), option.get("duration", 0), option.get("monthly_cost", 0.0)]
-				if get_window().size.x < 1500 or get_window().size.y < 850:
+				if _is_compact():
 					option_text = "%s\n%s" % [_compact_region_status(region), option_text]
 				%RegionBrief.find_child("ProgrammeStatus").text = option_text
 				break
