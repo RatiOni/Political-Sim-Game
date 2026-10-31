@@ -31,6 +31,8 @@ func _run() -> void:
 	t.truth(not Overlay.any_open(self), "and the prompt is gone")
 	t.truth(not app._clock_held(), "and the clock is free")
 
+	app._open_records()
+	await h.frames()
 	var second := ConfirmPrompt.ask(app, "Leave?", "Progress will be lost.", [["leave", "Leave"], ["stay", "Stay"]])
 	second.chosen.connect(func(choice: String) -> void: answer[0] = choice)
 	await h.frames()
@@ -40,6 +42,6 @@ func _run() -> void:
 	Input.parse_input_event(escape)
 	await h.frames(3)
 	t.equal(answer[0], "stay", "Escape takes the last, safe answer")
-	t.truth(not app._desk_open(), "and does not also act on the dashboard")
+	t.truth(app._records_open, "and does not also close the desk behind it")
 	h.finish()
 	quit(t.finish())

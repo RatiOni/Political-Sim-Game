@@ -1888,11 +1888,7 @@ func _clock_held() -> bool:
 
 
 func _reset_desks() -> void:
-	_budget_open = false
-	_legislation_open = false
-	_situation_open = false
-	_opposition_open = false
-	_diplomacy_open = false
+	_close_all_desks()
 	_selected_event_id = ""
 	_selected_bill_id = ""
 	_selected_country_id = ""
@@ -1968,9 +1964,11 @@ func _refresh_controls() -> void:
 		button.disabled = not ready
 		# The open desk's own destination is lit: it is also the way to close it.
 		if open_desk == pair[1]:
-			button.add_theme_color_override("font_color", UiPalette.GOLD)
+			for c in ["font_color", "font_focus_color", "font_hover_color", "font_pressed_color"]:
+				button.add_theme_color_override(c, UiPalette.GOLD)
 		else:
-			button.remove_theme_color_override("font_color")
+			for c in ["font_color", "font_focus_color", "font_hover_color", "font_pressed_color"]:
+				button.remove_theme_color_override(c)
 	%PlayButton.disabled = not ready
 	for index in range(5):
 		(find_child("Speed%d" % (index + 1)) as Button).disabled = not ready

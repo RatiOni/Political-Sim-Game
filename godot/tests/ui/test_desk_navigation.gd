@@ -46,5 +46,28 @@ func _run() -> void:
 	app._situation_open = true
 	await app._go_to_desk("records")
 	t.truth(not app._situation_open, "opening any desk closes every other kind")
+
+	# Escape and the desk's own close button both ask before dropping a draft.
+	await app._go_to_desk("budget")
+	app._budget_adjustments["defense"] = 0.05
+	await h.frames()
+	var gold: Color = UiPalette.GOLD
+	var bb := app.find_child("BudgetButton", true, false) as Button
+	t.truth(bb.has_theme_color_override("font_color") and bb.get_theme_color("font_color") == gold, "the open desk's button is lit amber")
+	t.truth(not (app.find_child("RecordsButton", true, false) as Button).has_theme_color_override("font_color"), "and another destination is not")
+	var esc := InputEventAction.new()
+	esc.action = "back"
+	esc.pressed = true
+	Input.parse_input_event(esc)
+	await h.frames(3)
+	t.truth(_prompt() != null, "Escape on a budget draft asks first")
+	(_prompt().find_child("Choice_stay", true, false) as Button).pressed.emit()
+	await h.frames()
+	t.truth(app._budget_open, "keeping the draft after Escape stays on the budget")
+	(app.find_child("CloseBudgetButton", true, false) as Button).pressed.emit()
+	await h.frames()
+	t.truth(_prompt() != null, "the budget desk's close button asks too")
+	(_prompt().find_child("Choice_stay", true, false) as Button).pressed.emit()
+	await h.frames()
 	h.finish()
 	quit(t.finish())
