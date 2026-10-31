@@ -13,6 +13,8 @@ const ALPHABET := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const ROLL_SECONDS := 0.07
 const LETTER_GAP := 0.22
 const START := 0.35
+## How long after the word is found the wall keeps rolling before it freezes.
+const SETTLE_SECONDS := 1.5
 
 var word := "ARDENIA"
 var font_size := 52
@@ -32,16 +34,21 @@ func _init() -> void:
 
 func _process(delta: float) -> void:
 	_clock += delta
-	if _clock - _rolled_at >= ROLL_SECONDS:
+	var finish := START + word.length() * LETTER_GAP + 0.5
+	# Once the word is found and the wall has faded, it stops rolling: letters
+	# changing forever beside the game's name read as unfinished.
+	var settled := _clock >= finish + SETTLE_SECONDS
+	if not settled and _clock - _rolled_at >= ROLL_SECONDS:
 		_rolled_at = _clock
 		_wall.resize(rows * cols)
 		for i in _wall.size():
 			_wall[i] = ALPHABET[_rng.randi_range(0, ALPHABET.length() - 1)]
-	var finish := START + word.length() * LETTER_GAP + 0.5
 	if not _done and _clock >= finish:
 		_done = true
 		revealed.emit()
 	queue_redraw()
+	if settled:
+		set_process(false)
 
 
 func _draw() -> void:
