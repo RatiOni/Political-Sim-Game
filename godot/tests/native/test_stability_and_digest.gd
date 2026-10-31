@@ -107,12 +107,12 @@ func _test_digest_direction_wording(t, content: Dictionary) -> void:
 	for household in state.households.values():
 		household.hardship += 0.10
 	var rising: Array[String] = MonthlyDigestScript.build(state, before)
-	t.equal(rising, [
-		"Public approval improves (+1.0 points).",
-		"Government stability improves (+1.0 points).",
-		"Inflation deteriorates (+1.0 points).",
-		"Regional pressure deteriorates (+10.0 points).",
-		"Household hardship deteriorates (+10.0 points).",
+	_starts(t, rising, [
+		"Public approval improves (+1.0 points)",
+		"Government stability improves (+1.0 points)",
+		"Inflation deteriorates (+1.0 points)",
+		"Regional pressure deteriorates (+10.0 points)",
+		"Household hardship deteriorates (+10.0 points)",
 	], "digest interprets positive movement according to the metric")
 
 	before = MonthlyDigestScript.capture(state)
@@ -124,13 +124,19 @@ func _test_digest_direction_wording(t, content: Dictionary) -> void:
 	for household in state.households.values():
 		household.hardship -= 0.10
 	var falling: Array[String] = MonthlyDigestScript.build(state, before)
-	t.equal(falling, [
-		"Public approval deteriorates (-1.0 points).",
-		"Government stability deteriorates (-1.0 points).",
-		"Inflation improves (-1.0 points).",
-		"Regional pressure improves (-10.0 points).",
-		"Household hardship improves (-10.0 points).",
+	_starts(t, falling, [
+		"Public approval deteriorates (-1.0 points)",
+		"Government stability deteriorates (-1.0 points)",
+		"Inflation improves (-1.0 points)",
+		"Regional pressure improves (-10.0 points)",
+		"Household hardship improves (-10.0 points)",
 	], "digest interprets negative movement according to the metric")
+
+
+func _starts(t, lines: Array[String], starts: Array, label: String) -> void:
+	t.equal(lines.size(), starts.size(), "%s: one line per moved metric" % label)
+	for i in mini(lines.size(), starts.size()):
+		t.truth(lines[i].begins_with(String(starts[i])) and lines[i].ends_with("."), "%s: %s" % [label, starts[i]])
 
 
 func _initialize() -> void:

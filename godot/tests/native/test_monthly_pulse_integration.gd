@@ -88,13 +88,13 @@ static func _run_reference_rollover(state: GameState) -> void:
 	var crisis_notes := CrisisSim.monthly(state)
 	Modifiers.age_all(state)
 	var situation_notes := EventsSim.monthly(state)
-	state.monthly_digest = MonthlyDigestScript.build(state, before)
-	election_notes.append_array(state.monthly_digest)
-	election_notes.append(poll_line)
 	state.monthly_digest = election_notes
-	state.monthly_digest.append_array(world_notes)
+	state.monthly_digest.append_array(MonthlyDigestScript.build(state, before))
 	state.monthly_digest.append_array(crisis_notes)
 	state.monthly_digest.append_array(situation_notes)
+	state.monthly_digest.append_array(world_notes)
+	if poll_line != "":
+		state.monthly_digest.append(poll_line)
 	state.front_page = Press.front_page(state, before, MonthlyDigestScript.capture(state))
 	state.monthly_news.clear()
 

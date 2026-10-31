@@ -49,6 +49,16 @@ static func national_pressure(state: GameState) -> float:
 static func update_approval(state: GameState) -> void:
 	if state.player == null or state.country == null or state.country.economy == null:
 		return
+	var target := 0.5
+	for value in approval_breakdown(state).values():
+		target += float(value)
+	target = clampf(target, 0.05, 0.95)
+	state.player.approval = clampf(state.player.approval + (target - state.player.approval) * 0.05, 0.0, 1.0)
+
+
+## The terms approval moves toward, by name, so the monthly report can say
+## which one moved it. `update_approval` sums exactly these.
+static func approval_breakdown(state: GameState) -> Dictionary:
 	var faction_signal := 0.0
 	var approval_bias := 0.0
 	if state.player.in_government:
@@ -67,10 +77,13 @@ static func update_approval(state: GameState) -> void:
 	var services_mood := (HouseholdsSimScript.national_service_access(state) - SERVICES_EXPECTED) * SERVICES_APPROVAL_WEIGHT
 	if not state.player.in_government:
 		services_mood *= -1.0
-	var target := (0.5 + economic_signal(state) * 0.25 + faction_signal * 0.15 + household_mood * 0.12
-		+ services_mood + approval_bias)
-	target = clampf(target, 0.05, 0.95)
-	state.player.approval = clampf(state.player.approval + (target - state.player.approval) * 0.05, 0.0, 1.0)
+	return {
+		"The economy": economic_signal(state) * 0.25,
+		"Party loyalty": faction_signal * 0.15,
+		"Household mood": household_mood * 0.12,
+		"Public services": services_mood,
+		"Policy effects": approval_bias,
+	}
 
 static func stability_breakdown(state: GameState) -> Dictionary:
 	var opposition := state.player != null and not state.player.in_government
