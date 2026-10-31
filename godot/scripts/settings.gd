@@ -74,6 +74,17 @@ func apply_all() -> void:
 	_apply_ui_scale()
 
 
+## Only crosses the fullscreen boundary, so a maximized window stays maximized.
+## -1 means leave the window alone.
+static func next_window_mode(current: int, want_fullscreen: bool) -> int:
+	var fs := current == DisplayServer.WINDOW_MODE_FULLSCREEN or current == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+	if want_fullscreen and not fs:
+		return DisplayServer.WINDOW_MODE_FULLSCREEN
+	if not want_fullscreen and fs:
+		return DisplayServer.WINDOW_MODE_WINDOWED
+	return -1
+
+
 func _apply_ui_scale() -> void:
 	if not is_inside_tree():
 		return

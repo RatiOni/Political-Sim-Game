@@ -32,6 +32,12 @@ func _run() -> void:
 	t.equal(again.get_value("gameplay/autosave"), false, "a preference survives a restart")
 	t.near(float(again.get_value("audio/music")), 0.25, 0.0001, "so does a volume")
 
+	var W := DisplayServer
+	t.equal(SettingsScript.next_window_mode(W.WINDOW_MODE_MAXIMIZED, false), -1, "a maximized window is left alone with fullscreen off")
+	t.equal(SettingsScript.next_window_mode(W.WINDOW_MODE_WINDOWED, true), W.WINDOW_MODE_FULLSCREEN, "fullscreen on enters fullscreen")
+	t.equal(SettingsScript.next_window_mode(W.WINDOW_MODE_EXCLUSIVE_FULLSCREEN, false), W.WINDOW_MODE_WINDOWED, "fullscreen off leaves it")
+	t.equal(SettingsScript.next_window_mode(W.WINDOW_MODE_FULLSCREEN, true), -1, "already fullscreen is left alone")
+
 	var music := AudioServer.get_bus_index(AudioBuses.ensure(&"Music"))
 	t.truth(music >= 0, "music has its own bus")
 	t.equal(AudioServer.get_bus_send(music), &"Master", "under the master volume")
