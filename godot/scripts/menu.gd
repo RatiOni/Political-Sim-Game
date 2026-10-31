@@ -4,11 +4,17 @@ var _sfx: Node
 
 func _ready() -> void:
 	_sfx = get_node_or_null("/root/UiSfx")
+	var ambience := get_node_or_null("/root/Ambience")
+	if ambience != null:
+		ambience.set_scene("menu")
 	randomize()
 	%NewCampaignButton.pressed.connect(_new_campaign.bind("contextual"))
 	%OppositionCampaignButton.pressed.connect(_new_campaign.bind("opposition"))
 	%ContinueButton.pressed.connect(_continue_campaign)
 	%QuitButton.pressed.connect(_quit)
+	var sound := SoundControl.new()
+	sound.alignment = BoxContainer.ALIGNMENT_CENTER
+	%QuitButton.add_sibling(sound)
 	# Keyboard first: the title screen opens with a focused entry so arrows
 	# and Enter work without touching the mouse.
 	%NewCampaignButton.grab_focus()

@@ -14,6 +14,7 @@ var selected_region_id := "vashtera"
 var _decision_index := -1
 var _game: Node
 var _sfx: Node
+var _sound := SoundControl.new()
 var _fatal := false
 var _starting := false
 var _paused := true
@@ -93,6 +94,9 @@ func _ready() -> void:
 	%DiplomacyPanel.find_child("CountryChoice").item_selected.connect(_on_country_selected)
 	%OppositionPanel.requested.connect(_on_opposition_request)
 	%OppositionPanel.close_requested.connect(_close_opposition)
+	_sound.name = "SoundControl"
+	find_child("Header").add_child(_sound)
+	find_child("Header").move_child(_sound, find_child("SaveButton").get_index())
 	get_window().size_changed.connect(_resize_layout)
 	_resize_layout()
 	_sfx = get_node_or_null("/root/UiSfx")
@@ -158,6 +162,7 @@ func _resize_layout() -> void:
 	# close up — hiding a destination instead would make it unreachable on
 	# exactly the machines most likely to be running at that size.
 	find_child("Header").add_theme_constant_override("separation", 8 if compact else 16)
+	_sound.slider.visible = not compact
 	%MonthlyReport.find_child("DispatchColumn").visible = not compact
 	if not snapshot.is_empty():
 		_refresh_controls()
@@ -188,7 +193,35 @@ const ROOMS := {
 }
 var _rooms: Dictionary = {}
 
+## The bed under the current screen: the open desk's room, the selected
+## region's street sized to its town, or the minister's own office. Desks win
+## over the dossier because opening one leaves `_region_panel_open` set.
+func _update_ambience() -> void:
+	var ambience := get_node_or_null("/root/Ambience")
+	if ambience == null:
+		return
+	var scene := "desk"
+	if _budget_open:
+		scene = "treasury"
+	elif _legislation_open:
+		scene = "parliament"
+	elif _diplomacy_open:
+		scene = "foreign"
+	elif _situation_open:
+		scene = "situation"
+	elif _opposition_open:
+		scene = "opposition"
+	elif _records_open:
+		scene = "records"
+	elif _region_panel_open:
+		var d := RegionCity.data_from(_selected_region_row())
+		var harbour := RegionCity.is_harbour(String(d["id"]))
+		ambience.set_scene(ambience.scene_for_region(float(d["population"]), harbour), float(d["trouble"]))
+		return
+	ambience.set_scene(scene)
+
 func _refresh_rooms() -> void:
+	_update_ambience()
 	var compact := get_window().size.y < COMPACT_MAX_HEIGHT
 	for panel_name in ROOMS:
 		var panel := find_child(panel_name) as Control
