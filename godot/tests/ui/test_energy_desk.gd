@@ -25,6 +25,7 @@ func _fresh() -> void:
 	root.get_node("GameFlow").pending_seed = 424242
 	app = (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	app.save_slot = TEST_SLOT
+	app.autosave_slot = ""
 	root.add_child(app)
 	game = root.get_node("NativeGame")
 	await _frames(3)

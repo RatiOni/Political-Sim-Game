@@ -356,7 +356,9 @@ func save(slot: String) -> Dictionary:
 	if _state == null:
 		return {"ok": false, "error": "no campaign is active"}
 	_busy = true
-	var result := SaveStoreScript.save_slot(slot, _state)
+	var meta := {"date_text": _date_text(_state),
+		"leader": _state.player.name if _state.player != null else ""}
+	var result := SaveStoreScript.save_slot(slot, _state, meta)
 	_busy = false
 	return result
 

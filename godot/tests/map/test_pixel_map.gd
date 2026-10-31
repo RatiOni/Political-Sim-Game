@@ -237,6 +237,7 @@ func _run() -> void:
 	root.get_node("GameFlow").pending_seed = 424242
 	var app: Node = (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	app.save_slot = TEST_SLOT
+	app.autosave_slot = ""
 	root.add_child(app)
 	await _frames()
 	var map = app.find_child("ArdeniaMap", true, false)

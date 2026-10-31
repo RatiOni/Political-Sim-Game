@@ -1,6 +1,6 @@
 extends PanelContainer
 
-const SAVE_SLOT := "godot_slice"
+const SAVE_SLOT := "slot_1"
 const SPEED_DELAYS := [1.5, 1.0, 0.65, 0.4, 0.2]
 const COMPACT_MAX_WIDTH := 1500
 const COMPACT_MAX_HEIGHT := 850
@@ -34,6 +34,9 @@ var _sound := SoundControl.new()
 var _clock := ClockDisplay.new()
 var _date_text := ""
 var _notice := StatusNotice.new()
+## The slot autosave writes; "" turns it off (tests do this).
+var autosave_slot := SaveStore.AUTOSAVE_SLOT
+var _saved_hash := 0
 var _fatal := false
 var _starting := false
 var _paused := true
@@ -140,11 +143,13 @@ func _ready() -> void:
 		_game.connect("state_changed", _on_state_changed)
 	if not _game.is_connected("fatal_error", _on_fatal_error):
 		_game.connect("fatal_error", _on_fatal_error)
-	find_child("SaveButton").pressed.connect(_do_save)
-	find_child("LoadButton").pressed.connect(_do_load)
-	find_child("SaveButton").tooltip_text = "Save the campaign (%s)" % Keys.label("save")
-	find_child("LoadButton").tooltip_text = "Load a saved campaign (%s)" % Keys.label("load")
+	find_child("SaveButton").pressed.connect(_open_save_dialog.bind("save"))
+	find_child("LoadButton").pressed.connect(_open_save_dialog.bind("load"))
+	find_child("SaveButton").tooltip_text = "Choose a slot to save into (quick save: %s)" % Keys.label("save")
+	find_child("LoadButton").tooltip_text = "Choose a save to load (%s)" % Keys.label("load")
 	if GameFlow.start_mode == "continue":
+		if GameFlow.continue_slot != "":
+			save_slot = GameFlow.continue_slot
 		_starting = true
 		_do_load()
 	else:
@@ -162,6 +167,7 @@ func _process(delta: float) -> void:
 			_notice.say("Could not advance: %s" % result.get("error", "unknown error"), true)
 		elif bool(result.get("month_rolled", false)):
 			_sfx_cue("month_rollover")
+			_autosave()
 		_refresh_controls()
 
 ## The one test for a small layout, on the size the layout actually gets:
@@ -1839,7 +1845,40 @@ func _do_new_campaign() -> void:
 		new_snap = _game.snapshot()
 	_reset_budget_draft()
 	apply_snapshot(new_snap)
+	_saved_hash = snapshot.hash()
 	_refresh_controls()
+
+func _has_unsaved_progress() -> bool:
+	return not snapshot.is_empty() and snapshot.hash() != _saved_hash
+
+
+func _open_save_dialog(mode: String) -> void:
+	if _fatal or snapshot.is_empty():
+		return
+	var dialog := SaveDialog.open(self, mode, _has_unsaved_progress())
+	var slot: String = await dialog.finished
+	if slot == "":
+		return
+	save_slot = slot
+	if mode == "save":
+		_do_save()
+	else:
+		_do_load()
+
+
+func _autosave() -> void:
+	if autosave_slot == "":
+		return
+	var settings := get_node_or_null("/root/Settings")
+	if settings != null and not bool(settings.get_value("gameplay/autosave")):
+		return
+	var result: Dictionary = _game.save(autosave_slot)
+	if result.get("ok", false):
+		_saved_hash = snapshot.hash()
+		_notice.say("Autosaved")
+	else:
+		_notice.say("Autosave failed: %s" % result.get("error", "unknown error"), true)
+
 
 func _do_save() -> void:
 	if _fatal or snapshot.is_empty():
@@ -1848,7 +1887,8 @@ func _do_save() -> void:
 	if not result.get("ok", false):
 		_notice.say("Save failed: %s" % result.get("error", "unknown error"), true)
 	else:
-		_notice.say("Saved")
+		_saved_hash = snapshot.hash()
+		_notice.say("Saved to %s" % SaveStore.slot_label(save_slot))
 	_sfx_result(result)
 	_refresh_controls()
 
@@ -1875,6 +1915,7 @@ func _do_load() -> void:
 		load_snap = _game.snapshot()
 	_reset_budget_draft()
 	apply_snapshot(load_snap)
+	_saved_hash = snapshot.hash()
 	_notice.say("Loaded")
 	_refresh_controls()
 
@@ -2065,8 +2106,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		_do_save()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("load"):
-		_do_load()
 		get_viewport().set_input_as_handled()
+		_open_save_dialog("load")
 	else:
 		for index in range(5):
 			if event.is_action_pressed("speed_%d" % (index + 1)):

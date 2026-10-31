@@ -11,6 +11,7 @@ func _ready() -> void:
 	%NewCampaignButton.pressed.connect(_new_campaign.bind("contextual"))
 	%OppositionCampaignButton.pressed.connect(_new_campaign.bind("opposition"))
 	%ContinueButton.pressed.connect(_continue_campaign)
+	%ContinueButton.disabled = SaveStore.most_recent_slot(SaveStore.player_slots()) == ""
 	%OptionsButton.pressed.connect(func() -> void:
 		_sfx_cue("navigation")
 		OptionsPanel.open(self))
@@ -53,6 +54,7 @@ func _new_campaign(role: String) -> void:
 func _continue_campaign() -> void:
 	_sfx_cue("selection")
 	GameFlow.start_mode = "continue"
+	GameFlow.continue_slot = SaveStore.most_recent_slot(SaveStore.player_slots())
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 func _quit() -> void:

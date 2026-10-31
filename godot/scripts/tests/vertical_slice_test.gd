@@ -48,6 +48,7 @@ func _run() -> void:
 		return
 	var scene = load("res://scenes/main.tscn").instantiate()
 	scene.save_slot = APP_SLOT
+	scene.autosave_slot = ""
 	root.add_child(scene)
 	for frame in range(3):
 		await process_frame
