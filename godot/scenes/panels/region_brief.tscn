@@ -60,7 +60,7 @@ autowrap_mode = 3
 [node name="SourceNote" type="Label" parent="Content/Details/Rows"]
 layout_mode = 2
 theme_type_variation = &"Muted"
-text = "Pressure, jobs and state reach are supplied by the simulation."
+text = "Pressure is how close a region is to trouble. State reach is how much of the state's work actually arrives there."
 autowrap_mode = 3
 
 [node name="ProgramChoice" type="OptionButton" parent="Content"]

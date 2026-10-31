@@ -29,7 +29,7 @@ text = "Close"
 [node name="BudgetIntro" type="Label" parent="Content"]
 layout_mode = 2
 theme_type_variation = &"Muted"
-text = "DRAG EACH ENVELOPE; THE SIMULATION ACCEPTS ITS AUTHORISED STEPS. THEN TABLE THE PLAN."
+text = "Move each envelope to set next year's spending. When the plan is right, table it and call the vote."
 autowrap_mode = 3
 
 [node name="Rule" type="HSeparator" parent="Content"]

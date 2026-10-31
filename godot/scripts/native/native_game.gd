@@ -445,6 +445,7 @@ static func _build_snapshot(state: GameState) -> Dictionary:
 			"population_share": RegionsSimScript.population_weight(state, region.id),
 			"development": region.development,
 			"control": region.control,
+			"control_label": String(regional_catalog.get("control_labels", {}).get(region.control, region.control.capitalize())),
 			"insurgency": state.insurgency_pressure if region.id == "vetrenka" else 0.0,
 			"civil_war": state.civil_war,
 			"vetrenka_status": str(state.campaign_meta.get("vetrenka_status", "")) if region.id == "vetrenka" else "",

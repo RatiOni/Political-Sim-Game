@@ -171,6 +171,7 @@ text = "Drop"
 layout_mode = 2
 
 [node name="PledgeChoice" type="OptionButton" parent="Content/Scroll/BodyMargin/Body/PledgeAdd"]
+tooltip_text = "A pledge to add to your platform"
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -199,6 +200,7 @@ clip_text = true
 layout_mode = 2
 
 [node name="ShadowChoice" type="OptionButton" parent="Content/Scroll/BodyMargin/Body/ShadowAdd"]
+tooltip_text = "The portfolio to fill in your shadow cabinet"
 custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 size_flags_horizontal = 3

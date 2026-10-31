@@ -39,7 +39,7 @@ horizontal_alignment = 1
 [node name="Subtitle" type="Label" parent="Center/Plate/Layout"]
 layout_mode = 2
 theme_type_variation = &"Section"
-text = "MINISTERIAL WIRE  ·  JUNE 1993"
+text = "MINISTERIAL WIRE  ·  MARCH 1993"
 horizontal_alignment = 1
 
 [node name="Rule" type="HSeparator" parent="Center/Plate/Layout"]
@@ -76,6 +76,8 @@ text = "Quit"
 
 [node name="Footer" type="Label" parent="."]
 layout_mode = 2
+custom_minimum_size = Vector2(0, 40)
+vertical_alignment = 1
 size_flags_vertical = 8
 theme_type_variation = &"Muted"
 text = "A republic four years old, and every account still open."

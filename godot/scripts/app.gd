@@ -7,6 +7,20 @@ const COMPACT_MAX_HEIGHT := 850
 const DATE_WIDTH_COMPACT := 120
 const DATE_WIDTH_WIDE := 192
 
+## What each vital sign means, in the player's terms, on hover.
+const VITAL_TERMS := {
+	"stability": "How secure your government is. It moves toward a level set by coalition and cabinet loyalty, your majority, public approval, the economy and unrest.",
+	"approval": "How the public rates your government. Each month it drifts toward a level set by the economy, party loyalty, household mood and public services.",
+	"capital": "What you spend to act: tabling a budget or a bill, launching a programme, lobbying a party. It refills each month.",
+	"growth": "How fast the economy is growing, per year.",
+	"unemployment": "The share of the workforce without work.",
+	"inflation": "How fast prices are rising, per year.",
+	"debt": "Public debt as a share of the economy. Every deficit adds to it.",
+	"revenue": "What the state collects in a year.",
+	"expenditure": "What the state spends in a year.",
+	"balance": "Revenue minus spending. A negative balance is a deficit, and adds to the debt.",
+}
+
 
 var _wire := WireLog.new()
 var snapshot: Dictionary = {}
@@ -119,6 +133,8 @@ func _ready() -> void:
 		_game.connect("fatal_error", _on_fatal_error)
 	find_child("SaveButton").pressed.connect(_do_save)
 	find_child("LoadButton").pressed.connect(_do_load)
+	find_child("SaveButton").tooltip_text = "Save the campaign (%s)" % Keys.label("save")
+	find_child("LoadButton").tooltip_text = "Load a saved campaign (%s)" % Keys.label("load")
 	if GameFlow.start_mode == "continue":
 		_starting = true
 		_do_load()
@@ -136,7 +152,7 @@ func _process(delta: float) -> void:
 		if not result.get("ok", false):
 			_set_status("ADVANCE FAILED / %s" % result.get("error", "Unknown error"))
 		else:
-			_set_status("LIVE SIMULATION / READY")
+			_set_status("READY")
 			if bool(result.get("month_rolled", false)):
 				_sfx_cue("month_rollover")
 		_refresh_controls()
@@ -308,14 +324,14 @@ func apply_snapshot(value: Dictionary) -> void:
 		items.add_child(label)
 	if decisions.is_empty():
 		var label := Label.new()
-		label.text = "No decisions waiting."
+		label.text = "Nothing needs your decision right now."
 		items.add_child(label)
 	find_child("NextDecision").disabled = decisions.is_empty()
 	var decisions_key := decisions.hash()
 	if decisions_key != _decisions_key:
 		_decisions_key = decisions_key
 		_decision_index = -1
-	%MonthlyReport.find_child("ReportText").text = _lines(snapshot.get("digest", []), "No monthly report yet. Advance a day once connected.")
+	%MonthlyReport.find_child("ReportText").text = _lines(snapshot.get("digest", []), "Your first monthly report arrives at the end of the month. Start the clock to get there.")
 	%MonthlyReport.find_child("DispatchText").text = _lines(snapshot.get("dispatches", []), "No dispatches this period.")
 	_wire.show_rows(snapshot.get("dispatches", []), "No dispatches this period.")
 	%ArdeniaMap.apply_snapshot(snapshot.get("regions", []), selected_region_id)
@@ -434,6 +450,7 @@ func _vital_row(key: String) -> StatBar:
 		return _vital_rows[key]
 	var row := StatBar.new()
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.tooltip_text = VITAL_TERMS.get(key, "")
 	_vitals_box().add_child(row)
 	_vital_rows[key] = row
 	return row
@@ -490,7 +507,7 @@ func _refresh_vitals(player: Dictionary, economy: Dictionary, headline: Dictiona
 		_trend_for("balance", balance, date_text))
 
 func _compact_region_status(region: Dictionary) -> String:
-	return "P %.0f%% · U %.1f%% · Reach %.0f%%" % [
+	return "Pressure %.0f%% · Jobless %.1f%% · Reach %.0f%%" % [
 		float(region.get("pressure", 0.0)) * 100.0,
 		float(region.get("unemployment", 0.0)) * 100.0,
 		float(region.get("state_reach", 0.0)) * 100.0,
@@ -1636,14 +1653,15 @@ func _refresh_region() -> void:
 	_selected_program_id = ""
 	_selected_program_option = {}
 	%RegionBrief.find_child("RegionName").text = selected_region_id.capitalize()
-	%RegionBrief.find_child("RegionId").text = selected_region_id
+	%RegionBrief.find_child("RegionId").text = ""
 	%RegionBrief.find_child("PressureValue").text = "—"
-	%RegionBrief.find_child("RegionMetrics").text = "No regional snapshot received."
+	%RegionBrief.find_child("RegionMetrics").text = "No regional figures yet."
 	%RegionBrief.find_child("ProgrammeStatus").text = "Select a region to review available programmes."
 	for region in snapshot.get("regions", []):
 		if region.get("id") != selected_region_id:
 			continue
 		%RegionBrief.find_child("RegionName").text = str(region.get("name", selected_region_id.capitalize()))
+		%RegionBrief.find_child("RegionId").text = str(region.get("control_label", ""))
 		%RegionBrief.find_child("PressureValue").text = "%.0f%%" % (float(region["pressure"]) * 100.0) if region.has("pressure") else "—"
 		%RegionBrief.find_child("RegionMetrics").text = "Unemployment    %s\n\nState reach    %s" % [_percent(region, "unemployment"), _percent(region, "state_reach")]
 		var active: Variant = region.get("active_program")
@@ -1753,7 +1771,7 @@ func _do_new_campaign() -> void:
 		new_snap = _game.snapshot()
 	_reset_budget_draft()
 	apply_snapshot(new_snap)
-	_set_status("LIVE SIMULATION / READY")
+	_set_status("READY")
 	_refresh_controls()
 
 func _do_save() -> void:
@@ -1907,7 +1925,7 @@ func _set_status(message: String) -> void:
 
 func _show_blocking_error(message: String) -> void:
 	_remove_blocking_error()
-	_set_status("NATIVE SIMULATION FAILED")
+	_set_status("THE GAME HIT AN ERROR")
 	var blocker := ColorRect.new()
 	blocker.name = "FatalError"
 	blocker.color = Color(0.05, 0.06, 0.06, 0.96)
@@ -1919,7 +1937,7 @@ func _show_blocking_error(message: String) -> void:
 	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 48)
 	var label := Label.new()
 	label.name = "FatalErrorLabel"
-	label.text = "SIMULATION UNAVAILABLE\n\n%s\n\nThis is a native-state failure with no worker to retry. Restart the application." % message
+	label.text = "THE GAME HIT AN ERROR\n\n%s\n\nYour last save is untouched. Restart Ardenia to carry on from it." % message
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
