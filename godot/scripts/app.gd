@@ -60,6 +60,7 @@ var _budget_preview: Dictionary = {}
 var _legislation_open := false
 var _opposition_open := false
 var save_slot := SAVE_SLOT
+var _leaving := false
 var _pending_snapshot: Dictionary = {}
 var _snapshot_flush_queued := false
 var _budget_view_key := 0
@@ -2091,16 +2092,27 @@ func _on_pause_action(id: String, menu: PauseMenu) -> void:
 			_leave("quit")
 
 
-## Quick save never lands on a read-only slot (autosave, legacy).
-func _quick_save_slot() -> String:
-	if save_slot == SaveStore.AUTOSAVE_SLOT or save_slot == SaveStore.LEGACY_SLOT:
-		return SaveStore.MANUAL_SLOTS[0]
-	return save_slot
+## Quick save never lands on a read-only slot, and never over another
+## campaign: from a read-only slot it takes the first empty manual slot, and
+## asks which to overwrite when all are used. "" means the player cancelled.
+func _quick_save_slot(slots: Array[String] = []) -> String:
+	if save_slot != SaveStore.AUTOSAVE_SLOT and save_slot != SaveStore.LEGACY_SLOT:
+		return save_slot
+	if slots.is_empty():
+		slots = SaveStore.MANUAL_SLOTS
+	for candidate in slots:
+		if not bool(SaveStore.slot_info(candidate)["exists"]):
+			return candidate
+	var dialog := SaveDialog.open(self, "save", false)
+	return await dialog.finished
 
 
 ## Every way out of a campaign comes through here, so unsaved progress is
 ## always offered a save first.
 func _leave(target: String) -> void:
+	if _leaving:
+		return
+	_leaving = true
 	if _has_unsaved_progress():
 		var verb := "exit" if target == "menu" else "quit"
 		var prompt := ConfirmPrompt.ask(self, "Unsaved progress",
@@ -2108,11 +2120,17 @@ func _leave(target: String) -> void:
 			[["save", "Save and %s" % verb], ["leave", "Leave without saving"], ["cancel", "Cancel"]])
 		var choice: String = await prompt.chosen
 		if choice == "cancel":
+			_leaving = false
 			return
 		if choice == "save":
-			save_slot = _quick_save_slot()
+			var chosen: String = await _quick_save_slot()
+			if chosen == "":
+				_leaving = false
+				return
+			save_slot = chosen
 			_do_save()
 			if _has_unsaved_progress():
+				_leaving = false
 				return
 	if target == "quit":
 		get_tree().quit()
@@ -2166,8 +2184,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		_next_decision()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("save"):
-		save_slot = _quick_save_slot()
-		_do_save()
+		var chosen: String = await _quick_save_slot()
+		if chosen != "":
+			save_slot = chosen
+			_do_save()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("load"):
 		get_viewport().set_input_as_handled()

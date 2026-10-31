@@ -42,6 +42,13 @@ func _run() -> void:
 	t.truth(app._has_unsaved_progress(), "two days of unsaved play")
 	app._leave("menu")
 	await h.frames()
+	app._leave("menu")
+	await h.frames()
+	var stacked := 0
+	for o in _overlays():
+		if o is ConfirmPrompt:
+			stacked += 1
+	t.truth(stacked == 1, "repeated leave requests do not stack prompts")
 	var prompt: Node = _overlays()[-1] if not _overlays().is_empty() else null
 	t.truth(prompt is ConfirmPrompt, "leaving with unsaved progress asks")
 	t.truth(prompt.find_child("Choice_save", true, false) != null and prompt.find_child("Choice_leave", true, false) != null, "offering to save first or leave anyway")
@@ -49,11 +56,20 @@ func _run() -> void:
 	await h.frames()
 	t.truth(is_instance_valid(app) and app.is_inside_tree(), "and cancelling stays in the game")
 
+	var zz_a := "zz_quick_a"
+	var zz_b := "zz_quick_b"
+	var zz: Array[String] = [zz_a, zz_b]
+	var zz_file := "user://saves/%s.json" % zz_a
+	DirAccess.make_dir_recursive_absolute("user://saves")
 	app.save_slot = SaveStore.AUTOSAVE_SLOT
-	t.truth(app._quick_save_slot() == "slot_1", "quick save never targets the autosave")
+	t.truth(await app._quick_save_slot(zz) == zz_a, "quick save from the autosave takes the first empty slot")
+	var f := FileAccess.open(zz_file, FileAccess.WRITE)
+	f.store_string("{}")
+	f = null
 	app.save_slot = SaveStore.LEGACY_SLOT
-	t.truth(app._quick_save_slot() == "slot_1", "nor the legacy slot")
+	t.truth(await app._quick_save_slot(zz) == zz_b, "from the legacy slot it skips a used slot, never overwriting it")
+	DirAccess.remove_absolute(zz_file)
 	app.save_slot = "zz_pause_menu"
-	t.truth(app._quick_save_slot() == "zz_pause_menu", "a chosen manual slot is kept")
+	t.truth(await app._quick_save_slot() == "zz_pause_menu", "a chosen manual slot is kept")
 	h.finish()
 	quit(t.finish())
