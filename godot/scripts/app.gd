@@ -31,6 +31,7 @@ var _sfx: Node
 var _sound := SoundControl.new()
 var _clock := ClockDisplay.new()
 var _date_text := ""
+var _notice := StatusNotice.new()
 var _fatal := false
 var _starting := false
 var _paused := true
@@ -70,6 +71,9 @@ func _ready() -> void:
 	TerminalFrame.adopt_all(self)
 	TerminalFrame.capitalise(self)
 	TerminalFrame.capitalise_buttons(self)
+	_notice.name = "StatusNotice"
+	add_child(_notice)
+	_notice.bind(find_child("PreviewStatus"), find_child("Footer"))
 	%DateLabel.add_theme_color_override("font_color", UiPalette.GOLD)
 	_clock.name = "ClockDisplay"
 	add_child(_clock)
@@ -150,11 +154,9 @@ func _process(delta: float) -> void:
 		var result: Dictionary = _game.advance_day()
 		_flush_snapshot()
 		if not result.get("ok", false):
-			_set_status("ADVANCE FAILED / %s" % result.get("error", "Unknown error"))
-		else:
-			_set_status("READY")
-			if bool(result.get("month_rolled", false)):
-				_sfx_cue("month_rollover")
+			_notice.say("Could not advance: %s" % result.get("error", "unknown error"), true)
+		elif bool(result.get("month_rolled", false)):
+			_sfx_cue("month_rollover")
 		_refresh_controls()
 
 func _resize_layout() -> void:
@@ -1408,7 +1410,7 @@ func _choose_situation_option(option_id: String) -> void:
 	if not result.get("ok", false):
 		_set_situation_status("REFUSED / %s" % result.get("error", "Unknown error"))
 		return
-	_set_status("DECIDED / %s" % result.get("message", ""))
+	_notice.say("Decided: %s" % result.get("message", ""))
 	_situation_open = false
 	_resize_layout()
 
@@ -1759,11 +1761,10 @@ func _do_new_campaign() -> void:
 	_reset_desks()
 	if _fatal:
 		return
-	_set_status("WORKING / NEW CAMPAIGN")
 	var result: Dictionary = _game.new_campaign(_campaign_config())
 	_flush_snapshot()
 	if not result.get("ok", false):
-		_set_status("NEW CAMPAIGN FAILED / %s" % result.get("error", "Unknown error"))
+		_notice.say("Could not start the campaign: %s" % result.get("error", "unknown error"), true)
 		_refresh_controls()
 		return
 	var new_snap: Dictionary = result.get("snapshot", {})
@@ -1771,7 +1772,6 @@ func _do_new_campaign() -> void:
 		new_snap = _game.snapshot()
 	_reset_budget_draft()
 	apply_snapshot(new_snap)
-	_set_status("READY")
 	_refresh_controls()
 
 func _do_save() -> void:
@@ -1779,9 +1779,9 @@ func _do_save() -> void:
 		return
 	var result: Dictionary = _game.save(save_slot)
 	if not result.get("ok", false):
-		_set_status("SAVE FAILED / %s" % result.get("error", "Unknown error"))
+		_notice.say("Save failed: %s" % result.get("error", "unknown error"), true)
 	else:
-		_set_status("SAVED / READY")
+		_notice.say("Saved")
 	_sfx_result(result)
 	_refresh_controls()
 
@@ -1797,7 +1797,7 @@ func _do_load() -> void:
 			_starting = false
 			_do_new_campaign()
 			return
-		_set_status("LOAD FAILED / %s" % result.get("error", "Unknown error"))
+		_notice.say("Load failed: %s" % result.get("error", "unknown error"), true)
 		_sfx_result(result)
 		_refresh_controls()
 		return
@@ -1808,7 +1808,7 @@ func _do_load() -> void:
 		load_snap = _game.snapshot()
 	_reset_budget_draft()
 	apply_snapshot(load_snap)
-	_set_status("LOADED / READY")
+	_notice.say("Loaded")
 	_refresh_controls()
 
 func _on_state_changed(value: Dictionary) -> void:
@@ -1896,9 +1896,9 @@ func _start_selected_program() -> void:
 	var result: Dictionary = _game.start_regional_program(selected_region_id, _selected_program_id)
 	_flush_snapshot()
 	if not result.get("ok", false):
-		_set_status("PROGRAMME REFUSED / %s" % result.get("error", "Unknown error"))
+		_notice.say("Programme refused: %s" % result.get("error", "unknown error"), true)
 	else:
-		_set_status("PROGRAMME LAUNCHED / READY")
+		_notice.say("Programme launched")
 	_sfx_result(result)
 	_refresh_controls()
 
@@ -1917,15 +1917,9 @@ func _refresh_controls() -> void:
 	find_child("SaveButton").disabled = not ready
 	find_child("LoadButton").disabled = not ready
 
-func _set_status(message: String) -> void:
-	# The footer carries the full line; the header keeps only its last word
-	# ("READY", "PAUSED"…) so it never elides mid-phrase.
-	find_child("PreviewStatus").text = message.get_slice("/", message.get_slice_count("/") - 1).strip_edges()
-	find_child("Footer").text = "MINISTERIAL WIRE  /  %s" % message
-
 func _show_blocking_error(message: String) -> void:
 	_remove_blocking_error()
-	_set_status("THE GAME HIT AN ERROR")
+	_notice.say("Error", true)
 	var blocker := ColorRect.new()
 	blocker.name = "FatalError"
 	blocker.color = Color(0.05, 0.06, 0.06, 0.96)
