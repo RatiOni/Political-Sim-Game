@@ -11,6 +11,9 @@ func _ready() -> void:
 	%NewCampaignButton.pressed.connect(_new_campaign.bind("contextual"))
 	%OppositionCampaignButton.pressed.connect(_new_campaign.bind("opposition"))
 	%ContinueButton.pressed.connect(_continue_campaign)
+	%OptionsButton.pressed.connect(func() -> void:
+		_sfx_cue("navigation")
+		OptionsPanel.open(self))
 	%QuitButton.pressed.connect(_quit)
 	var sound := SoundControl.new()
 	sound.alignment = BoxContainer.ALIGNMENT_CENTER
