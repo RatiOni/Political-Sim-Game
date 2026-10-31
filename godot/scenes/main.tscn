@@ -58,7 +58,8 @@ text_overrun_behavior = 3
 unique_name_in_owner = true
 custom_minimum_size = Vector2(192, 0)
 layout_mode = 2
-text = "Awaiting snapshot"
+text = ""
+vertical_alignment = 1
 text_overrun_behavior = 3
 
 [node name="BudgetButton" type="Button" parent="Margin/Layout/Header"]
@@ -102,8 +103,8 @@ custom_minimum_size = Vector2(116, 44)
 layout_mode = 2
 size_flags_vertical = 4
 disabled = true
-text = "Paused"
-tooltip_text = "Space: pause / resume. Disabled in this static preview."
+text = "▶ Play"
+tooltip_text = "Start the clock (Space)"
 
 [node name="SpeedControls" type="HBoxContainer" parent="Margin/Layout/Header"]
 unique_name_in_owner = true

@@ -15,6 +15,8 @@ var _decision_index := -1
 var _game: Node
 var _sfx: Node
 var _sound := SoundControl.new()
+var _clock := ClockDisplay.new()
+var _date_text := ""
 var _fatal := false
 var _starting := false
 var _paused := true
@@ -55,6 +57,12 @@ func _ready() -> void:
 	TerminalFrame.capitalise(self)
 	TerminalFrame.capitalise_buttons(self)
 	%DateLabel.add_theme_color_override("font_color", UiPalette.GOLD)
+	_clock.name = "ClockDisplay"
+	add_child(_clock)
+	var pips: Array[Button] = []
+	for index in range(5):
+		pips.append(find_child("Speed%d" % (index + 1)) as Button)
+	_clock.bind(%PlayButton, %DateLabel, pips)
 	var wire_text: Label = %MonthlyReport.find_child("DispatchText")
 	wire_text.visible = false
 	wire_text.get_parent().add_child(_wire)
@@ -276,7 +284,7 @@ func apply_snapshot(value: Dictionary) -> void:
 		_reset_budget_draft()
 	snapshot = value.duplicate(true)
 	_refresh_rooms()
-	%DateLabel.text = "▌ %s ▌" % str(snapshot.get("date", {}).get("text", "Awaiting snapshot"))
+	_date_text = str(snapshot.get("date", {}).get("text", ""))
 	var player: Dictionary = snapshot.get("player", {})
 	# The header column is narrow beside eleven controls: the name always
 	# fits, the full office rides in the tooltip.
@@ -1884,11 +1892,9 @@ func _refresh_controls() -> void:
 	%DiplomacyButton.disabled = not ready or _desk_open()
 	%RecordsButton.disabled = not ready or _desk_open()
 	%PlayButton.disabled = not ready
-	%PlayButton.text = "Paused" if _paused else "Playing ×%d" % _speed
 	for index in range(5):
-		var button = find_child("Speed%d" % (index + 1))
-		button.disabled = not ready
-		button.button_pressed = index + 1 == _speed
+		(find_child("Speed%d" % (index + 1)) as Button).disabled = not ready
+	_clock.show_state(_date_text, _paused, _speed, ready)
 	_update_program_controls(ready)
 	find_child("SaveButton").disabled = not ready
 	find_child("LoadButton").disabled = not ready
