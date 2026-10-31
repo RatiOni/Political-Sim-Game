@@ -22,6 +22,7 @@ const DEFAULTS := {
 
 var path := PATH
 var _values := {}
+var _applied_scale := 1.0
 
 
 func _ready() -> void:
@@ -77,7 +78,12 @@ func _apply_ui_scale() -> void:
 	if not is_inside_tree():
 		return
 	var window := get_tree().root
-	window.content_scale_factor = fitting_scale(float(get_value("display/ui_scale")), Vector2(window.size))
+	var scale := fitting_scale(float(get_value("display/ui_scale")), Vector2(window.size))
+	# Only write what changed from what we last applied, so another owner of
+	# the factor is never overwritten by a preference left at 100%.
+	if not is_equal_approx(scale, _applied_scale):
+		_applied_scale = scale
+		window.content_scale_factor = scale
 
 
 ## The largest scale, up to the one chosen, that still leaves the dashboard

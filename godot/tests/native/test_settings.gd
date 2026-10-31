@@ -41,6 +41,12 @@ func _run() -> void:
 	t.equal(SettingsScript.fitting_scale(1.3, Vector2(1920, 1080)), 1.3, "130% fits a 1080p window")
 	t.equal(SettingsScript.fitting_scale(1.3, Vector2(1280, 720)), 1.0, "but not a 720p one, which keeps 100%")
 	t.equal(SettingsScript.fitting_scale(1.3, Vector2(1600, 900)), 1.15, "a middling window gets the largest scale that fits")
+	root.content_scale_factor = 0.5
+	root.add_child(settings)
+	settings._apply_ui_scale()
+	t.equal(root.content_scale_factor, 0.5, "a 100% preference leaves another owner of the scale alone")
+	root.remove_child(settings)
+	root.content_scale_factor = 1.0
 	DirAccess.remove_absolute(TEST_PATH)
 	settings.free()
 	again.free()
