@@ -62,7 +62,7 @@ func _ready() -> void:
 
 func _player() -> AudioStreamPlayer:
 	var player := AudioStreamPlayer.new()
-	player.bus = &"Master"
+	player.bus = AudioBuses.ensure(&"Music")
 	player.volume_db = SILENT_DB
 	add_child(player)
 	return player

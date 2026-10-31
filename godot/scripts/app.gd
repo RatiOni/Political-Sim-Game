@@ -126,6 +126,9 @@ func _ready() -> void:
 	find_child("Header").add_child(_sound)
 	find_child("Header").move_child(_sound, find_child("SaveButton").get_index())
 	get_window().size_changed.connect(_resize_layout)
+	var settings := get_node_or_null("/root/Settings")
+	if settings != null:
+		settings.changed.connect(func(_key: String) -> void: _resize_layout())
 	_resize_layout()
 	_sfx = get_node_or_null("/root/UiSfx")
 	if _game == null:

@@ -14,7 +14,7 @@ func _ready() -> void:
 		return
 	for _index in range(VOICE_COUNT):
 		var player := AudioStreamPlayer.new()
-		player.bus = &"Master"
+		player.bus = AudioBuses.ensure(&"Effects")
 		player.volume_db = VOLUME_DB
 		add_child(player)
 		_voices.append(player)
