@@ -20,88 +20,74 @@ const LAND_KINDS: Array[int] = [3, 4, 5, 6, 7, 8]
 ## Canon towns (geography.py CITIES not in the world file). `coast` snaps the
 ## point onto the shore so a port really sits on the water.
 const TOWNS: Array[Dictionary] = [
-	{"name": "Ostrena", "point": Vector2(0.262, 0.300), "coast": true, "harbour": true},
-	{"name": "Kavor", "point": Vector2(0.388, 0.272)},
-	{"name": "Karvel", "point": Vector2(0.505, 0.130)},
-	{"name": "Lestara", "point": Vector2(0.528, 0.272)},
-	{"name": "Ordel", "point": Vector2(0.365, 0.415)},
-	{"name": "Meradin", "point": Vector2(0.905, 0.405)},
-	{"name": "Azren", "point": Vector2(0.935, 0.300)},
+	{"name": "Ostrena", "point": Vector2(0.065, 0.25), "coast": true, "harbour": true},
+	{"name": "Kavor", "point": Vector2(0.23, 0.355)},
+	{"name": "Karvel", "point": Vector2(0.44, 0.19)},
+	{"name": "Lestara", "point": Vector2(0.52, 0.31)},
+	{"name": "Ordel", "point": Vector2(0.265, 0.42)},
+	{"name": "Meradin", "point": Vector2(0.9445, 0.69)},
+	{"name": "Azren", "point": Vector2(0.9609, 0.49)},
 ]
 
 ## Ports on the existing city list (by name).
-const HARBOUR_CITIES: Array[String] = ["Tavri", "Selvara"]
+const HARBOUR_CITIES: Array[String] = ["Tavri"]
 
 ## Secondary roads: the country's ordinary road net between the trunk routes.
 const ROADS: Array = [
-	# The east: Duvinsk to Darev and out to the frontier towns.
-	[Vector2(0.705, 0.385), Vector2(0.785, 0.365), Vector2(0.865, 0.325)],
-	[Vector2(0.865, 0.325), Vector2(0.885, 0.37), Vector2(0.905, 0.405)],
-	[Vector2(0.865, 0.325), Vector2(0.90, 0.305), Vector2(0.935, 0.300)],
-	# The southern market road: Darev down into Kostrel, Rovets, then west
-	# under the hills across the Sela; and Rovets north to Duvinsk.
-	[Vector2(0.865, 0.325), Vector2(0.835, 0.45), Vector2(0.79, 0.57), Vector2(0.705, 0.700)],
-	[Vector2(0.705, 0.700), Vector2(0.65, 0.66), Vector2(0.59, 0.635), Vector2(0.515, 0.620)],
-	[Vector2(0.705, 0.700), Vector2(0.69, 0.58), Vector2(0.70, 0.47), Vector2(0.705, 0.385)],
-	[Vector2(0.705, 0.700), Vector2(0.72, 0.79), Vector2(0.725, 0.880)],
-	[Vector2(0.465, 0.415), Vector2(0.50, 0.52), Vector2(0.515, 0.620)],
-	[Vector2(0.515, 0.620), Vector2(0.45, 0.66), Vector2(0.37, 0.705), Vector2(0.29, 0.745), Vector2(0.205, 0.705)],
-	# The north: the pass roads and the plateau.
-	[Vector2(0.545, 0.215), Vector2(0.505, 0.130)],
-	[Vector2(0.545, 0.215), Vector2(0.60, 0.27), Vector2(0.65, 0.33), Vector2(0.705, 0.385)],
-	[Vector2(0.415, 0.255), Vector2(0.48, 0.225), Vector2(0.545, 0.215)],
-	[Vector2(0.415, 0.255), Vector2(0.44, 0.33), Vector2(0.465, 0.415)],
-	# The west: the closed road into Vetrenka, the coast road south, the tail.
-	[Vector2(0.415, 0.255), Vector2(0.388, 0.272), Vector2(0.355, 0.31), Vector2(0.300, 0.345)],
-	[Vector2(0.300, 0.345), Vector2(0.28, 0.32), Vector2(0.265, 0.300)],
-	# Vetrenka's own coast road, up the strip under the wall.
-	[Vector2(0.265, 0.300), Vector2(0.285, 0.25), Vector2(0.300, 0.195), Vector2(0.305, 0.150)],
-	[Vector2(0.318, 0.468), Vector2(0.285, 0.55), Vector2(0.245, 0.63), Vector2(0.205, 0.705)],
-	[Vector2(0.205, 0.705), Vector2(0.16, 0.765), Vector2(0.12, 0.81), Vector2(0.085, 0.815)],
-	[Vector2(0.318, 0.468), Vector2(0.38, 0.53), Vector2(0.515, 0.620)],
+	[Vector2(0.7425, 0.4), Vector2(0.7698, 0.51), Vector2(0.8626, 0.58)],
+	[Vector2(0.8626, 0.58), Vector2(0.9063, 0.65), Vector2(0.9445, 0.69)],
+	[Vector2(0.8626, 0.58), Vector2(0.9172, 0.52), Vector2(0.9609, 0.49)],
+	[Vector2(0.8626, 0.58), Vector2(0.7425, 0.66), Vector2(0.6442, 0.72)],
+	[Vector2(0.6442, 0.72), Vector2(0.515, 0.7), Vector2(0.405, 0.68)],
+	[Vector2(0.6442, 0.72), Vector2(0.677, 0.56), Vector2(0.7425, 0.4)],
+	[Vector2(0.5732, 0.475), Vector2(0.6005, 0.6), Vector2(0.6442, 0.72)],
+	[Vector2(0.465, 0.28), Vector2(0.44, 0.19)],
+	[Vector2(0.465, 0.28), Vector2(0.52, 0.31)],
+	[Vector2(0.465, 0.28), Vector2(0.5896, 0.3), Vector2(0.7425, 0.4)],
+	[Vector2(0.275, 0.31), Vector2(0.365, 0.265), Vector2(0.465, 0.28)],
+	[Vector2(0.275, 0.31), Vector2(0.23, 0.355)],
+	[Vector2(0.23, 0.355), Vector2(0.155, 0.35), Vector2(0.12, 0.33)],
+	[Vector2(0.12, 0.33), Vector2(0.065, 0.25)],
+	[Vector2(0.255, 0.53), Vector2(0.225, 0.66), Vector2(0.215, 0.82)],
+	[Vector2(0.255, 0.53), Vector2(0.335, 0.62), Vector2(0.405, 0.68)],
 ]
 
-## Lesser rivers, all falling from high ground toward the western sea: the
-## Orvena water down from the Anera highlands to the Selvara bay, the eastern
-## river that drains the Darev steppe into the Kesla, and a short torrent off
-## the southern hills across the Kelvet tail.
+## Lesser rivers, all falling from high ground: the Orvena water down from
+## the Anera highlands to the Orvena bay, the eastern river that drains the
+## Darev steppe across Kostrel into the Kesla, and a short torrent off the
+## southern hills across Kelvet.
 const RIVERS: Array = [
-	[Vector2(0.405, 0.195), Vector2(0.395, 0.27), Vector2(0.375, 0.35), Vector2(0.345, 0.425), Vector2(0.315, 0.455), Vector2(0.285, 0.465)],
-	[Vector2(0.925, 0.225), Vector2(0.86, 0.265), Vector2(0.78, 0.32), Vector2(0.69, 0.43), Vector2(0.60, 0.46), Vector2(0.52, 0.47), Vector2(0.443, 0.48)],
-	[Vector2(0.275, 0.815), Vector2(0.215, 0.80), Vector2(0.16, 0.785), Vector2(0.105, 0.775)],
+	[Vector2(0.32, 0.215), Vector2(0.31, 0.3), Vector2(0.285, 0.38), Vector2(0.235, 0.43), Vector2(0.185, 0.44), Vector2(0.16, 0.425)],
+	[Vector2(0.95, 0.4), Vector2(0.8735, 0.46), Vector2(0.7752, 0.5), Vector2(0.666, 0.54), Vector2(0.5896, 0.545), Vector2(0.53, 0.535)],
+	[Vector2(0.325, 0.81), Vector2(0.275, 0.8), Vector2(0.225, 0.785), Vector2(0.165, 0.78)],
 ]
 
-## Water bodies: [centre, radius in tiles]. The hydro reservoir on the upper
-## Kesla, the plateau lakes of Karsen, the coastal lagoon behind the Selvara
-## bay, a reservoir under the Sela hills, a mountain lake in the Kelvet tail
-## and a steppe lake in Darev.
+## Water bodies: [centre, radius in tiles]. A hydro reservoir on the upper
+## Kesla (Karsen's hydro stations), a highland tarn, Kostrel's orchard lake and
+## a steppe lake on the Darev side.
 const LAKES: Array = [
-	[Vector2(0.553, 0.150), Vector2(3.0, 1.6)],
-	[Vector2(0.488, 0.135), Vector2(2.2, 1.4)],
-	[Vector2(0.612, 0.232), Vector2(2.0, 1.3)],
-	[Vector2(0.282, 0.515), Vector2(2.6, 1.8)],
-	[Vector2(0.590, 0.615), Vector2(2.2, 1.2)],
-	[Vector2(0.200, 0.835), Vector2(1.8, 1.2)],
-	[Vector2(0.755, 0.455), Vector2(2.8, 1.6)],
+	[Vector2(0.495, 0.243), Vector2(3.2, 1.8)],
+	[Vector2(0.34, 0.235), Vector2(2.4, 1.6)],
+	[Vector2(0.808, 0.71), Vector2(3.0, 1.8)],
+	[Vector2(0.6333, 0.58), Vector2(1.8, 1.2)],
 ]
-## Reed marsh: the Kesla delta by Tavri, the coastal wetland behind the
-## Selvara lagoon, and a wet bend of the Kesla below the capital.
+## Reed marsh: the Kesla delta below Tavri and a wet bend in the Sela.
 const MARSHES: Array = [
-	[Vector2(0.175, 0.735), Vector2(4.5, 2.2)],
-	[Vector2(0.285, 0.565), Vector2(4.5, 2.6)],
-	[Vector2(0.395, 0.585), Vector2(3.0, 1.6)],
+	[Vector2(0.155, 0.855), Vector2(6.0, 3.0)],
+	[Vector2(0.335, 0.735), Vector2(4.5, 2.2)],
+	[Vector2(0.445, 0.655), Vector2(3.0, 1.6)],
 ]
 ## Protected woodland: forest kept whole in the Kelvet hills, the Anera
 ## highlands and the Sela uplands.
 const PARKS: Array = [
-	[Vector2(0.235, 0.805), Vector2(5.5, 2.4)],
-	[Vector2(0.435, 0.205), Vector2(4.0, 2.0)],
-	[Vector2(0.430, 0.700), Vector2(4.5, 2.0)],
+	[Vector2(0.285, 0.84), Vector2(5.5, 2.4)],
+	[Vector2(0.375, 0.29), Vector2(4.0, 2.0)],
+	[Vector2(0.455, 0.78), Vector2(4.5, 2.0)],
 ]
 ## Old fortresses: the Karvel pass fort, the Kavor monastery walls, the
-## Meradin frontier citadel and the sea fort on the cape of the tail.
+## Meradin frontier citadel and the sea fort on Ostrena's headland.
 const FORTS: Array[Vector2] = [
-	Vector2(0.495, 0.112), Vector2(0.398, 0.243), Vector2(0.925, 0.395), Vector2(0.080, 0.808),
+	Vector2(0.43, 0.165), Vector2(0.24, 0.34), Vector2(0.9554, 0.665), Vector2(0.075, 0.24),
 ]
 
 const VILLAGE_SPACING := 5
