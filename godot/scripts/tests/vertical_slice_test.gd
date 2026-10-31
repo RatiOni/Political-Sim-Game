@@ -73,7 +73,7 @@ func _run() -> void:
 	var map = scene.find_child("ArdeniaMap", true, false)
 	var brief = scene.find_child("RegionBrief", true, false)
 	map.select_region("vashtera")
-	if not _check(brief.find_child("RegionId").text == "vashtera", "Selected region id is displayed"):
+	if not _check(brief.find_child("RegionName").text.to_lower().contains("vashtera"), "Selected region name is displayed"):
 		return
 	var live_pressure := 0.0
 	for r in (native_game.snapshot()["regions"] as Array):
@@ -201,8 +201,8 @@ func _run() -> void:
 					compact_region = region
 					break
 			var compact_status := str(brief.find_child("ProgrammeStatus").text)
-			if not _check(compact_status.contains("P %.0f%%" % (float(compact_region["pressure"]) * 100.0))
-					and compact_status.contains("U %.1f%%" % (float(compact_region["unemployment"]) * 100.0))
+			if not _check(compact_status.contains("Pressure %.0f%%" % (float(compact_region["pressure"]) * 100.0))
+					and compact_status.contains("Jobless %.1f%%" % (float(compact_region["unemployment"]) * 100.0))
 					and compact_status.contains("Reach %.0f%%" % (float(compact_region["state_reach"]) * 100.0)),
 					"1920-to-1280 resize preserves live regional metrics in the compact status"):
 				return
@@ -247,7 +247,7 @@ func _run() -> void:
 		key.pressed = true
 		root.push_input(key)
 		await process_frame
-		if not _check(map.selected_id != "vashtera" and brief.find_child("RegionId").text == map.selected_id, "Keyboard region selection updates the brief"):
+		if not _check(map.selected_id != "vashtera" and brief.find_child("RegionName").text.to_lower().contains(map.selected_id), "Keyboard region selection updates the brief"):
 			return
 		var motion := InputEventMouseMotion.new()
 		motion.position = map.global_position + map.map_to_local(Vector2(0.55, 0.48))
@@ -477,7 +477,7 @@ func _run() -> void:
 			break
 	if not _check(scene.snapshot["date"] == saved_date
 			and anera["active_program"].get("months_active") == 1
-			and brief.find_child("RegionId").text == map.selected_id,
+			and brief.find_child("RegionName").text.to_lower().contains(map.selected_id),
 			"Reload after a full state drop restores the saved campaign"):
 		return
 	print("PASS: empty snapshot clears stale state; reload restores the save")
