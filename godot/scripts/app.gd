@@ -1839,7 +1839,8 @@ func _flush_snapshot() -> void:
 
 
 func _clock_held() -> bool:
-	return _situation_open or (_budget_open and not _budget_adjustments.is_empty())
+	return _situation_open or (_budget_open and not _budget_adjustments.is_empty()) \
+		or Overlay.any_open(get_tree())
 
 
 func _reset_desks() -> void:
@@ -1965,6 +1966,8 @@ func _notification(what: int) -> void:
 func _input(event: InputEvent) -> void:
 	if _fatal or snapshot.is_empty():
 		return
+	if Overlay.any_open(get_tree()):
+		return
 	if event.is_action_pressed("pause"):
 		_toggle_pause()
 		get_viewport().set_input_as_handled()
@@ -1991,6 +1994,8 @@ func _close_open_desk() -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
+	if Overlay.any_open(get_tree()):
+		return
 	if (event.is_action_pressed("save") or event.is_action_pressed("load")) and _desk_open():
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("next_decision"):
