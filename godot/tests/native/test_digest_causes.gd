@@ -71,4 +71,13 @@ func _run() -> void:
 	game.next_month(state)
 	var digest: Array = state.monthly_digest
 	t.truth(not digest.is_empty() and String(digest[-1]).begins_with("Polls:"), "the polls line comes last")
+
+	# Month one: households are seeded by the first pulse, which is not a worsening.
+	game.new_campaign({"country_id": "ardenia", "background_id": "none", "difficulty_id": "normal", "opening_role": "contextual", "seed": 424242})
+	game.next_month(game._state)
+	var first_hardship := false
+	for line in game._state.monthly_digest:
+		if String(line).begins_with("Household hardship"):
+			first_hardship = true
+	t.truth(not first_hardship, "the first month does not report hardship deteriorating from nothing")
 	quit(t.finish())

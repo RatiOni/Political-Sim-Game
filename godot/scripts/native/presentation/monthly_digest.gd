@@ -24,6 +24,7 @@ static func capture(state: GameState) -> Dictionary:
 		"regional_pressure": StabilitySimScript.national_pressure(state),
 		"household_confidence": HouseholdsSimScript.national_confidence(state),
 		"household_hardship": HouseholdsSimScript.national_hardship(state),
+		"has_households": not state.households.is_empty(),
 		"debt": econ.public_debt_pct,
 		"approval_terms": StabilitySimScript.approval_breakdown(state),
 		"stability_terms": StabilitySimScript.stability_breakdown(state),
@@ -47,8 +48,9 @@ static func build(state: GameState, before: Dictionary) -> Array[String]:
 	_append_change(lines, "Regional pressure", float(before.get("regional_pressure", 0.0)), float(after["regional_pressure"]), 0.003, false)
 	var hardship_before := float(before.get("household_hardship", 0.0))
 	var hardship_after := float(after["household_hardship"])
-	_append_change(lines, "Household hardship", hardship_before, hardship_after, 0.003, false,
-		_hardest_hit(state) if hardship_after > hardship_before else "")
+	if bool(before.get("has_households", true)):
+		_append_change(lines, "Household hardship", hardship_before, hardship_after, 0.003, false,
+			_hardest_hit(state) if hardship_after > hardship_before else "")
 	_append_change(lines, "Public debt", float(before.get("debt", after["debt"])), float(after["debt"]), 0.002, false)
 	return lines
 
