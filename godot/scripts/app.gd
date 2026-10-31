@@ -73,6 +73,7 @@ var _selected_bill_id := ""
 var _bill_preview: Dictionary = {}
 
 func _ready() -> void:
+	get_tree().set_auto_accept_quit(false)
 	TerminalFrame.adopt_all(self)
 	TerminalFrame.capitalise(self)
 	TerminalFrame.capitalise_buttons(self)
@@ -2062,7 +2063,63 @@ func _remove_blocking_error() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_leave("quit")
+
+
+func _open_pause_menu() -> void:
+	_sfx_cue("navigation")
+	var menu := PauseMenu.open(self)
+	menu.action.connect(_on_pause_action.bind(menu))
+
+
+func _on_pause_action(id: String, menu: PauseMenu) -> void:
+	match id:
+		"save":
+			_open_save_dialog("save")
+		"load":
+			await _open_save_dialog("load")
+			if is_instance_valid(menu):
+				menu.close()
+		"options":
+			OptionsPanel.open(self)
+		"main_menu":
+			_leave("menu")
+		"quit":
+			_leave("quit")
+
+
+## Quick save never lands on a read-only slot (autosave, legacy).
+func _quick_save_slot() -> String:
+	if save_slot == SaveStore.AUTOSAVE_SLOT or save_slot == SaveStore.LEGACY_SLOT:
+		return SaveStore.MANUAL_SLOTS[0]
+	return save_slot
+
+
+## Every way out of a campaign comes through here, so unsaved progress is
+## always offered a save first.
+func _leave(target: String) -> void:
+	if _has_unsaved_progress():
+		var verb := "exit" if target == "menu" else "quit"
+		var prompt := ConfirmPrompt.ask(self, "Unsaved progress",
+			"Progress since your last save will be lost.",
+			[["save", "Save and %s" % verb], ["leave", "Leave without saving"], ["cancel", "Cancel"]])
+		var choice: String = await prompt.chosen
+		if choice == "cancel":
+			return
+		if choice == "save":
+			save_slot = _quick_save_slot()
+			_do_save()
+			if _has_unsaved_progress():
+				return
+	if target == "quit":
 		get_tree().quit()
+	else:
+		get_tree().change_scene_to_file("res://scenes/menu.tscn")
+
+
+func _exit_tree() -> void:
+	get_tree().set_auto_accept_quit(true)
+
 
 func _input(event: InputEvent) -> void:
 	if _fatal or snapshot.is_empty():
@@ -2072,9 +2129,12 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		_toggle_pause()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("back") and _desk_open():
+	elif event.is_action_pressed("back"):
 		get_viewport().set_input_as_handled()
-		_request_close_desk()
+		if _desk_open():
+			_request_close_desk()
+		else:
+			_open_pause_menu()
 
 
 func _close_open_desk() -> void:
@@ -2103,6 +2163,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		_next_decision()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("save"):
+		save_slot = _quick_save_slot()
 		_do_save()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("load"):
