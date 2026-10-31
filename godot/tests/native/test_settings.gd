@@ -38,6 +38,8 @@ func _run() -> void:
 	t.equal(SettingsScript.next_window_mode(W.WINDOW_MODE_EXCLUSIVE_FULLSCREEN, false), W.WINDOW_MODE_WINDOWED, "fullscreen off leaves it")
 	t.equal(SettingsScript.next_window_mode(W.WINDOW_MODE_FULLSCREEN, true), -1, "already fullscreen is left alone")
 
+	settings.set_value("display/fullscreen", false)
+	t.equal(settings.window_mode_change(W.WINDOW_MODE_MAXIMIZED), -1, "apply_all leaves a maximized window alone")
 	var music := AudioServer.get_bus_index(AudioBuses.ensure(&"Music"))
 	t.truth(music >= 0, "music has its own bus")
 	t.equal(AudioServer.get_bus_send(music), &"Master", "under the master volume")

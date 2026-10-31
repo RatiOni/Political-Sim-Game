@@ -67,11 +67,15 @@ func apply_all() -> void:
 	_set_bus_volume(&"Music", float(get_value("audio/music")))
 	_set_bus_volume(&"Effects", float(get_value("audio/effects")))
 	if DisplayServer.get_name() != "headless":
-		var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if bool(get_value("display/fullscreen")) \
-			else DisplayServer.WINDOW_MODE_WINDOWED
-		if DisplayServer.window_get_mode() != mode:
+		var mode := window_mode_change(DisplayServer.window_get_mode())
+		if mode != -1:
 			DisplayServer.window_set_mode(mode)
 	_apply_ui_scale()
+
+
+## What apply_all does to a window currently in `current`: -1 leaves it alone.
+func window_mode_change(current: int) -> int:
+	return next_window_mode(current, bool(get_value("display/fullscreen")))
 
 
 ## Only crosses the fullscreen boundary, so a maximized window stays maximized.
