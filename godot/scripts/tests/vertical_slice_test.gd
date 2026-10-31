@@ -313,12 +313,12 @@ func _run() -> void:
 			and float(scene.snapshot["player"]["political_capital"]) < law_pc_before,
 			"Real legislation panel tables a bill and spends engine-owned political capital"):
 		return
-	scene.find_child("SaveButton", true, false).pressed.emit()
+	scene._do_save()  # the button now opens a slot dialog (test_save_dialog covers it)
 	await process_frame
 	var pending_replacement: Dictionary = native_game.new_campaign({"country_id": "ardenia", "background_id": "none", "difficulty_id": "normal", "opening_role": "contextual", "seed": FIXED_SEED + 7})
 	if not _check(pending_replacement.get("ok", false), "A replacement campaign clears memory before pending-law reload"):
 		return
-	scene.find_child("LoadButton", true, false).pressed.emit()
+	scene._do_load()
 	await process_frame
 	var loaded_choice: OptionButton = scene.find_child("BillChoice", true, false)
 	var loaded_meta: Variant = loaded_choice.get_item_metadata(loaded_choice.selected)
@@ -340,13 +340,13 @@ func _run() -> void:
 	var terminal_status := str(law_model.get("history", [])[0].get("status", ""))
 	if not _check(terminal_status in ["enacted", "rejected"], "Vote visibly records enacted or rejected"):
 		return
-	scene.find_child("SaveButton", true, false).pressed.emit()
+	scene._do_save()  # the button now opens a slot dialog (test_save_dialog covers it)
 	await process_frame
 	var saved_law_history: Array = law_model.get("history", []).duplicate(true)
 	var replacement_result: Dictionary = native_game.new_campaign({"country_id": "ardenia", "background_id": "none", "difficulty_id": "normal", "opening_role": "contextual", "seed": FIXED_SEED + 9})
 	if not _check(replacement_result.get("ok", false), "A different native campaign replaces memory before law save reload"):
 		return
-	scene.find_child("LoadButton", true, false).pressed.emit()
+	scene._do_load()
 	await process_frame
 	if not _check(scene.snapshot.get("legislation", {}).get("history", []) == saved_law_history,
 			"Terminal law outcome survives real Save and Load controls"):
@@ -442,10 +442,7 @@ func _run() -> void:
 	if not _check(anera["active_program"].get("months_active") == 2,
 			"Programme reaches month two after save"):
 		return
-	var load_event := InputEventAction.new()
-	load_event.action = "load"
-	load_event.pressed = true
-	scene._unhandled_key_input(load_event)
+	scene._do_load()  # the load shortcut now opens a slot dialog (test_save_dialog covers it)
 	for region in scene.snapshot["regions"]:
 		if region.get("id") == "anera":
 			anera = region
@@ -530,12 +527,12 @@ func _run() -> void:
 		return
 	var approved_allocations: Dictionary = approved_budget.get("allocations", {}).duplicate(true)
 	var approved_year := int(approved_budget.get("year", 0))
-	scene.find_child("SaveButton", true, false).pressed.emit()
+	scene._do_save()  # the button now opens a slot dialog (test_save_dialog covers it)
 	if not _check(FileAccess.file_exists("user://saves/%s.json" % APP_SLOT),
 			"Approved pending budget is written through the real save control"):
 		return
 	native_game.advance_day()
-	scene.find_child("LoadButton", true, false).pressed.emit()
+	scene._do_load()
 	var loaded_pending: Variant = scene.snapshot.get("budget", {}).get("pending")
 	if not _check(loaded_pending is Dictionary
 			and loaded_pending.get("status") == "approved"

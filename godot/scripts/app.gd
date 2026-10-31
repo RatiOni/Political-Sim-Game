@@ -208,7 +208,10 @@ func _resize_layout() -> void:
 	# The header carries eleven controls. At 1280 they fit only if the gaps
 	# close up — hiding a destination instead would make it unreachable on
 	# exactly the machines most likely to be running at that size.
-	find_child("Header").add_theme_constant_override("separation", 8 if compact else 16)
+	find_child("Header").add_theme_constant_override("separation", 6 if compact else 16)
+	# The side margins give up 12 px each too, so the whole header clears 1280.
+	for side in ["margin_left", "margin_right"]:
+		find_child("Margin").add_theme_constant_override(side, 12 if compact else 24)
 	_sound.slider.visible = not compact
 	%MonthlyReport.find_child("DispatchColumn").visible = not compact
 	if not snapshot.is_empty():
