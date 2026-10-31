@@ -71,5 +71,7 @@ func _run() -> void:
 	DirAccess.remove_absolute(zz_file)
 	app.save_slot = "zz_pause_menu"
 	t.truth(await app._quick_save_slot() == "zz_pause_menu", "a chosen manual slot is kept")
+	var s: Node = root.get_node("Settings")
+	t.equal(s.path, AppHarness.TEST_SETTINGS, "UI tests read their own settings file, not the player's")
 	h.finish()
 	quit(t.finish())

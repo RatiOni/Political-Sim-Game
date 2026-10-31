@@ -4,6 +4,7 @@ extends RefCounted
 ## save slot, with autosave off, so a test never writes the player's files.
 
 const MAIN := "res://scenes/main.tscn"
+const TEST_SETTINGS := "user://test_harness_settings.cfg"
 
 var tree: SceneTree
 var slot: String
@@ -16,6 +17,11 @@ func _init(scene_tree: SceneTree, test_slot: String) -> void:
 
 
 func fresh(role: String = "contextual") -> Node:
+	var s = tree.root.get_node_or_null("Settings")
+	if s != null and s.path != TEST_SETTINGS:
+		s.path = TEST_SETTINGS
+		s.load_from_disk()
+		s.apply_all()
 	if app != null and is_instance_valid(app):
 		app.queue_free()
 		await frames()
@@ -54,5 +60,11 @@ func wipe_slot() -> void:
 
 func finish() -> void:
 	wipe_slot()
+	var s = tree.root.get_node_or_null("Settings")
+	if s != null and s.path == TEST_SETTINGS:
+		if FileAccess.file_exists(TEST_SETTINGS):
+			DirAccess.remove_absolute(TEST_SETTINGS)
+		s.path = s.get_script().PATH
+		s.load_from_disk()
 	if app != null and is_instance_valid(app):
 		app.queue_free()
