@@ -297,7 +297,12 @@ func _refresh_rooms() -> void:
 			_rooms[panel_name] = view
 		var view: DeskView = _rooms[panel_name]
 		var column := view.get_parent().get_child(0) as Control
-		column.custom_minimum_size.x = (460 if compact else 560) + (180 if panel_name == "BudgetPanel" else 0)
+		# Data before decoration: the desk's controls take three parts of the
+		# width to the room's two, and never less than their minimum.
+		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.size_flags_stretch_ratio = 3.0
+		view.size_flags_stretch_ratio = 2.0
+		column.custom_minimum_size.x = 460 if compact else 560
 		# On a small window the budget sliders need the whole width.
 		view.visible = not (compact and panel_name == "BudgetPanel")
 		if not snapshot.is_empty():
@@ -703,35 +708,32 @@ func _sync_budget_sliders(rows: VBoxContainer, envelopes: Array, editable: bool,
 		row.set_meta("current", float(envelope.get("current", 0.0)))
 
 
-func _budget_slider_row(envelope: Dictionary) -> VBoxContainer:
+## One line per envelope — name, slider, figure — so all eight fit on the desk
+## at 1920x1080. Two-line rows pushed the largest envelope below the fold.
+func _budget_slider_row(envelope: Dictionary) -> HBoxContainer:
 	var envelope_id := str(envelope.get("id", ""))
 	var steps: Array[float] = []
 	for value in envelope.get("allowed_adjustments", [0.0]):
 		steps.append(float(value))
 	steps.sort()
-	var row := VBoxContainer.new()
+	var row := HBoxContainer.new()
 	row.name = "BudgetRow_%s" % envelope_id
 	row.set_meta("envelope_id", envelope_id)
-	row.add_theme_constant_override("separation", 0)
-	var top := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
 	var label := Label.new()
 	label.name = "EnvelopeName"
-	label.text = str(envelope.get("name", envelope_id.capitalize())).to_upper()
+	label.text = str(envelope.get("name", envelope_id.capitalize()))
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.clip_text = true
+	label.size_flags_stretch_ratio = 2.0
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	label.tooltip_text = str(envelope.get("body", ""))
 	label.mouse_filter = Control.MOUSE_FILTER_PASS
-	var amount := Label.new()
-	amount.name = "EnvelopeAmount"
-	amount.custom_minimum_size = Vector2(220, 0)
-	amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	amount.clip_text = true
-	top.add_child(label)
-	top.add_child(amount)
-	row.add_child(top)
 	var slider := HSlider.new()
 	slider.name = "Adjustment_%s" % envelope_id
-	slider.custom_minimum_size = Vector2(0, 44)
+	slider.custom_minimum_size = Vector2(0, 30)
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.size_flags_stretch_ratio = 3.0
+	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	slider.min_value = steps[0]
 	slider.max_value = steps[-1]
 	# ponytail: uniform step from the catalogue; the sim only accepts its listed steps.
@@ -739,7 +741,14 @@ func _budget_slider_row(envelope: Dictionary) -> VBoxContainer:
 	slider.tick_count = steps.size()
 	slider.ticks_on_borders = true
 	slider.value_changed.connect(_on_budget_slider.bind(envelope_id))
+	var amount := Label.new()
+	amount.name = "EnvelopeAmount"
+	amount.custom_minimum_size = Vector2(190, 0)
+	amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	amount.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	row.add_child(label)
 	row.add_child(slider)
+	row.add_child(amount)
 	return row
 
 

@@ -124,8 +124,8 @@ func _run() -> void:
 					"Budget control is a bounded 44 px target: " + budget_control_name + " at " + str(dimensions)):
 				return
 		for envelope_choice in envelope_choices:
-			if not _check((envelope_choice as HSlider).size.y >= 44.0,
-					"Envelope adjustment is a 44 px target at " + str(dimensions)):
+			if not _check((envelope_choice as HSlider).size.y >= 30.0,
+					"Envelope adjustment is a 30 px one-line-row target (eight envelopes fit without scrolling) at " + str(dimensions)):
 				return
 		if dimensions == Vector2i(1920, 1080):
 			var first_choice := envelope_choices[0] as HSlider

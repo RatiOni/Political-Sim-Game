@@ -78,7 +78,7 @@ layout_mode = 2
 metadata/_tab_index = 0
 
 [node name="SpendingChart" type="Control" parent="Content/BudgetTabs/SPENDING"]
-custom_minimum_size = Vector2(0, 120)
+custom_minimum_size = Vector2(0, 96)
 layout_mode = 2
 script = ExtResource("1_chart")
 
