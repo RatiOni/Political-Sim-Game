@@ -212,7 +212,7 @@ func _run() -> void:
 		# the scene past the viewport and clipped the UI off both edges. This
 		# only reproduces at 1920, because compact mode hides the status.
 		var width_before: float = scene.get_combined_minimum_size().x
-		scene._set_status("DECIDED / " + "Respond in kind. Another incident on the Vetrenka line. ".repeat(4))
+		scene._notice.say("Decided: " + "Respond in kind. Another incident on the Vetrenka line. ".repeat(4))
 		await process_frame
 		await process_frame
 		if not _check(is_equal_approx(scene.get_combined_minimum_size().x, width_before)
@@ -220,7 +220,7 @@ func _run() -> void:
 				"A wordy status does not widen the dashboard at %s (minimum %s -> %s, scene %s)"
 				% [dimensions, width_before, scene.get_combined_minimum_size().x, scene.size]):
 			return
-		scene._set_status("LIVE SIMULATION / READY")
+		scene._notice.say("Saved")
 		await process_frame
 		if not _check(scene.size.is_equal_approx(Vector2(dimensions)), "Native-size layout at %s (window %s, scene %s, minimum %s)" % [dimensions, root.size, scene.size, scene.get_combined_minimum_size()]):
 			return
