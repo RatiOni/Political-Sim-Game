@@ -103,10 +103,10 @@ func _run() -> void:
 		scene.find_child("BudgetButton", true, false).pressed.emit()
 		await process_frame
 		if not _check(budget_panel.is_visible_in_tree()
-				and not scene.find_child("NationalPanel", true, false).visible
+				and scene.find_child("NationalPanel", true, false).visible
 				and not scene.find_child("MapPanel", true, false).visible
 				and not brief.visible,
-				"Budget view replaces the national/map/region body at " + str(dimensions)):
+				"Budget view replaces the map/region body and keeps the vital signs at " + str(dimensions)):
 			return
 		if not _check(Rect2(Vector2.ZERO, Vector2(dimensions)).encloses(budget_panel.get_global_rect()),
 				"Budget panel stays in viewport at " + str(dimensions)):

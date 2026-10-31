@@ -99,10 +99,10 @@ func _test_header_buttons_follow_the_open_desk(t) -> void:
 	app._paused = true
 	app._open_budget()
 	await _frames()
-	t.truth(app.find_child("LegislationButton", true, false).disabled, "while a desk is open the other desks' buttons are off")
+	t.truth(not app.find_child("LegislationButton", true, false).disabled, "an open desk does not lock the other destinations")
 	app._close_budget()
 	await _frames()
-	t.truth(not app.find_child("LegislationButton", true, false).disabled, "and come back the moment it closes, even while paused")
+	t.truth(not app.find_child("LegislationButton", true, false).disabled, "and they stay live once it closes, even while paused")
 
 
 func _test_a_budget_draft_holds_the_clock(t) -> void:

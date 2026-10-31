@@ -93,8 +93,8 @@ func _ready() -> void:
 		find_child("Speed%d" % (index + 1)).pressed.connect(_set_speed.bind(index + 1))
 	%RegionBrief.find_child("RegionAction").pressed.connect(_start_selected_program)
 	%RegionBrief.find_child("ProgramChoice").item_selected.connect(_on_program_choice_selected)
-	%BudgetButton.pressed.connect(_open_budget)
-	%BudgetPanel.find_child("CloseBudgetButton").pressed.connect(_close_budget)
+	%BudgetButton.pressed.connect(_go_to_desk.bind("budget"))
+	%BudgetPanel.find_child("CloseBudgetButton").pressed.connect(_request_close_desk)
 	%BudgetPanel.find_child("ProposeBudgetButton").pressed.connect(_propose_budget)
 	%BudgetPanel.find_child("VoteBudgetButton").pressed.connect(_call_budget_vote)
 	%BudgetPanel.find_child("WithdrawBudgetButton").pressed.connect(_withdraw_budget)
@@ -104,7 +104,7 @@ func _ready() -> void:
 	for chart_name: String in BudgetChart.MODE_NAMES:
 		chart_choice.add_item(chart_name)
 	chart_choice.item_selected.connect(_on_budget_chart_type)
-	%LegislationButton.pressed.connect(_open_legislation)
+	%LegislationButton.pressed.connect(_go_to_desk.bind("legislation"))
 	%LegislationPanel.find_child("CloseLegislationButton").pressed.connect(_close_legislation)
 	%LegislationPanel.find_child("BillChoice").item_selected.connect(_on_bill_choice_selected)
 	%LegislationPanel.find_child("ProposeBillButton").pressed.connect(_propose_bill)
@@ -113,8 +113,8 @@ func _ready() -> void:
 	%LegislationPanel.find_child("LobbyButton").pressed.connect(_lobby_bill)
 	%LegislationPanel.find_child("LobbyChoice").item_selected.connect(_on_bill_lobby_selected)
 	%SituationPanel.find_child("CloseSituationButton").pressed.connect(_close_situation)
-	%DiplomacyButton.pressed.connect(_open_diplomacy)
-	%RecordsButton.pressed.connect(_open_records)
+	%DiplomacyButton.pressed.connect(_go_to_desk.bind("diplomacy"))
+	%RecordsButton.pressed.connect(_go_to_desk.bind("records"))
 	%RecordsPanel.find_child("CloseRecordsButton").pressed.connect(_close_records)
 	%RegionPanel.find_child("CloseRegionButton").pressed.connect(_close_region_panel)
 	%RegionBrief.find_child("OpenDossierButton").pressed.connect(_open_region_panel)
@@ -175,7 +175,7 @@ func _resize_layout() -> void:
 	find_child("PreviewStatus").visible = not compact
 	%DateLabel.custom_minimum_size.x = DATE_WIDTH_COMPACT if compact else DATE_WIDTH_WIDE
 	var national := find_child("NationalPanel") as Control
-	national.visible = not _desk_open()
+	national.visible = true
 	national.custom_minimum_size.x = NATIONAL_WIDTH_COMPACT if compact else NATIONAL_WIDTH_WIDE
 	find_child("MapPanel").visible = not _desk_open()
 	# A desk takes the whole body; its room needs the height the decision rail
@@ -532,14 +532,80 @@ func _lines(rows: Array, empty_text: String) -> String:
 		lines.append(str(row))
 	return "\n\n".join(lines) if not lines.is_empty() else empty_text
 
+
+## Every desk closes through here before another opens, so two can never be
+## open at once (the record used to stay open under the budget).
+func _close_all_desks() -> void:
+	_budget_open = false
+	_legislation_open = false
+	_situation_open = false
+	_diplomacy_open = false
+	_opposition_open = false
+	_records_open = false
+	_region_panel_open = false
+
+
+func _open_desk_name() -> String:
+	if _budget_open:
+		return "budget"
+	if _legislation_open or _opposition_open:
+		return "legislation"
+	if _diplomacy_open:
+		return "diplomacy"
+	if _records_open:
+		return "records"
+	if _situation_open:
+		return "situation"
+	if _region_panel_open:
+		return "region"
+	return ""
+
+
+## A budget draft that has not been tabled is the one thing a desk change can
+## throw away, so leaving it asks.
+func _may_leave_desk() -> bool:
+	if not (_budget_open and not _budget_adjustments.is_empty()):
+		return true
+	var prompt := ConfirmPrompt.ask(self, "Discard the budget draft?",
+		"You have moved envelopes that have not been tabled. Leaving the desk throws the changes away.",
+		[["discard", "Discard draft"], ["stay", "Keep editing"]])
+	var choice: String = await prompt.chosen
+	return choice == "discard"
+
+
+## Header destinations switch desks directly; the open desk's own button
+## closes it.
+func _go_to_desk(desk: String) -> void:
+	var already := _open_desk_name() == desk
+	if not await _may_leave_desk():
+		return
+	if already:
+		_sfx_cue("navigation")
+		_close_all_desks()
+		_reset_budget_draft()
+		_resize_layout()
+		return
+	match desk:
+		"budget":
+			_open_budget()
+		"legislation":
+			_open_legislation()
+		"diplomacy":
+			_open_diplomacy()
+		"records":
+			_open_records()
+
+
+func _request_close_desk() -> void:
+	if await _may_leave_desk():
+		_close_open_desk()
+
+
 func _open_budget() -> void:
 	if snapshot.is_empty() or _fatal:
 		return
 	_sfx_cue("navigation")
-	_diplomacy_open = false
-	_legislation_open = false
-	_situation_open = false
-	_opposition_open = false
+	_close_all_desks()
 	_budget_open = true
 	_budget_adjustments.clear()
 	_budget_preview.clear()
@@ -835,10 +901,7 @@ func _open_legislation() -> void:
 		_open_opposition()
 		return
 	_sfx_cue("navigation")
-	_diplomacy_open = false
-	_budget_open = false
-	_situation_open = false
-	_opposition_open = false
+	_close_all_desks()
 	_legislation_open = true
 	_bill_preview.clear()
 	_resize_layout()
@@ -848,10 +911,7 @@ func _open_diplomacy() -> void:
 	if snapshot.is_empty() or _fatal:
 		return
 	_sfx_cue("navigation")
-	_budget_open = false
-	_legislation_open = false
-	_situation_open = false
-	_opposition_open = false
+	_close_all_desks()
 	_diplomacy_open = true
 	_set_diplomacy_status("")
 	_resize_layout()
@@ -869,12 +929,7 @@ func _open_records() -> void:
 	if snapshot.is_empty() or _fatal:
 		return
 	_sfx_cue("navigation")
-	_budget_open = false
-	_legislation_open = false
-	_situation_open = false
-	_opposition_open = false
-	_diplomacy_open = false
-	_region_panel_open = false
+	_close_all_desks()
 	_records_open = true
 	_refresh_records()
 	_resize_layout()
@@ -996,12 +1051,7 @@ func _open_region_panel() -> void:
 	if snapshot.is_empty() or _fatal or selected_region_id.is_empty():
 		return
 	_sfx_cue("navigation")
-	_budget_open = false
-	_legislation_open = false
-	_situation_open = false
-	_opposition_open = false
-	_diplomacy_open = false
-	_records_open = false
+	_close_all_desks()
 	_region_panel_open = true
 	_refresh_region_panel()
 	_resize_layout()
@@ -1337,10 +1387,7 @@ func _open_situation(event_id: String) -> void:
 	if snapshot.is_empty() or _fatal:
 		return
 	_sfx_cue("navigation")
-	_diplomacy_open = false
-	_budget_open = false
-	_legislation_open = false
-	_opposition_open = false
+	_close_all_desks()
 	_situation_open = true
 	_paused = true
 	_selected_event_id = event_id
@@ -1436,10 +1483,7 @@ func _in_government() -> bool:
 
 func _open_opposition() -> void:
 	_sfx_cue("navigation")
-	_budget_open = false
-	_legislation_open = false
-	_situation_open = false
-	_diplomacy_open = false
+	_close_all_desks()
 	_opposition_open = true
 	%OppositionPanel.set_status("")
 	_resize_layout()
@@ -1916,11 +1960,17 @@ func _start_selected_program() -> void:
 
 func _refresh_controls() -> void:
 	var ready := not snapshot.is_empty() and not _fatal
-	%BudgetButton.disabled = not ready or _desk_open()
-	%LegislationButton.disabled = not ready or _desk_open()
 	%LegislationButton.text = "Legislation" if _in_government() else "Opposition"
-	%DiplomacyButton.disabled = not ready or _desk_open()
-	%RecordsButton.disabled = not ready or _desk_open()
+	var open_desk := _open_desk_name()
+	for pair in [["BudgetButton", "budget"], ["LegislationButton", "legislation"],
+			["DiplomacyButton", "diplomacy"], ["RecordsButton", "records"]]:
+		var button := find_child(pair[0]) as Button
+		button.disabled = not ready
+		# The open desk's own destination is lit: it is also the way to close it.
+		if open_desk == pair[1]:
+			button.add_theme_color_override("font_color", UiPalette.GOLD)
+		else:
+			button.remove_theme_color_override("font_color")
 	%PlayButton.disabled = not ready
 	for index in range(5):
 		(find_child("Speed%d" % (index + 1)) as Button).disabled = not ready
@@ -1972,8 +2022,8 @@ func _input(event: InputEvent) -> void:
 		_toggle_pause()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("back") and _desk_open():
-		_close_open_desk()
 		get_viewport().set_input_as_handled()
+		_request_close_desk()
 
 
 func _close_open_desk() -> void:
