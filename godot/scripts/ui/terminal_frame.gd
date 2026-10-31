@@ -88,7 +88,13 @@ static func capitalise_buttons(root: Node) -> void:
 
 static func capitalise(root: Node) -> void:
 	for node in root.find_children("*", "Label", true, false):
-		(node as Label).uppercase = true
+		_capitalise_label(node as Label)
 	root.get_tree().node_added.connect(func(node: Node) -> void:
 		if node is Label:
-			(node as Label).uppercase = true)
+			_capitalise_label(node as Label))
+
+
+## Labels are set in capitals; prose is not. A wrapping label is prose, and
+## capitals slow reading over more than a line, so it keeps its own case.
+static func _capitalise_label(label: Label) -> void:
+	label.uppercase = label.autowrap_mode == TextServer.AUTOWRAP_OFF
