@@ -7,52 +7,60 @@ parity-contract programme.
 
 ## Required reading order
 
-1. `PLAN.md` (repository root) — the plan and its rationale. Read the
-   **Context** section first if you touched anything under
+1. `PLAN.md` (repository root) — what the game is, what has landed, and the
+   standing design rules. Its appendix explains the superseded parity
+   programme, if you touched anything under
    `docs/superpowers/plans/2026-09-16-native-godot-*` or
-   `docs/godot/native_port/` before now — it explains what changed and why.
+   `docs/godot/native_port/` before now.
 2. `AGENTS.md`
 3. `docs/EARLY_ACCESS_MISSION.md` — product authority: what Ardenia is, who
    plays it, what "done" looks like as a game.
-4. `.superpowers/sdd/PLAN/progress.md` — the ledger. Task lines marked
-   `complete` are done; do not re-dispatch or redo them. A line ending in a
-   fix round is mid-loop; resume at the next round. Trust this file and
-   `git log` over any memory of your own — sessions get compacted or run out
-   of budget mid-task.
+4. The ledger for the plan you are working on, at
+   `.superpowers/sdd/<plan-name>/progress.md`. Task lines marked `complete`
+   are done; do not re-dispatch or redo them. A line ending in a fix round is
+   mid-loop; resume at the next round. Trust this file and `git log` over any
+   memory of your own — sessions get compacted or run out of budget mid-task.
 
 ## What this project is, in one paragraph
 
-Ardenia is a political simulation currently in Python (`engine/`, `content/`,
-`models/`) with a PySide6 desktop front-end. It is being rebuilt as a native
-Godot 4.7.2 game — real assets, mechanics, UI, no Python at runtime. **The
-Python source is a design reference to read, not an oracle to match
-numerically.** There is no parity contract, no fixture comparison, no `1e-9`
-tolerance. Write idiomatic GDScript that does the same job the Python code
-does; don't transcribe it, and don't chase bit-for-bit equivalence.
+Ardenia is a native Godot 4.7.2 political simulation — GDScript simulation,
+typed state, committed JSON content, Godot scenes, and no Python at runtime, at
+build time, or in a test run. The Python tree at the repository root
+(`engine/`, `content/`, `models/`, the PySide6 front-end) is a **frozen
+historical reference**: read it to understand what Ardenia contains, never
+modify it, never run it as part of a task. There is no parity contract, no
+fixture comparison, no `1e-9` tolerance — Godot owns every equation and
+constant. Write idiomatic GDScript that does the same job; don't transcribe,
+and don't chase equivalence.
 
 ## Canonical starting point
 
-Work happens on branch `codex/godot-foundation`. If you're picking this up
+Work happens on branch `claude/godot-native-sim`, in the shared worktree
+`D:\Political Sim Game\.worktrees\godot-native-sim`. If you're picking this up
 fresh: `git status --short` and `git log --oneline -5` first, so you know
-whether you're resuming mid-task or starting clean. This repository's shared
-worktree for this branch is `D:\Political Sim Game\.worktrees\godot-foundation`
-— use it directly; do not create a separate isolated worktree for a task that
-the ledger expects to land on this branch. Never work in the user's root
-checkout (`D:\Political Sim Game`) — it is a separate, dirty, protected
-checkout.
+whether you're resuming mid-task or starting clean. Use the worktree directly;
+do not create a separate isolated one for a task the ledger expects to land on
+this branch. Never work in the user's root checkout
+(`D:\Political Sim Game`) — it is a separate, dirty, protected checkout.
+
+The worktree is shared with other agent sessions. Commit with explicit paths
+(`git commit -m "..." -- <paths>`) so you never carry someone else's
+uncommitted work, and never use bare `git stash` / `git stash pop` — the stash
+stack is shared.
 
 ## Coordination
 
-- Only one phase of `PLAN.md` is active at a time (currently: **Phase 3**).
-  Tasks 5-13 are complete; the next task must define and claim the smallest
-  remaining **Phase 3 government-play slice** before implementation. Read
-  `.superpowers/sdd/PLAN/progress.md`
-  and `git log` before acting; the ledger and committed work always override
-  this guide when they disagree.
-- Within a phase, parallel work is fine only when file ownership doesn't
-  overlap and the task breakdown marks the tasks independent. Phase 2's tasks
-  are ordered by the monthly pulse and consume the earlier systems — preserve
-  that sequence unless the ledger records an explicit, non-overlapping split.
+- Work is organised per plan: a document in `docs/superpowers/plans/` and its
+  own ledger in `.superpowers/sdd/<plan-name>/progress.md`. The native core,
+  the monthly political economy, government play and the living world have all
+  landed; what remains in `PLAN.md` is **Phase 5 (the game as a game)** and
+  **Phase 6 (ship)**, plus whatever deepening slice the current plan names.
+  Read that plan's ledger and `git log` before acting; the ledger and
+  committed work always override this guide when they disagree.
+- Parallel work is fine only when file ownership doesn't overlap and the task
+  breakdown marks the tasks independent. Tasks ordered by the monthly pulse
+  consume the earlier systems — preserve that sequence unless the ledger
+  records an explicit, non-overlapping split.
 - `native_game.gd`, `content_repository.gd`, and any file two tasks would
   both need to edit have one owner at a time. Check the ledger before
   touching a file another task's entry claims.
@@ -62,9 +70,12 @@ checkout.
   and parked, per the SDD fix-loop process) before the next task begins.
   Minor findings are recorded in the ledger with a disposition, not silently
   dropped.
-- Generated JSON under `godot/data/native/` is written only by its exporter
-  script (`scripts/native_port/export_native_content.py` from Phase 1 Task 1
-  onward) — never hand-edited.
+- JSON under `godot/data/native/` is authored directly in the Godot tree and
+  committed. Nothing regenerates it: the old Python exporter
+  (`scripts/native_port/export_native_content.py`) is dead, and the content has
+  diverged far past `content/` — 31 countries against Python's 9, plus energy
+  and foreign-orientation catalogues with no Python source. Edit the JSON, and
+  keep `catalog_manifest.json` in step.
 - Do not delete or rewrite another contributor's unrelated changes. Do not
   merge, push, tag, or publish without explicit authorization.
 
@@ -160,24 +171,24 @@ directly, with cell backgrounds, under scanline glass.
 
 ## Runtime prohibition
 
-The final game ships with no Python installation, no PySide, no worker
-process, and no repository path baked into it. Development scripts (content
-exporters, the retained N0 test harness) may use Python or reference the
-repository during development only. No development-only path may be
-reachable from a Godot export build.
+Nothing in this project runs Python any more — not the game, not the build,
+not a test step. The final game ships with no Python installation, no PySide,
+no worker process, and no repository path baked into it. The test harness is
+pure GDScript (`godot/tests/native/run_contract_tests.gd`). No development-only
+path may be reachable from a Godot export build.
 
 ## For OpenCode specifically
 
 You are the third reserve in this project's workflow — used when both Claude
 and Codex hourly limits are exhausted. When you pick up a task:
 
-- Read the ledger (`progress.md`) fully before starting; don't assume the
-  task list in `PLAN.md` alone tells you what's already done.
+- Read the current plan's ledger (`.superpowers/sdd/<plan>/progress.md`) fully
+  before starting; `PLAN.md` gives direction, not the task list.
 - Follow the same task-brief/report/review discipline the ledger already
   shows, even without the Claude tooling that generates brief files
-  automatically — read the task's full text directly from `PLAN.md`, and
-  write your own brief-equivalent notes into the ledger before starting if
-  none exists yet for the task you're taking.
-- Commit with the exact message format the task specifies in `PLAN.md`
+  automatically — read the task's full text from its plan document under
+  `docs/superpowers/plans/`, and write your own brief-equivalent notes into
+  the ledger before starting if none exists yet for the task you're taking.
+- Commit with the message format the task specifies
   (`type(scope): description`), and append your own ledger entry when done —
   don't leave your work undocumented for the next agent to rediscover cold.
