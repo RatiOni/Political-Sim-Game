@@ -3,6 +3,7 @@ extends PanelContainer
 var _sfx: Node
 
 func _ready() -> void:
+	ButtonRoles.apply(self)
 	_sfx = get_node_or_null("/root/UiSfx")
 	var ambience := get_node_or_null("/root/Ambience")
 	if ambience != null:

@@ -13,6 +13,7 @@ func _ready() -> void:
 	_ambience = get_node_or_null("/root/Ambience")
 	add_theme_constant_override("separation", 6)
 	mute_button.toggle_mode = true
+	mute_button.theme_type_variation = &"QuietButton"
 	mute_button.focus_mode = Control.FOCUS_NONE
 	mute_button.custom_minimum_size = Vector2(72, 44)
 	mute_button.tooltip_text = "Mute all sound"

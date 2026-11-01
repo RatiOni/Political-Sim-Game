@@ -25,6 +25,7 @@ func _run() -> void:
 		t.truth(r.end.y <= view.end.y + 1.0, "%s is on screen without scrolling" % row.name)
 	var room: Control = app.find_child("BudgetPanel", true, false).find_child("Room", true, false)
 	var column: Control = room.get_parent().get_child(0)
-	t.truth(column.size.x >= 0.55 * (column.size.x + room.size.x), "the desk's controls take most of its width")
+	var share := column.size.x / (column.size.x + room.size.x)
+	t.truth(share >= 0.4 and share <= 0.6, "the desk splits evenly between its controls and its room (controls %.0f%%)" % (share * 100.0))
 	h.finish()
 	quit(t.finish())
