@@ -78,6 +78,7 @@ var _routes_key := []
 var _dusk := false
 var _warned_ids: Dictionary = {}
 var _growth_started := false
+var _snapshot_key := 0
 var _user_zoomed := false
 var _screen_scale := 1.0
 var _base := Vector2.ZERO
@@ -462,6 +463,13 @@ func _redraw() -> void:
 
 
 func apply_snapshot(values: Array, selection: String) -> void:
+	# The clock pushes a snapshot every day; repainting an unchanged map
+	# re-runs the growth painter and reads as the whole map twitching.
+	var key := [values, selection].hash()
+	if key == _snapshot_key:
+		last_changed_cells = 0
+		return
+	_snapshot_key = key
 	regions.clear()
 	for region in values:
 		if not (region is Dictionary and region.has("id")):

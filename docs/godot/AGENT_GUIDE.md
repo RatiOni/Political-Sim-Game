@@ -144,6 +144,18 @@ Note the trap that let it ship: the journey test asserts the layout at both
 status before the native-size assertion at each width; that guard fails
 loudly if the protection is removed.
 
+## UI gotcha: the clock pushes a snapshot every day
+
+`apply_snapshot` runs on every in-game day, not once a month. Anything it
+rebuilds or repaints unconditionally — a list of rows, the map's growth
+painter, the region's programme picker — redraws daily, and the owner saw that
+as the whole UI twitching while time ran. Compare a hash of the inputs and
+skip the work when nothing changed (`ArdeniaMap._snapshot_key`,
+`WireLog._rows_key`, `_decisions_key`, `_region_key`), and remove a child
+before freeing it so the old and new rows never share a frame. New text enters
+through `Arrive` (types on, heading glows) rather than snapping in.
+`tests/ui/test_quiet_tick.gd` guards this.
+
 ## Pictures are ASCII conversions of a smooth source
 
 Every picture except the map reaches the screen through

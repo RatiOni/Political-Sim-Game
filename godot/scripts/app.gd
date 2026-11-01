@@ -65,6 +65,7 @@ var _pending_snapshot: Dictionary = {}
 var _snapshot_flush_queued := false
 var _budget_view_key := 0
 var _decisions_key := 0
+var _region_key := 0
 var _situation_open := false
 var _diplomacy_open := false
 var _selected_country_id := ""
@@ -77,6 +78,7 @@ func _ready() -> void:
 	get_tree().set_auto_accept_quit(false)
 	TerminalFrame.adopt_all(self)
 	TerminalFrame.capitalise(self)
+	ButtonRoles.apply(self)
 	TerminalFrame.capitalise_buttons(self)
 	_notice.name = "StatusNotice"
 	add_child(_notice)
@@ -91,6 +93,7 @@ func _ready() -> void:
 	var wire_text: Label = %MonthlyReport.find_child("DispatchText")
 	wire_text.visible = false
 	wire_text.get_parent().add_child(_wire)
+	_wire.arrived.connect(func() -> void: Arrive.glow(%MonthlyReport.find_child("DispatchColumn").find_child("Heading")))
 	%ArdeniaMap.region_selected.connect(_select_region)
 	find_child("NextDecision").pressed.connect(_next_decision)
 	%PlayButton.pressed.connect(_toggle_pause)
@@ -201,7 +204,7 @@ func _resize_layout() -> void:
 	%RecordsPanel.visible = _records_open
 	%RegionPanel.visible = _region_panel_open
 	find_child("MapHint").visible = not compact and not _desk_open()
-	%MonthlyReport.custom_minimum_size.y = 88 if compact or _desk_open() else 150
+	%MonthlyReport.custom_minimum_size.y = 96 if compact or _desk_open() else 230
 	%RegionBrief.find_child("Details").custom_minimum_size.y = 48 if compact else 84
 	for name in ["Rule", "PressureHeading", "PressureValue", "Details"]:
 		%RegionBrief.find_child(name).visible = not compact
@@ -311,12 +314,12 @@ func _refresh_rooms() -> void:
 			_rooms[panel_name] = view
 		var view: DeskView = _rooms[panel_name]
 		var column := view.get_parent().get_child(0) as Control
-		# Data before decoration: the desk's controls take three parts of the
-		# width to the room's two, and never less than their minimum.
+		# The desk splits evenly between its controls and its room: the room is
+		# what makes a desk a place, so it is not squeezed into a strip.
 		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		column.size_flags_stretch_ratio = 3.0
-		view.size_flags_stretch_ratio = 2.0
-		column.custom_minimum_size.x = 460 if compact else 560
+		column.size_flags_stretch_ratio = 1.0
+		view.size_flags_stretch_ratio = 1.0
+		column.custom_minimum_size.x = 420 if compact else 480
 		# On a small window the budget sliders need the whole width.
 		view.visible = not (compact and panel_name == "BudgetPanel")
 		if not snapshot.is_empty():
@@ -343,32 +346,28 @@ func apply_snapshot(value: Dictionary) -> void:
 	var economy: Dictionary = snapshot.get("economy", {})
 	_refresh_vitals(player, economy, snapshot.get("headline", {}))
 	_seat_strip().set_factions(snapshot.get("factions", []))
-	var items = find_child("DecisionItems")
-	for child in items.get_children():
-		items.remove_child(child)
-		child.queue_free()
 	var decisions: Array = snapshot.get("decisions", [])
-	for decision in decisions:
-		var label := Label.new()
-		label.text = "%s / %s — %s" % [str(decision.get("tag", "REVIEW")).to_upper(), decision.get("title", "Decision"), decision.get("due_text", "")]
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		items.add_child(label)
-	if decisions.is_empty():
-		var label := Label.new()
-		label.text = "Nothing needs your decision right now."
-		items.add_child(label)
-	find_child("NextDecision").disabled = decisions.is_empty()
+	# Rebuild the rail only when it changed: the clock pushes a snapshot every
+	# day, and rebuilding identical rows reads as the dashboard twitching.
 	var decisions_key := decisions.hash()
 	if decisions_key != _decisions_key:
 		_decisions_key = decisions_key
 		_decision_index = -1
-	%MonthlyReport.find_child("ReportText").text = _lines(snapshot.get("digest", []), "Your first monthly report arrives at the end of the month. Start the clock to get there.")
+		_fill_decisions(decisions)
+	find_child("NextDecision").disabled = decisions.is_empty()
+	var report: Label = %MonthlyReport.find_child("ReportText")
+	var report_text := _lines(snapshot.get("digest", []), "Your first monthly report arrives at the end of the month. Start the clock to get there.")
+	if report.text != report_text and not snapshot.get("digest", []).is_empty():
+		Arrive.glow(%MonthlyReport.find_child("Report").find_child("Heading"))
+	Arrive.set_text(report, report_text)
 	%MonthlyReport.find_child("DispatchText").text = _lines(snapshot.get("dispatches", []), "No dispatches this period.")
 	_wire.show_rows(snapshot.get("dispatches", []), "No dispatches this period.")
 	%ArdeniaMap.apply_snapshot(snapshot.get("regions", []), selected_region_id)
 
-	_refresh_region()
+	var region_key := [_selected_region_row(), selected_region_id].hash()
+	if region_key != _region_key:
+		_region_key = region_key
+		_refresh_region()
 	if _budget_open:
 		_refresh_budget()
 	elif _legislation_open:
@@ -386,6 +385,23 @@ func apply_snapshot(value: Dictionary) -> void:
 	_notice_new_situations()
 	_notice_election()
 	_refresh_controls()
+
+
+func _fill_decisions(decisions: Array) -> void:
+	var items = find_child("DecisionItems")
+	for child in items.get_children():
+		items.remove_child(child)
+		child.queue_free()
+	for decision in decisions:
+		var label := Label.new()
+		label.text = "%s / %s — %s" % [str(decision.get("tag", "REVIEW")).to_upper(), decision.get("title", "Decision"), decision.get("due_text", "")]
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		items.add_child(label)
+	if decisions.is_empty():
+		var label := Label.new()
+		label.text = "Nothing needs your decision right now."
+		items.add_child(label)
 
 
 ## An election is the campaign's big national moment, so a new result gets
@@ -1957,6 +1973,7 @@ func _reset_desks() -> void:
 	_known_situations = {}
 	_budget_view_key = 0
 	_decisions_key = 0
+	_region_key = 0
 
 
 func _reselect(choice: OptionButton, wanted: String) -> bool:
@@ -2022,9 +2039,11 @@ func _refresh_controls() -> void:
 		button.disabled = not ready
 		# The open desk's own destination is lit: it is also the way to close it.
 		if open_desk == pair[1]:
+			button.add_theme_stylebox_override("normal", button.get_theme_stylebox("hover"))
 			for c in ["font_color", "font_focus_color", "font_hover_color", "font_pressed_color"]:
 				button.add_theme_color_override(c, UiPalette.GOLD)
 		else:
+			button.remove_theme_stylebox_override("normal")
 			for c in ["font_color", "font_focus_color", "font_hover_color", "font_pressed_color"]:
 				button.remove_theme_color_override(c)
 	%PlayButton.disabled = not ready
